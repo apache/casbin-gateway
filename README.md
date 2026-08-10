@@ -1,4 +1,4 @@
-<h1 align="center" style="border-bottom: none;">📦⚡️ CasWAF</h1>
+<h1 align="center" style="border-bottom: none;">📦⚡️ casbin-gateway</h1>
 <h3 align="center">An open-source Web Application Firewall (WAF) software developed by Go and React.</h3>
 <p align="center">
   <a href="#badge">
@@ -44,20 +44,20 @@ https://caswaf.org
 
 ## Architecture
 
-CasWAF contains 2 parts:
+casbin-gateway contains 2 parts:
 
 | Name     | Description                    | Language               | Source code                                      |
 |----------|--------------------------------|------------------------|--------------------------------------------------|
-| Frontend | Web frontend UI for CasWAF     | Javascript + React     | https://github.com/casbin/caswaf/tree/master/web |
-| Backend  | RESTful API backend for CAsWAF | Golang + Beego + MySQL | https://github.com/casbin/caswaf                 |
+| Frontend | Web frontend UI for casbin-gateway     | Javascript + React     | https://github.com/casbin/caswaf/tree/master/web |
+| Backend  | RESTful API backend for casbin-gateway | Golang + Beego + MySQL | https://github.com/casbin/caswaf                 |
 
 ## Installation
 
-CasWAF uses Casdoor to manage members. So you need to create an organization and an application for CasWAF in a Casdoor instance.
+casbin-gateway uses Casdoor to manage members. So you need to create an organization and an application for casbin-gateway in a Casdoor instance.
 
 ### Deployment Options
 
-- **[Kubernetes Deployment](k8s/README.md)**: Deploy CasWAF on Kubernetes with complete manifests and guide
+- **[Kubernetes Deployment](k8s/README.md)**: Deploy casbin-gateway on Kubernetes with complete manifests and guide
 - **Docker Compose**: Use the provided `docker-compose.yml` for quick local setup
 - **Manual Installation**: Build and run from source
 
@@ -79,36 +79,36 @@ git clone https://github.com/casbin/caswaf
 
 #### Setup database
 
-CasWAF will store its users, nodes and topics information in a MySQL database named: `caswaf`, will create it if not existed. The DB connection string can be specified at: https://github.com/casbin/caswaf/blob/master/conf/app.conf
+casbin-gateway will store its users, nodes and topics information in a MySQL database named: `caswaf`, will create it if not existed. The DB connection string can be specified at: https://github.com/casbin/caswaf/blob/master/conf/app.conf
 
 ```ini
 dataSourceName = root:123@tcp(localhost:3306)/
 ```
 
-CasWAF uses XORM to connect to DB, so all DBs supported by XORM can also be used.
+casbin-gateway uses XORM to connect to DB, so all DBs supported by XORM can also be used.
 
 #### Configure Casdoor
 
-After creating an organization and an application for CasWAF in a Casdoor, you need to update `clientID`, `clientSecret`, `casdoorOrganization` and `casdoorApplication` in app.conf.
+After creating an organization and an application for casbin-gateway in a Casdoor, you need to update `clientID`, `clientSecret`, `casdoorOrganization` and `casdoorApplication` in app.conf.
 
-#### Run CasWAF
+#### Run casbin-gateway
 
-- Configure and run CasWAF by yourself. If you want to learn more about caswaf.
+- Configure and run casbin-gateway by yourself. If you want to learn more about caswaf.
 - Open browser: http://localhost:16001/
 
 ### Optional configuration
 
 #### Setup your WAF to enable some third-party login platform
 
-CasWAF uses Casdoor to manage members. If you want to log in with oauth, you should see [casdoor oauth configuration](https://casdoor.org/docs/provider/oauth/overview).
+casbin-gateway uses Casdoor to manage members. If you want to log in with oauth, you should see [casdoor oauth configuration](https://casdoor.org/docs/provider/oauth/overview).
 
 #### OSS, Mail, and SMS services
 
-CasWAF uses Casdoor to upload files to cloud storage, send Emails and send SMSs. See Casdoor for more details.
+casbin-gateway uses Casdoor to upload files to cloud storage, send Emails and send SMSs. See Casdoor for more details.
 
 ## Contribute
 
-For CasWAF, if you have any questions, you can open Issues, or you can also directly start Pull Requests(but we recommend opening issues first to communicate with the community).
+For casbin-gateway, if you have any questions, you can open Issues, or you can also directly start Pull Requests(but we recommend opening issues first to communicate with the community).
 
 ## License
 

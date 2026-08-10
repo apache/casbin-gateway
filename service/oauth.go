@@ -40,29 +40,29 @@ func redirectToCasdoor(casdoorClient *casdoorsdk.Client, w http.ResponseWriter, 
 func handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 	site := getSiteByDomainWithWww(r.Host)
 	if site == nil {
-		responseError(w, "CasWAF error: site not found for host: %s", r.Host)
+		responseError(w, "casbin-gateway error: site not found for host: %s", r.Host)
 		return
 	}
 
 	code := r.URL.Query().Get("code")
 	state := r.URL.Query().Get("state")
 	if code == "" {
-		responseError(w, "CasWAF error: the code should not be empty")
+		responseError(w, "casbin-gateway error: the code should not be empty")
 		return
 	} else if state == "" {
-		responseError(w, "CasWAF error: the state should not be empty")
+		responseError(w, "casbin-gateway error: the state should not be empty")
 		return
 	}
 
 	casdoorClient, err := getCasdoorClientFromSite(site)
 	if err != nil {
-		responseError(w, "CasWAF error: getCasdoorClientFromSite() error: %s", err.Error())
+		responseError(w, "casbin-gateway error: getCasdoorClientFromSite() error: %s", err.Error())
 		return
 	}
 
 	token, err := casdoorClient.GetOAuthToken(code, state)
 	if err != nil {
-		responseError(w, "CasWAF error: casdoorClient.GetOAuthToken() error: %s", err.Error())
+		responseError(w, "casbin-gateway error: casdoorClient.GetOAuthToken() error: %s", err.Error())
 		return
 	}
 

@@ -169,7 +169,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		responseError(w, "CasWAF error: site not found for host: %s", r.Host)
+		responseError(w, "casbin-gateway error: site not found for host: %s", r.Host)
 		return
 	}
 
@@ -187,7 +187,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 	if site.Node == "" {
 		site.Node = util.GetHostname()
 		_, err := object.UpdateSiteNoRefresh(site.GetId(), site)
-		responseError(w, "CasWAF error: UpdateSiteNoRefresh() error: %v", err)
+		responseError(w, "casbin-gateway error: UpdateSiteNoRefresh() error: %v", err)
 		return
 	}
 
@@ -200,7 +200,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		responseError(w, fmt.Sprintf("CasWAF error: ACME HTTP-01 challenge failed, requestUri cannot match with challengeMap, requestUri = %s, challengeMap = %v", r.RequestURI, challengeMap))
+		responseError(w, fmt.Sprintf("casbin-gateway error: ACME HTTP-01 challenge failed, requestUri cannot match with challengeMap, requestUri = %s, challengeMap = %v", r.RequestURI, challengeMap))
 		return
 	}
 
@@ -232,7 +232,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 
 		casdoorClient, err := getCasdoorClientFromSite(site)
 		if err != nil {
-			responseError(w, "CasWAF error: getCasdoorClientFromSite() error: %s", err.Error())
+			responseError(w, "casbin-gateway error: getCasdoorClientFromSite() error: %s", err.Error())
 			return
 		}
 
@@ -243,7 +243,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 		} else {
 			_, err = casdoorClient.ParseJwtToken(cookie.Value)
 			if err != nil {
-				responseError(w, "CasWAF error: casdoorClient.ParseJwtToken() error: %s", err.Error())
+				responseError(w, "casbin-gateway error: casdoorClient.ParseJwtToken() error: %s", err.Error())
 				return
 			}
 		}
@@ -251,7 +251,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 
 	host := site.GetHost()
 	if host == "" {
-		responseError(w, "CasWAF error: targetUrl should not be empty for host: %s, site = %v", r.Host, site)
+		responseError(w, "casbin-gateway error: targetUrl should not be empty for host: %s, site = %v", r.Host, site)
 		return
 	}
 
@@ -276,11 +276,11 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 		// Do not write header for Allow action, let the proxy handle it
 	case "Block":
 		w.WriteHeader(result.StatusCode)
-		responseErrorWithoutCode(w, "Blocked by CasWAF: %s", reason)
+		responseErrorWithoutCode(w, "Blocked by casbin-gateway: %s", reason)
 		return
 	case "Drop":
 		w.WriteHeader(result.StatusCode)
-		responseErrorWithoutCode(w, "Dropped by CasWAF: %s", reason)
+		responseErrorWithoutCode(w, "Dropped by casbin-gateway: %s", reason)
 		return
 	case "CAPTCHA":
 		ok := isVerifiedSession(r)
@@ -293,7 +293,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 		redirectToCaptcha(w, r)
 		return
 	default:
-		responseError(w, "Error in CasWAF: %s", reason)
+		responseError(w, "Error in casbin-gateway: %s", reason)
 	}
 	nextHandle(w, r)
 }
@@ -332,7 +332,7 @@ func Start() {
 		panic(err)
 	}
 	if !gatewayEnabled {
-		fmt.Printf("CasWAF gateway not enabled (gatewayEnabled == \"false\")\n")
+		fmt.Printf("casbin-gateway gateway not enabled (gatewayEnabled == \"false\")\n")
 		return
 	}
 
@@ -347,7 +347,7 @@ func Start() {
 	}
 
 	go func() {
-		fmt.Printf("CasWAF gateway running on: http://127.0.0.1:%d\n", gatewayHttpPort)
+		fmt.Printf("casbin-gateway gateway running on: http://127.0.0.1:%d\n", gatewayHttpPort)
 		err := http.ListenAndServe(fmt.Sprintf(":%d", gatewayHttpPort), serverMux)
 		if err != nil {
 			panic(err)
@@ -355,7 +355,7 @@ func Start() {
 	}()
 
 	go func() {
-		fmt.Printf("CasWAF gateway running on: https://127.0.0.1:%d\n", gatewayHttpsPort)
+		fmt.Printf("casbin-gateway gateway running on: https://127.0.0.1:%d\n", gatewayHttpsPort)
 		server := &http.Server{
 			Handler: serverMux,
 			Addr:    fmt.Sprintf(":%d", gatewayHttpsPort),

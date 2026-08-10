@@ -56,7 +56,7 @@ func InitSelfGuard() {
 
 // runSupervisor starts the supervisor that monitors and restarts the main process
 func runSupervisor() error {
-	fmt.Println("Starting CasWAF with auto-recovery mechanism...")
+	fmt.Println("Starting casbin-gateway with auto-recovery mechanism...")
 	
 	restartTimes := []time.Time{}
 	
