@@ -51,6 +51,13 @@ func initAPI() {
 	beego.Router("/api/add-site", &controllers.ApiController{}, "POST:AddSite")
 	beego.Router("/api/delete-site", &controllers.ApiController{}, "POST:DeleteSite")
 
+	beego.Router("/api/get-global-channels", &controllers.ApiController{}, "GET:GetGlobalChannels")
+	beego.Router("/api/get-channels", &controllers.ApiController{}, "GET:GetChannels")
+	beego.Router("/api/get-channel", &controllers.ApiController{}, "GET:GetChannel")
+	beego.Router("/api/update-channel", &controllers.ApiController{}, "POST:UpdateChannel")
+	beego.Router("/api/add-channel", &controllers.ApiController{}, "POST:AddChannel")
+	beego.Router("/api/delete-channel", &controllers.ApiController{}, "POST:DeleteChannel")
+
 	beego.Router("/api/get-global-certs", &controllers.ApiController{}, "GET:GetGlobalCerts")
 	beego.Router("/api/get-certs", &controllers.ApiController{}, "GET:GetCerts")
 	beego.Router("/api/get-cert", &controllers.ApiController{}, "GET:GetCert")
