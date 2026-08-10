@@ -1,0 +1,107 @@
+name: Release
+
+# Releases are cut manually by pushing a git tag:
+#   v1.4.0-rc1 -> GitHub pre-release only (source package for the Apache vote)
+#   v1.4.0     -> GitHub release (the Go module is published automatically by
+#                 proxy.golang.org once the tag exists)
+#
+# The release manager downloads the source package from the release, signs it
+# locally with their own GPG key, and uses it for the vote. This workflow does
+# not sign anything and does not touch any other Apache infrastructure.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: ${{ github.repository == 'apache/casbin-gateway' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute release metadata
+        id: meta
+        run: |
+          TAG_NAME="${GITHUB_REF_NAME}"
+
+          if [[ "${TAG_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            PRERELEASE=false
+          elif [[ "${TAG_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+$ ]]; then
+            PRERELEASE=true
+          else
+            echo "Unsupported release tag: ${TAG_NAME}. Use v1.2.3 or v1.2.3-rc1." >&2
+            exit 1
+          fi
+
+          VERSION="${TAG_NAME#v}"
+          BASENAME="apache-casbin-gateway-${VERSION}-incubating-src"
+
+          {
+            echo "tag=${TAG_NAME}"
+            echo "version=${VERSION}"
+            echo "basename=${BASENAME}"
+            echo "prerelease=${PRERELEASE}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Build source release tarball
+        env:
+          BASENAME: ${{ steps.meta.outputs.basename }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          git archive --format=tar.gz --prefix="${BASENAME}/" -o "dist/${BASENAME}.tar.gz" "${TAG}"
+          cd dist
+          sha512sum "${BASENAME}.tar.gz" > "${BASENAME}.tar.gz.sha512"
+          sha512sum -c "${BASENAME}.tar.gz.sha512"
+          ls -l
+
+      - name: Write release notes
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+          PRERELEASE: ${{ steps.meta.outputs.prerelease }}
+          BASENAME: ${{ steps.meta.outputs.basename }}
+        run: |
+          set -euo pipefail
+          {
+            if [[ "${PRERELEASE}" == "true" ]]; then
+              printf 'Release candidate for version `%s`. This is **not** a released version; it is the source artifact for the Apache release vote.\n' "${VERSION%%-rc*}"
+            else
+              printf 'Version `%s`.\n' "${VERSION}"
+            fi
+            printf '\n| Asset | Description |\n| --- | --- |\n'
+            printf '| `%s.tar.gz` | Source release |\n' "${BASENAME}"
+            printf '| `%s.tar.gz.sha512` | SHA-512 checksum |\n\n' "${BASENAME}"
+            printf 'The release manager signs the tarball locally with their own GPG key before starting the vote.\n'
+          } > release-notes.md
+          cat release-notes.md
+
+      # The gh CLI is used instead of a marketplace action: the ASF org only
+      # allows actions owned by GitHub or by the enterprise allow-list.
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          BASENAME: ${{ steps.meta.outputs.basename }}
+          PRERELEASE: ${{ steps.meta.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          args=(
+            "${TAG}"
+            --title "Casbin Gateway ${TAG}"
+            --notes-file release-notes.md
+          )
+          if [[ "${PRERELEASE}" == "true" ]]; then
+            args+=(--prerelease)
+          fi
+          gh release create "${args[@]}" \
+            "dist/${BASENAME}.tar.gz" \
+            "dist/${BASENAME}.tar.gz.sha512"
