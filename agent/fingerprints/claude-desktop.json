@@ -1,0 +1,7 @@
+{
+  "id": "claude-desktop",
+  "displayName": "Claude Desktop",
+  "execName": "claude",
+  "msixFamily": "Claude_pzs8sxrjxfjjc",
+  "desktopInstallerDir": "AnthropicClaude"
+}

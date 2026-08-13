@@ -1,0 +1,9 @@
+{
+  "id": "codex-cli",
+  "displayName": "Codex CLI",
+  "execName": "codex",
+  "stateDir": "codex",
+  "npmPackage": "@openai/codex",
+  "homebrewCasks": ["codex", "codex@latest"],
+  "windowsUserDirs": ["OpenAI/Codex/bin"]
+}

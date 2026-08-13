@@ -1,0 +1,7 @@
+{
+  "id": "cursor-agent",
+  "displayName": "Cursor Agent",
+  "execName": "cursor-agent",
+  "stateDir": "cursor-agent",
+  "windowsProgramDirs": ["cursor-agent"]
+}

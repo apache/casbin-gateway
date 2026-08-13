@@ -5,6 +5,16 @@
     "Sign Out": "退出",
     "Sign Up": "注册"
   },
+  "agent": {
+    "Agent": "Agent",
+    "Agents": "Agent 列表",
+    "Failed to scan agents": "探测 Agent 失败",
+    "Install Method": "安装方式",
+    "No supported agents found": "未发现支持的 Agent",
+    "Scan": "探测",
+    "Unknown": "未知",
+    "Version": "版本"
+  },
   "cert": {
     "Access key": "访问密钥",
     "Access secret": "访问密钥",

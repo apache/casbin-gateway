@@ -1,0 +1,7 @@
+{
+  "id": "cursor",
+  "displayName": "Cursor",
+  "execName": "Cursor",
+  "windowsProgramDirs": ["cursor"],
+  "homebrewCasks": ["cursor"]
+}

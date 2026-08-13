@@ -1,0 +1,10 @@
+{
+  "id": "claude-code",
+  "displayName": "Claude Code",
+  "execName": "claude",
+  "stateDir": "claude",
+  "npmPackage": "@anthropic-ai/claude-code",
+  "wingetPackage": "Anthropic.ClaudeCode",
+  "homebrewCasks": ["claude-code", "claude-code@latest"],
+  "systemPackage": "claude-code"
+}

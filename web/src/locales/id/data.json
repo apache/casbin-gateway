@@ -5,6 +5,16 @@
     "Sign Out": "Sign Out",
     "Sign Up": "Sign Up"
   },
+  "agent": {
+    "Agent": "Agent",
+    "Agents": "Agents",
+    "Failed to scan agents": "Failed to scan agents",
+    "Install Method": "Install Method",
+    "No supported agents found": "No supported agents found",
+    "Scan": "Scan",
+    "Unknown": "Unknown",
+    "Version": "Version"
+  },
   "cert": {
     "Access key": "Access key",
     "Access secret": "Access secret",

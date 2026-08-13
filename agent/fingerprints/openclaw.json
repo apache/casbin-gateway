@@ -1,0 +1,8 @@
+{
+  "id": "openclaw",
+  "displayName": "OpenClaw",
+  "execName": "openclaw",
+  "npmPackage": "openclaw",
+  "extraUnixNpmDirs": [".openclaw/tools/node-v*/lib"],
+  "extraWindowsNpmDirs": ["OpenClaw/deps/portable-node"]
+}

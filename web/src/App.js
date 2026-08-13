@@ -15,7 +15,7 @@
 import React, {Component} from "react";
 import {Link, Redirect, Route, Switch, withRouter} from "react-router-dom";
 import {Avatar, BackTop, Drawer, Dropdown, Layout, Menu, Tooltip} from "antd";
-import {DeploymentUnitOutlined, DownOutlined, GithubOutlined, LogoutOutlined, SettingOutlined, ShareAltOutlined} from "@ant-design/icons";
+import {DeploymentUnitOutlined, DownOutlined, GithubOutlined, LogoutOutlined, RobotOutlined, SettingOutlined, ShareAltOutlined} from "@ant-design/icons";
 import "./App.less";
 import * as Setting from "./Setting";
 import * as AccountBackend from "./backend/AccountBackend";
@@ -37,6 +37,7 @@ import RecordListPage from "./RecordListPage";
 import RecordEditPage from "./RecordEditPage";
 import i18next from "i18next";
 import DashboardPage from "./DashboardPage";
+import AgentsPage from "./AgentsPage";
 import LanguageSelect from "./LanguageSelect";
 import {withTranslation} from "react-i18next";
 // import SelectLanguageBox from "./SelectLanguageBox";
@@ -81,6 +82,8 @@ class App extends Component {
       this.setState({selectedMenuKey: "/"});
     } else if (uri.includes("/dashboard")) {
       this.setState({selectedMenuKey: "/dashboard"});
+    } else if (uri.includes("/agents")) {
+      this.setState({selectedMenuKey: "/agents"});
     } else if (uri.includes("/nodes")) {
       this.setState({selectedMenuKey: "/nodes"});
     } else if (uri.includes("/sites")) {
@@ -286,6 +289,15 @@ class App extends Component {
         </Link>
       </Menu.Item>
     );
+    if (Setting.isAdminUser(this.state.account)) {
+      res.push(
+        <Menu.Item key="/agents" icon={<RobotOutlined />}>
+          <Link to="/agents">
+            {i18next.t("agent:Agents")}
+          </Link>
+        </Menu.Item>
+      );
+    }
     res.push(
       <Menu.Item key="/nodes">
         <Link to="/nodes">
@@ -384,6 +396,7 @@ class App extends Component {
           <Route exact path="/home" render={(props) => <HomePage account={this.state.account} {...props} />} />
           <Route exact path="/" render={(props) => <Redirect to="/sites" />} />
           <Route exact path="/signin" render={(props) => this.renderHomeIfSignedIn(<SigninPage {...props} />)} />
+          <Route exact path="/agents" render={(props) => this.renderSigninIfNotSignedIn(<AgentsPage account={this.state.account} {...props} />)} />
           <Route exact path="/nodes" render={(props) => this.renderSigninIfNotSignedIn(<NodeListPage account={this.state.account} {...props} />)} />
           <Route exact path="/nodes/:owner/:nodeName" render={(props) => this.renderSigninIfNotSignedIn(<NodeEditPage account={this.state.account} {...props} />)} />
           <Route exact path="/sites" render={(props) => this.renderSigninIfNotSignedIn(<SiteListPage account={this.state.account} {...props} />)} />

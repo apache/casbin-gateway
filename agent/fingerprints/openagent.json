@@ -1,0 +1,17 @@
+{
+  "id": "openagent",
+  "displayName": "OpenAgent",
+  "execName": "openagent",
+  "stateDir": "openagent",
+  "windowsUserDirs": ["openagent"],
+  "buildInfoModule": "github.com/the-open-agent/openagent",
+  "buildInfoVersionVar": "github.com/the-open-agent/openagent/internal/cli.Version",
+  "versionFile": "version",
+  "localServer": {
+    "ports": [14000],
+    "probePath": "/api/health",
+    "probeMarkers": ["openagent_session_id"],
+    "versionPath": "/api/get-version-info",
+    "versionFields": ["data", "version"]
+  }
+}

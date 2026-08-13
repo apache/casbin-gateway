@@ -60,6 +60,7 @@ func initAPI() {
 	beego.Router("/api/update-cert-domain-expire", &controllers.ApiController{}, "POST:UpdateCertDomainExpire")
 
 	beego.Router("/api/get-applications", &controllers.ApiController{}, "GET:GetApplications")
+	beego.Router("/api/get-agents", &controllers.ApiController{}, "GET:GetAgents")
 
 	beego.Router("/api/get-records", &controllers.ApiController{}, "GET:GetRecords")
 	beego.Router("/api/get-record", &controllers.ApiController{}, "GET:GetRecord")

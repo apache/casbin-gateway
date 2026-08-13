@@ -1,0 +1,7 @@
+{
+  "id": "windsurf",
+  "displayName": "Windsurf",
+  "execName": "Windsurf",
+  "windowsProgramDirs": ["Windsurf"],
+  "homebrewCasks": ["windsurf"]
+}
