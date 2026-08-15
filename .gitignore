@@ -24,6 +24,7 @@ tmp/
 tmpFiles/
 *.tmp
 logs/
+data/agent-patches/
 lastupdate.tmp
 commentsRouter*.go
 acme_account.key

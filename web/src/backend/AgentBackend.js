@@ -14,10 +14,41 @@
 
 import * as Setting from "../Setting";
 
+function request(url, method = "GET", body = null) {
+  const options = {
+    method: method,
+    credentials: "include",
+  };
+  if (body !== null) {
+    options.body = JSON.stringify(Setting.deepCopy(body));
+  }
+  return fetch(`${Setting.ServerUrl}${url}`, options).then(res => res.json());
+}
+
 export function getAgents(forceRefresh = false) {
   const query = forceRefresh ? "?refresh=true" : "";
-  return fetch(`${Setting.ServerUrl}/api/get-agents${query}`, {
-    method: "GET",
-    credentials: "include",
-  }).then(res => res.json());
+  return request(`/api/get-agents${query}`);
+}
+
+export function patchAgent(target) {
+  return request("/api/patch-agent", "POST", target);
+}
+
+export function unpatchAgent(target) {
+  return request("/api/unpatch-agent", "POST", target);
+}
+
+export function getAgentRecords(agent = "", eventType = "", outcome = "", session = "", limit = 200) {
+  const params = new URLSearchParams({
+    agent: agent,
+    eventType: eventType,
+    outcome: outcome,
+    session: session,
+    limit: String(limit),
+  });
+  return request(`/api/get-agent-records?${params.toString()}`);
+}
+
+export function getAgentSessions() {
+  return request("/api/get-agent-sessions");
 }

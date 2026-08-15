@@ -15,7 +15,7 @@
 import React, {Component} from "react";
 import {Link, Redirect, Route, Switch, withRouter} from "react-router-dom";
 import {Avatar, BackTop, Drawer, Dropdown, Layout, Menu, Tooltip} from "antd";
-import {DeploymentUnitOutlined, DownOutlined, GithubOutlined, LogoutOutlined, RobotOutlined, SettingOutlined, ShareAltOutlined} from "@ant-design/icons";
+import {DeploymentUnitOutlined, DownOutlined, FileSearchOutlined, GithubOutlined, LogoutOutlined, MessageOutlined, RobotOutlined, SettingOutlined, ShareAltOutlined} from "@ant-design/icons";
 import "./App.less";
 import * as Setting from "./Setting";
 import * as AccountBackend from "./backend/AccountBackend";
@@ -38,6 +38,8 @@ import RecordEditPage from "./RecordEditPage";
 import i18next from "i18next";
 import DashboardPage from "./DashboardPage";
 import AgentsPage from "./AgentsPage";
+import AgentRecordsPage from "./AgentRecordsPage";
+import AgentSessionsPage from "./AgentSessionsPage";
 import LanguageSelect from "./LanguageSelect";
 import {withTranslation} from "react-i18next";
 // import SelectLanguageBox from "./SelectLanguageBox";
@@ -82,6 +84,10 @@ class App extends Component {
       this.setState({selectedMenuKey: "/"});
     } else if (uri.includes("/dashboard")) {
       this.setState({selectedMenuKey: "/dashboard"});
+    } else if (uri.includes("/agent-records")) {
+      this.setState({selectedMenuKey: "/agent-records"});
+    } else if (uri.includes("/agent-sessions")) {
+      this.setState({selectedMenuKey: "/agent-sessions"});
     } else if (uri.includes("/agents")) {
       this.setState({selectedMenuKey: "/agents"});
     } else if (uri.includes("/nodes")) {
@@ -297,6 +303,20 @@ class App extends Component {
           </Link>
         </Menu.Item>
       );
+      res.push(
+        <Menu.Item key="/agent-records" icon={<FileSearchOutlined />}>
+          <Link to="/agent-records">
+            {i18next.t("agent:Agent Records")}
+          </Link>
+        </Menu.Item>
+      );
+      res.push(
+        <Menu.Item key="/agent-sessions" icon={<MessageOutlined />}>
+          <Link to="/agent-sessions">
+            {i18next.t("agent:Agent Sessions")}
+          </Link>
+        </Menu.Item>
+      );
     }
     res.push(
       <Menu.Item key="/nodes">
@@ -397,6 +417,8 @@ class App extends Component {
           <Route exact path="/" render={(props) => <Redirect to="/sites" />} />
           <Route exact path="/signin" render={(props) => this.renderHomeIfSignedIn(<SigninPage {...props} />)} />
           <Route exact path="/agents" render={(props) => this.renderSigninIfNotSignedIn(<AgentsPage account={this.state.account} {...props} />)} />
+          <Route exact path="/agent-records" render={(props) => this.renderSigninIfNotSignedIn(<AgentRecordsPage account={this.state.account} {...props} />)} />
+          <Route exact path="/agent-sessions" render={(props) => this.renderSigninIfNotSignedIn(<AgentSessionsPage account={this.state.account} {...props} />)} />
           <Route exact path="/nodes" render={(props) => this.renderSigninIfNotSignedIn(<NodeListPage account={this.state.account} {...props} />)} />
           <Route exact path="/nodes/:owner/:nodeName" render={(props) => this.renderSigninIfNotSignedIn(<NodeEditPage account={this.state.account} {...props} />)} />
           <Route exact path="/sites" render={(props) => this.renderSigninIfNotSignedIn(<SiteListPage account={this.state.account} {...props} />)} />

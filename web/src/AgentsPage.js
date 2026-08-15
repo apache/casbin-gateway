@@ -13,9 +13,10 @@
 // limitations under the License.
 
 import React, {useCallback, useEffect, useState} from "react";
-import {Alert, Button, Result, Space, Table, Tag, Typography} from "antd";
+import {Alert, Button, Popconfirm, Result, Space, Table, Tag, Tooltip, Typography} from "antd";
 import {ReloadOutlined, RobotOutlined} from "@ant-design/icons";
 import i18next from "i18next";
+import {Link} from "react-router-dom";
 import * as AgentBackend from "./backend/AgentBackend";
 import * as Setting from "./Setting";
 import AgentIcon from "./components/AgentIcon";
@@ -24,10 +25,15 @@ const {Text, Title} = Typography;
 
 const rowKey = record => `${record.owner}:${record.path}`;
 
+function monitorAgentId(agentId) {
+  return agentId === "codex_vscode" || agentId === "codex-vscode" ? "codex-cli" : agentId;
+}
+
 export default function AgentsPage({account}) {
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [busyKey, setBusyKey] = useState("");
   const isAdmin = Setting.isAdminUser(account);
 
   const scan = useCallback((forceRefresh = false) => {
@@ -54,6 +60,33 @@ export default function AgentsPage({account}) {
     scan();
   }, [scan]);
 
+  const togglePatch = record => {
+    const target = {
+      agentId: record.agentId,
+      path: record.path,
+      owner: record.owner,
+    };
+    const patched = record.patched;
+
+    setBusyKey(rowKey(record));
+    (patched ? AgentBackend.unpatchAgent(target) : AgentBackend.patchAgent(target)).then(res => {
+      if (res.status === "ok") {
+        const success = patched ? "Unpatched" : "Patched";
+        const followup = res.data?.followup || record.followup;
+        Setting.showMessage("success", followup
+          ? `${i18next.t(`agent:${success}`)} ${record.name}. ${followup}`
+          : `${i18next.t(`agent:${success}`)} ${record.name}`);
+        scan();
+      } else {
+        Setting.showMessage("error", res.msg || i18next.t("agent:Failed to update agent patch"));
+      }
+    }).catch(err => {
+      Setting.showMessage("error", err.message || String(err));
+    }).then(() => {
+      setBusyKey("");
+    });
+  };
+
   if (!isAdmin) {
     return (
       <Result
@@ -64,6 +97,41 @@ export default function AgentsPage({account}) {
       />
     );
   }
+
+  const renderPatchStatus = (_, record) => {
+    if (!record.supported) {
+      const tag = <Tag>{i18next.t("agent:Not supported")}</Tag>;
+      return record.detail ? <Tooltip title={record.detail}>{tag}</Tooltip> : tag;
+    }
+
+    const tag = record.patched
+      ? <Tag color="green">{i18next.t("agent:Patched")}</Tag>
+      : <Tag>{i18next.t("agent:Not patched")}</Tag>;
+    return record.detail ? <Tooltip title={record.detail}>{tag}</Tooltip> : tag;
+  };
+
+  const renderAction = (_, record) => {
+    if (!record.supported) {
+      return <Button size="small" disabled>{i18next.t("agent:Patch")}</Button>;
+    }
+
+    const patched = record.patched;
+    const actionKey = patched ? "Unpatch" : "Patch";
+    const action = i18next.t(`agent:${actionKey}`);
+    const note = [record.notice, record.followup].filter(Boolean).join(" ");
+    return (
+      <Popconfirm
+        title={note ? `${action} ${record.name}? ${note}` : `${action} ${record.name}?`}
+        okText={action}
+        cancelText={i18next.t("general:Cancel")}
+        onConfirm={() => togglePatch(record)}
+      >
+        <Button size="small" type={patched ? "default" : "primary"} loading={busyKey === rowKey(record)}>
+          {action}
+        </Button>
+      </Popconfirm>
+    );
+  };
 
   const columns = [
     {
@@ -102,6 +170,25 @@ export default function AgentsPage({account}) {
       dataIndex: "path",
       key: "path",
       render: value => <Text code>{value}</Text>,
+    },
+    {
+      title: i18next.t("agent:Patch Status"),
+      key: "patched",
+      render: renderPatchStatus,
+    },
+    {
+      title: i18next.t("agent:Records"),
+      key: "records",
+      render: (_, record) => record.patched && (
+        <Link to={`/agent-records?agent=${encodeURIComponent(monitorAgentId(record.agentId))}`}>
+          {i18next.t("agent:View Records")}
+        </Link>
+      ),
+    },
+    {
+      title: i18next.t("general:Action"),
+      key: "action",
+      render: renderAction,
     },
   ];
 

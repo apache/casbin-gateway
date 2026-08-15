@@ -17,8 +17,12 @@ package main
 import (
 	"fmt"
 
+	"github.com/apache/casbin-gateway/agenthook"
+	"github.com/apache/casbin-gateway/agentmonitor"
 	"github.com/apache/casbin-gateway/casdoor"
+	"github.com/apache/casbin-gateway/conf"
 	"github.com/apache/casbin-gateway/ip"
+	"github.com/apache/casbin-gateway/mcpserver"
 	"github.com/apache/casbin-gateway/object"
 	"github.com/apache/casbin-gateway/proxy"
 	"github.com/apache/casbin-gateway/routers"
@@ -31,6 +35,11 @@ import (
 )
 
 func main() {
+	// Hooks and MCP servers are launched by an agent as a short-lived child
+	// process. They must exit before Gateway initializes its own services.
+	agenthook.ServeIfInvoked()
+	mcpserver.ServeIfInvoked()
+
 	util.InitSelfGuard()
 	object.InitFlag()
 	object.InitAdapter()
@@ -44,6 +53,12 @@ func main() {
 	run.InitRdsClient()
 	run.InitSelfStart()
 	object.StartMonitorSitesLoop()
+
+	agentmonitor.Configure(conf.GetAgentPatchStateDir())
+	if err := agentmonitor.Start(); err != nil {
+		beego.Error("agent monitor could not start:", err)
+	}
+	defer agentmonitor.Stop()
 
 	beego.InsertFilter("*", beego.BeforeRouter, cors.Allow(&cors.Options{
 		AllowOrigins:     []string{"*"},

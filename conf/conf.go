@@ -122,6 +122,17 @@ func GetConfigBatchSize() int {
 	return res
 }
 
+// GetAgentPatchStateDir is the local directory that holds agent patch
+// manifests, backups, and monitor cursors. It is operational state only; agent
+// behaviour records remain in memory.
+func GetAgentPatchStateDir() string {
+	dir := GetConfigString("agentPatchStateDir")
+	if dir == "" {
+		return "./data/agent-patches"
+	}
+	return dir
+}
+
 func GetConfigRealDataSourceName(driverName string) string {
 	var dataSourceName string
 	if driverName != "mysql" {
