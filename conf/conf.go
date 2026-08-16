@@ -30,7 +30,7 @@ var WafConf string
 
 func init() {
 	// this array contains the beego configuration items that may be modified via env
-	presetConfigItems := []string{"httpport", "appname"}
+	presetConfigItems := []string{"httpport", "appname", "appDir"}
 	for _, key := range presetConfigItems {
 		if value, ok := os.LookupEnv(key); ok {
 			err := beego.AppConfig.Set(key, value)

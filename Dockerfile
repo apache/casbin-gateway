@@ -1,5 +1,16 @@
 FROM node:18.19.0 AS FRONT
 WORKDIR /web
+# Casdoor connection baked into the frontend bundle. Defaults keep the public
+# demo working; docker-compose passes these to point the browser at the bundled
+# Casdoor (see web/src/Conf.js).
+ARG REACT_APP_CASDOOR_SERVER_URL
+ARG REACT_APP_CLIENT_ID
+ARG REACT_APP_APP_NAME
+ARG REACT_APP_ORG_NAME
+ENV REACT_APP_CASDOOR_SERVER_URL=$REACT_APP_CASDOOR_SERVER_URL \
+    REACT_APP_CLIENT_ID=$REACT_APP_CLIENT_ID \
+    REACT_APP_APP_NAME=$REACT_APP_APP_NAME \
+    REACT_APP_ORG_NAME=$REACT_APP_ORG_NAME
 COPY ./web .
 RUN yarn install --frozen-lockfile --network-timeout 1000000 && yarn run build
 

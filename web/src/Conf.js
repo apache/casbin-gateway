@@ -12,12 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// These default to the public Casdoor demo so a plain `yarn start` works out of
+// the box. The docker-compose quickstart overrides them at build time via
+// REACT_APP_* build args (see Dockerfile) so the browser talks to the bundled,
+// self-hosted Casdoor instead.
 export const AuthConfig = {
-  serverUrl: "https://door.casdoor.com",
-  // serverUrl: "http://localhost:7001",
-  clientId: "af6b5aa958822fb9dc33",
-  appName: "app-casibase",
-  organizationName: "casbin",
+  serverUrl: process.env.REACT_APP_CASDOOR_SERVER_URL || "https://door.casdoor.com",
+  clientId: process.env.REACT_APP_CLIENT_ID || "af6b5aa958822fb9dc33",
+  appName: process.env.REACT_APP_APP_NAME || "app-casibase",
+  organizationName: process.env.REACT_APP_ORG_NAME || "casbin",
   redirectPath: "/callback",
 };
 

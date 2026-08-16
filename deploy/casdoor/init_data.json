@@ -1,0 +1,203 @@
+{
+  "organizations": [
+    {
+      "owner": "admin",
+      "name": "casbin",
+      "createdTime": "2023-01-01T00:00:00Z",
+      "displayName": "Casbin",
+      "websiteUrl": "https://casbin.org",
+      "favicon": "https://cdn.casbin.org/img/favicon.png",
+      "passwordType": "plain",
+      "passwordSalt": "",
+      "countryCodes": [
+        "US"
+      ],
+      "defaultAvatar": "https://cdn.casbin.org/img/casbin.svg",
+      "tags": [],
+      "languages": [
+        "en",
+        "zh",
+        "es",
+        "fr",
+        "de",
+        "id",
+        "ja",
+        "ko",
+        "ru"
+      ],
+      "masterPassword": "",
+      "enableSoftDeletion": false,
+      "isProfilePublic": false,
+      "accountItems": [
+        {
+          "name": "Organization",
+          "visible": true,
+          "viewRule": "Public",
+          "modifyRule": "Admin"
+        },
+        {
+          "name": "ID",
+          "visible": true,
+          "viewRule": "Public",
+          "modifyRule": "Immutable"
+        },
+        {
+          "name": "Name",
+          "visible": true,
+          "viewRule": "Public",
+          "modifyRule": "Admin"
+        },
+        {
+          "name": "Display name",
+          "visible": true,
+          "viewRule": "Public",
+          "modifyRule": "Self"
+        },
+        {
+          "name": "Avatar",
+          "visible": true,
+          "viewRule": "Public",
+          "modifyRule": "Self"
+        },
+        {
+          "name": "Email",
+          "visible": true,
+          "viewRule": "Public",
+          "modifyRule": "Self"
+        },
+        {
+          "name": "Phone",
+          "visible": true,
+          "viewRule": "Public",
+          "modifyRule": "Self"
+        },
+        {
+          "name": "Password",
+          "visible": true,
+          "viewRule": "Self",
+          "modifyRule": "Self"
+        },
+        {
+          "name": "Is admin",
+          "visible": true,
+          "viewRule": "Admin",
+          "modifyRule": "Admin"
+        }
+      ]
+    }
+  ],
+  "certs": [],
+  "applications": [
+    {
+      "owner": "admin",
+      "name": "app-casibase",
+      "createdTime": "2023-01-01T00:00:00Z",
+      "displayName": "Casbin Gateway",
+      "logo": "https://cdn.casbin.org/img/casdoor-logo_1185x256.png",
+      "homepageUrl": "http://localhost:17000",
+      "organization": "casbin",
+      "cert": "cert-built-in",
+      "enablePassword": true,
+      "enableSignUp": true,
+      "enableSigninSession": true,
+      "enableAutoSignin": false,
+      "clientId": "af6b5aa958822fb9dc33",
+      "clientSecret": "8bc3010c1c951c8d876b1f311a901ff8deeb93bc",
+      "redirectUris": [
+        "http://localhost:17000/callback"
+      ],
+      "tokenFormat": "JWT",
+      "expireInHours": 168,
+      "refreshExpireInHours": 168,
+      "signupUrl": "",
+      "signinUrl": "",
+      "grantTypes": [
+        "authorization_code"
+      ],
+      "providers": [],
+      "signinMethods": [
+        {
+          "name": "Password",
+          "displayName": "Password",
+          "rule": "None"
+        }
+      ],
+      "signupItems": [
+        {
+          "name": "ID",
+          "visible": false,
+          "required": true,
+          "rule": "Random"
+        },
+        {
+          "name": "Username",
+          "visible": true,
+          "required": true,
+          "rule": "None"
+        },
+        {
+          "name": "Display name",
+          "visible": true,
+          "required": true,
+          "rule": "None"
+        },
+        {
+          "name": "Password",
+          "visible": true,
+          "required": true,
+          "rule": "None"
+        },
+        {
+          "name": "Confirm password",
+          "visible": true,
+          "required": true,
+          "rule": "None"
+        },
+        {
+          "name": "Agreement",
+          "visible": true,
+          "required": true,
+          "rule": "None"
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "owner": "casbin",
+      "name": "admin",
+      "createdTime": "2023-01-01T00:00:00Z",
+      "id": "gateway-admin-0001",
+      "type": "normal-user",
+      "password": "123",
+      "displayName": "Admin",
+      "avatar": "https://cdn.casbin.org/img/casbin.svg",
+      "email": "admin@example.com",
+      "phone": "12345678910",
+      "countryCode": "US",
+      "address": [],
+      "affiliation": "Casbin",
+      "tag": "staff",
+      "score": 2000,
+      "isAdmin": true,
+      "isForbidden": false,
+      "isDeleted": false,
+      "signupApplication": "app-casibase",
+      "properties": {}
+    }
+  ],
+  "providers": [],
+  "ldaps": [],
+  "models": [],
+  "permissions": [],
+  "payments": [],
+  "products": [],
+  "resources": [],
+  "roles": [],
+  "syncers": [],
+  "tokens": [],
+  "webhooks": [],
+  "groups": [],
+  "adapters": [],
+  "enforcers": []
+}

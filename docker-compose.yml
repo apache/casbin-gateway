@@ -1,22 +1,118 @@
-version: '3.1'
+# One-command quickstart for Casbin Gateway, bundled with a self-hosted Casdoor.
+#
+#   docker compose up --build
+#
+# Then open http://localhost:17000 and sign in with the seeded account:
+#   username: admin
+#   password: 123
+#
+# No private keys are shipped in this repo. Casdoor auto-generates its built-in
+# signing certificate on first boot; the cert-export step then hands that
+# certificate's public half to the gateway so it can verify login tokens. The
+# seeded admin/123 account is for LOCAL EVALUATION ONLY -- never use it in
+# production.
 services:
+  db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: "123"
+    # Not published to the host on purpose: the gateway and Casdoor reach MySQL
+    # over the compose network, so there is no clash with a local MySQL on 3306.
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p123"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  casdoor:
+    image: casbin/casdoor:3.154.3
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    # --createDatabase=true lets Casdoor create its own `casdoor` schema on first
+    # boot instead of requiring it to pre-exist.
+    entrypoint: ["/bin/sh", "-c", "./server --createDatabase=true"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./deploy/casdoor/app.conf:/conf/app.conf:ro
+      - ./deploy/casdoor/init_data.json:/init_data.json:ro
+
+  # Waits for Casdoor to create its built-in signing certificate, then exports
+  # that certificate's PUBLIC half to a shared volume for the gateway. This keeps
+  # the signing key inside Casdoor and out of the repo -- nothing secret is
+  # committed. Runs once and exits.
+  cert-export:
+    image: mysql:8.0
+    depends_on:
+      db:
+        condition: service_healthy
+      casdoor:
+        condition: service_started
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        echo "waiting for Casdoor built-in certificate...";
+        until CERT=$$(mysql --raw -N -s -h db -uroot -p123 \
+              -e "SELECT certificate FROM casdoor.cert WHERE owner='admin' AND name='cert-built-in'" 2>/dev/null) \
+              && [ -n "$$CERT" ]; do
+          sleep 2;
+        done;
+        printf '%s' "$$CERT" > /shared/token_jwt_key.pem;
+        echo "exported cert-built-in to /shared/token_jwt_key.pem";
+    volumes:
+      - casdoor-cert:/shared
+
   caswaf:
     build:
       context: ./
       dockerfile: Dockerfile
+      args:
+        # Baked into the frontend bundle so the browser reaches the bundled
+        # Casdoor at localhost:8000 (must be browser-reachable, not the compose
+        # service name).
+        REACT_APP_CASDOOR_SERVER_URL: "http://localhost:8000"
+        REACT_APP_CLIENT_ID: "af6b5aa958822fb9dc33"
+        REACT_APP_APP_NAME: "app-casibase"
+        REACT_APP_ORG_NAME: "casbin"
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+      casdoor:
+        condition: service_started
+      # Ensures /shared/token_jwt_key.pem exists before the gateway starts.
+      cert-export:
+        condition: service_completed_successfully
+    # Appended to the image ENTRYPOINT (wait-for-it db:3306 -- ./server), so the
+    # server creates the `caswaf` schema on first boot instead of panicking on a
+    # missing database.
+    command: ["--createDatabase=true"]
     ports:
       - "17000:17000"
-    depends_on:
-      - db
-    command: ["./wait-for-it", "db:3306", "--", "./server"]
-    volumes:
-      - ./conf:/conf/
-  db:
-    restart: always
-    image: mysql:8.0.25
-    ports:
-      - "3306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: 123
+      # Read via conf.GetConfigString, which prefers env vars over conf/app.conf.
+      dataSourceName: "root:123@tcp(db:3306)/"
+      dbName: "caswaf"
+      # The backend reaches Casdoor over the compose network by service name.
+      casdoorEndpoint: "http://casdoor:8000"
+      clientId: "af6b5aa958822fb9dc33"
+      clientSecret: "8bc3010c1c951c8d876b1f311a901ff8deeb93bc"
+      casdoorOrganization: "casbin"
+      casdoorApplication: "app-casibase"
+      # Verify Casdoor-issued JWTs with the cert exported from Casdoor above.
+      casdoorCertPath: "/shared/token_jwt_key.pem"
+      # Override the developer-private default in conf/app.conf with a writable
+      # path inside the container.
+      appDir: "/tmp/casbin-gateway-apps"
     volumes:
-      - /usr/local/docker/mysql:/var/lib/mysql
+      - casdoor-cert:/shared:ro
+
+volumes:
+  db-data:
+  casdoor-cert:

@@ -57,9 +57,42 @@ Casbin Gateway uses Casdoor to manage members. So you need to create an organiza
 
 ### Deployment Options
 
+- **Docker Compose (recommended for a first run)**: one command brings up the whole stack, including a bundled Casdoor — see [Quick start](#quick-start-docker-compose) below
 - **[Kubernetes Deployment](k8s/README.md)**: Deploy Casbin Gateway on Kubernetes with complete manifests and guide
-- **Docker Compose**: Use the provided `docker-compose.yml` for quick local setup
-- **Manual Installation**: Build and run from source
+- **Manual Installation**: Build and run from source (see [Necessary configuration](#necessary-configuration))
+
+### Quick start (Docker Compose)
+
+Try Casbin Gateway end to end without installing MySQL or setting up Casdoor by
+hand. From the repository root:
+
+```shell
+docker compose up --build
+```
+
+This starts three services:
+
+| Service   | Port  | Description                                  |
+|-----------|-------|----------------------------------------------|
+| `caswaf`  | 17000 | Casbin Gateway (backend + built web UI)      |
+| `casdoor` | 8000  | Bundled, self-hosted Casdoor for login       |
+| `db`      | 3306  | MySQL 8 (databases `caswaf` and `casdoor`)   |
+
+Once all three are up, open **http://localhost:17000** and sign in with the
+seeded account:
+
+- **username:** `admin`
+- **password:** `123`
+
+The Casdoor organization, application, and admin user are seeded automatically
+from [`deploy/casdoor/init_data.json`](deploy/casdoor/init_data.json) on first
+boot. No private keys are shipped in this repository: Casdoor generates its own
+signing certificate on first boot, and a one-shot `cert-export` step hands that
+certificate's public half to the gateway so it can verify login tokens.
+
+> ⚠️ The bundled Casdoor and the `admin/123` account are for **local evaluation
+> only**. For any real deployment, point `casdoorEndpoint` / `clientId` /
+> `clientSecret` at your own Casdoor instance and remove these demo credentials.
 
 ### Necessary configuration
 
