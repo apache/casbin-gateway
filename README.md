@@ -51,14 +51,22 @@ Casbin Gateway contains 2 parts:
 | Frontend | Web frontend UI for Casbin Gateway     | Javascript + React     | https://github.com/apache/casbin-gateway/tree/master/web |
 | Backend  | RESTful API backend for Casbin Gateway | Golang + Beego + MySQL | https://github.com/apache/casbin-gateway                 |
 
-## Installation
+## Quick start
 
-Casbin Gateway uses Casdoor to manage members. So you need to create an organization and an application for Casbin Gateway in a Casdoor instance.
+The bundled configuration uses Casbin's public Casdoor demo application, so the management UI can be started without creating a Casdoor application first:
+
+```shell
+docker compose up --build
+```
+
+Open http://localhost:17000/ after the containers are healthy.
+
+## Installation
 
 ### Deployment Options
 
 - **[Kubernetes Deployment](k8s/README.md)**: Deploy Casbin Gateway on Kubernetes with complete manifests and guide
-- **Docker Compose**: Use the provided `docker-compose.yml` for quick local setup
+- **Docker Compose**: Use the quick start above
 - **Manual Installation**: Build and run from source
 
 ### Necessary configuration
@@ -66,15 +74,8 @@ Casbin Gateway uses Casdoor to manage members. So you need to create an organiza
 #### Get the code
 
 ```shell
-go get github.com/casdoor/casdoor
-go get github.com/apache/casbin-gateway
-```
-
-or
-
-```shell
-git clone https://github.com/casdoor/casdoor
 git clone https://github.com/apache/casbin-gateway
+cd casbin-gateway
 ```
 
 #### Setup database
@@ -89,12 +90,27 @@ Casbin Gateway uses XORM to connect to DB, so all DBs supported by XORM can also
 
 #### Configure Casdoor
 
-After creating an organization and an application for Casbin Gateway in a Casdoor, you need to update `clientID`, `clientSecret`, `casdoorOrganization` and `casdoorApplication` in app.conf.
+The default frontend configuration and embedded JWT public key are paired with the public application at `door.casdoor.com`. Changing only the backend environment variables is not enough to use a self-hosted Casdoor instance.
+
+To use a self-hosted Casdoor instance, update `clientId`, `clientSecret`, `casdoorEndpoint`, `casdoorOrganization`, and `casdoorApplication` in `conf/app.conf`, update the matching values in `web/src/Conf.js`, and replace `casdoor/token_jwt_key.pem` with that instance's public key before rebuilding Casbin Gateway.
+
+Backend configuration values can also be supplied as environment variables with the same names. Environment variables take precedence over `conf/app.conf`.
 
 #### Run Casbin Gateway
 
-- Configure and run Casbin Gateway by yourself. If you want to learn more, see the [documentation](https://caswaf.org).
-- Open browser: http://localhost:16001/
+Build the frontend, then run the backend:
+
+```shell
+cd web
+yarn install
+yarn build
+cd ..
+go run .
+```
+
+Open http://localhost:17000/.
+
+For frontend development, run `yarn start` in `web/` and open http://localhost:16001/. The development frontend sends API requests to the backend on port 17000, so keep `go run .` running in another terminal.
 
 ### Optional configuration
 

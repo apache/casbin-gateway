@@ -1,0 +1,9 @@
+services:
+  caswaf:
+    environment:
+      dataSourceName: root:123@tcp(db:3306)/
+      clientId: ${CASDOOR_CLIENT_ID:-af6b5aa958822fb9dc33}
+      clientSecret: ${CASDOOR_CLIENT_SECRET:-8bc3010c1c951c8d876b1f311a901ff8deeb93bc}
+      casdoorEndpoint: ${CASDOOR_ENDPOINT:-https://door.casdoor.com}
+      casdoorOrganization: ${CASDOOR_ORGANIZATION:-casbin}
+      casdoorApplication: ${CASDOOR_APPLICATION:-app-casibase}

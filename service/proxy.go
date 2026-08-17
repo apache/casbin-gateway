@@ -24,10 +24,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/apache/casbin-gateway/conf"
 	"github.com/apache/casbin-gateway/object"
 	"github.com/apache/casbin-gateway/rule"
 	"github.com/apache/casbin-gateway/util"
-	"github.com/beego/beego"
 )
 
 func forwardHandler(targetUrl string, writer http.ResponseWriter, request *http.Request) {
@@ -327,24 +327,14 @@ func Start() {
 	serverMux.HandleFunc("/caswaf-handler", handleAuthCallback)
 	serverMux.HandleFunc("/caswaf-captcha-verify", handleCaptchaCallback)
 
-	gatewayEnabled, err := beego.AppConfig.Bool("gatewayEnabled")
-	if err != nil {
-		panic(err)
-	}
+	gatewayEnabled := conf.GetConfigBool("gatewayEnabled")
 	if !gatewayEnabled {
 		fmt.Printf("Casbin Gateway not enabled (gatewayEnabled == \"false\")\n")
 		return
 	}
 
-	gatewayHttpPort, err := beego.AppConfig.Int("gatewayHttpPort")
-	if err != nil {
-		panic(err)
-	}
-
-	gatewayHttpsPort, err := beego.AppConfig.Int("gatewayHttpsPort")
-	if err != nil {
-		panic(err)
-	}
+	gatewayHttpPort := conf.GetConfigInt("gatewayHttpPort")
+	gatewayHttpsPort := conf.GetConfigInt("gatewayHttpsPort")
 
 	go func() {
 		fmt.Printf("Casbin Gateway running on: http://127.0.0.1:%d\n", gatewayHttpPort)

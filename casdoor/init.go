@@ -17,7 +17,7 @@ package casdoor
 import (
 	_ "embed"
 
-	"github.com/beego/beego"
+	"github.com/apache/casbin-gateway/conf"
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
 )
 
@@ -25,10 +25,10 @@ import (
 var JwtPublicKey string
 
 func InitCasdoorConfig() {
-	casdoorEndpoint := beego.AppConfig.String("casdoorEndpoint")
-	clientId := beego.AppConfig.String("clientId")
-	clientSecret := beego.AppConfig.String("clientSecret")
-	casdoorOrganization := beego.AppConfig.String("casdoorOrganization")
-	casdoorApplication := beego.AppConfig.String("casdoorApplication")
+	casdoorEndpoint := conf.GetConfigString("casdoorEndpoint")
+	clientId := conf.GetConfigString("clientId")
+	clientSecret := conf.GetConfigString("clientSecret")
+	casdoorOrganization := conf.GetConfigString("casdoorOrganization")
+	casdoorApplication := conf.GetConfigString("casdoorApplication")
 	casdoorsdk.InitConfig(casdoorEndpoint, clientId, clientSecret, JwtPublicKey, casdoorOrganization, casdoorApplication)
 }
