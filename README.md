@@ -61,6 +61,8 @@ Casbin Gateway uses Casdoor to manage members. So you need to create an organiza
 - **Docker Compose**: Use the provided `docker-compose.yml` for quick local setup
 - **Manual Installation**: Build and run from source
 
+The reverse-proxy gateway on ports 80 and 443 is disabled by default, so starting the management application does not take over those ports. Set `gatewayEnabled = true` in `conf/app.conf` when you are ready to use the WAF proxy.
+
 ### Necessary configuration
 
 #### Get the code

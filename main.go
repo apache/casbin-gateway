@@ -91,38 +91,6 @@ func main() {
 
 	port := beego.AppConfig.DefaultInt("httpport", 17000)
 
-	// Stop old instances on all ports before starting new services
-	// Check gateway ports first since they bind first in service.Start()
-	gatewayEnabled, err := beego.AppConfig.Bool("gatewayEnabled")
-	if err != nil {
-		panic(err)
-	}
-
-	if gatewayEnabled {
-		gatewayHttpPort, err := beego.AppConfig.Int("gatewayHttpPort")
-		if err != nil {
-			panic(err)
-		}
-		err = util.StopOldInstance(gatewayHttpPort)
-		if err != nil {
-			panic(err)
-		}
-
-		gatewayHttpsPort, err := beego.AppConfig.Int("gatewayHttpsPort")
-		if err != nil {
-			panic(err)
-		}
-		err = util.StopOldInstance(gatewayHttpsPort)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	err = util.StopOldInstance(port)
-	if err != nil {
-		panic(err)
-	}
-
 	service.Start()
 
 	beego.Run(fmt.Sprintf(":%v", port))
