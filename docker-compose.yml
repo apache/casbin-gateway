@@ -1,4 +1,3 @@
-version: '3.1'
 services:
   caswaf:
     build:
@@ -6,17 +5,9 @@ services:
       dockerfile: Dockerfile
     ports:
       - "17000:17000"
-    depends_on:
-      - db
-    command: ["./wait-for-it", "db:3306", "--", "./server"]
     volumes:
       - ./conf:/conf/
-  db:
-    restart: always
-    image: mysql:8.0.25
-    ports:
-      - "3306:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: 123
-    volumes:
-      - /usr/local/docker/mysql:/var/lib/mysql
+      - gateway-data:/data
+
+volumes:
+  gateway-data:

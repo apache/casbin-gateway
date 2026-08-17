@@ -18,6 +18,8 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
+	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -63,14 +65,25 @@ func InitConfig() {
 }
 
 func InitAdapter() {
+	driverName := conf.GetConfigString("driverName")
+	dataSourceName := conf.GetConfigDataSourceName()
+	if driverName == "sqlite" {
+		dir := filepath.Dir(dataSourceName)
+		if dir != "." {
+			if err := os.MkdirAll(dir, 0o755); err != nil {
+				panic(err)
+			}
+		}
+	}
+
 	if createDatabase {
-		err := createDatabaseForPostgres(conf.GetConfigString("driverName"), conf.GetConfigDataSourceName(), conf.GetConfigString("dbName"))
+		err := createDatabaseForPostgres(driverName, dataSourceName, conf.GetConfigString("dbName"))
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	ormer = NewAdapter(conf.GetConfigString("driverName"), conf.GetConfigDataSourceName(), conf.GetConfigString("dbName"))
+	ormer = NewAdapter(driverName, dataSourceName, conf.GetConfigString("dbName"))
 
 	tableNamePrefix := conf.GetConfigString("tableNamePrefix")
 	tbMapper := core.NewPrefixMapper(core.SnakeMapper{}, tableNamePrefix)
@@ -98,7 +111,7 @@ func PingDatabase() error {
 	return ormer.Engine.Ping()
 }
 
-// Ormer represents the MySQL adapter for policy storage.
+// Ormer represents the database adapter for policy storage.
 type Ormer struct {
 	driverName     string
 	dataSourceName string
@@ -152,7 +165,7 @@ func createDatabaseForPostgres(driverName string, dataSourceName string, dbName 
 }
 
 func (a *Ormer) CreateDatabase() error {
-	if a.driverName == "postgres" {
+	if a.driverName != "mysql" {
 		return nil
 	}
 

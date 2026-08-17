@@ -104,8 +104,12 @@ type DataCount struct {
 
 func GetMetrics(dataType string, startAt time.Time, top int) (*[]DataCount, error) {
 	var dataCounts []DataCount
+	createdAfter := "UNIX_TIMESTAMP(created_time) > ?"
+	if ormer.driverName == "sqlite" {
+		createdAfter = "CAST(strftime('%s', created_time) AS INTEGER) > ?"
+	}
 	err := ormer.Engine.Table("record").
-		Where("UNIX_TIMESTAMP(created_time) > ?", startAt.Unix()).
+		Where(createdAfter, startAt.Unix()).
 		Select(dataType + " as data, COUNT(*) as count").
 		GroupBy("data").
 		Desc("count").
@@ -120,8 +124,13 @@ func GetMetrics(dataType string, startAt time.Time, top int) (*[]DataCount, erro
 func GetMetricsOverTime(startAt time.Time, timeType string) (*[]DataCount, error) {
 	var dataCounts []DataCount
 	createdTime := "DATE_FORMAT(created_time, '" + timeType2Format(timeType) + "')"
+	createdAfter := "UNIX_TIMESTAMP(created_time) > ?"
+	if ormer.driverName == "sqlite" {
+		createdTime = "strftime('" + timeType2Format(timeType) + "', created_time)"
+		createdAfter = "CAST(strftime('%s', created_time) AS INTEGER) > ?"
+	}
 	err := ormer.Engine.Table("record").
-		Where("UNIX_TIMESTAMP(created_time) > ?", startAt.Unix()).
+		Where(createdAfter, startAt.Unix()).
 		GroupBy(createdTime).
 		Select(createdTime + " as data, COUNT(*) as count").
 		Asc("data").

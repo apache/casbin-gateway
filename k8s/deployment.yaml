@@ -15,17 +15,6 @@ spec:
         app: caswaf
     spec:
       initContainers:
-        - name: wait-for-mysql
-          image: busybox:1.36
-          command:
-            - sh
-            - -c
-            - |
-              until timeout 1 sh -c 'cat < /dev/null > /dev/tcp/caswaf-mysql/3306' 2>/dev/null; do
-                echo "Waiting for MySQL to be ready..."
-                sleep 2
-              done
-              echo "MySQL is ready!"
         - name: setup-config
           image: busybox:1.36
           command:
@@ -36,11 +25,6 @@ spec:
               PLACEHOLDER="CHANGEME_INSECURE_DEFAULT_REPLACE_THIS"
               
               # Validate that secrets have been replaced
-              if [ "$MYSQL_PASSWORD" = "$PLACEHOLDER" ]; then
-                echo "ERROR: MySQL password has not been configured!"
-                echo "Please update k8s/secret.yaml with your actual MySQL password"
-                exit 1
-              fi
               if [ "$CASDOOR_CLIENT_ID" = "$PLACEHOLDER" ]; then
                 echo "ERROR: Casdoor client ID has not been configured!"
                 echo "Please update k8s/secret.yaml with your actual Casdoor client ID"
@@ -54,16 +38,10 @@ spec:
               
               # All validations passed, proceed with configuration
               cp /tmp/config/app.conf /conf-out/app.conf
-              sed -i "s/MYSQL_PASSWORD_PLACEHOLDER/${MYSQL_PASSWORD}/g" /conf-out/app.conf
               sed -i "s/CLIENT_ID_PLACEHOLDER/${CASDOOR_CLIENT_ID}/g" /conf-out/app.conf
               sed -i "s/CLIENT_SECRET_PLACEHOLDER/${CASDOOR_CLIENT_SECRET}/g" /conf-out/app.conf
               echo "Configuration prepared successfully"
           env:
-            - name: MYSQL_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: caswaf-secrets
-                  key: mysql-password
             - name: CASDOOR_CLIENT_ID
               valueFrom:
                 secretKeyRef:
@@ -82,6 +60,7 @@ spec:
       containers:
         - name: caswaf
           image: casbin/caswaf:latest
+          command: ["./server"]
           ports:
             - containerPort: 17000
               name: http
@@ -92,6 +71,8 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /conf
+            - name: data
+              mountPath: /data
           livenessProbe:
             tcpSocket:
               port: 17000
@@ -119,6 +100,9 @@ spec:
             name: caswaf-config
         - name: config
           emptyDir: {}
+        - name: data
+          persistentVolumeClaim:
+            claimName: caswaf-data
 ---
 apiVersion: v1
 kind: Service

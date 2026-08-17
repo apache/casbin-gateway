@@ -1,0 +1,17 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: caswaf
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: caswaf-data
+  namespace: caswaf
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

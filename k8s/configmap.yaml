@@ -11,9 +11,9 @@ data:
     runmode = prod
     SessionOn = true
     copyrequestbody = true
-    driverName = mysql
-    dataSourceName = root:MYSQL_PASSWORD_PLACEHOLDER@tcp(caswaf-mysql:3306)/
-    dbName = caswaf
+    driverName = sqlite
+    dataSourceName = /data/casbin-gateway.db
+    dbName =
     redisEndpoint =
     gatewayEnabled = false
     gatewayHttpPort = 80

@@ -25,6 +25,9 @@ tmpFiles/
 *.tmp
 logs/
 data/agent-patches/
+data/*.db
+data/*.db-shm
+data/*.db-wal
 lastupdate.tmp
 commentsRouter*.go
 acme_account.key

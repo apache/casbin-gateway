@@ -49,7 +49,7 @@ Casbin Gateway contains 2 parts:
 | Name     | Description                            | Language               | Source code                                              |
 |----------|----------------------------------------|------------------------|----------------------------------------------------------|
 | Frontend | Web frontend UI for Casbin Gateway     | Javascript + React     | https://github.com/apache/casbin-gateway/tree/master/web |
-| Backend  | RESTful API backend for Casbin Gateway | Golang + Beego + MySQL | https://github.com/apache/casbin-gateway                 |
+| Backend  | RESTful API backend for Casbin Gateway | Golang + Beego + SQLite | https://github.com/apache/casbin-gateway                |
 
 ## Installation
 
@@ -67,15 +67,9 @@ The reverse-proxy gateway on ports 80 and 443 is disabled by default, so startin
 
 From nothing to a request flowing through the gateway, in five steps.
 
-#### 1. Start MySQL
+#### 1. Use the default SQLite database
 
-Any MySQL 5.7+ reachable from Gateway will do. With Docker:
-
-```bash
-docker run -d --name caswaf-db -p 3306:3306 -e MYSQL_ROOT_PASSWORD=123 mysql:8.0.25
-```
-
-Gateway creates the `caswaf` database itself on first start. If your MySQL is elsewhere, or the password is not `123`, change `dataSourceName` in `conf/app.conf`.
+No database setup is required. Gateway creates `data/casbin-gateway.db` automatically on first start. MySQL and PostgreSQL remain available as optional external databases through `conf/app.conf`.
 
 #### 2. Build the web UI
 
@@ -104,7 +98,7 @@ It prints a summary of what it is actually doing — ports, whether the reverse 
 | Reverse proxy  | enabled                                                    |
 | Gateway HTTP   | :8080                                                      |
 | Gateway HTTPS  | :8443                                                      |
-| Database       | mysql, database "caswaf" (connected)                       |
+| Database       | sqlite, file "data/casbin-gateway.db" (connected)           |
 | Sign-in        | built-in user table, Casdoor is not configured             |
 | App dir        | ./data/apps                                                |
 +----------------+-----------------------------------------------------------+
@@ -156,13 +150,17 @@ git clone https://github.com/apache/casbin-gateway
 
 #### Setup database
 
-Casbin Gateway will store its users, nodes and topics information in a MySQL database named: `caswaf`, will create it if not existed. The DB connection string can be specified at: https://github.com/apache/casbin-gateway/blob/master/conf/app.conf
+Casbin Gateway uses SQLite by default and creates `data/casbin-gateway.db` automatically. No separate database service is required for native, Docker Compose, or Kubernetes deployments.
 
 ```ini
-dataSourceName = root:123@tcp(localhost:3306)/
+driverName = sqlite
+dataSourceName = data/casbin-gateway.db
+dbName =
 ```
 
-Casbin Gateway uses XORM to connect to DB, so all DBs supported by XORM can also be used.
+Docker Compose stores the database in the `gateway-data` volume. Kubernetes stores it in the `caswaf-data` persistent volume claim.
+
+MySQL and PostgreSQL remain available when an external database is needed. Set `driverName`, `dataSourceName`, and `dbName` in `conf/app.conf` for the selected database.
 
 #### Run Casbin Gateway
 

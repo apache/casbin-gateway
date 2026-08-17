@@ -77,9 +77,13 @@ func describeGatewayPort(port int) string {
 }
 
 func describeDatabase() string {
-	// The connection string holds the database password, so only the driver and
-	// the database name are ever printed.
-	target := fmt.Sprintf("%s, database \"%s\"", unquote(conf.GetConfigString("driverName")), unquote(conf.GetConfigString("dbName")))
+	// External connection strings can contain passwords, so only SQLite's local
+	// file path is safe to show in full.
+	driverName := unquote(conf.GetConfigString("driverName"))
+	target := fmt.Sprintf("%s, database \"%s\"", driverName, unquote(conf.GetConfigString("dbName")))
+	if driverName == "sqlite" {
+		target = fmt.Sprintf("sqlite, file \"%s\"", unquote(conf.GetConfigDataSourceName()))
+	}
 
 	err := object.PingDatabase()
 	if err != nil {
