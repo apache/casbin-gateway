@@ -24,10 +24,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/apache/casbin-gateway/conf"
 	"github.com/apache/casbin-gateway/object"
 	"github.com/apache/casbin-gateway/rule"
 	"github.com/apache/casbin-gateway/util"
-	"github.com/beego/beego"
 )
 
 func forwardHandler(targetUrl string, writer http.ResponseWriter, request *http.Request) {
@@ -70,10 +70,10 @@ func forwardHandler(targetUrl string, writer http.ResponseWriter, request *http.
 				for _, cookie := range cookies {
 					// Check if Secure attribute is already present (case-insensitive)
 					cookieLower := strings.ToLower(cookie)
-					hasSecure := strings.Contains(cookieLower, ";secure;") || 
-					             strings.Contains(cookieLower, "; secure;") ||
-					             strings.HasSuffix(cookieLower, ";secure") ||
-					             strings.HasSuffix(cookieLower, "; secure")
+					hasSecure := strings.Contains(cookieLower, ";secure;") ||
+						strings.Contains(cookieLower, "; secure;") ||
+						strings.HasSuffix(cookieLower, ";secure") ||
+						strings.HasSuffix(cookieLower, "; secure")
 					if !hasSecure {
 						cookie = cookie + "; Secure"
 					}
@@ -85,7 +85,7 @@ func forwardHandler(targetUrl string, writer http.ResponseWriter, request *http.
 		// Fix CORS issue: Remove CORS header combinations that allow credential theft from any origin
 		allowOrigin := resp.Header.Get("Access-Control-Allow-Origin")
 		allowCredentials := resp.Header.Get("Access-Control-Allow-Credentials")
-		
+
 		// Remove CORS headers when the combination is present:
 		// 1. Access-Control-Allow-Credentials: true with Access-Control-Allow-Origin: *
 		//    This is actually blocked by browsers but we sanitize it anyway
@@ -327,24 +327,14 @@ func Start() {
 	serverMux.HandleFunc("/caswaf-handler", handleAuthCallback)
 	serverMux.HandleFunc("/caswaf-captcha-verify", handleCaptchaCallback)
 
-	gatewayEnabled, err := beego.AppConfig.Bool("gatewayEnabled")
-	if err != nil {
-		panic(err)
-	}
+	gatewayEnabled := conf.GetConfigBool("gatewayEnabled")
 	if !gatewayEnabled {
 		fmt.Printf("Casbin Gateway not enabled (gatewayEnabled == \"false\")\n")
 		return
 	}
 
-	gatewayHttpPort, err := beego.AppConfig.Int("gatewayHttpPort")
-	if err != nil {
-		panic(err)
-	}
-
-	gatewayHttpsPort, err := beego.AppConfig.Int("gatewayHttpsPort")
-	if err != nil {
-		panic(err)
-	}
+	gatewayHttpPort := conf.GetConfigInt("gatewayHttpPort")
+	gatewayHttpsPort := conf.GetConfigInt("gatewayHttpsPort")
 
 	go func() {
 		fmt.Printf("Casbin Gateway running on: http://127.0.0.1:%d\n", gatewayHttpPort)

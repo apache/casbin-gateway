@@ -89,39 +89,7 @@ func main() {
 	}
 	beego.BConfig.WebConfig.Session.SessionGCMaxLifetime = 3600 * 24 * 365
 
-	port := beego.AppConfig.DefaultInt("httpport", 17000)
-
-	// Stop old instances on all ports before starting new services
-	// Check gateway ports first since they bind first in service.Start()
-	gatewayEnabled, err := beego.AppConfig.Bool("gatewayEnabled")
-	if err != nil {
-		panic(err)
-	}
-
-	if gatewayEnabled {
-		gatewayHttpPort, err := beego.AppConfig.Int("gatewayHttpPort")
-		if err != nil {
-			panic(err)
-		}
-		err = util.StopOldInstance(gatewayHttpPort)
-		if err != nil {
-			panic(err)
-		}
-
-		gatewayHttpsPort, err := beego.AppConfig.Int("gatewayHttpsPort")
-		if err != nil {
-			panic(err)
-		}
-		err = util.StopOldInstance(gatewayHttpsPort)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	err = util.StopOldInstance(port)
-	if err != nil {
-		panic(err)
-	}
+	port := conf.GetConfigInt("httpport")
 
 	service.Start()
 

@@ -13,25 +13,14 @@ jobs:
   go-tests:
     name: Running Go tests
     runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:5.7
-        env:
-          MYSQL_DATABASE: casdoor
-          MYSQL_ROOT_PASSWORD: 123456
-        ports:
-          - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
         with:
-          go-version: '1.20.0'
+          go-version-file: go.mod
           cache-dependency-path: ./go.mod
       - name: Tests
-        run: |
-        # go test -v $(go list ./...) -tags skipCi
-        working-directory: ./
+        run: go test -v ./agent ./controllers ./rule
 
   frontend:
     name: Front-end

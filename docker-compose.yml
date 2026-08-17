@@ -1,4 +1,3 @@
-version: '3.1'
 services:
   caswaf:
     build:
@@ -7,8 +6,15 @@ services:
     ports:
       - "17000:17000"
     depends_on:
-      - db
-    command: ["./wait-for-it", "db:3306", "--", "./server"]
+      db:
+        condition: service_healthy
+    environment:
+      dataSourceName: root:123@tcp(db:3306)/
+      clientId: ${CASDOOR_CLIENT_ID:-}
+      clientSecret: ${CASDOOR_CLIENT_SECRET:-}
+      casdoorEndpoint: ${CASDOOR_ENDPOINT:-https://door.casdoor.com}
+      casdoorOrganization: ${CASDOOR_ORGANIZATION:-casbin}
+      casdoorApplication: ${CASDOOR_APPLICATION:-app-casbin-gateway}
     volumes:
       - ./conf:/conf/
   db:
@@ -18,5 +24,13 @@ services:
       - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: 123
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p123"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     volumes:
-      - /usr/local/docker/mysql:/var/lib/mysql
+      - mysql-data:/var/lib/mysql
+
+volumes:
+  mysql-data:

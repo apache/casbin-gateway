@@ -1,5 +1,5 @@
 <h1 align="center" style="border-bottom: none;">📦⚡️ Casbin Gateway</h1>
-<h3 align="center">An open-source Web Application Firewall (WAF) software developed by Go and React.</h3>
+<h3 align="center">An open-source WAF, LLM gateway, and AI agent monitoring platform built with Go and React.</h3>
 <p align="center">
   <a href="#badge">
     <img alt="semantic-release" src="https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg">
@@ -14,6 +14,12 @@
     <img alt="Docker Image Version (latest semver)" src="https://img.shields.io/badge/Docker%20Hub-latest-brightgreen">
   </a>
 </p>
+
+Casbin Gateway (formerly CasWAF) provides:
+
+- a reverse proxy with Coraza WAF rules and automatic TLS certificates;
+- an OpenAI-compatible LLM gateway at `/v1/chat/completions`, with channel management and failover;
+- local AI agent discovery, patching, live activity records, and session inspection.
 
 <p align="center">
   <a href="https://goreportcard.com/report/github.com/apache/casbin-gateway">
@@ -51,14 +57,29 @@ Casbin Gateway contains 2 parts:
 | Frontend | Web frontend UI for Casbin Gateway     | Javascript + React     | https://github.com/apache/casbin-gateway/tree/master/web |
 | Backend  | RESTful API backend for Casbin Gateway | Golang + Beego + MySQL | https://github.com/apache/casbin-gateway                 |
 
-## Installation
+## Quick start
 
-Casbin Gateway uses Casdoor to manage members. So you need to create an organization and an application for Casbin Gateway in a Casdoor instance.
+Casbin Gateway uses [Casdoor](https://casdoor.org/) for login. Create an organization and application in an existing Casdoor instance, then start the gateway with their values:
+
+```shell
+export CASDOOR_ENDPOINT=https://door.example.com
+export CASDOOR_CLIENT_ID=your-client-id
+export CASDOOR_CLIENT_SECRET=your-client-secret
+export CASDOOR_ORGANIZATION=your-organization
+export CASDOOR_APPLICATION=your-application
+docker compose up --build
+```
+
+Open http://localhost:17000/ after the containers are healthy. MySQL data is stored in the Compose-managed `mysql-data` volume.
+
+The reverse-proxy gateway on ports 80 and 443 is disabled by default, so starting the management application does not take over those ports. Set `gatewayEnabled = true` in `conf/app.conf` when you are ready to use the WAF proxy.
+
+## Installation
 
 ### Deployment Options
 
 - **[Kubernetes Deployment](k8s/README.md)**: Deploy Casbin Gateway on Kubernetes with complete manifests and guide
-- **Docker Compose**: Use the provided `docker-compose.yml` for quick local setup
+- **Docker Compose**: Use the quick start above
 - **Manual Installation**: Build and run from source
 
 ### Necessary configuration
@@ -66,15 +87,8 @@ Casbin Gateway uses Casdoor to manage members. So you need to create an organiza
 #### Get the code
 
 ```shell
-go get github.com/casdoor/casdoor
-go get github.com/apache/casbin-gateway
-```
-
-or
-
-```shell
-git clone https://github.com/casdoor/casdoor
 git clone https://github.com/apache/casbin-gateway
+cd casbin-gateway
 ```
 
 #### Setup database
@@ -89,12 +103,25 @@ Casbin Gateway uses XORM to connect to DB, so all DBs supported by XORM can also
 
 #### Configure Casdoor
 
-After creating an organization and an application for Casbin Gateway in a Casdoor, you need to update `clientID`, `clientSecret`, `casdoorOrganization` and `casdoorApplication` in app.conf.
+After creating an organization and application for Casbin Gateway in Casdoor, update `clientId`, `clientSecret`, `casdoorEndpoint`, `casdoorOrganization`, and `casdoorApplication` in `conf/app.conf`.
+
+These settings, along with `httpport`, `gatewayEnabled`, `gatewayHttpPort`, `gatewayHttpsPort`, and `dataSourceName`, can also be supplied as environment variables with the same names. Environment variables take precedence over `conf/app.conf`.
 
 #### Run Casbin Gateway
 
-- Configure and run Casbin Gateway by yourself. If you want to learn more, see the [documentation](https://caswaf.org).
-- Open browser: http://localhost:16001/
+Build the frontend, then run the backend:
+
+```shell
+cd web
+yarn install
+yarn build
+cd ..
+go run .
+```
+
+Open http://localhost:17000/.
+
+For frontend development, run `yarn start` in `web/` and open http://localhost:16001/. The development frontend sends API requests to the backend on port 17000, so keep `go run .` running in another terminal.
 
 ### Optional configuration
 
