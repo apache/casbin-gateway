@@ -62,7 +62,7 @@ export default function SiteEditPage({account}: {account: Account}) {
       if (res.status === "ok") {
         setSite(res.data);
       } else {
-        Setting.showMessage("error", `Failed to get site: ${res.msg}`);
+        Setting.showMessage("error", `${i18next.t("site:Failed to get site")}: ${res.msg}`);
       }
     });
   }, [owner, siteName]);
@@ -113,13 +113,13 @@ export default function SiteEditPage({account}: {account: Account}) {
     SiteBackend.updateSite(site.owner, siteName, Setting.deepCopy(site))
       .then(res => {
         if (res.status === "error") {
-          Setting.showMessage("error", `Failed to save: ${res.msg}`);
+          Setting.showMessage("error", `${i18next.t("site:Failed to save")}: ${res.msg}`);
         } else {
-          Setting.showMessage("success", "Successfully saved");
+          Setting.showMessage("success", i18next.t("site:Successfully saved"));
           navigate(`/sites/${site.owner}/${site.name}`);
         }
       })
-      .catch(error => Setting.showMessage("error", `failed to save: ${error}`));
+      .catch(error => Setting.showMessage("error", `${i18next.t("site:Failed to save")}: ${error}`));
   };
 
   if (site === null) {

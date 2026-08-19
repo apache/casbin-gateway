@@ -14,6 +14,7 @@
 
 import * as React from "react";
 import {CircleCheck, CircleMinus, RefreshCw} from "lucide-react";
+import i18next from "i18next";
 
 import * as Setting from "@/Setting";
 import {DataTable, type Column} from "@/components/DataTable";
@@ -107,7 +108,7 @@ export function NodeTable({
       render: (text: string, _record, index) => (
         <Select value={text || undefined} onValueChange={value => updateField(index, "name", value)}>
           <SelectTrigger>
-            <SelectValue placeholder="Node" />
+            <SelectValue placeholder={i18next.t("node:Node")} />
           </SelectTrigger>
           <SelectContent>
             {availableNodes(text).map(node => (

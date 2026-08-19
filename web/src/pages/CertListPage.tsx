@@ -63,7 +63,7 @@ export default function CertListPage({account}: {account: Account}) {
           setPage(nextPage);
           setPageSize(nextPageSize);
         } else {
-          Setting.showMessage("error", `Failed to get certs: ${res.msg}`);
+          Setting.showMessage("error", `${i18next.t("cert:Failed to get certs")}: ${res.msg}`);
         }
       });
     },
@@ -80,39 +80,39 @@ export default function CertListPage({account}: {account: Account}) {
     CertBackend.addCert(newCert(account.name))
       .then(res => {
         if (res.status === "error") {
-          Setting.showMessage("error", `Failed to add: ${res.msg}`);
+          Setting.showMessage("error", `${i18next.t("cert:Failed to add")}: ${res.msg}`);
         } else {
-          Setting.showMessage("success", "Cert added successfully");
+          Setting.showMessage("success", i18next.t("cert:Cert added successfully"));
           fetchCerts();
         }
       })
-      .catch(error => Setting.showMessage("error", `Cert failed to add: ${error}`));
+      .catch(error => Setting.showMessage("error", `${i18next.t("cert:Failed to add")}: ${error}`));
   };
 
   const deleteCert = (cert: Cert) => {
     CertBackend.deleteCert(cert)
       .then(res => {
         if (res.status === "error") {
-          Setting.showMessage("error", `Failed to delete: ${res.msg}`);
+          Setting.showMessage("error", `${i18next.t("cert:Failed to delete")}: ${res.msg}`);
         } else {
-          Setting.showMessage("success", "Cert deleted successfully");
+          Setting.showMessage("success", i18next.t("cert:Cert deleted successfully"));
           fetchCerts();
         }
       })
-      .catch(error => Setting.showMessage("error", `Cert failed to delete: ${error}`));
+      .catch(error => Setting.showMessage("error", `${i18next.t("cert:Failed to delete")}: ${error}`));
   };
 
   const refreshCert = (cert: Cert) => {
     CertBackend.refreshDomainExpire(cert.owner, cert.name)
       .then(res => {
         if (res.status === "error") {
-          Setting.showMessage("error", `Failed to refresh domain expire: ${res.msg}`);
+          Setting.showMessage("error", `${i18next.t("cert:Failed to refresh domain expire")}: ${res.msg}`);
         } else {
-          Setting.showMessage("success", "Domain expire refresh successfully");
+          Setting.showMessage("success", i18next.t("cert:Domain expire refresh successfully"));
           fetchCerts();
         }
       })
-      .catch(error => Setting.showMessage("error", `Domain expire failed to refresh: ${error}`));
+      .catch(error => Setting.showMessage("error", `${i18next.t("cert:Failed to refresh domain expire")}: ${error}`));
   };
 
   const copyButton = (text: string, prefix: RegExp, message: string) => (
@@ -224,7 +224,7 @@ export default function CertListPage({account}: {account: Account}) {
             {i18next.t("general:Edit")}
           </Button>
           <ConfirmButton
-            title={`Sure to delete cert: ${record.name} ?`}
+            title={i18next.t("cert:Sure to delete cert: {name} ?").replace("{name}", record.name)}
             onConfirm={() => deleteCert(record)}
           >
             <Button size="sm" variant="destructive">

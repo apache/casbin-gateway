@@ -199,8 +199,10 @@ export function setLanguage(language: string) {
 }
 
 export function changeLanguage(language: string) {
+  // setLanguage fires i18next's "languageChanged", which the App root listens
+  // for via useTranslation(), so the UI re-translates in place — no page reload
+  // and no lost table filters/pagination.
   setLanguage(language);
-  window.location.reload();
 }
 
 export function isResponseDenied(data: {msg?: string}) {

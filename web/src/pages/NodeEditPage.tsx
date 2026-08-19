@@ -44,7 +44,7 @@ export default function NodeEditPage() {
       if (res.status === "ok") {
         setNode(res.data);
       } else {
-        Setting.showMessage("error", `Failed to get node: ${res.msg}`);
+        Setting.showMessage("error", `${i18next.t("node:Failed to get node")}: ${res.msg}`);
       }
     });
   }, [nodeName, owner]);
@@ -61,13 +61,13 @@ export default function NodeEditPage() {
     NodeBackend.updateNode(node.owner, nodeName, Setting.deepCopy(node))
       .then(res => {
         if (res.status === "error") {
-          Setting.showMessage("error", `Failed to save: ${res.msg}`);
+          Setting.showMessage("error", `${i18next.t("node:Failed to save")}: ${res.msg}`);
         } else {
-          Setting.showMessage("success", "Successfully saved");
+          Setting.showMessage("success", i18next.t("node:Successfully saved"));
           navigate(`/nodes/${node.owner}/${node.name}`);
         }
       })
-      .catch(error => Setting.showMessage("error", `Failed to connect to server: ${error}`));
+      .catch(error => Setting.showMessage("error", `${i18next.t("node:Failed to connect to server")}: ${error}`));
   };
 
   if (node === null) {

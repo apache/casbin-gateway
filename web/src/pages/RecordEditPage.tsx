@@ -35,7 +35,7 @@ export default function RecordEditPage() {
       if (res.status === "ok") {
         setRecord(res.data);
       } else {
-        Setting.showMessage("error", `Failed to get record: ${res.msg}`);
+        Setting.showMessage("error", `${i18next.t("general:Failed to get record")}: ${res.msg}`);
       }
     });
   }, [id, owner]);
@@ -52,13 +52,13 @@ export default function RecordEditPage() {
     RecordBackend.updateRecord(record.owner, id, Setting.deepCopy(record))
       .then(res => {
         if (res.status === "error") {
-          Setting.showMessage("error", `Failed to save: ${res.msg}`);
+          Setting.showMessage("error", `${i18next.t("general:Failed to save")}: ${res.msg}`);
         } else {
-          Setting.showMessage("success", "Successfully saved");
+          Setting.showMessage("success", i18next.t("general:Successfully saved"));
           navigate(`/records/${record.owner}/${record.id}`);
         }
       })
-      .catch(error => Setting.showMessage("error", `failed to save: ${error}`));
+      .catch(error => Setting.showMessage("error", `${i18next.t("general:Failed to save")}: ${error}`));
   };
 
   if (record === null) {

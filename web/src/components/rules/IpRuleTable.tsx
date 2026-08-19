@@ -85,7 +85,7 @@ export function IpRuleTable({title, table, onUpdateTable}: ExpressionTableProps)
       // split apart for editing and joined back on every change.
       render: (text: string, _record, index) => (
         <TagsInput
-          placeholder="Input IP Addresses"
+          placeholder={i18next.t("general:Input IP Addresses")}
           value={text ? text.split(",") : []}
           onChange={value => updateField(index, "value", value.map(item => item.trim()).join(","))}
         />

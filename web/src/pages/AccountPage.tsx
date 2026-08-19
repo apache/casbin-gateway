@@ -46,7 +46,7 @@ export default function AccountPage({account}: {account: Account}) {
     AccountBackend.updateAccount({displayName: displayName, avatar: avatar})
       .then(res => {
         if (res.status === "ok") {
-          Setting.showMessage("success", "Successfully saved");
+          Setting.showMessage("success", i18next.t("account:Successfully saved"));
           window.location.reload();
         } else {
           Setting.showMessage("error", res.msg);
@@ -64,7 +64,7 @@ export default function AccountPage({account}: {account: Account}) {
     })
       .then(res => {
         if (res.status === "ok") {
-          Setting.showMessage("success", "Successfully saved");
+          Setting.showMessage("success", i18next.t("account:Successfully saved"));
           setPasswordOpen(false);
           setCurrentPassword("");
           setNewPassword("");

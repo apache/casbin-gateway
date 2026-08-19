@@ -42,7 +42,7 @@ export default function RecordListPage({account}: {account: Account}) {
           setPage(nextPage);
           setPageSize(nextPageSize);
         } else {
-          Setting.showMessage("error", `Failed to get records: ${res.msg}`);
+          Setting.showMessage("error", `${i18next.t("general:Failed to get records")}: ${res.msg}`);
         }
       });
     },
@@ -67,26 +67,26 @@ export default function RecordListPage({account}: {account: Account}) {
     })
       .then(res => {
         if (res.status === "error") {
-          Setting.showMessage("error", `Failed to add: ${res.msg}`);
+          Setting.showMessage("error", `${i18next.t("general:Failed to add")}: ${res.msg}`);
         } else {
-          Setting.showMessage("success", "Record added successfully");
+          Setting.showMessage("success", i18next.t("general:Record added successfully"));
           fetchRecords();
         }
       })
-      .catch(error => Setting.showMessage("error", `Record failed to add: ${error}`));
+      .catch(error => Setting.showMessage("error", `${i18next.t("general:Failed to add")}: ${error}`));
   };
 
   const deleteRecord = (record: GatewayRecord) => {
     RecordBackend.deleteRecord(record)
       .then(res => {
         if (res.status === "error") {
-          Setting.showMessage("error", `Failed to delete: ${res.msg}`);
+          Setting.showMessage("error", `${i18next.t("general:Failed to delete")}: ${res.msg}`);
         } else {
-          Setting.showMessage("success", "Record deleted successfully");
+          Setting.showMessage("success", i18next.t("general:Record deleted successfully"));
           fetchRecords();
         }
       })
-      .catch(error => Setting.showMessage("error", `Record failed to delete: ${error}`));
+      .catch(error => Setting.showMessage("error", `${i18next.t("general:Failed to delete")}: ${error}`));
   };
 
   const columns: Column<GatewayRecord>[] = [
@@ -160,7 +160,7 @@ export default function RecordListPage({account}: {account: Account}) {
           <Button size="sm" onClick={() => navigate(`/records/${record.owner}/${record.id}`)}>
             {i18next.t("general:Edit")}
           </Button>
-          <ConfirmButton title="Sure to delete record?" onConfirm={() => deleteRecord(record)}>
+          <ConfirmButton title={i18next.t("general:Sure to delete record?")} onConfirm={() => deleteRecord(record)}>
             <Button size="sm" variant="destructive">
               {i18next.t("general:Delete")}
             </Button>

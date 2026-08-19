@@ -45,7 +45,7 @@ export default function CertEditPage() {
       if (res.status === "ok") {
         setCert(res.data);
       } else {
-        Setting.showMessage("error", `Failed to get cert: ${res.msg}`);
+        Setting.showMessage("error", `${i18next.t("cert:Failed to get cert")}: ${res.msg}`);
       }
     });
   }, [certName, owner]);
@@ -62,13 +62,13 @@ export default function CertEditPage() {
     CertBackend.updateCert(cert.owner, certName, Setting.deepCopy(cert))
       .then(res => {
         if (res.status === "error") {
-          Setting.showMessage("error", `Failed to save: ${res.msg}`);
+          Setting.showMessage("error", `${i18next.t("cert:Failed to save")}: ${res.msg}`);
         } else {
-          Setting.showMessage("success", "Successfully saved");
+          Setting.showMessage("success", i18next.t("cert:Successfully saved"));
           navigate(`/certs/${cert.owner}/${cert.name}`);
         }
       })
-      .catch(error => Setting.showMessage("error", `failed to save: ${error}`));
+      .catch(error => Setting.showMessage("error", `${i18next.t("cert:Failed to save")}: ${error}`));
   };
 
   if (cert === null) {

@@ -72,7 +72,7 @@ export default function SiteListPage({account}: {account: Account}) {
       if (res.status === "ok") {
         setData(res.data ?? []);
       } else {
-        Setting.showMessage("error", `Failed to get sites: ${res.msg}`);
+        Setting.showMessage("error", `${i18next.t("site:Failed to get sites")}: ${res.msg}`);
       }
     });
   }, [account.name]);
@@ -94,26 +94,26 @@ export default function SiteListPage({account}: {account: Account}) {
     SiteBackend.addSite(site)
       .then(res => {
         if (res.status === "error") {
-          Setting.showMessage("error", `Failed to add: ${res.msg}`);
+          Setting.showMessage("error", `${i18next.t("site:Failed to add")}: ${res.msg}`);
         } else {
-          Setting.showMessage("success", "Site added successfully");
+          Setting.showMessage("success", i18next.t("site:Site added successfully"));
           fetchSites();
         }
       })
-      .catch(error => Setting.showMessage("error", `Site failed to add: ${error}`));
+      .catch(error => Setting.showMessage("error", `${i18next.t("site:Failed to add")}: ${error}`));
   };
 
   const deleteSite = (site: Site) => {
     SiteBackend.deleteSite(site)
       .then(res => {
         if (res.status === "error") {
-          Setting.showMessage("error", `Failed to delete: ${res.msg}`);
+          Setting.showMessage("error", `${i18next.t("site:Failed to delete")}: ${res.msg}`);
         } else {
-          Setting.showMessage("success", "Site deleted successfully");
+          Setting.showMessage("success", i18next.t("site:Site deleted successfully"));
           fetchSites();
         }
       })
-      .catch(error => Setting.showMessage("error", `Site failed to delete: ${error}`));
+      .catch(error => Setting.showMessage("error", `${i18next.t("site:Failed to delete")}: ${error}`));
   };
 
   const columns: Column<Site>[] = [
@@ -290,7 +290,7 @@ export default function SiteListPage({account}: {account: Account}) {
             {i18next.t("general:Edit")}
           </Button>
           <ConfirmButton
-            title={`Sure to delete site: ${record.name} ?`}
+            title={i18next.t("site:Sure to delete site: {name} ?").replace("{name}", record.name)}
             onConfirm={() => deleteSite(record)}
           >
             <Button size="sm" variant="destructive">

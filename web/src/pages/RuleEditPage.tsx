@@ -49,7 +49,7 @@ export default function RuleEditPage() {
       if (res.status === "ok") {
         setRule(res.data);
       } else {
-        Setting.showMessage("error", `Failed to get rule: ${res.msg}`);
+        Setting.showMessage("error", `${i18next.t("rule:Failed to get rule")}: ${res.msg}`);
       }
     });
   }, [owner, ruleName]);
@@ -80,10 +80,10 @@ export default function RuleEditPage() {
 
     RuleBackend.updateRule(owner, ruleName, Setting.deepCopy(rule)).then(res => {
       if (res.status !== "error") {
-        Setting.showMessage("success", "Rule updated successfully");
+        Setting.showMessage("success", i18next.t("rule:Rule updated successfully"));
         navigate(`/rules/${rule.owner}/${rule.name}`);
       } else {
-        Setting.showMessage("error", `Rule failed to update: ${res.msg}`);
+        Setting.showMessage("error", `${i18next.t("rule:Rule failed to update")}: ${res.msg}`);
         getRule();
       }
     });

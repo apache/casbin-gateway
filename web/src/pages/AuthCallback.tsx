@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import * as React from "react";
+import i18next from "i18next";
 
 import * as Setting from "@/Setting";
 import {Result} from "@/components/Result";
@@ -25,7 +26,7 @@ export default function AuthCallback() {
   React.useEffect(() => {
     Setting.signin().then(res => {
       if (res.status === "ok") {
-        Setting.showMessage("success", "Logged in successfully");
+        Setting.showMessage("success", i18next.t("general:Logged in successfully"));
         Setting.goToLink(sessionStorage.getItem("from") || "/");
       } else {
         setMessage(res.msg);
@@ -34,8 +35,8 @@ export default function AuthCallback() {
   }, []);
 
   if (message === null) {
-    return <PageSpinner tip="Signing in..." />;
+    return <PageSpinner tip={i18next.t("general:Signing in...")} />;
   }
 
-  return <Result status="error" title="Login Error" subTitle={message} />;
+  return <Result status="error" title={i18next.t("general:Login Error")} subTitle={message} />;
 }

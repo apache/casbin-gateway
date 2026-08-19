@@ -65,26 +65,26 @@ export default function NodeListPage({account}: {account: Account}) {
     NodeBackend.addNode(newNode(account.name))
       .then(res => {
         if (res.status === "error") {
-          Setting.showMessage("error", `Failed to add: ${res.msg}`);
+          Setting.showMessage("error", `${i18next.t("node:Failed to add")}: ${res.msg}`);
         } else {
-          Setting.showMessage("success", "Node added successfully");
+          Setting.showMessage("success", i18next.t("node:Node added successfully"));
           fetchNodes();
         }
       })
-      .catch(error => Setting.showMessage("error", `Node failed to add: ${error}`));
+      .catch(error => Setting.showMessage("error", `${i18next.t("node:Failed to add")}: ${error}`));
   };
 
   const deleteNode = (node: Node) => {
     NodeBackend.deleteNode(node)
       .then(res => {
         if (res.status === "error") {
-          Setting.showMessage("error", `Failed to delete: ${res.msg}`);
+          Setting.showMessage("error", `${i18next.t("node:Failed to delete")}: ${res.msg}`);
         } else {
-          Setting.showMessage("success", "Node deleted successfully");
+          Setting.showMessage("success", i18next.t("node:Node deleted successfully"));
           fetchNodes();
         }
       })
-      .catch(error => Setting.showMessage("error", `Node failed to delete: ${error}`));
+      .catch(error => Setting.showMessage("error", `${i18next.t("node:Failed to delete")}: ${error}`));
   };
 
   if (!authorized) {
@@ -156,7 +156,7 @@ export default function NodeListPage({account}: {account: Account}) {
             {i18next.t("general:Edit")}
           </Button>
           <ConfirmButton
-            title={`Sure to delete node: ${record.name} ?`}
+            title={i18next.t("node:Sure to delete node: {name} ?").replace("{name}", record.name)}
             onConfirm={() => deleteNode(record)}
           >
             <Button size="sm" variant="destructive">

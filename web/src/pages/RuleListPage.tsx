@@ -59,7 +59,7 @@ export default function RuleListPage({account}: {account: Account}) {
           setPage(nextPage);
           setPageSize(nextPageSize);
         } else {
-          Setting.showMessage("error", `Failed to get rules: ${res.msg}`);
+          Setting.showMessage("error", `${i18next.t("rule:Failed to get rules")}: ${res.msg}`);
         }
       });
     },
@@ -74,9 +74,9 @@ export default function RuleListPage({account}: {account: Account}) {
   const addRule = () => {
     RuleBackend.addRule(newRule(account.name)).then(res => {
       if (res.status === "error") {
-        Setting.showMessage("error", `Failed to add: ${res.msg}`);
+        Setting.showMessage("error", `${i18next.t("rule:Failed to add")}: ${res.msg}`);
       } else {
-        Setting.showMessage("success", "Rule added successfully");
+        Setting.showMessage("success", i18next.t("rule:Rule added successfully"));
         fetchRules();
       }
     });
@@ -85,9 +85,9 @@ export default function RuleListPage({account}: {account: Account}) {
   const deleteRule = (rule: Rule) => {
     RuleBackend.deleteRule(rule).then(res => {
       if (res.status === "error") {
-        Setting.showMessage("error", `Failed to delete: ${res.msg}`);
+        Setting.showMessage("error", `${i18next.t("rule:Failed to delete")}: ${res.msg}`);
       } else {
-        Setting.showMessage("success", "Deleted successfully");
+        Setting.showMessage("success", i18next.t("rule:Deleted successfully"));
         fetchRules();
       }
     });
@@ -182,7 +182,7 @@ export default function RuleListPage({account}: {account: Account}) {
             {i18next.t("general:Edit")}
           </Button>
           <ConfirmButton
-            title={`Sure to delete rule: ${record.name} ?`}
+            title={i18next.t("rule:Sure to delete rule: {name} ?").replace("{name}", record.name)}
             onConfirm={() => deleteRule(record)}
           >
             <Button size="sm" variant="destructive">
