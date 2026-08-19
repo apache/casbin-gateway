@@ -14,6 +14,7 @@
 
 import * as React from "react";
 import i18next from "i18next";
+import {useTranslation} from "react-i18next";
 import {Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis} from "recharts";
 
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
@@ -80,6 +81,9 @@ export function PieChartCard({
   title: string;
   data: {name: string; value: number}[] | null;
 }) {
+  // Subscribe to language changes so the memoised "Other" label below
+  // re-translates in place on a switch (changeLanguage no longer reloads).
+  const {t} = useTranslation();
   // Rank the slices, keep the five that get their own color, and sum the tail
   // into a single neutral "Other" slice so no color is ever reused.
   const {slices, config} = React.useMemo(() => {
@@ -92,7 +96,7 @@ export function PieChartCard({
 
     if (tail.length > 0) {
       head.push({
-        name: i18next.t("general:Other"),
+        name: t("general:Other"),
         value: tail.reduce((sum, item) => sum + item.value, 0),
         fill: OTHER_COLOR,
       });
@@ -104,7 +108,7 @@ export function PieChartCard({
     });
 
     return {slices: head, config: chartConfig};
-  }, [data]);
+  }, [data, t]);
 
   return (
     <Card className="h-full">

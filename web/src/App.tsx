@@ -14,6 +14,7 @@
 
 import * as React from "react";
 import {Navigate, Route, Routes, useLocation} from "react-router-dom";
+import {useTranslation} from "react-i18next";
 
 import * as AccountBackend from "@/backend/AccountBackend";
 import * as Conf from "@/Conf";
@@ -55,6 +56,11 @@ Setting.initCasdoorSdk(Conf.AuthConfig);
 const collapsedKey = "sidebarCollapsed";
 
 export default function App() {
+  // Pages read their labels through i18next.t() at render time rather than the
+  // useTranslation() hook, so subscribing the root to "languageChanged" here
+  // re-renders the whole tree on a language switch. That lets changeLanguage
+  // update every string in place instead of forcing a full window.reload().
+  useTranslation();
   // undefined while the account request is in flight, null when signed out.
   const [account, setAccount] = React.useState<Account | null | undefined>(undefined);
   const [collapsed, setCollapsed] = React.useState(
