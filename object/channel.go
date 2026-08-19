@@ -269,29 +269,37 @@ func DeleteChannel(channel *Channel) (bool, error) {
 }
 
 // TestChannelConnectivity performs a read-only probe against the channel's
-// upstream. It returns whether the probe succeeded, the upstream HTTP status
-// code (0 when no response was received) and a human-readable message.
+// upstream. It probes the configuration passed in (which may be unsaved edits
+// from the editor), so the user can verify a channel before deciding to save.
+// It returns whether the probe succeeded, the upstream HTTP status code (0 when
+// no response was received) and a human-readable message.
 func TestChannelConnectivity(channel *Channel) (bool, int, string) {
-	stored, err := getChannel(channel.Owner, channel.Name)
-	if err != nil {
-		return false, 0, err.Error()
-	}
-	if stored == nil {
-		return false, 0, "the channel does not exist"
+	// The browser only ever sees the masked key, so getting it back means the
+	// user did not touch the field. Fall back to the stored (decrypted) key so
+	// an unchanged key can still be tested without re-entering it.
+	if channel.ApiKey == ApiKeyMask {
+		stored, err := getChannel(channel.Owner, channel.Name)
+		if err != nil {
+			return false, 0, err.Error()
+		}
+		if stored == nil {
+			return false, 0, "the channel does not exist"
+		}
+		channel.ApiKey = stored.ApiKey
 	}
 
-	if !IsChannelTypeSupported(stored) {
-		return false, 0, fmt.Sprintf("the %s channel type is not supported", stored.Type)
+	if !IsChannelTypeSupported(channel) {
+		return false, 0, fmt.Sprintf("the %s channel type is not supported", channel.Type)
 	}
 
-	if stored.BaseUrl == "" {
+	if channel.BaseUrl == "" {
 		return false, 0, "the base URL is empty"
 	}
-	if err = validateBaseUrl(stored.BaseUrl); err != nil {
+	if err := validateBaseUrl(channel.BaseUrl); err != nil {
 		return false, 0, err.Error()
 	}
 
-	probeUrl, err := BuildOpenAiUrl(stored.BaseUrl, "/models")
+	probeUrl, err := BuildOpenAiUrl(channel.BaseUrl, "/models")
 	if err != nil {
 		return false, 0, err.Error()
 	}
@@ -300,8 +308,8 @@ func TestChannelConnectivity(channel *Channel) (bool, int, string) {
 	if err != nil {
 		return false, 0, err.Error()
 	}
-	if stored.ApiKey != "" {
-		req.Header.Set("Authorization", "Bearer "+stored.ApiKey)
+	if channel.ApiKey != "" {
+		req.Header.Set("Authorization", "Bearer "+channel.ApiKey)
 	}
 
 	client := &http.Client{

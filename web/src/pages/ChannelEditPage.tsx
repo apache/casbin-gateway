@@ -119,9 +119,13 @@ export default function ChannelEditPage() {
   };
 
   const test = () => {
+    if (!channel) {
+      return;
+    }
+
     setTesting(true);
     setResult(null);
-    ChannelBackend.testChannel(owner, channelName)
+    ChannelBackend.testChannel(channel)
       .then(res => {
         setTesting(false);
         if (res.status === "error") {

@@ -212,25 +212,21 @@ func (c *ApiController) TestChannel() {
 		return
 	}
 
-	var request struct {
-		Owner string `json:"owner"`
-		Name  string `json:"name"`
-	}
-	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &request); err != nil {
+	var channel object.Channel
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &channel); err != nil {
 		c.ResponseError(err.Error())
 		return
 	}
 
-	if request.Owner == "" || request.Name == "" {
+	if channel.Owner == "" || channel.Name == "" {
 		c.ResponseError("the channel owner and name cannot be empty")
 		return
 	}
-	if !c.channelAccess(request.Owner) {
+	if !c.channelAccess(channel.Owner) {
 		c.ResponseError("unauthorized")
 		return
 	}
 
-	channel := &object.Channel{Owner: request.Owner, Name: request.Name}
-	success, statusCode, message := object.TestChannelConnectivity(channel)
+	success, statusCode, message := object.TestChannelConnectivity(&channel)
 	c.ResponseOk(map[string]interface{}{"success": success, "statusCode": statusCode, "message": message})
 }
