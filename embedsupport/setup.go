@@ -14,13 +14,13 @@
 
 // Package embedsupport wires up the assets that are baked into the binary when
 // it is built with -tags embed: conf/app.conf, the compiled web UI in
-// web2/build, and the IP location database. Those are every file Gateway needs
+// web/build, and the IP location database. Those are every file Gateway needs
 // to find on disk at startup, so embedding them turns it into a single
 // executable that runs with nothing next to it.
 //
 // The embedded copies are a fallback, never an override: whenever the matching
 // file exists on disk it wins, so an operator can drop a conf/app.conf beside
-// the binary, or keep developing against a live web2/build, without rebuilding.
+// the binary, or keep developing against a live web/build, without rebuilding.
 //
 // A build without -tags embed never calls Setup, so both accessors report
 // "nothing embedded" and every caller keeps its original on-disk behaviour.
@@ -35,7 +35,7 @@ var (
 
 // Setup must be called before any config value is read or any request is
 // served. appConf is the contents of the embedded conf/app.conf, web is the
-// embedded web2/build tree, and ipDb is the embedded IP location database; each
+// embedded web/build tree, and ipDb is the embedded IP location database; each
 // of them may be empty or nil.
 func Setup(appConf string, web fs.FS, ipDatabase []byte) {
 	webFS = web
@@ -43,7 +43,7 @@ func Setup(appConf string, web fs.FS, ipDatabase []byte) {
 	setupConf(appConf)
 }
 
-// WebFS returns the embedded web2/build filesystem, or nil when the binary was
+// WebFS returns the embedded web/build filesystem, or nil when the binary was
 // built without embedded web assets.
 func WebFS() fs.FS { return webFS }
 

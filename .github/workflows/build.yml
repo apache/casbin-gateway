@@ -34,9 +34,9 @@ jobs:
         with:
           node-version: 20
           cache: 'yarn'
-          cache-dependency-path: ./web2/yarn.lock
+          cache-dependency-path: ./web/yarn.lock
       - run: yarn install && yarn build
-        working-directory: ./web2
+        working-directory: ./web
 
   backend:
     name: Back-end

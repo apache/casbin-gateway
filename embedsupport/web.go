@@ -24,7 +24,7 @@ import (
 	"time"
 )
 
-// ServeWeb answers a request for a frontend asset from the embedded web2/build
+// ServeWeb answers a request for a frontend asset from the embedded web/build
 // tree. urlPath is the request path, e.g. "/" or "/static/js/main.abc123.js".
 // Anything the tree does not contain falls back to index.html, because the web
 // UI is a single-page app whose routes ("/sites", "/rules", ...) exist only in

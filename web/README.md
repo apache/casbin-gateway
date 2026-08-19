@@ -1,70 +1,53 @@
-# Getting Started with Create React App
+# Casbin Gateway web UI
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+The management UI, built with [Vite](https://vite.dev), React, TypeScript, Tailwind CSS and
+[shadcn/ui](https://ui.shadcn.com). It talks to the Go backend over the `/api` endpoints.
 
-## Available Scripts
+## Running it
 
-In the project directory, you can run:
+```bash
+cd web && yarn install && yarn dev
+```
 
-### `yarn start`
+That serves the UI on http://localhost:16002 with hot reload, and proxies `/api` and `/v1` to the
+backend on port 17000, so the backend has to be running too. Point the proxy somewhere else with
+`VITE_BACKEND_URL=http://host:port yarn dev`.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+Because the dev server proxies rather than calling an absolute URL, the browser only ever sees one
+origin: the beego session cookie is stored and replayed with no CORS or SameSite special cases, in
+development exactly as in production.
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## Building it
 
-### `yarn test`
+```bash
+cd web && yarn build
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+The output lands in `web/build`, which is where the backend looks for the compiled UI — see
+`webui.BuildDir`.
 
-### `yarn build`
+`yarn lint` runs ESLint and `yarn fix` applies what it can fix. `yarn build` type-checks first, so a
+type error fails the build.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Layout
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+| Path                 | What lives there                                                            |
+| -------------------- | --------------------------------------------------------------------------- |
+| `src/backend/`       | One typed module per REST resource; `request.ts` is the single `fetch` call   |
+| `src/pages/`         | One component per route, mounted in `src/App.tsx`                            |
+| `src/components/ui/` | shadcn/ui primitives, generated with the CLI settings in `components.json`   |
+| `src/components/`    | Shared pieces: `DataTable`, `FormRow`, the rule and node sub-tables, charts   |
+| `src/locales/`       | English and Chinese strings                                                  |
+| `src/types.ts`       | The shapes the Go API returns, including its `{status, msg, data, data2}` envelope |
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Translations are addressed as `i18next.t("general:Name")`, where the part before the colon is a
+top-level key of `locales/*/data.json`.
 
-### `yarn eject`
+## Adding a shadcn component
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+```bash
+npx shadcn@latest add <component>
+```
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `yarn build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+`components.json` already points the CLI at `src/components/ui`, the `@/` alias and the "new-york"
+style, so a generated component needs no further edits.

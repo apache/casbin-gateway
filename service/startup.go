@@ -66,7 +66,7 @@ func describeWebBuild() string {
 		return "embedded in the binary"
 	}
 
-	return fmt.Sprintf("%s is missing, run \"yarn install && yarn build\" in web2/", webui.BuildDirs[0])
+	return fmt.Sprintf("%s is missing, run \"yarn install && yarn build\" in web/", webui.BuildDir)
 }
 
 func describeGateway() string {

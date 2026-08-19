@@ -40,7 +40,7 @@ func TransparentStatic(ctx *context.Context) {
 
 		// Nothing is built and nothing is embedded. Serving from the preferred
 		// directory anyway turns this into a plain 404 that names it.
-		webBuildDir = webui.BuildDirs[0]
+		webBuildDir = webui.BuildDir
 	}
 
 	indexPath := webBuildDir + "/index.html"

@@ -1,88 +1,89 @@
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "Roboto", "Oxygen",
-    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-    sans-serif !important;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    /* rgb(89,54,213), the brand purple the antd build set as @primary-color. */
+    --primary: 255 60% 52%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 72.2% 50.6%;
+    --destructive-foreground: 210 40% 98%;
+    --success: 142.1 70.6% 35.3%;
+    --success-foreground: 0 0% 100%;
+    --warning: 32.1 94.6% 43.7%;
+    --warning-foreground: 0 0% 100%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 255 60% 52%;
+    /* Categorical series colors, assigned in slot order and never cycled.
+       Validated for colorblind separation against both surfaces. */
+    --chart-1: 212.8 67.7% 50.2%;
+    --chart-2: 17 82.1% 56.3%;
+    --chart-3: 158.5 73.3% 39.6%;
+    --chart-4: 40.8 100% 46.5%;
+    --chart-5: 337.4 70.3% 69.6%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 255 70% 68%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 210 40% 98%;
+    --success: 142.1 70.6% 45.3%;
+    --success-foreground: 222.2 47.4% 11.2%;
+    --warning: 32.1 94.6% 53.7%;
+    --warning-foreground: 222.2 47.4% 11.2%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 255 70% 68%;
+    --chart-1: 212.8 76.8% 56.1%;
+    --chart-2: 17.1 70.2% 50%;
+    --chart-3: 159.2 72.7% 35.9%;
+    --chart-4: 39.7 100% 39.4%;
+    --chart-5: 338.2 61.1% 57.6%;
+  }
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
-    monospace;
-}
+@layer base {
+  * {
+    @apply border-border;
+  }
 
-.logo {
-  background: url("https://cdn.casbin.org/img/logo_384x96.png");
-  background-size: 108px, 33px;
-  width: 108px;
-  height: 27px;
-  /*background: rgba(0, 0, 0, 0.2);*/
-  margin: 17px 10px 16px 20px;
-  float: left;
-}
+  body {
+    @apply bg-background text-foreground;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "Roboto",
+      "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
-.ant-table.ant-table-middle .ant-table-title, .ant-table.ant-table-middle .ant-table-footer, .ant-table.ant-table-middle thead > tr > th, .ant-table.ant-table-middle tbody > tr > td {
-  padding: 1px 8px !important;
-}
-
-.ant-list-sm .ant-list-item {
-  padding: 2px !important;
-}
-
-.highlight-row {
-  background: rgb(249,198,205);
-}
-
-.alert-row {
-  background: #ffccc7;
-}
-
-/* http://react-china.org/t/topic/33846/3 */
-.ant-table-header {
-  scrollbar-color:transparent transparent
-}
-.ant-table-header::-webkit-scrollbar {
-  background-color:transparent
-}
-
-.import-output {
-  height: 500px;
-}
-
-.CodeMirror {
-  height: 100% !important;
-}
-
-.App {
-  padding: 20px;
-}
-
-.red-row {
-  background: #ffccc7;
-}
-
-.yellow-row {
-  background: #ffffb8;
-}
-
-.green-row {
-  background: #d9f7be;
-}
-
-/*https://stackoverflow.com/questions/64961752/how-do-i-change-the-color-of-selected-menu-item-in-ant-design*/
-/*.conferenceMenu > .ant-menu-item-selected {*/
-/*  background-color: rgb(230,247,255) !important;*/
-/*}*/
-
-.conferenceMenu {
-  background-color: rgb(242,242,242) !important;
-}
-
-.dashboard-card {
-  margin: 7px !important;
-}
-
-.custom-link:hover {
-  color: rgb(64 64 64) !important;
+  code, pre {
+    font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+  }
 }

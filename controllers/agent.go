@@ -112,12 +112,15 @@ func (c *ApiController) GetAgentRecords() {
 	}))
 }
 
-// GetAgentSessions groups the current in-memory records by agent session.
+// GetAgentSessions groups the current in-memory records by agent session. The
+// optional agent filter is what an agent's own detail page asks for.
 func (c *ApiController) GetAgentSessions() {
 	if c.RequireAdmin() {
 		return
 	}
-	c.ResponseOk(agentmonitor.ListSessions(agentmonitor.RecordQuery{}))
+	c.ResponseOk(agentmonitor.ListSessions(agentmonitor.RecordQuery{
+		Agent: c.Input().Get("agent"),
+	}))
 }
 
 // AddAgentRecord accepts reports from a hook or MCP process launched locally by

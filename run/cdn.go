@@ -25,10 +25,10 @@ import (
 	"github.com/apache/casbin-gateway/util"
 )
 
-func filterFiles(filenames []string, folder string, siteName string) []string {
+func filterFiles(filenames []string, ext string, siteName string) []string {
 	res := []string{}
 	for _, filename := range filenames {
-		if !strings.HasSuffix(filename, folder) {
+		if !strings.HasSuffix(filename, ext) {
 			continue
 		}
 
@@ -43,42 +43,67 @@ func filterFiles(filenames []string, folder string, siteName string) []string {
 	return res
 }
 
-func uploadFolder(provider storage.StorageProvider, buildDir string, folder string, siteName string) (string, error) {
+// assetDirs tells where a web build keeps its hashed assets. Create React App
+// splits them into "static/js" and "static/css", Vite puts both in "assets".
+type assetDirs struct {
+	root string
+	js   string
+	css  string
+}
+
+func getAssetDirs(buildDir string) (*assetDirs, error) {
+	if util.FileExist(filepath.Join(buildDir, "static")) {
+		return &assetDirs{root: "static", js: "static/js", css: "static/css"}, nil
+	}
+
+	if util.FileExist(filepath.Join(buildDir, "assets")) {
+		return &assetDirs{root: "assets", js: "assets", css: "assets"}, nil
+	}
+
+	return nil, fmt.Errorf("getAssetDirs() error: no \"static\" or \"assets\" folder in buildDir = %s", buildDir)
+}
+
+func uploadFolder(provider storage.StorageProvider, buildDir string, root string, dir string, ext string, siteName string) (string, error) {
 	domainUrl := ""
 
-	path := filepath.Join(buildDir, "static", folder)
-	filenames := util.ListFiles(path)
-	filteredFilenames := filterFiles(filenames, folder, siteName)
+	urlRoot := "/" + root
+	dirPath := filepath.Join(buildDir, filepath.FromSlash(dir))
+	filenames, err := util.ListFiles(dirPath)
+	if err != nil {
+		return "", err
+	}
+
+	filteredFilenames := filterFiles(filenames, ext, siteName)
 	for _, filename := range filteredFilenames {
-		data, err := os.ReadFile(filepath.Join(path, filename))
+		data, err := os.ReadFile(filepath.Join(dirPath, filename))
 		if err != nil {
 			return "", err
 		}
 		fileBuffer := bytes.NewBuffer(data)
 
-		objectKey := strings.ReplaceAll(filepath.Join("static", folder, filename), "\\", "/")
+		objectKey := fmt.Sprintf("%s/%s", dir, filename)
 		fileUrl, err := provider.PutObject("Built-in-Untracked", "", objectKey, fileBuffer)
 		if err != nil {
 			return "", err
 		}
 
-		index := strings.Index(fileUrl, "/static")
+		index := strings.Index(fileUrl, urlRoot)
 		if index == -1 {
-			return "", fmt.Errorf("uploadFolder() error, fileUrl should contain \"/static/\", fileUrl = %s", fileUrl)
+			return "", fmt.Errorf("uploadFolder() error, fileUrl should contain \"%s/\", fileUrl = %s", urlRoot, fileUrl)
 		}
 
-		domainUrl = fileUrl[:index+len("/static")] + "/"
+		domainUrl = fileUrl[:index+len(urlRoot)] + "/"
 		fmt.Printf("uploadFolder(): [/%s] -> [%s]\n", objectKey, fileUrl)
 	}
 
 	return domainUrl, nil
 }
 
-func updateHtml(domainUrl string, buildDir string) {
+func updateHtml(domainUrl string, buildDir string, root string) {
 	htmlPath := filepath.Join(buildDir, "index.html")
 	html := util.ReadStringFromPath(htmlPath)
 
-	html = strings.Replace(html, "\"/static/", fmt.Sprintf("\"%s", domainUrl), -1)
+	html = strings.Replace(html, fmt.Sprintf("\"/%s/", root), fmt.Sprintf("\"%s", domainUrl), -1)
 	util.WriteStringToPath(html, htmlPath)
 
 	fmt.Printf("updateHtml(): index.html content:\n%s\n%s\n%s\n", strings.Repeat("=", 80), html, strings.Repeat("=", 80))
@@ -94,22 +119,27 @@ func gitUploadCdn(providerName string, siteName string) error {
 	path := GetRepoPath(siteName)
 	buildDir := filepath.Join(path, "web/build")
 
+	dirs, err := getAssetDirs(buildDir)
+	if err != nil {
+		return err
+	}
+
 	provider, err := storage.GetStorageProvider(providerName)
 	if err != nil {
 		return err
 	}
 
 	var domainUrl string
-	domainUrl, err = uploadFolder(provider, buildDir, "js", siteName)
+	domainUrl, err = uploadFolder(provider, buildDir, dirs.root, dirs.js, "js", siteName)
 	if err != nil {
 		return err
 	}
 
-	_, err = uploadFolder(provider, buildDir, "css", siteName)
+	_, err = uploadFolder(provider, buildDir, dirs.root, dirs.css, "css", siteName)
 	if err != nil {
 		return err
 	}
 
-	updateHtml(domainUrl, buildDir)
+	updateHtml(domainUrl, buildDir, dirs.root)
 	return nil
 }

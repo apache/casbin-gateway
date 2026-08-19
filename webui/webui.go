@@ -12,26 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package webui says which compiled frontend this process serves. The router
-// and the startup summary both need the answer, and they must agree on it.
+// Package webui says where this process looks for the compiled frontend. The
+// router and the startup summary both need the answer, and they must agree on
+// it.
 package webui
 
 import "github.com/apache/casbin-gateway/util"
 
-// BuildDirs lists the compiled web UIs, most preferred first: "web2" is the
-// shadcn frontend and "web" the older antd one it replaces. Whichever is found
-// first serves the whole UI, so a half-built tree is never quietly completed
-// with files from the other.
-var BuildDirs = []string{"web2/build", "web/build"}
+// BuildDir is where the compiled web UI is expected, relative to the working
+// directory.
+const BuildDir = "web/build"
 
-// GetBuildDir returns the first compiled UI present on disk, or "" when none of
-// them was built. A build made with -tags embed carries its own copy, which is
-// used only in that last case.
+// GetBuildDir returns BuildDir when the UI has been built there, or "" when it
+// has not. A build made with -tags embed carries its own copy, which is used
+// only in that last case.
 func GetBuildDir() string {
-	for _, dir := range BuildDirs {
-		if util.FileExist(dir + "/index.html") {
-			return dir
-		}
+	if util.FileExist(BuildDir + "/index.html") {
+		return BuildDir
 	}
 
 	return ""
