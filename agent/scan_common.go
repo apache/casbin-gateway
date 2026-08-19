@@ -79,6 +79,44 @@ func (f *Fingerprint) npmPackagePath() string {
 	return filepath.FromSlash(f.NpmPackage)
 }
 
+// npmrcPrefix returns the "prefix" setting from an npmrc file, or "" when the
+// file is absent or sets no prefix. npm lets users relocate the global install
+// root this way (npm config set prefix ...), so discovery must read it to find
+// agents installed outside the default layout. Only the prefix key matters; the
+// rest of the npm config is ignored. Any ${VAR} references are expanded the way
+// npm expands them.
+func npmrcPrefix(path string) string {
+	info, err := os.Stat(path)
+	if err != nil || !info.Mode().IsRegular() || info.Size() > maxPackageJSONSize {
+		return ""
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, ";") || strings.HasPrefix(line, "#") {
+			continue
+		}
+		key, value, ok := strings.Cut(line, "=")
+		if !ok || strings.TrimSpace(key) != "prefix" {
+			continue
+		}
+		value = strings.TrimSpace(value)
+		value = strings.Trim(value, `"'`)
+		return os.Expand(value, npmConfigEnv)
+	}
+	return ""
+}
+
+// npmConfigEnv resolves ${VAR} references in npmrc values against the
+// environment, matching npm's own expansion. An undefined variable expands to
+// the empty string, again as npm does.
+func npmConfigEnv(name string) string {
+	return os.Getenv(name)
+}
+
 func stampAgentId(installations []Installation, mark int, agentId string) {
 	for i := mark; i < len(installations); i++ {
 		installations[i].AgentId = agentId

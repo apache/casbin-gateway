@@ -329,5 +329,44 @@ func scanWindowsNpm(ctx context.Context, fingerprint *Fingerprint, home homeDir)
 	for _, dir := range fingerprint.ExtraWindowsNpmDirs {
 		patterns = append(patterns, filepath.Join(local, filepath.FromSlash(dir), "node_modules", pkg, "package.json"))
 	}
+	// A user may relocate npm's global root with a custom prefix (e.g.
+	// D:\develop\npmPackage), which falls outside every fixed layout above.
+	for _, prefix := range windowsNpmPrefixDirs(home) {
+		patterns = append(patterns,
+			filepath.Join(prefix, "node_modules", pkg, "package.json"),
+			filepath.Join(prefix, "lib", "node_modules", pkg, "package.json"),
+		)
+	}
 	return scanNpmPatterns(ctx, fingerprint, patterns, home.owner, nil)
+}
+
+// windowsNpmPrefixDirs returns npm global prefixes configured outside the
+// default layout, so an agent installed under a custom prefix is still found.
+// It reads the npm_config_prefix environment variable (current user only) and
+// the "prefix" setting in the profile's .npmrc.
+func windowsNpmPrefixDirs(home homeDir) []string {
+	var dirs []string
+	seen := map[string]bool{}
+	add := func(prefix string) {
+		if strings.TrimSpace(prefix) == "" {
+			return
+		}
+		prefix = filepath.Clean(prefix)
+		key := strings.ToLower(prefix)
+		if seen[key] {
+			return
+		}
+		seen[key] = true
+		dirs = append(dirs, prefix)
+	}
+
+	// The environment only describes the process's own user, so it is read for
+	// the current home; other profiles are covered by their on-disk .npmrc.
+	if current, err := os.UserHomeDir(); err == nil &&
+		strings.EqualFold(filepath.Clean(current), filepath.Clean(home.path)) {
+		add(os.Getenv("npm_config_prefix"))
+		add(os.Getenv("NPM_CONFIG_PREFIX"))
+	}
+	add(npmrcPrefix(filepath.Join(home.path, ".npmrc")))
+	return dirs
 }
