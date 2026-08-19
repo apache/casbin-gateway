@@ -18,11 +18,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
+	"github.com/apache/casbin-gateway/conf"
 	"github.com/apache/casbin-gateway/proxy"
 	"github.com/apache/casbin-gateway/util"
 	"github.com/xorm-io/core"
@@ -195,10 +197,89 @@ func validateBaseUrl(baseUrl string) error {
 	if u.Scheme != "http" && u.Scheme != "https" {
 		return fmt.Errorf("invalid base URL: only the http and https schemes are supported")
 	}
-	if u.Hostname() == "" {
+	host := u.Hostname()
+	if host == "" {
 		return fmt.Errorf("invalid base URL: the host is empty")
 	}
+	if err := validateUpstreamHost(host); err != nil {
+		return err
+	}
 	return nil
+}
+
+// validateUpstreamHost rejects hosts that point at the gateway's own machine or
+// its private network, so an authenticated user cannot turn the channel probe
+// (or a saved channel) into an SSRF against internal services: loopback, the
+// RFC 1918 ranges, IPv6 unique-local addresses and — most importantly — the
+// 169.254.169.254 cloud metadata endpoint that leaks instance credentials.
+//
+// Operators that legitimately run an internal upstream (a self-hosted vLLM or
+// one-api, say) can allow specific hosts back in via the
+// allowedPrivateUpstreamHosts setting; see hostAllowlisted.
+//
+// It is a static check on the literal host: an IP literal is inspected
+// directly and "localhost" is rejected by name. It deliberately does not
+// resolve DNS, so a public hostname that resolves to a private address (for
+// example via DNS rebinding) is not caught here — closing that hole requires
+// validating the address again at dial time.
+func validateUpstreamHost(host string) error {
+	ip := net.ParseIP(host)
+
+	if hostAllowlisted(host, ip) {
+		return nil
+	}
+
+	if strings.EqualFold(host, "localhost") || strings.HasSuffix(strings.ToLower(host), ".localhost") {
+		return fmt.Errorf("invalid base URL: the host %q is not allowed", host)
+	}
+	if ip == nil {
+		// A regular hostname; leave address-based checks to dial time.
+		return nil
+	}
+	if !isPublicIP(ip) {
+		return fmt.Errorf("invalid base URL: the host %q is not a public address", host)
+	}
+	return nil
+}
+
+// hostAllowlisted reports whether host has been explicitly permitted as an
+// internal upstream through the allowedPrivateUpstreamHosts setting. Entries are
+// comma- or whitespace-separated and may be a hostname ("localhost",
+// "llm.internal"), an IP literal ("10.0.0.5") or a CIDR block ("10.0.0.0/8").
+// The setting is read on each call so a config reload takes effect without a
+// restart. ip is the parsed form of host, or nil when host is not an IP literal.
+func hostAllowlisted(host string, ip net.IP) bool {
+	raw := strings.Trim(conf.GetConfigString("allowedPrivateUpstreamHosts"), `"' `)
+	if raw == "" {
+		return false
+	}
+
+	for _, entry := range strings.FieldsFunc(raw, func(r rune) bool { return r == ',' || r == ' ' }) {
+		if _, cidr, err := net.ParseCIDR(entry); err == nil {
+			if ip != nil && cidr.Contains(ip) {
+				return true
+			}
+			continue
+		}
+		if strings.EqualFold(entry, host) {
+			return true
+		}
+	}
+	return false
+}
+
+// isPublicIP reports whether ip is safe to reach out to, i.e. it is not a
+// loopback, unspecified, private, link-local, multicast or broadcast address.
+func isPublicIP(ip net.IP) bool {
+	if ip.IsLoopback() || ip.IsUnspecified() || ip.IsPrivate() ||
+		ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsMulticast() {
+		return false
+	}
+	// The IPv4 limited-broadcast address is not covered by the checks above.
+	if v4 := ip.To4(); v4 != nil && v4.Equal(net.IPv4bcast) {
+		return false
+	}
+	return true
 }
 
 // BuildOpenAiUrl joins an OpenAI-compatible endpoint onto a channel base URL.
