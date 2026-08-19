@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/apache/casbin-gateway/agentfile"
 	"github.com/apache/casbin-gateway/agentmonitor"
 )
 
@@ -182,7 +183,7 @@ func enableOpenclawHook(changes *ChangeSet, configPath string) error {
 }
 
 func openclawHookEnabled(configPath string) (bool, error) {
-	config, _, exists, err := readJSONConfig(configPath)
+	config, exists, err := agentfile.ReadJSON(configPath)
 	if err != nil || !exists {
 		return false, err
 	}

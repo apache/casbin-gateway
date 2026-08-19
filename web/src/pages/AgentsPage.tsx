@@ -20,6 +20,7 @@ import i18next from "i18next";
 import * as AgentBackend from "@/backend/AgentBackend";
 import * as Setting from "@/Setting";
 import {AgentIcon} from "@/components/AgentIcon";
+import {AgentConfigDialog} from "@/components/AgentConfigDialog";
 import {DataTable, type Column} from "@/components/DataTable";
 import {PageHeader} from "@/components/FormRow";
 import {UnauthorizedResult} from "@/components/Result";
@@ -27,59 +28,20 @@ import {Alert, AlertDescription} from "@/components/ui/alert";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {ConfirmButton} from "@/components/ui/confirm-button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {Input} from "@/components/ui/input";
-import {PasswordInput} from "@/components/ui/password-input";
 import {Spinner} from "@/components/ui/spinner";
 import {Tooltip} from "@/components/ui/tooltip";
 import {agentDetailPath, agentKey, monitorAgentId, useAgents} from "@/lib/agents";
+import {getAgentConfigDefinition} from "@/lib/agentConfigs";
 import type {Account, Agent} from "@/types";
 
 export default function AgentsPage({account}: {account: Account}) {
   const [configAgent, setConfigAgent] = React.useState<Agent | null>(null);
-  const [endpoint, setEndpoint] = React.useState("");
-  const [token, setToken] = React.useState("");
-  const [savingConfig, setSavingConfig] = React.useState(false);
   const [configBusyKey, setConfigBusyKey] = React.useState("");
   const isAdmin = Setting.isAdminUser(account);
   const {agents, loading, error, busyKey, scan, togglePatch} = useAgents(isAdmin);
 
   const openConfig = (record: Agent) => {
     setConfigAgent(record);
-    setEndpoint(record.configStatus?.endpoint ?? "");
-    setToken("");
-  };
-
-  const saveConfig = () => {
-    if (!configAgent || !endpoint.trim() || !token.trim()) {
-      Setting.showMessage("error", i18next.t("agent:API endpoint and token are required"));
-      return;
-    }
-
-    const target = {
-      agentId: configAgent.agentId,
-      path: configAgent.path,
-      owner: configAgent.owner,
-    };
-    setSavingConfig(true);
-    AgentBackend.takeoverAgentConfig(target, endpoint.trim(), token.trim())
-      .then(res => {
-        if (res.status === "ok") {
-          Setting.showMessage("success", i18next.t("agent:API configuration updated"));
-          setConfigAgent(null);
-          scan();
-        } else {
-          Setting.showMessage("error", res.msg || i18next.t("agent:Failed to update API configuration"));
-        }
-      })
-      .catch(err => Setting.showMessage("error", err.message || String(err)))
-      .then(() => setSavingConfig(false));
   };
 
   const restoreConfig = (record: Agent) => {
@@ -175,16 +137,21 @@ export default function AgentsPage({account}: {account: Account}) {
       title: i18next.t("agent:API Configuration"),
       key: "apiConfig",
       render: (_value, record) => {
-        if (record.agentId !== "claude-code") {
+        const definition = getAgentConfigDefinition(record.agentId);
+        if (!definition) {
           return null;
         }
 
         const takenOver = record.configStatus?.takenOver === true;
+        const configured = record.configStatus?.configured === true;
+        const provider =
+          definition.presets.find(preset => preset.endpoint === record.configStatus?.endpoint) ??
+          definition.presets.find(preset => preset.id === "custom");
         return (
           <div className="flex items-center gap-2">
             <Tooltip title={record.configStatus?.endpoint}>
-              <Badge variant={takenOver ? "success" : "secondary"}>
-                {i18next.t(`agent:${takenOver ? "Configured" : "Not configured"}`)}
+              <Badge variant={configured ? "success" : "secondary"}>
+                {configured && provider ? i18next.t(`agent:${provider.name}`) : i18next.t("agent:Not configured")}
               </Badge>
             </Tooltip>
             <Button size="sm" variant="outline" onClick={() => openConfig(record)}>
@@ -268,40 +235,16 @@ export default function AgentsPage({account}: {account: Account}) {
         emptyText={i18next.t("agent:No supported agents found")}
       />
 
-      <Dialog open={configAgent !== null} onOpenChange={open => !open && setConfigAgent(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{i18next.t("agent:Configure Claude Code API")}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{i18next.t("agent:API Endpoint")}</label>
-              <Input
-                value={endpoint}
-                placeholder="https://api.example.com"
-                onChange={event => setEndpoint(event.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{i18next.t("agent:API Token")}</label>
-              <PasswordInput
-                value={token}
-                placeholder="sk-ant-..."
-                onChange={event => setToken(event.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfigAgent(null)}>
-              {i18next.t("general:Cancel")}
-            </Button>
-            <Button onClick={saveConfig} disabled={savingConfig}>
-              {savingConfig ? <Spinner /> : null}
-              {i18next.t("general:Save")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {configAgent ? (
+        <AgentConfigDialog
+          agent={configAgent}
+          onClose={() => setConfigAgent(null)}
+          onSaved={() => {
+            setConfigAgent(null);
+            scan();
+          }}
+        />
+      ) : null}
     </div>
   );
 }

@@ -175,7 +175,9 @@ export interface Agent {
   followup?: string;
   configStatus?: {
     takenOver: boolean;
+    configured: boolean;
     endpoint?: string;
+    values?: {[key: string]: string};
   };
 }
 

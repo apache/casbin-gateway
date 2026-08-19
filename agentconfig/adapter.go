@@ -16,13 +16,22 @@ package agentconfig
 
 // Status describes the configuration managed by an Adapter.
 type Status struct {
-	TakenOver bool   `json:"takenOver"`
-	Endpoint  string `json:"endpoint,omitempty"`
+	TakenOver  bool              `json:"takenOver"`
+	Configured bool              `json:"configured"`
+	Endpoint   string            `json:"endpoint,omitempty"`
+	Values     map[string]string `json:"values,omitempty"`
+}
+
+// Config contains the API settings managed for an agent.
+type Config struct {
+	Endpoint string            `json:"endpoint"`
+	Token    string            `json:"token"`
+	Values   map[string]string `json:"values,omitempty"`
 }
 
 // Adapter switches an agent to Gateway and restores its previous configuration.
 type Adapter interface {
-	Takeover(endpoint, token string) error
+	Takeover(config Config) error
 	Restore() error
 	Status() (Status, error)
 }

@@ -73,14 +73,18 @@ func (c *ApiController) TakeoverAgentConfig() {
 
 	var request struct {
 		agentpatch.Target
-		Endpoint string `json:"endpoint"`
-		Token    string `json:"token"`
+		agentconfig.Config
 	}
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &request); err != nil {
 		c.ResponseError(err.Error())
 		return
 	}
-	if strings.TrimSpace(request.Endpoint) == "" || strings.TrimSpace(request.Token) == "" {
+	request.Endpoint = strings.TrimSpace(request.Endpoint)
+	request.Token = strings.TrimSpace(request.Token)
+	for key, value := range request.Values {
+		request.Values[key] = strings.TrimSpace(value)
+	}
+	if request.Endpoint == "" || request.Token == "" {
 		c.ResponseError("endpoint and token are required")
 		return
 	}
@@ -94,7 +98,7 @@ func (c *ApiController) TakeoverAgentConfig() {
 		c.ResponseError(err.Error())
 		return
 	}
-	if err = adapter.Takeover(request.Endpoint, request.Token); err != nil {
+	if err = adapter.Takeover(request.Config); err != nil {
 		c.ResponseError(err.Error())
 		return
 	}

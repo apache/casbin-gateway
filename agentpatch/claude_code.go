@@ -19,6 +19,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/apache/casbin-gateway/agentfile"
 	"github.com/apache/casbin-gateway/agenthook"
 )
 
@@ -49,18 +50,16 @@ func (claudeCodePatcher) Patch(target Target) error {
 	if err != nil {
 		return err
 	}
-	config, mode, _, err := readJSONConfig(path)
-	if err != nil {
-		return err
-	}
 	command, args, err := claudeCodeHookCommand(target)
 	if err != nil {
 		return err
 	}
-	if err := normalizeClaudeCodeHooks(config, command, args); err != nil {
-		return err
-	}
-	return writeJSONConfig(path, config, mode)
+	return agentfile.UpdateJSON(path, func(config map[string]any, _ bool) (agentfile.Action, error) {
+		if err := normalizeClaudeCodeHooks(config, command, args); err != nil {
+			return agentfile.Keep, err
+		}
+		return agentfile.Write, nil
+	})
 }
 
 func (claudeCodePatcher) Unpatch(target Target) error {
@@ -71,16 +70,15 @@ func (claudeCodePatcher) Unpatch(target Target) error {
 	if err != nil {
 		return err
 	}
-	config, mode, exists, err := readJSONConfig(path)
-	if err != nil {
-		return err
-	}
 	// The credential is revoked on every unpatch path, including the ones that
 	// change no file, so a stale hook can never keep reporting.
-	if exists && removeClaudeCodeHooks(config) {
-		if err := writeJSONConfig(path, config, mode); err != nil {
-			return err
+	if err := agentfile.UpdateJSON(path, func(config map[string]any, exists bool) (agentfile.Action, error) {
+		if exists && removeClaudeCodeHooks(config) {
+			return agentfile.Write, nil
 		}
+		return agentfile.Keep, nil
+	}); err != nil {
+		return err
 	}
 	return RevokeIngestToken(target)
 }
@@ -100,7 +98,7 @@ func (claudeCodePatcher) Status(target Target) (Status, error) {
 	if err != nil {
 		return Status{}, err
 	}
-	config, _, exists, err := readJSONConfig(path)
+	config, exists, err := agentfile.ReadJSON(path)
 	if err != nil {
 		return Status{}, err
 	}

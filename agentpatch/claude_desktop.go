@@ -23,6 +23,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/apache/casbin-gateway/agentfile"
 	"github.com/apache/casbin-gateway/agentmonitor"
 	"github.com/apache/casbin-gateway/mcpserver"
 )
@@ -106,31 +107,25 @@ func (p claudeDesktopPatcher) Unpatch(target Target) error {
 // updateClaudeDesktopServers applies mutate to the mcpServers object and writes
 // the file back only when mutate reports a change.
 func updateClaudeDesktopServers(configPath string, mutate func(map[string]any) bool) error {
-	config, mode, exists, err := readJSONConfig(configPath)
-	if err != nil {
-		return err
-	}
-
-	servers, found := config["mcpServers"]
-	if !found {
-		servers = map[string]any{}
-	}
-	object, ok := objectAt(servers)
-	if !ok {
-		return errors.New("mcpServers must be a JSON object")
-	}
-	if !mutate(object) {
-		return nil
-	}
-	if len(object) == 0 {
-		delete(config, "mcpServers")
-	} else {
-		config["mcpServers"] = object
-	}
-	if !exists {
-		mode = 0o600
-	}
-	return writeJSONConfig(configPath, config, mode)
+	return agentfile.UpdateJSON(configPath, func(config map[string]any, _ bool) (agentfile.Action, error) {
+		servers, found := config["mcpServers"]
+		if !found {
+			servers = map[string]any{}
+		}
+		object, ok := objectAt(servers)
+		if !ok {
+			return agentfile.Keep, errors.New("mcpServers must be a JSON object")
+		}
+		if !mutate(object) {
+			return agentfile.Keep, nil
+		}
+		if len(object) == 0 {
+			delete(config, "mcpServers")
+		} else {
+			config["mcpServers"] = object
+		}
+		return agentfile.Write, nil
+	})
 }
 
 func (p claudeDesktopPatcher) Status(target Target) (Status, error) {
@@ -138,7 +133,7 @@ func (p claudeDesktopPatcher) Status(target Target) (Status, error) {
 	if err != nil {
 		return Status{}, err
 	}
-	config, _, exists, err := readJSONConfig(configPath)
+	config, exists, err := agentfile.ReadJSON(configPath)
 	if err != nil {
 		return Status{}, err
 	}
