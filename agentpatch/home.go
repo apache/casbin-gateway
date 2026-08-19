@@ -22,6 +22,11 @@ import (
 	"strings"
 )
 
+// ResolveHome returns the home directory for a discovered agent owner.
+func ResolveHome(target Target) (string, error) {
+	return homeOf(target)
+}
+
 // homeOf resolves the home directory of the installation owner. Patching writes
 // into that home, so guessing here would silently modify the wrong account's
 // configuration: an unresolvable owner is an error rather than a fallback to

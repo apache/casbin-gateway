@@ -173,6 +173,10 @@ export interface Agent {
   detail?: string;
   notice?: string;
   followup?: string;
+  configStatus?: {
+    takenOver: boolean;
+    endpoint?: string;
+  };
 }
 
 export interface AgentRecord {

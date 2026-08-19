@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import * as React from "react";
 import {Link} from "react-router-dom";
-import {Bot, CircleX, RefreshCw} from "lucide-react";
+import {Bot, CircleX, RefreshCw, Settings} from "lucide-react";
 import i18next from "i18next";
 
+import * as AgentBackend from "@/backend/AgentBackend";
 import * as Setting from "@/Setting";
 import {AgentIcon} from "@/components/AgentIcon";
 import {DataTable, type Column} from "@/components/DataTable";
@@ -25,14 +27,76 @@ import {Alert, AlertDescription} from "@/components/ui/alert";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {ConfirmButton} from "@/components/ui/confirm-button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {Input} from "@/components/ui/input";
+import {PasswordInput} from "@/components/ui/password-input";
 import {Spinner} from "@/components/ui/spinner";
 import {Tooltip} from "@/components/ui/tooltip";
 import {agentDetailPath, agentKey, monitorAgentId, useAgents} from "@/lib/agents";
 import type {Account, Agent} from "@/types";
 
 export default function AgentsPage({account}: {account: Account}) {
+  const [configAgent, setConfigAgent] = React.useState<Agent | null>(null);
+  const [endpoint, setEndpoint] = React.useState("");
+  const [token, setToken] = React.useState("");
+  const [savingConfig, setSavingConfig] = React.useState(false);
+  const [configBusyKey, setConfigBusyKey] = React.useState("");
   const isAdmin = Setting.isAdminUser(account);
   const {agents, loading, error, busyKey, scan, togglePatch} = useAgents(isAdmin);
+
+  const openConfig = (record: Agent) => {
+    setConfigAgent(record);
+    setEndpoint(record.configStatus?.endpoint ?? "");
+    setToken("");
+  };
+
+  const saveConfig = () => {
+    if (!configAgent || !endpoint.trim() || !token.trim()) {
+      Setting.showMessage("error", i18next.t("agent:API endpoint and token are required"));
+      return;
+    }
+
+    const target = {
+      agentId: configAgent.agentId,
+      path: configAgent.path,
+      owner: configAgent.owner,
+    };
+    setSavingConfig(true);
+    AgentBackend.takeoverAgentConfig(target, endpoint.trim(), token.trim())
+      .then(res => {
+        if (res.status === "ok") {
+          Setting.showMessage("success", i18next.t("agent:API configuration updated"));
+          setConfigAgent(null);
+          scan();
+        } else {
+          Setting.showMessage("error", res.msg || i18next.t("agent:Failed to update API configuration"));
+        }
+      })
+      .catch(err => Setting.showMessage("error", err.message || String(err)))
+      .then(() => setSavingConfig(false));
+  };
+
+  const restoreConfig = (record: Agent) => {
+    const target = {agentId: record.agentId, path: record.path, owner: record.owner};
+    setConfigBusyKey(agentKey(record));
+    AgentBackend.restoreAgentConfig(target)
+      .then(res => {
+        if (res.status === "ok") {
+          Setting.showMessage("success", i18next.t("agent:API configuration restored"));
+          scan();
+        } else {
+          Setting.showMessage("error", res.msg || i18next.t("agent:Failed to restore API configuration"));
+        }
+      })
+      .catch(err => Setting.showMessage("error", err.message || String(err)))
+      .then(() => setConfigBusyKey(""));
+  };
 
   if (!isAdmin) {
     return <UnauthorizedResult />;
@@ -108,6 +172,42 @@ export default function AgentsPage({account}: {account: Account}) {
         ) : null,
     },
     {
+      title: i18next.t("agent:API Configuration"),
+      key: "apiConfig",
+      render: (_value, record) => {
+        if (record.agentId !== "claude-code") {
+          return null;
+        }
+
+        const takenOver = record.configStatus?.takenOver === true;
+        return (
+          <div className="flex items-center gap-2">
+            <Tooltip title={record.configStatus?.endpoint}>
+              <Badge variant={takenOver ? "success" : "secondary"}>
+                {i18next.t(`agent:${takenOver ? "Configured" : "Not configured"}`)}
+              </Badge>
+            </Tooltip>
+            <Button size="sm" variant="outline" onClick={() => openConfig(record)}>
+              <Settings />
+              {i18next.t("agent:Configure")}
+            </Button>
+            {takenOver ? (
+              <ConfirmButton
+                title={i18next.t("agent:Restore Claude Code configuration?")}
+                okText={i18next.t("agent:Restore")}
+                onConfirm={() => restoreConfig(record)}
+              >
+                <Button size="sm" variant="outline" disabled={configBusyKey === agentKey(record)}>
+                  {configBusyKey === agentKey(record) ? <Spinner /> : null}
+                  {i18next.t("agent:Restore")}
+                </Button>
+              </ConfirmButton>
+            ) : null}
+          </div>
+        );
+      },
+    },
+    {
       title: i18next.t("general:Action"),
       key: "action",
       render: (_value, record) => {
@@ -167,6 +267,41 @@ export default function AgentsPage({account}: {account: Account}) {
         pageSize={0}
         emptyText={i18next.t("agent:No supported agents found")}
       />
+
+      <Dialog open={configAgent !== null} onOpenChange={open => !open && setConfigAgent(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{i18next.t("agent:Configure Claude Code API")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{i18next.t("agent:API Endpoint")}</label>
+              <Input
+                value={endpoint}
+                placeholder="https://api.example.com"
+                onChange={event => setEndpoint(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{i18next.t("agent:API Token")}</label>
+              <PasswordInput
+                value={token}
+                placeholder="sk-ant-..."
+                onChange={event => setToken(event.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfigAgent(null)}>
+              {i18next.t("general:Cancel")}
+            </Button>
+            <Button onClick={saveConfig} disabled={savingConfig}>
+              {savingConfig ? <Spinner /> : null}
+              {i18next.t("general:Save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

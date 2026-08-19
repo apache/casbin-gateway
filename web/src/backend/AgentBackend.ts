@@ -21,6 +21,11 @@ export interface PatchTarget {
   owner: string;
 }
 
+export interface AgentConfigStatus {
+  takenOver: boolean;
+  endpoint?: string;
+}
+
 export function getAgents(forceRefresh = false) {
   return request<Agent[]>(`/api/get-agents${forceRefresh ? "?refresh=true" : ""}`);
 }
@@ -31,6 +36,18 @@ export function patchAgent(target: PatchTarget) {
 
 export function unpatchAgent(target: PatchTarget) {
   return request<{followup?: string}>("/api/unpatch-agent", "POST", target);
+}
+
+export function takeoverAgentConfig(target: PatchTarget, endpoint: string, token: string) {
+  return request<AgentConfigStatus>("/api/takeover-agent-config", "POST", {
+    ...target,
+    endpoint,
+    token,
+  });
+}
+
+export function restoreAgentConfig(target: PatchTarget) {
+  return request("/api/restore-agent-config", "POST", target);
 }
 
 export function getAgentRecords(agent = "", eventType = "", outcome = "", session = "", limit = 200) {

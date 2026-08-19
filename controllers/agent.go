@@ -16,12 +16,14 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/apache/casbin-gateway/agent"
+	"github.com/apache/casbin-gateway/agentconfig"
 	"github.com/apache/casbin-gateway/agentmonitor"
 	"github.com/apache/casbin-gateway/agentpatch"
 )
@@ -29,6 +31,7 @@ import (
 type discoveredAgent struct {
 	agent.Installation
 	agentpatch.Status
+	ConfigStatus *agentconfig.Status `json:"configStatus,omitempty"`
 }
 
 // GetAgents scans known installation locations and returns the AI agents
@@ -46,12 +49,94 @@ func (c *ApiController) GetAgents() {
 
 	result := make([]*discoveredAgent, 0, len(installations))
 	for _, installation := range installations {
-		result = append(result, &discoveredAgent{
+		item := &discoveredAgent{
 			Installation: installation,
 			Status:       agentpatch.StatusOf(targetOf(installation)),
-		})
+		}
+		if installation.AgentId == "claude-code" {
+			if adapter, adapterErr := configAdapter(targetOf(installation)); adapterErr == nil {
+				if status, statusErr := adapter.Status(); statusErr == nil {
+					item.ConfigStatus = &status
+				}
+			}
+		}
+		result = append(result, item)
 	}
 	c.ResponseOk(result)
+}
+
+// TakeoverAgentConfig points a supported agent at the configured API endpoint.
+func (c *ApiController) TakeoverAgentConfig() {
+	if c.RequireAdmin() {
+		return
+	}
+
+	var request struct {
+		agentpatch.Target
+		Endpoint string `json:"endpoint"`
+		Token    string `json:"token"`
+	}
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &request); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if strings.TrimSpace(request.Endpoint) == "" || strings.TrimSpace(request.Token) == "" {
+		c.ResponseError("endpoint and token are required")
+		return
+	}
+
+	target, ok := c.readAgentPatchTarget()
+	if !ok {
+		return
+	}
+	adapter, err := configAdapter(target)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if err = adapter.Takeover(request.Endpoint, request.Token); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	status, err := adapter.Status()
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(status)
+}
+
+// RestoreAgentConfig restores the configuration saved before takeover.
+func (c *ApiController) RestoreAgentConfig() {
+	if c.RequireAdmin() {
+		return
+	}
+
+	target, ok := c.readAgentPatchTarget()
+	if !ok {
+		return
+	}
+	adapter, err := configAdapter(target)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if err = adapter.Restore(); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk()
+}
+
+func configAdapter(target agentpatch.Target) (agentconfig.Adapter, error) {
+	if target.AgentId != "claude-code" {
+		return nil, fmt.Errorf("agent config is not supported for %s", target.AgentId)
+	}
+	home, err := agentpatch.ResolveHome(target)
+	if err != nil {
+		return nil, err
+	}
+	return agentconfig.NewClaudeCodeAdapter(home), nil
 }
 
 // PatchAgent enables monitoring for one discovered installation.
