@@ -67,6 +67,8 @@ Casbin Gateway runs standalone out of the box: it stores its data in a local SQL
 - **Manual Installation**: Build and run from source
 - **Single binary**: Build one self-contained executable that runs with no files next to it, see [Single binary](#single-binary)
 
+The Agent features are not supported by the default Docker Compose deployment because the container cannot access agents installed on the host.
+
 The reverse-proxy gateway on ports 80 and 443 is disabled by default, so starting the management application does not take over those ports. Set `gatewayEnabled = true` in `conf/app.conf` when you are ready to use the WAF proxy. On Linux and macOS those ports also need root, so for a first try it is easier to point `gatewayHttpPort` at a high port such as `8080`.
 
 ### Quick start
