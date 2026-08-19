@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/apache/casbin-gateway/conf"
 	"github.com/apache/casbin-gateway/proxy"
 	"github.com/apache/casbin-gateway/util"
 	"github.com/xorm-io/core"
@@ -38,6 +39,44 @@ var ErrNoChannelAvailable = errors.New("no available channel")
 // back in an update means "keep the existing key"; sending anything else
 // (including an empty string) overwrites the stored key.
 const ApiKeyMask = "***"
+
+// apiKeyEncryptionSecret is the configured secret used to encrypt channel API
+// keys at rest. When empty, keys are stored as plaintext (the previous
+// behavior), so encryption can be enabled without a migration.
+func apiKeyEncryptionSecret() string {
+	return conf.GetConfigString("apiKeyEncryptionKey")
+}
+
+// encryptApiKey encrypts channel.ApiKey in place before it is written to the
+// database. It is a no-op when no key is configured or the value is empty.
+func encryptApiKey(channel *Channel) error {
+	encrypted, err := util.EncryptWithKey(apiKeyEncryptionSecret(), channel.ApiKey)
+	if err != nil {
+		return err
+	}
+	channel.ApiKey = encrypted
+	return nil
+}
+
+// decryptChannel restores the plaintext ApiKey on a channel just read from the
+// database, so every caller above this layer works with the real key. A legacy
+// plaintext value is passed through unchanged. A decryption failure (e.g. the
+// key was rotated) leaves the stored value in place rather than dropping the
+// channel: the masking layer still hides it, and any upstream call fails loudly.
+func decryptChannel(channel *Channel) {
+	if channel == nil {
+		return
+	}
+	if plain, err := util.DecryptWithKey(apiKeyEncryptionSecret(), channel.ApiKey); err == nil {
+		channel.ApiKey = plain
+	}
+}
+
+func decryptChannels(channels []*Channel) {
+	for _, channel := range channels {
+		decryptChannel(channel)
+	}
+}
 
 const (
 	maxChannelModels     = 200
@@ -76,7 +115,9 @@ type Channel struct {
 	DisplayName string `xorm:"varchar(100)" json:"displayName"`
 	Type        string `xorm:"varchar(100)" json:"type"`
 	BaseUrl     string `xorm:"varchar(255)" json:"baseUrl"`
-	// TODO(1.3): ApiKey is stored as plaintext; AES encryption will be added in milestone 1.3.
+	// ApiKey is encrypted at rest with AES-256-GCM when "apiKeyEncryptionKey" is
+	// set in app.conf (see encryptApiKey/decryptApiKey). The column also holds the
+	// base64 ciphertext, so it is wider than a bare key.
 	ApiKey string `xorm:"varchar(500)" json:"apiKey"`
 	// Models is JSON-serialized by xorm, so it needs a text column rather than
 	// a varchar: the serialized form is longer than the joined model names.
@@ -94,6 +135,7 @@ func GetChannels(owner string) ([]*Channel, error) {
 	channels := []*Channel{}
 	session := GetSession(owner, -1, -1, "", "", "", "")
 	err := session.Find(&channels)
+	decryptChannels(channels)
 	return channels, err
 }
 
@@ -106,6 +148,7 @@ func GetPaginationChannels(owner string, offset, limit int, field, value, sortFi
 	channels := []*Channel{}
 	session := GetSession(owner, offset, limit, field, value, sortField, sortOrder)
 	err := session.Find(&channels)
+	decryptChannels(channels)
 	return channels, err
 }
 
@@ -118,6 +161,7 @@ func getChannel(owner, name string) (*Channel, error) {
 	if !existed {
 		return nil, nil
 	}
+	decryptChannel(channel)
 	return channel, nil
 }
 
@@ -231,6 +275,10 @@ func AddChannel(channel *Channel) (bool, error) {
 	}
 	channel.UpdatedTime = now
 
+	if err := encryptApiKey(channel); err != nil {
+		return false, err
+	}
+
 	affected, err := ormer.Engine.Insert(channel)
 	return affected != 0, err
 }
@@ -257,6 +305,9 @@ func UpdateChannel(id string, channel *Channel) (bool, error) {
 	// is what makes clearing a key possible.
 	if channel.ApiKey == ApiKeyMask {
 		session = session.Omit("api_key")
+	} else if err := encryptApiKey(channel); err != nil {
+		// A real (new or cleared) key is being written, so encrypt it first.
+		return false, err
 	}
 
 	affected, err := session.AllCols().Update(channel)
@@ -350,6 +401,9 @@ func GetChannelsByModel(model string) ([]*Channel, error) {
 			}
 		}
 	}
+
+	// The proxy sends these keys upstream, so hand back the decrypted values.
+	decryptChannels(matchedChannels)
 
 	if len(matchedChannels) == 0 {
 		return nil, fmt.Errorf("%w: %s", ErrNoChannelAvailable, model)
