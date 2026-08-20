@@ -16,8 +16,10 @@ package controllers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -65,8 +67,8 @@ func (c *ApiController) GetAgents() {
 	c.ResponseOk(result)
 }
 
-// TakeoverAgentConfig points a supported agent at the configured API endpoint.
-func (c *ApiController) TakeoverAgentConfig() {
+// ConfigureAgentApi configures a supported agent to use a third-party API.
+func (c *ApiController) ConfigureAgentApi() {
 	if c.RequireAdmin() {
 		return
 	}
@@ -84,8 +86,8 @@ func (c *ApiController) TakeoverAgentConfig() {
 	for key, value := range request.Values {
 		request.Values[key] = strings.TrimSpace(value)
 	}
-	if request.Endpoint == "" || request.Token == "" {
-		c.ResponseError("endpoint and token are required")
+	if err := validateAgentEndpoint(request.Endpoint); err != nil {
+		c.ResponseError(err.Error())
 		return
 	}
 
@@ -98,7 +100,7 @@ func (c *ApiController) TakeoverAgentConfig() {
 		c.ResponseError(err.Error())
 		return
 	}
-	if err = adapter.Takeover(request.Config); err != nil {
+	if err = adapter.Configure(request.Config); err != nil {
 		c.ResponseError(err.Error())
 		return
 	}
@@ -110,7 +112,26 @@ func (c *ApiController) TakeoverAgentConfig() {
 	c.ResponseOk(status)
 }
 
-// RestoreAgentConfig restores the configuration saved before takeover.
+func validateAgentEndpoint(endpoint string) error {
+	parsed, err := url.Parse(endpoint)
+	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return errors.New("endpoint must be a valid HTTP or HTTPS URL")
+	}
+	if parsed.Scheme == "https" {
+		return nil
+	}
+
+	host := parsed.Hostname()
+	if strings.EqualFold(host, "localhost") {
+		return nil
+	}
+	if ip := net.ParseIP(host); ip != nil && ip.IsLoopback() {
+		return nil
+	}
+	return errors.New("endpoint must use HTTPS unless it points to localhost")
+}
+
+// RestoreAgentConfig restores the configuration saved before it was configured.
 func (c *ApiController) RestoreAgentConfig() {
 	if c.RequireAdmin() {
 		return

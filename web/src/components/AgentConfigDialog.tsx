@@ -31,7 +31,12 @@ import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
 import {PasswordInput} from "@/components/ui/password-input";
 import {Spinner} from "@/components/ui/spinner";
-import {getAgentConfigDefinition, type AgentConfigPreset, type AgentConfigValues} from "@/lib/agentConfigs";
+import {
+  getAgentConfigDefinition,
+  type AgentConfigDefinition,
+  type AgentConfigPreset,
+  type AgentConfigValues,
+} from "@/lib/agentConfigs";
 import {cn} from "@/lib/utils";
 import type {Agent} from "@/types";
 
@@ -46,16 +51,32 @@ export function AgentConfigDialog({
 }) {
   const definition = getAgentConfigDefinition(agent.agentId);
   if (!definition) {
-    throw new Error(`Missing configuration definition for ${agent.agentId}`);
+    return null;
   }
 
-  const initialPreset = agent.configStatus?.takenOver
+  return <AgentConfigDialogContent agent={agent} definition={definition} onClose={onClose} onSaved={onSaved} />;
+}
+
+function AgentConfigDialogContent({
+  agent,
+  definition,
+  onClose,
+  onSaved,
+}: {
+  agent: Agent;
+  definition: AgentConfigDefinition;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const editing = agent.configStatus?.configured === true;
+
+  const initialPreset = agent.configStatus?.restorable
     ? definition.presets.find(preset => preset.endpoint && preset.endpoint === agent.configStatus?.endpoint) ??
       definition.presets.find(preset => preset.id === "custom")!
     : definition.presets.find(preset => preset.id === definition.defaultPreset)!;
   const [presetId, setPresetId] = React.useState(initialPreset.id);
   const [config, setConfig] = React.useState<AgentConfigValues>(() =>
-    agent.configStatus?.takenOver
+    agent.configStatus?.restorable
       ? {
         endpoint: agent.configStatus.endpoint ?? "",
         values: Object.fromEntries(
@@ -74,13 +95,17 @@ export function AgentConfigDialog({
   };
 
   const save = () => {
-    if (!config.endpoint.trim() || !token.trim()) {
-      Setting.showMessage("error", i18next.t("agent:API endpoint and token are required"));
+    if (!config.endpoint.trim()) {
+      Setting.showMessage("error", i18next.t("agent:API endpoint is required"));
+      return;
+    }
+    if (!editing && !token.trim()) {
+      Setting.showMessage("error", i18next.t("agent:API token is required"));
       return;
     }
 
     setSaving(true);
-    AgentBackend.takeoverAgentConfig(
+    AgentBackend.configureAgentApi(
       {agentId: agent.agentId, path: agent.path, owner: agent.owner},
       {
         endpoint: config.endpoint.trim(),
@@ -157,7 +182,7 @@ export function AgentConfigDialog({
               <PasswordInput
                 id="agent-config-token"
                 value={token}
-                placeholder={i18next.t("agent:Enter API token")}
+                placeholder={i18next.t(editing ? "agent:Leave blank to keep current token" : "agent:Enter API token")}
                 onChange={event => setToken(event.target.value)}
               />
             </div>

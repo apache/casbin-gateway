@@ -66,7 +66,7 @@ func initAPI() {
 	beego.Router("/api/get-agents", &controllers.ApiController{}, "GET:GetAgents")
 	beego.Router("/api/patch-agent", &controllers.ApiController{}, "POST:PatchAgent")
 	beego.Router("/api/unpatch-agent", &controllers.ApiController{}, "POST:UnpatchAgent")
-	beego.Router("/api/takeover-agent-config", &controllers.ApiController{}, "POST:TakeoverAgentConfig")
+	beego.Router("/api/configure-agent-api", &controllers.ApiController{}, "POST:ConfigureAgentApi")
 	beego.Router("/api/restore-agent-config", &controllers.ApiController{}, "POST:RestoreAgentConfig")
 	beego.Router("/api/get-agent-records", &controllers.ApiController{}, "GET:GetAgentRecords")
 	beego.Router("/api/get-agent-sessions", &controllers.ApiController{}, "GET:GetAgentSessions")

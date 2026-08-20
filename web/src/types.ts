@@ -174,7 +174,7 @@ export interface Agent {
   notice?: string;
   followup?: string;
   configStatus?: {
-    takenOver: boolean;
+    restorable: boolean;
     configured: boolean;
     endpoint?: string;
     values?: {[key: string]: string};

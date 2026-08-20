@@ -22,7 +22,7 @@ export interface PatchTarget {
 }
 
 export interface AgentConfigStatus {
-  takenOver: boolean;
+  restorable: boolean;
   configured: boolean;
   endpoint?: string;
   values?: Record<string, string>;
@@ -46,8 +46,8 @@ export function unpatchAgent(target: PatchTarget) {
   return request<{followup?: string}>("/api/unpatch-agent", "POST", target);
 }
 
-export function takeoverAgentConfig(target: PatchTarget, config: AgentConfig) {
-  return request<AgentConfigStatus>("/api/takeover-agent-config", "POST", {
+export function configureAgentApi(target: PatchTarget, config: AgentConfig) {
+  return request<AgentConfigStatus>("/api/configure-agent-api", "POST", {
     ...target,
     ...config,
   });

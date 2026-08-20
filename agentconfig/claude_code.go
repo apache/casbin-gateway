@@ -71,11 +71,14 @@ func (a *ClaudeCodeAdapter) Read() (map[string]any, error) {
 	return config, err
 }
 
-func (a *ClaudeCodeAdapter) Takeover(settings Config) error {
+func (a *ClaudeCodeAdapter) Configure(settings Config) error {
 	return agentfile.UpdateJSON(a.configPath, func(config map[string]any, fileExists bool) (agentfile.Action, error) {
 		env, envExists, err := envObject(config)
 		if err != nil {
 			return agentfile.Keep, err
+		}
+		if settings.Token == "" && stringValue(env[claudeAuthToken]) == "" {
+			return agentfile.Keep, errors.New("token is required for initial configuration")
 		}
 		if err = a.createBackup(fileExists, envExists, env); err != nil {
 			return agentfile.Keep, err
@@ -83,8 +86,10 @@ func (a *ClaudeCodeAdapter) Takeover(settings Config) error {
 
 		config["env"] = env
 		env[claudeBaseURL] = settings.Endpoint
-		env[claudeAuthToken] = settings.Token
-		delete(env, claudeAPIKey)
+		if settings.Token != "" {
+			env[claudeAuthToken] = settings.Token
+			delete(env, claudeAPIKey)
+		}
 		for field, envKey := range claudeModelEnv {
 			setOrDelete(env, envKey, settings.Values[field])
 		}
@@ -151,7 +156,7 @@ func (a *ClaudeCodeAdapter) Status() (Status, error) {
 		}
 	}
 	return Status{
-		TakenOver:  true,
+		Restorable: true,
 		Configured: endpoint != "" && token != "",
 		Endpoint:   endpoint,
 		Values:     values,

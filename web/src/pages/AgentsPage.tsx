@@ -142,7 +142,7 @@ export default function AgentsPage({account}: {account: Account}) {
           return null;
         }
 
-        const takenOver = record.configStatus?.takenOver === true;
+        const restorable = record.configStatus?.restorable === true;
         const configured = record.configStatus?.configured === true;
         const provider =
           definition.presets.find(preset => preset.endpoint === record.configStatus?.endpoint) ??
@@ -158,7 +158,7 @@ export default function AgentsPage({account}: {account: Account}) {
               <Settings />
               {i18next.t("agent:Configure")}
             </Button>
-            {takenOver ? (
+            {restorable ? (
               <ConfirmButton
                 title={i18next.t("agent:Restore Claude Code configuration?")}
                 okText={i18next.t("agent:Restore")}
