@@ -209,8 +209,12 @@ export default function App() {
                   element={requireSignin(user => <ChannelListPage account={user} />)}
                 />
                 <Route
+                  path="/channels/new"
+                  element={requireSignin(user => <ChannelEditPage account={user} />)}
+                />
+                <Route
                   path="/channels/:owner/:channelName"
-                  element={requireSignin(() => <ChannelEditPage />)}
+                  element={requireSignin(user => <ChannelEditPage account={user} />)}
                 />
                 <Route path="/dashboard" element={requireSignin(() => <DashboardPage />)} />
               </Routes>

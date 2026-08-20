@@ -52,3 +52,7 @@ export function deleteChannel(channel: Channel) {
 export function testChannel(owner: string, name: string) {
   return request<ChannelTestResult>("/api/test-channel", "POST", {owner: owner, name: name});
 }
+
+export function fetchChannelModels(channel: Channel) {
+  return request<string[]>("/api/fetch-channel-models", "POST", channel);
+}

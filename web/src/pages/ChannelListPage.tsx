@@ -26,21 +26,6 @@ import {ConfirmButton} from "@/components/ui/confirm-button";
 import {Tooltip} from "@/components/ui/tooltip";
 import type {Account, Channel} from "@/types";
 
-function newChannel(owner: string): Channel {
-  const randomName = Setting.getRandomName();
-  return {
-    owner: owner,
-    name: `channel_${randomName}`,
-    displayName: `New Channel - ${randomName}`,
-    type: "openai",
-    status: "enabled",
-    models: [],
-    priority: 0,
-    baseUrl: "",
-    apiKey: "",
-  };
-}
-
 export default function ChannelListPage({account}: {account: Account}) {
   const navigate = useNavigate();
   const [data, setData] = React.useState<Channel[]>([]);
@@ -87,19 +72,6 @@ export default function ChannelListPage({account}: {account: Account}) {
     fetchChannels(1, 10, {field: "", order: undefined});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account.name]);
-
-  const addChannel = () => {
-    ChannelBackend.addChannel(newChannel(account.name))
-      .then(res => {
-        if (res.status === "error") {
-          Setting.showMessage("error", `${i18next.t("channel:Failed to add")}: ${res.msg}`);
-        } else {
-          Setting.showMessage("success", i18next.t("channel:Channel added successfully"));
-          fetchChannels();
-        }
-      })
-      .catch(error => Setting.showMessage("error", `${i18next.t("channel:Failed to add")}: ${error}`));
-  };
 
   const deleteChannel = (channel: Channel) => {
     ChannelBackend.deleteChannel(channel)
@@ -150,7 +122,7 @@ export default function ChannelListPage({account}: {account: Account}) {
       dataIndex: "type",
       width: "110px",
       render: (text: string) => (
-        <Badge variant={text === "openai" ? "success" : "processing"}>{text}</Badge>
+        <Badge variant={text === "openai" ? "success" : text === "anthropic" ? "warning" : "processing"}>{text}</Badge>
       ),
     },
     {
@@ -172,8 +144,12 @@ export default function ChannelListPage({account}: {account: Account}) {
       key: "models",
       dataIndex: "models",
       width: "220px",
-      render: (models: string[]) =>
-        !models || models.length === 0 ? (
+      render: (models: string[], record) =>
+        record.type === "anthropic" ? (
+          <Tooltip title={`Default: ${record.defaultModel} / Haiku: ${record.haikuModel} / Sonnet: ${record.sonnetModel} / Opus: ${record.opusModel}`}>
+            <span className="block truncate text-xs">H: {record.haikuModel} / S: {record.sonnetModel} / O: {record.opusModel}</span>
+          </Tooltip>
+        ) : !models || models.length === 0 ? (
           "-"
         ) : (
           <div className="flex flex-wrap gap-1">
@@ -251,7 +227,7 @@ export default function ChannelListPage({account}: {account: Account}) {
         }}
         title={i18next.t("channel:Channels")}
         toolbar={
-          <Button size="sm" onClick={addChannel}>
+          <Button size="sm" onClick={() => navigate("/channels/new")}>
             <Plus />
             {i18next.t("channel:New Channel")}
           </Button>

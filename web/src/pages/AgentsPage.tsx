@@ -12,11 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import * as React from "react";
 import {Link} from "react-router-dom";
-import {Bot, CircleX, RefreshCw} from "lucide-react";
+import {Bot, CircleX, PlugZap, RefreshCw, RotateCcw} from "lucide-react";
 import i18next from "i18next";
 
 import * as Setting from "@/Setting";
+import * as AgentBackend from "@/backend/AgentBackend";
+import * as ChannelBackend from "@/backend/ChannelBackend";
 import {AgentIcon} from "@/components/AgentIcon";
 import {DataTable, type Column} from "@/components/DataTable";
 import {PageHeader} from "@/components/FormRow";
@@ -33,6 +36,33 @@ import type {Account, Agent} from "@/types";
 export default function AgentsPage({account}: {account: Account}) {
   const isAdmin = Setting.isAdminUser(account);
   const {agents, loading, error, busyKey, scan, togglePatch} = useAgents(isAdmin);
+  const [gatewayBusy, setGatewayBusy] = React.useState("");
+  const [hasAnthropicChannel, setHasAnthropicChannel] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isAdmin) return;
+    ChannelBackend.getChannels(account.name).then(res => {
+      if (res.status === "ok") {
+        setHasAnthropicChannel((res.data ?? []).some(channel => channel.type === "anthropic" && channel.status === "enabled"));
+      }
+    });
+  }, [account.name, isAdmin]);
+
+  const changeGateway = (agent: Agent, restore: boolean) => {
+    const target = {agentId: agent.agentId, path: agent.path, owner: agent.owner};
+    setGatewayBusy(agentKey(agent));
+    (restore ? AgentBackend.restoreAgentGateway(target) : AgentBackend.configureAgentGateway(target))
+      .then(res => {
+        if (res.status === "ok") {
+          Setting.showMessage("success", `${i18next.t(restore ? "agent:Gateway restored" : "agent:Gateway connected")}. ${i18next.t("agent:Restart Claude Code")}`);
+          scan();
+        } else {
+          Setting.showMessage("error", res.msg);
+        }
+      })
+      .catch(err => Setting.showMessage("error", err.message || String(err)))
+      .then(() => setGatewayBusy(""));
+  };
 
   if (!isAdmin) {
     return <UnauthorizedResult />;
@@ -106,6 +136,33 @@ export default function AgentsPage({account}: {account: Account}) {
             {i18next.t("agent:View Records")}
           </Link>
         ) : null,
+    },
+    {
+      title: i18next.t("agent:Gateway Connection"),
+      key: "gatewayConfig",
+      render: (_value, record) => {
+        if (record.agentId !== "claude-code" || !record.gatewayConfig) return null;
+        const busy = gatewayBusy === agentKey(record);
+        return (
+          <div className="flex flex-wrap items-center gap-2">
+            {record.gatewayConfig.configured ? <Badge variant="success">{i18next.t("agent:Connected")}</Badge> : null}
+            <Tooltip title={!hasAnthropicChannel ? i18next.t("agent:Create an enabled Anthropic channel first") : record.gatewayConfig.detail}>
+              <span>
+                <Button size="sm" variant="outline" disabled={busy || !hasAnthropicChannel} onClick={() => changeGateway(record, false)}>
+                  {busy ? <Spinner /> : <PlugZap />}
+                  {i18next.t(record.gatewayConfig.configured ? "agent:Reconfigure Gateway" : "agent:Connect Gateway")}
+                </Button>
+              </span>
+            </Tooltip>
+            {!hasAnthropicChannel ? <Link className="text-sm text-primary hover:underline" to="/channels">{i18next.t("agent:Go to Channels")}</Link> : null}
+            {record.gatewayConfig.restorable ? (
+              <ConfirmButton title={i18next.t("agent:Restore original Claude Code configuration?")} onConfirm={() => changeGateway(record, true)}>
+                <Button size="sm" variant="outline" disabled={busy}><RotateCcw />{i18next.t("agent:Restore configuration")}</Button>
+              </ConfirmButton>
+            ) : null}
+          </div>
+        );
+      },
     },
     {
       title: i18next.t("general:Action"),

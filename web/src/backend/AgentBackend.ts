@@ -33,6 +33,14 @@ export function unpatchAgent(target: PatchTarget) {
   return request<{followup?: string}>("/api/unpatch-agent", "POST", target);
 }
 
+export function configureAgentGateway(target: PatchTarget) {
+  return request<Agent["gatewayConfig"]>("/api/configure-agent-gateway", "POST", target);
+}
+
+export function restoreAgentGateway(target: PatchTarget) {
+  return request<Agent["gatewayConfig"]>("/api/restore-agent-gateway", "POST", target);
+}
+
 export function getAgentRecords(agent = "", eventType = "", outcome = "", session = "", limit = 200) {
   return request<AgentRecord[]>(
     `/api/get-agent-records${query({

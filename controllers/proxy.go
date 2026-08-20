@@ -72,6 +72,16 @@ type openaiErrorDetail struct {
 	Type    string `json:"type"`
 }
 
+type anthropicErrorResponse struct {
+	Type  string               `json:"type"`
+	Error anthropicErrorDetail `json:"error"`
+}
+
+type anthropicErrorDetail struct {
+	Type    string `json:"type"`
+	Message string `json:"message"`
+}
+
 // proxyClient is a shared HTTP client for upstream requests.
 // Reusing a single instance allows TCP connection pooling across requests.
 // It has no overall Timeout on purpose, see proxyResponseHeaderTimeout.
@@ -163,6 +173,133 @@ func (c *ApiController) ChatCompletions() {
 	}
 
 	c.writeOpenAIError(lastStatus, "server_error", lastMessage)
+}
+
+// Messages proxies Claude Code's native Anthropic Messages protocol. Client
+// authentication is intentionally deferred to the gateway auth milestone;
+// client credentials are still stripped before a channel key is injected.
+func (c *ApiController) Messages() {
+	rawBody := c.Ctx.Input.RequestBody
+	var req chatCompletionsRequest
+	var body map[string]json.RawMessage
+	if err := json.Unmarshal(rawBody, &body); err != nil || json.Unmarshal(rawBody, &req) != nil {
+		c.writeAnthropicError(http.StatusBadRequest, "invalid_request_error", "invalid request body")
+		return
+	}
+	if req.Model == "" {
+		c.writeAnthropicError(http.StatusBadRequest, "invalid_request_error", "model is required")
+		return
+	}
+
+	channels, err := object.GetAnthropicChannelsByModel(req.Model)
+	if err != nil {
+		if errors.Is(err, object.ErrNoChannelAvailable) {
+			c.writeAnthropicError(http.StatusBadRequest, "invalid_request_error", err.Error())
+		} else {
+			beego.Error("Anthropic channel lookup failed:", err)
+			c.writeAnthropicError(http.StatusBadGateway, "api_error", "channel lookup failed")
+		}
+		return
+	}
+
+	usableChannels := make([]*object.Channel, 0, len(channels))
+	for _, channel := range channels {
+		if reason := channelUnusableReason(channel); reason != "" {
+			beego.Error("skipped channel", channel.GetId()+":", reason)
+			continue
+		}
+		usableChannels = append(usableChannels, channel)
+	}
+	if len(usableChannels) == 0 {
+		c.writeAnthropicError(http.StatusBadGateway, "api_error", "no usable Anthropic channel")
+		return
+	}
+
+	lastStatus, lastMessage := http.StatusBadGateway, "upstream connection failed"
+	for index, channel := range usableChannels {
+		if c.Ctx.Request.Context().Err() != nil {
+			return
+		}
+		attemptBody := make(map[string]json.RawMessage, len(body))
+		for key, value := range body {
+			attemptBody[key] = value
+		}
+		attemptBody["model"], _ = json.Marshal(channel.AnthropicModel(req.Model))
+		encoded, err := json.Marshal(attemptBody)
+		if err != nil {
+			c.writeAnthropicError(http.StatusBadRequest, "invalid_request_error", "invalid request body")
+			return
+		}
+		status, message, written := c.forwardAnthropicToChannel(channel, encoded, req.Stream, index == len(usableChannels)-1)
+		if written {
+			return
+		}
+		lastStatus, lastMessage = status, message
+	}
+	c.writeAnthropicError(lastStatus, "api_error", lastMessage)
+}
+
+func (c *ApiController) forwardAnthropicToChannel(channel *object.Channel, body []byte, stream, isLast bool) (int, string, bool) {
+	upstreamURL, err := object.BuildAnthropicMessagesUrl(channel.BaseUrl, c.Ctx.Request.URL.RawQuery)
+	if err != nil {
+		return http.StatusBadGateway, err.Error(), false
+	}
+	ctx, cancel := context.WithCancel(c.Ctx.Request.Context())
+	defer cancel()
+
+	upstreamReq, err := http.NewRequestWithContext(ctx, http.MethodPost, upstreamURL, bytes.NewReader(body))
+	if err != nil {
+		return http.StatusBadGateway, "upstream connection failed", false
+	}
+	copyRequestHeaders(upstreamReq.Header, c.Ctx.Request.Header)
+	upstreamReq.Header.Set("Content-Type", "application/json")
+	if channel.AuthType == "x-api-key" {
+		upstreamReq.Header.Set("x-api-key", channel.ApiKey)
+	} else {
+		upstreamReq.Header.Set("Authorization", "Bearer "+channel.ApiKey)
+	}
+
+	upstreamResp, err := proxyClient.Do(upstreamReq)
+	if err != nil {
+		if c.Ctx.Request.Context().Err() != nil {
+			return 0, "", true
+		}
+		beego.Error("upstream request to channel", channel.GetId(), "failed:", err)
+		var netErr net.Error
+		if errors.As(err, &netErr) && netErr.Timeout() {
+			return http.StatusGatewayTimeout, "upstream timeout", false
+		}
+		return http.StatusBadGateway, "upstream connection failed", false
+	}
+	defer upstreamResp.Body.Close()
+	if !isLast && isRetryableStatus(upstreamResp.StatusCode) {
+		_, _ = io.Copy(io.Discard, io.LimitReader(upstreamResp.Body, 4096))
+		return http.StatusBadGateway, fmt.Sprintf("upstream returned %s", upstreamResp.Status), false
+	}
+
+	responseBody := newIdleTimeoutReader(upstreamResp.Body, proxyIdleTimeout, cancel)
+	defer responseBody.Stop()
+	c.relayResponse(upstreamResp, responseBody, stream && isEventStream(upstreamResp))
+	return 0, "", true
+}
+
+func copyRequestHeaders(dst, src http.Header) {
+	dynamicHopHeaders := map[string]bool{}
+	for _, value := range src.Values("Connection") {
+		for _, name := range strings.Split(value, ",") {
+			dynamicHopHeaders[http.CanonicalHeaderKey(strings.TrimSpace(name))] = true
+		}
+	}
+	for name, values := range src {
+		canonical := http.CanonicalHeaderKey(name)
+		if isHopByHopHeader(name) || dynamicHopHeaders[canonical] || strings.EqualFold(name, "Host") ||
+			strings.EqualFold(name, "Content-Length") || strings.EqualFold(name, "Authorization") || strings.EqualFold(name, "x-api-key") {
+			continue
+		}
+		for _, value := range values {
+			dst.Add(name, value)
+		}
+	}
 }
 
 // forwardToChannel sends the request to a single channel's upstream. It reports
@@ -261,8 +398,14 @@ func (c *ApiController) relayResponse(upstreamResp *http.Response, body io.Reade
 // hop-by-hop ones, which belong to the upstream connection and not to the
 // response being relayed.
 func copyResponseHeaders(dst http.Header, src http.Header) {
+	dynamicHopHeaders := map[string]bool{}
+	for _, value := range src.Values("Connection") {
+		for _, name := range strings.Split(value, ",") {
+			dynamicHopHeaders[http.CanonicalHeaderKey(strings.TrimSpace(name))] = true
+		}
+	}
 	for name, values := range src {
-		if isHopByHopHeader(name) {
+		if isHopByHopHeader(name) || dynamicHopHeaders[http.CanonicalHeaderKey(name)] {
 			continue
 		}
 		for _, value := range values {
@@ -347,6 +490,18 @@ func (c *ApiController) writeOpenAIError(statusCode int, errType, message string
 			Message: message,
 			Type:    errType,
 		},
+	}
+	c.Ctx.ResponseWriter.Header().Set("Content-Type", "application/json")
+	c.Ctx.ResponseWriter.WriteHeader(statusCode)
+	if err := json.NewEncoder(c.Ctx.ResponseWriter).Encode(resp); err != nil {
+		beego.Error("proxy error response write failed:", err)
+	}
+}
+
+func (c *ApiController) writeAnthropicError(statusCode int, errType, message string) {
+	resp := anthropicErrorResponse{
+		Type:  "error",
+		Error: anthropicErrorDetail{Type: errType, Message: message},
 	}
 	c.Ctx.ResponseWriter.Header().Set("Content-Type", "application/json")
 	c.Ctx.ResponseWriter.WriteHeader(statusCode)

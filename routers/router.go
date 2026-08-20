@@ -66,6 +66,8 @@ func initAPI() {
 	beego.Router("/api/get-agents", &controllers.ApiController{}, "GET:GetAgents")
 	beego.Router("/api/patch-agent", &controllers.ApiController{}, "POST:PatchAgent")
 	beego.Router("/api/unpatch-agent", &controllers.ApiController{}, "POST:UnpatchAgent")
+	beego.Router("/api/configure-agent-gateway", &controllers.ApiController{}, "POST:ConfigureAgentGateway")
+	beego.Router("/api/restore-agent-gateway", &controllers.ApiController{}, "POST:RestoreAgentGateway")
 	beego.Router("/api/get-agent-records", &controllers.ApiController{}, "GET:GetAgentRecords")
 	beego.Router("/api/get-agent-sessions", &controllers.ApiController{}, "GET:GetAgentSessions")
 	beego.Router("/api/add-agent-record", &controllers.ApiController{}, "POST:AddAgentRecord")
@@ -92,7 +94,9 @@ func initAPI() {
 	beego.Router("/api/update-channel", &controllers.ApiController{}, "POST:UpdateChannel")
 	beego.Router("/api/delete-channel", &controllers.ApiController{}, "POST:DeleteChannel")
 	beego.Router("/api/test-channel", &controllers.ApiController{}, "POST:TestChannel")
+	beego.Router("/api/fetch-channel-models", &controllers.ApiController{}, "POST:FetchChannelModels")
 
 	// OpenAI-compatible chat completions endpoint for LLM gateway milestone 1.2.
 	beego.Router("/v1/chat/completions", &controllers.ApiController{}, "POST:ChatCompletions")
+	beego.Router("/v1/messages", &controllers.ApiController{}, "POST:Messages")
 }

@@ -123,13 +123,14 @@ func decryptChannels(channels []*Channel) {
 const (
 	maxChannelModels     = 200
 	maxChannelModelChars = 100
+	maxProviderChars     = 100
+	maxMappedModelChars  = 255
 )
 
 var (
-	// The OpenAI HTTP API is the only wire format the gateway can talk, so
-	// every supported type is reached with an OpenAI-formatted request.
-	channelTypes    = []string{"openai", "custom"}
-	channelStatuses = []string{"enabled", "disabled"}
+	channelTypes     = []string{"openai", "custom", "anthropic"}
+	channelStatuses  = []string{"enabled", "disabled"}
+	channelAuthTypes = []string{"bearer", "x-api-key"}
 )
 
 // IsChannelTypeSupported reports whether the gateway can talk to the channel's
@@ -156,13 +157,19 @@ type Channel struct {
 
 	DisplayName string `xorm:"varchar(100)" json:"displayName"`
 	Type        string `xorm:"varchar(100)" json:"type"`
+	Provider    string `xorm:"varchar(100)" json:"provider"`
+	AuthType    string `xorm:"varchar(30)" json:"authType"`
 	BaseUrl     string `xorm:"varchar(255)" json:"baseUrl"`
 	// ApiKey holds base64 ciphertext, not the bare key, when
 	// "apiKeyEncryptionKey" is set in app.conf, hence the wider column.
 	ApiKey string `xorm:"varchar(1000)" json:"apiKey"`
 	// Models is JSON-serialized by xorm, so it needs a text column rather than
 	// a varchar: the serialized form is longer than the joined model names.
-	Models []string `xorm:"mediumtext" json:"models"`
+	Models       []string `xorm:"mediumtext" json:"models"`
+	DefaultModel string   `xorm:"varchar(255)" json:"defaultModel"`
+	HaikuModel   string   `xorm:"varchar(255)" json:"haikuModel"`
+	SonnetModel  string   `xorm:"varchar(255)" json:"sonnetModel"`
+	OpusModel    string   `xorm:"varchar(255)" json:"opusModel"`
 	// TODO(1.2): Priority routing strategy will be defined in milestone 1.2.
 	Priority int    `xorm:"int" json:"priority"`
 	Status   string `xorm:"varchar(100)" json:"status"`
@@ -240,6 +247,9 @@ func validateChannel(channel *Channel) error {
 	if channel.Status == "" {
 		channel.Status = "enabled"
 	}
+	if channel.AuthType == "" {
+		channel.AuthType = "bearer"
+	}
 	if channel.Models == nil {
 		channel.Models = []string{}
 	}
@@ -249,6 +259,12 @@ func validateChannel(channel *Channel) error {
 	}
 	if !containsString(channelStatuses, channel.Status) {
 		return fmt.Errorf("invalid channel status: %s", channel.Status)
+	}
+	if !containsString(channelAuthTypes, channel.AuthType) {
+		return fmt.Errorf("invalid channel auth type: %s", channel.AuthType)
+	}
+	if len(channel.Provider) > maxProviderChars {
+		return fmt.Errorf("provider is too long")
 	}
 
 	if channel.BaseUrl != "" {
@@ -266,6 +282,18 @@ func validateChannel(channel *Channel) error {
 		}
 		if len(model) > maxChannelModelChars {
 			return fmt.Errorf("model name is too long: %s", model)
+		}
+	}
+	if channel.Type == "anthropic" {
+		mappedModels := []*string{&channel.DefaultModel, &channel.HaikuModel, &channel.SonnetModel, &channel.OpusModel}
+		for _, model := range mappedModels {
+			*model = strings.TrimSpace(*model)
+			if *model == "" {
+				return fmt.Errorf("all Anthropic model mappings are required")
+			}
+			if len(*model) > maxMappedModelChars {
+				return fmt.Errorf("Anthropic model mapping is too long: %s", *model)
+			}
 		}
 	}
 
@@ -303,6 +331,86 @@ func BuildOpenAiUrl(baseUrl string, endpoint string) (string, error) {
 	u.Path = path + endpoint
 	u.RawPath = ""
 	return u.String(), nil
+}
+
+// BuildAnthropicMessagesUrl resolves the native Messages endpoint and merges
+// the client query into any query already present on the configured base URL.
+func BuildAnthropicMessagesUrl(baseUrl, requestQuery string) (string, error) {
+	u, err := url.Parse(baseUrl)
+	if err != nil {
+		return "", fmt.Errorf("invalid base URL: %s", err.Error())
+	}
+
+	path := strings.TrimRight(u.Path, "/")
+	if !strings.HasSuffix(path, "/v1/messages") {
+		if !strings.HasSuffix(path, "/v1") {
+			path += "/v1"
+		}
+		path += "/messages"
+	}
+	u.Path = path
+	u.RawPath = ""
+	u.Fragment = ""
+
+	query := u.Query()
+	clientQuery, err := url.ParseQuery(requestQuery)
+	if err != nil {
+		return "", fmt.Errorf("invalid request query: %s", err.Error())
+	}
+	for name, values := range clientQuery {
+		for _, value := range values {
+			query.Add(name, value)
+		}
+	}
+	u.RawQuery = query.Encode()
+	return u.String(), nil
+}
+
+// BuildModelEndpointCandidates returns the same-origin model endpoints used by
+// Anthropic-compatible providers, including the root fallback for compatibility
+// prefixes such as /anthropic.
+var providerModelEndpoints = map[string]string{
+	"deepseek": "https://api.deepseek.com/models",
+}
+
+func BuildModelEndpointCandidates(baseUrl, provider string) ([]string, error) {
+	base, err := url.Parse(baseUrl)
+	if err != nil || (base.Scheme != "http" && base.Scheme != "https") || base.Hostname() == "" {
+		return nil, fmt.Errorf("invalid base URL")
+	}
+	if endpoint := providerModelEndpoints[provider]; endpoint != "" {
+		explicit, parseErr := url.Parse(endpoint)
+		if parseErr != nil || explicit.Scheme != base.Scheme || !strings.EqualFold(explicit.Host, base.Host) {
+			return nil, fmt.Errorf("provider model endpoint must use the channel origin")
+		}
+		return []string{explicit.String()}, nil
+	}
+	base.Fragment = ""
+	base.RawQuery = ""
+	path := strings.TrimRight(base.Path, "/")
+	path = strings.TrimSuffix(path, "/v1/messages")
+	path = strings.TrimSuffix(path, "/messages")
+	path = strings.TrimSuffix(path, "/v1")
+
+	prefixes := []string{path}
+	if strings.HasSuffix(path, "/anthropic") {
+		prefixes = append(prefixes, strings.TrimSuffix(path, "/anthropic"))
+	}
+	seen := map[string]bool{}
+	result := []string{}
+	for _, prefix := range prefixes {
+		for _, suffix := range []string{"/v1/models", "/models"} {
+			candidate := *base
+			candidate.Path = strings.TrimRight(prefix, "/") + suffix
+			candidate.RawPath = ""
+			text := candidate.String()
+			if !seen[text] {
+				seen[text] = true
+				result = append(result, text)
+			}
+		}
+	}
+	return result, nil
 }
 
 func AddChannel(channel *Channel) (bool, error) {
@@ -382,17 +490,16 @@ func TestChannelConnectivity(channel *Channel) (bool, int, string) {
 		return false, 0, err.Error()
 	}
 
-	probeUrl, err := BuildOpenAiUrl(stored.BaseUrl, "/models")
+	probeUrls := []string{}
+	if stored.Type == "anthropic" {
+		probeUrls, err = BuildModelEndpointCandidates(stored.BaseUrl, stored.Provider)
+	} else {
+		var probeUrl string
+		probeUrl, err = BuildOpenAiUrl(stored.BaseUrl, "/models")
+		probeUrls = []string{probeUrl}
+	}
 	if err != nil {
 		return false, 0, err.Error()
-	}
-
-	req, err := http.NewRequest(http.MethodGet, probeUrl, nil)
-	if err != nil {
-		return false, 0, err.Error()
-	}
-	if stored.ApiKey != "" {
-		req.Header.Set("Authorization", "Bearer "+stored.ApiKey)
 	}
 
 	client := &http.Client{
@@ -403,19 +510,37 @@ func TestChannelConnectivity(channel *Channel) (bool, int, string) {
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 	}
 
-	resp, err := client.Do(req)
-	if err != nil {
-		// Unwrap the *url.Error so the reason is not buried behind the URL.
-		var urlErr *url.Error
-		if errors.As(err, &urlErr) {
-			return false, 0, urlErr.Err.Error()
+	lastStatus, lastMessage := 0, "no model endpoint succeeded"
+	for _, probeUrl := range probeUrls {
+		req, requestErr := http.NewRequest(http.MethodGet, probeUrl, nil)
+		if requestErr != nil {
+			return false, 0, requestErr.Error()
 		}
-		return false, 0, err.Error()
+		if stored.ApiKey != "" {
+			if stored.AuthType == "x-api-key" {
+				req.Header.Set("x-api-key", stored.ApiKey)
+			} else {
+				req.Header.Set("Authorization", "Bearer "+stored.ApiKey)
+			}
+		}
+		resp, requestErr := client.Do(req)
+		if requestErr != nil {
+			var urlErr *url.Error
+			if errors.As(requestErr, &urlErr) {
+				lastMessage = urlErr.Err.Error()
+			} else {
+				lastMessage = requestErr.Error()
+			}
+			continue
+		}
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 4096))
+		resp.Body.Close()
+		lastStatus, lastMessage = resp.StatusCode, resp.Status
+		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			return true, resp.StatusCode, resp.Status
+		}
 	}
-	defer resp.Body.Close()
-
-	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 4096))
-	return resp.StatusCode >= 200 && resp.StatusCode < 300, resp.StatusCode, resp.Status
+	return false, lastStatus, lastMessage
 }
 
 // GetChannelsByModel returns every enabled channel that supports the given
@@ -424,6 +549,16 @@ func TestChannelConnectivity(channel *Channel) (bool, int, string) {
 // channels globally (no owner filter) because /v1/chat/completions is an
 // unauthenticated public endpoint.
 func GetChannelsByModel(model string) ([]*Channel, error) {
+	return getChannelsByProtocolAndModel("openai", model)
+}
+
+// GetAnthropicChannelsByModel returns enabled native Anthropic channels for a
+// public Claude Code alias, ordered for failover.
+func GetAnthropicChannelsByModel(model string) ([]*Channel, error) {
+	return getChannelsByProtocolAndModel("anthropic", model)
+}
+
+func getChannelsByProtocolAndModel(protocol, model string) ([]*Channel, error) {
 	channels := []*Channel{}
 	err := ormer.Engine.Where("status = ?", "enabled").Asc("priority").Find(&channels)
 	if err != nil {
@@ -434,10 +569,18 @@ func GetChannelsByModel(model string) ([]*Channel, error) {
 	// be pushed down into the query.
 	matchedChannels := []*Channel{}
 	for _, channel := range channels {
-		for _, channelModel := range channel.Models {
-			if channelModel == model {
+		if protocol == "anthropic" {
+			if channel.Type == "anthropic" && channel.AnthropicModel(model) != "" {
 				matchedChannels = append(matchedChannels, channel)
-				break
+			}
+			continue
+		}
+		if channel.Type == "openai" || channel.Type == "custom" {
+			for _, channelModel := range channel.Models {
+				if channelModel == model {
+					matchedChannels = append(matchedChannels, channel)
+					break
+				}
 			}
 		}
 	}
@@ -448,4 +591,21 @@ func GetChannelsByModel(model string) ([]*Channel, error) {
 		return nil, fmt.Errorf("%w: %s", ErrNoChannelAvailable, model)
 	}
 	return matchedChannels, nil
+}
+
+// AnthropicModel maps a stable Claude Code alias to this channel's upstream
+// model. An empty result means the alias is not supported.
+func (channel *Channel) AnthropicModel(alias string) string {
+	switch alias {
+	case "casbin-default":
+		return channel.DefaultModel
+	case "casbin-haiku":
+		return channel.HaikuModel
+	case "casbin-sonnet":
+		return channel.SonnetModel
+	case "casbin-opus":
+		return channel.OpusModel
+	default:
+		return ""
+	}
 }

@@ -153,6 +153,12 @@ export interface Channel {
   priority: number;
   baseUrl: string;
   apiKey: string;
+  provider: string;
+  authType: "bearer" | "x-api-key";
+  defaultModel: string;
+  haikuModel: string;
+  sonnetModel: string;
+  opusModel: string;
 }
 
 export interface ChannelTestResult {
@@ -173,6 +179,12 @@ export interface Agent {
   detail?: string;
   notice?: string;
   followup?: string;
+  gatewayConfig?: {
+    configured: boolean;
+    restorable: boolean;
+    endpoint: string;
+    detail?: string;
+  };
 }
 
 export interface AgentRecord {

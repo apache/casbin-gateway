@@ -258,3 +258,58 @@ func TestForwardToChannel(t *testing.T) {
 		t.Errorf("Content-Type = %s, expected application/json", header)
 	}
 }
+
+func TestForwardAnthropicToChannel(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		authType string
+		header   string
+		expected string
+	}{
+		{name: "bearer", authType: "bearer", header: "Authorization", expected: "Bearer upstream-key"},
+		{name: "x-api-key", authType: "x-api-key", header: "X-Api-Key", expected: "upstream-key"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/anthropic/v1/messages" || r.URL.Query().Get("beta") != "true" {
+					t.Errorf("unexpected upstream URL: %s", r.URL.String())
+				}
+				if actual := r.Header.Get(tc.header); actual != tc.expected {
+					t.Errorf("%s = %q, want %q", tc.header, actual, tc.expected)
+				}
+				otherHeader := "Authorization"
+				if tc.header == otherHeader {
+					otherHeader = "X-Api-Key"
+				}
+				if actual := r.Header.Get(otherHeader); actual != "" {
+					t.Errorf("client credential leaked in %s: %q", otherHeader, actual)
+				}
+				if r.Header.Get("Anthropic-Beta") != "tools-2026" || r.Header.Get("Anthropic-Version") != "2023-06-01" {
+					t.Error("Anthropic compatibility headers were not preserved")
+				}
+				body, _ := io.ReadAll(r.Body)
+				if !strings.Contains(string(body), `"model":"upstream-model"`) {
+					t.Errorf("mapped body was not forwarded: %s", body)
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"content":[]}`))
+			}))
+			defer server.Close()
+
+			controller, recorder := newTestApiController()
+			controller.Ctx.Request.URL.RawQuery = "beta=true"
+			controller.Ctx.Request.Header.Set("Authorization", "Bearer client-placeholder")
+			controller.Ctx.Request.Header.Set("X-Api-Key", "client-placeholder")
+			controller.Ctx.Request.Header.Set("Anthropic-Beta", "tools-2026")
+			controller.Ctx.Request.Header.Set("Anthropic-Version", "2023-06-01")
+			channel := &object.Channel{
+				Owner: "admin", Name: tc.name, Type: "anthropic", BaseUrl: server.URL + "/anthropic",
+				ApiKey: "upstream-key", AuthType: tc.authType,
+			}
+			_, _, written := controller.forwardAnthropicToChannel(channel, []byte(`{"model":"upstream-model","messages":[]}`), false, true)
+			if !written || recorder.Code != http.StatusOK || !strings.Contains(recorder.Body.String(), "content") {
+				t.Fatalf("Anthropic response was not relayed: status=%d body=%s", recorder.Code, recorder.Body.String())
+			}
+		})
+	}
+}

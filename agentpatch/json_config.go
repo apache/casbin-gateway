@@ -55,7 +55,24 @@ func writeJSONConfig(path string, config map[string]any, mode os.FileMode) error
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(path, append(data, '\n'), mode)
+	temp, err := os.CreateTemp(filepath.Dir(path), ".casbin-gateway-*.tmp")
+	if err != nil {
+		return err
+	}
+	tempPath := temp.Name()
+	defer os.Remove(tempPath)
+	if err := temp.Chmod(mode); err != nil {
+		temp.Close()
+		return err
+	}
+	if _, err := temp.Write(append(data, '\n')); err != nil {
+		temp.Close()
+		return err
+	}
+	if err := temp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tempPath, path)
 }
 
 func objectAt(value any) (map[string]any, bool) {

@@ -29,6 +29,7 @@ import (
 type discoveredAgent struct {
 	agent.Installation
 	agentpatch.Status
+	GatewayConfig *agentpatch.GatewayStatus `json:"gatewayConfig,omitempty"`
 }
 
 // GetAgents scans known installation locations and returns the AI agents
@@ -46,12 +47,53 @@ func (c *ApiController) GetAgents() {
 
 	result := make([]*discoveredAgent, 0, len(installations))
 	for _, installation := range installations {
+		target := targetOf(installation)
+		var gatewayConfig *agentpatch.GatewayStatus
+		if installation.AgentId == "claude-code" {
+			status := agentpatch.ClaudeGatewayStatusOf(target)
+			gatewayConfig = &status
+		}
 		result = append(result, &discoveredAgent{
-			Installation: installation,
-			Status:       agentpatch.StatusOf(targetOf(installation)),
+			Installation:  installation,
+			Status:        agentpatch.StatusOf(target),
+			GatewayConfig: gatewayConfig,
 		})
 	}
 	c.ResponseOk(result)
+}
+
+// ConfigureAgentGateway connects a discovered Claude Code installation to the
+// local Gateway endpoint.
+func (c *ApiController) ConfigureAgentGateway() {
+	if c.RequireAdmin() {
+		return
+	}
+	target, ok := c.readAgentPatchTarget()
+	if !ok {
+		return
+	}
+	if err := agentpatch.ConfigureClaudeGateway(target); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(agentpatch.ClaudeGatewayStatusOf(target))
+}
+
+// RestoreAgentGateway restores only the Claude environment keys saved before
+// the first Gateway configuration.
+func (c *ApiController) RestoreAgentGateway() {
+	if c.RequireAdmin() {
+		return
+	}
+	target, ok := c.readAgentPatchTarget()
+	if !ok {
+		return
+	}
+	if err := agentpatch.RestoreClaudeGateway(target); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(agentpatch.ClaudeGatewayStatusOf(target))
 }
 
 // PatchAgent enables monitoring for one discovered installation.
