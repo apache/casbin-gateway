@@ -369,8 +369,18 @@ func BuildAnthropicMessagesUrl(baseUrl, requestQuery string) (string, error) {
 // BuildModelEndpointCandidates returns the same-origin model endpoints used by
 // Anthropic-compatible providers, including the root fallback for compatibility
 // prefixes such as /anthropic.
-var providerModelEndpoints = map[string]string{
-	"deepseek": "https://api.deepseek.com/models",
+type providerModelEndpoint struct {
+	Url      string
+	AuthType string
+}
+
+var providerModelEndpoints = map[string]providerModelEndpoint{
+	"anthropic":       {Url: "https://api.anthropic.com/v1/models", AuthType: "x-api-key"},
+	"deepseek":        {Url: "https://api.deepseek.com/models", AuthType: "bearer"},
+	"kimi-for-coding": {Url: "https://api.kimi.com/coding/v1/models", AuthType: "bearer"},
+	"minimax":         {Url: "https://api.minimaxi.com/anthropic/v1/models", AuthType: "x-api-key"},
+	"openrouter":      {Url: "https://openrouter.ai/api/v1/models", AuthType: "bearer"},
+	"longcat":         {Url: "https://api.longcat.chat/anthropic/v1/models", AuthType: "bearer"},
 }
 
 func BuildModelEndpointCandidates(baseUrl, provider string) ([]string, error) {
@@ -378,8 +388,8 @@ func BuildModelEndpointCandidates(baseUrl, provider string) ([]string, error) {
 	if err != nil || (base.Scheme != "http" && base.Scheme != "https") || base.Hostname() == "" {
 		return nil, fmt.Errorf("invalid base URL")
 	}
-	if endpoint := providerModelEndpoints[provider]; endpoint != "" {
-		explicit, parseErr := url.Parse(endpoint)
+	if endpoint, ok := providerModelEndpoints[provider]; ok {
+		explicit, parseErr := url.Parse(endpoint.Url)
 		if parseErr != nil || explicit.Scheme != base.Scheme || !strings.EqualFold(explicit.Host, base.Host) {
 			return nil, fmt.Errorf("provider model endpoint must use the channel origin")
 		}
@@ -411,6 +421,15 @@ func BuildModelEndpointCandidates(baseUrl, provider string) ([]string, error) {
 		}
 	}
 	return result, nil
+}
+
+// ModelEndpointAuthType returns the authentication required by a known
+// provider's model-list endpoint. Unknown providers use the Channel setting.
+func ModelEndpointAuthType(provider, channelAuthType string) string {
+	if endpoint, ok := providerModelEndpoints[provider]; ok {
+		return endpoint.AuthType
+	}
+	return channelAuthType
 }
 
 func AddChannel(channel *Channel) (bool, error) {
@@ -511,18 +530,20 @@ func TestChannelConnectivity(channel *Channel) (bool, int, string) {
 	}
 
 	lastStatus, lastMessage := 0, "no model endpoint succeeded"
+	modelAuthType := ModelEndpointAuthType(stored.Provider, stored.AuthType)
 	for _, probeUrl := range probeUrls {
 		req, requestErr := http.NewRequest(http.MethodGet, probeUrl, nil)
 		if requestErr != nil {
 			return false, 0, requestErr.Error()
 		}
 		if stored.ApiKey != "" {
-			if stored.AuthType == "x-api-key" {
+			if modelAuthType == "x-api-key" {
 				req.Header.Set("x-api-key", stored.ApiKey)
 			} else {
 				req.Header.Set("Authorization", "Bearer "+stored.ApiKey)
 			}
 		}
+		req.Header.Set("anthropic-version", "2023-06-01")
 		resp, requestErr := client.Do(req)
 		if requestErr != nil {
 			var urlErr *url.Error

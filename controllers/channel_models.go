@@ -83,8 +83,9 @@ func (c *ApiController) FetchChannelModels() {
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 	}
 	lastError := "no model endpoint succeeded"
+	modelAuthType := object.ModelEndpointAuthType(input.Provider, input.AuthType)
 	for _, candidate := range candidates {
-		models, err := fetchModelsCandidate(client, candidate, input.ApiKey, input.AuthType)
+		models, err := fetchModelsCandidate(client, candidate, input.ApiKey, modelAuthType)
 		if err != nil {
 			lastError = err.Error()
 			continue
@@ -105,6 +106,7 @@ func fetchModelsCandidate(client *http.Client, endpoint, apiKey, authType string
 	} else {
 		req.Header.Set("Authorization", "Bearer "+apiKey)
 	}
+	req.Header.Set("anthropic-version", "2023-06-01")
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("model request failed: %w", err)

@@ -67,12 +67,31 @@ func TestAnthropicModel(t *testing.T) {
 }
 
 func TestKnownProviderModelEndpoint(t *testing.T) {
-	actual, err := BuildModelEndpointCandidates("https://api.deepseek.com/anthropic", "deepseek")
-	if err != nil {
-		t.Fatal(err)
+	cases := []struct {
+		provider string
+		baseUrl  string
+		expected string
+		authType string
+	}{
+		{"anthropic", "https://api.anthropic.com", "https://api.anthropic.com/v1/models", "x-api-key"},
+		{"deepseek", "https://api.deepseek.com/anthropic", "https://api.deepseek.com/models", "bearer"},
+		{"kimi-for-coding", "https://api.kimi.com/coding/", "https://api.kimi.com/coding/v1/models", "bearer"},
+		{"minimax", "https://api.minimaxi.com/anthropic", "https://api.minimaxi.com/anthropic/v1/models", "x-api-key"},
+		{"openrouter", "https://openrouter.ai/api", "https://openrouter.ai/api/v1/models", "bearer"},
+		{"longcat", "https://api.longcat.chat/anthropic", "https://api.longcat.chat/anthropic/v1/models", "bearer"},
 	}
-	if len(actual) != 1 || actual[0] != "https://api.deepseek.com/models" {
-		t.Fatalf("DeepSeek candidates = %v", actual)
+	for _, tc := range cases {
+		actual, err := BuildModelEndpointCandidates(tc.baseUrl, tc.provider)
+		if err != nil {
+			t.Errorf("%s: %v", tc.provider, err)
+			continue
+		}
+		if len(actual) != 1 || actual[0] != tc.expected {
+			t.Errorf("%s candidates = %v", tc.provider, actual)
+		}
+		if actualAuth := ModelEndpointAuthType(tc.provider, "bearer"); actualAuth != tc.authType {
+			t.Errorf("%s auth type = %s, want %s", tc.provider, actualAuth, tc.authType)
+		}
 	}
 	if _, err := BuildModelEndpointCandidates("https://example.com/anthropic", "deepseek"); err == nil {
 		t.Fatal("DeepSeek endpoint was allowed for a different origin")

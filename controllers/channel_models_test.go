@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/apache/casbin-gateway/object"
@@ -25,6 +26,30 @@ func TestModelEndpointCandidates(t *testing.T) {
 		if actual[index] != expected[index] {
 			t.Errorf("candidate %d = %q, want %q", index, actual[index], expected[index])
 		}
+	}
+}
+
+func TestFetchModelsCandidateUsesProviderHeaders(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("X-Api-Key") != "provider-key" {
+			t.Errorf("x-api-key = %q", r.Header.Get("X-Api-Key"))
+		}
+		if r.Header.Get("Authorization") != "" {
+			t.Errorf("unexpected Authorization header: %q", r.Header.Get("Authorization"))
+		}
+		if r.Header.Get("Anthropic-Version") != "2023-06-01" {
+			t.Errorf("anthropic-version = %q", r.Header.Get("Anthropic-Version"))
+		}
+		_, _ = w.Write([]byte(`{"data":[{"id":"model-b"},{"id":"model-a"}]}`))
+	}))
+	defer server.Close()
+
+	models, err := fetchModelsCandidate(server.Client(), server.URL, "provider-key", "x-api-key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(models) != 2 || models[0] != "model-a" || models[1] != "model-b" {
+		t.Fatalf("models = %v", models)
 	}
 }
 
