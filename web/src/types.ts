@@ -170,6 +170,7 @@ export interface Agent {
   path: string;
   supported: boolean;
   patched: boolean;
+  switchable: boolean;
   detail?: string;
   notice?: string;
   followup?: string;

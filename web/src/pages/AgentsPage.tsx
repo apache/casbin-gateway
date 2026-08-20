@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import * as React from "react";
 import {Link} from "react-router-dom";
-import {Bot, CircleX, RefreshCw} from "lucide-react";
+import {Bot, CircleX, RefreshCw, Zap} from "lucide-react";
 import i18next from "i18next";
 
+import * as ChannelBackend from "@/backend/ChannelBackend";
 import * as Setting from "@/Setting";
 import {AgentIcon} from "@/components/AgentIcon";
 import {DataTable, type Column} from "@/components/DataTable";
@@ -25,14 +27,86 @@ import {Alert, AlertDescription} from "@/components/ui/alert";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {ConfirmButton} from "@/components/ui/confirm-button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {Spinner} from "@/components/ui/spinner";
 import {Tooltip} from "@/components/ui/tooltip";
 import {agentDetailPath, agentKey, monitorAgentId, useAgents} from "@/lib/agents";
-import type {Account, Agent} from "@/types";
+import type {Account, Agent, Channel} from "@/types";
+
+// ProviderSwitcher lets an admin pick a channel and write it into a switchable
+// agent's own config. It holds the pending selection locally so each row's
+// dropdown is independent.
+function ProviderSwitcher({
+  agent,
+  channels,
+  busy,
+  onSwitch,
+}: {
+  agent: Agent;
+  channels: Channel[];
+  busy: boolean;
+  onSwitch: (agent: Agent, channelId: string) => void;
+}) {
+  const [channelId, setChannelId] = React.useState("");
+
+  if (channels.length === 0) {
+    return <span className="text-xs text-muted-foreground">{i18next.t("agent:No providers")}</span>;
+  }
+
+  const selected = channels.find(channel => `${channel.owner}/${channel.name}` === channelId);
+  return (
+    <div className="flex items-center gap-2">
+      <Select value={channelId} onValueChange={setChannelId}>
+        <SelectTrigger className="h-8 w-44">
+          <SelectValue placeholder={i18next.t("agent:Select a provider")} />
+        </SelectTrigger>
+        <SelectContent>
+          {channels.map(channel => {
+            const id = `${channel.owner}/${channel.name}`;
+            return (
+              <SelectItem key={id} value={id}>
+                {channel.displayName || channel.name}
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </Select>
+      <ConfirmButton
+        title={`${i18next.t("agent:Switch Provider")}: ${agent.name}?`}
+        description={selected ? `${i18next.t("agent:Provider")}: ${selected.displayName || selected.name}` : undefined}
+        okText={i18next.t("agent:Switch Provider")}
+        onConfirm={() => onSwitch(agent, channelId)}
+      >
+        <Button size="sm" variant="outline" disabled={!channelId || busy}>
+          {busy ? <Spinner /> : <Zap />}
+          {i18next.t("agent:Switch Provider")}
+        </Button>
+      </ConfirmButton>
+    </div>
+  );
+}
 
 export default function AgentsPage({account}: {account: Account}) {
   const isAdmin = Setting.isAdminUser(account);
-  const {agents, loading, error, busyKey, scan, togglePatch} = useAgents(isAdmin);
+  const {agents, loading, error, busyKey, scan, togglePatch, switchProvider} = useAgents(isAdmin);
+  const [channels, setChannels] = React.useState<Channel[]>([]);
+
+  React.useEffect(() => {
+    if (!isAdmin) {
+      return;
+    }
+    ChannelBackend.getChannels("admin").then(res => {
+      if (res.status === "ok") {
+        setChannels(res.data ?? []);
+      }
+    });
+  }, [isAdmin]);
 
   if (!isAdmin) {
     return <UnauthorizedResult />;
@@ -105,6 +179,19 @@ export default function AgentsPage({account}: {account: Account}) {
           >
             {i18next.t("agent:View Records")}
           </Link>
+        ) : null,
+    },
+    {
+      title: i18next.t("agent:Provider"),
+      key: "provider",
+      render: (_value, record) =>
+        record.switchable ? (
+          <ProviderSwitcher
+            agent={record}
+            channels={channels}
+            busy={busyKey === agentKey(record)}
+            onSwitch={switchProvider}
+          />
         ) : null,
     },
     {

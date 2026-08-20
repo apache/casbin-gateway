@@ -96,6 +96,13 @@ func SupportedAgents() []string {
 	return ids
 }
 
+// Supports reports whether agentID has a registered adapter, i.e. whether
+// Switch can write a provider into that agent's config.
+func Supports(agentID string) bool {
+	_, ok := adapters[agentID]
+	return ok
+}
+
 // Switch writes provider p into install's config file, atomically and
 // idempotently: switching again to the same provider is a no-op, and switching
 // to a different one rewrites only the adapter-owned fields while preserving

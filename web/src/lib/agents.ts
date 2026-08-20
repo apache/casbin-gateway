@@ -108,7 +108,36 @@ export function useAgents(enabled = true) {
     [scan],
   );
 
-  return {agents, loading, error, busyKey, scanned, scan, togglePatch};
+  const switchProvider = React.useCallback(
+    (agent: Agent, channelId: string) => {
+      const target = {agentId: agent.agentId, path: agent.path, owner: agent.owner};
+
+      setBusyKey(agentKey(agent));
+      AgentBackend.switchAgentProvider(target, channelId)
+        .then(res => {
+          if (res.status === "ok") {
+            const done = res.data?.changed
+              ? i18next.t("agent:Provider switched")
+              : i18next.t("agent:Provider already selected");
+            const notes = [
+              res.data?.backedUp ? i18next.t("agent:Original config backed up") : "",
+              res.data?.configPath,
+            ]
+              .filter(Boolean)
+              .join(". ");
+            Setting.showMessage("success", notes ? `${done}: ${agent.name}. ${notes}` : `${done}: ${agent.name}`);
+            scan();
+          } else {
+            Setting.showMessage("error", res.msg || i18next.t("agent:Failed to switch provider"));
+          }
+        })
+        .catch(err => Setting.showMessage("error", err.message || String(err)))
+        .then(() => setBusyKey(""));
+    },
+    [scan],
+  );
+
+  return {agents, loading, error, busyKey, scanned, scan, togglePatch, switchProvider};
 }
 
 /** What one agent has been up to, derived from its monitoring sessions. */

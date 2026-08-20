@@ -22,13 +22,18 @@ import (
 	"strings"
 
 	"github.com/apache/casbin-gateway/agent"
+	"github.com/apache/casbin-gateway/agentconfig"
 	"github.com/apache/casbin-gateway/agentmonitor"
 	"github.com/apache/casbin-gateway/agentpatch"
+	"github.com/apache/casbin-gateway/object"
 )
 
 type discoveredAgent struct {
 	agent.Installation
 	agentpatch.Status
+	// Switchable reports whether Gateway can write a provider into this agent's
+	// own config, i.e. whether the "switch provider" action is available.
+	Switchable bool `json:"switchable"`
 }
 
 // GetAgents scans known installation locations and returns the AI agents
@@ -49,6 +54,7 @@ func (c *ApiController) GetAgents() {
 		result = append(result, &discoveredAgent{
 			Installation: installation,
 			Status:       agentpatch.StatusOf(targetOf(installation)),
+			Switchable:   agentconfig.Supports(installation.AgentId),
 		})
 	}
 	c.ResponseOk(result)
@@ -86,6 +92,75 @@ func (c *ApiController) UnpatchAgent() {
 		return
 	}
 	c.ResponseOk(agentpatch.StatusOf(target))
+}
+
+// SwitchAgentProvider writes a selected channel, as the upstream provider, into
+// the agent's own configuration file so the agent talks to that provider.
+func (c *ApiController) SwitchAgentProvider() {
+	if c.RequireAdmin() {
+		return
+	}
+
+	// The target is verified against the discovered installations, so a caller
+	// cannot name an arbitrary account's home to write into.
+	target, ok := c.readAgentPatchTarget()
+	if !ok {
+		return
+	}
+	if !agentconfig.Supports(target.AgentId) {
+		c.ResponseError("switching a provider is not supported for this agent")
+		return
+	}
+
+	var request struct {
+		ChannelId string `json:"channelId"`
+	}
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &request); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if request.ChannelId == "" {
+		c.ResponseError("channelId is required")
+		return
+	}
+
+	channel, err := object.GetChannel(request.ChannelId)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if channel == nil {
+		c.ResponseError("the channel does not exist")
+		return
+	}
+
+	install := agentconfig.Install{AgentID: target.AgentId, Path: target.Path, Owner: target.Owner}
+	result, err := agentconfig.Switch(install, providerFromChannel(channel))
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(map[string]interface{}{
+		"configPath": result.ConfigPath,
+		"changed":    result.Changed,
+		"backedUp":   result.BackedUp,
+	})
+}
+
+// providerFromChannel maps a stored channel onto the neutral provider the
+// config writer understands. The channel's first model becomes the default
+// model; richer per-role mapping can follow once channels carry roles.
+func providerFromChannel(channel *object.Channel) agentconfig.Provider {
+	provider := agentconfig.Provider{
+		ID:      channel.Name,
+		Name:    channel.DisplayName,
+		BaseURL: channel.BaseUrl,
+		APIKey:  channel.ApiKey,
+	}
+	if len(channel.Models) > 0 {
+		provider.Models = map[agentconfig.Role]string{agentconfig.RoleDefault: channel.Models[0]}
+	}
+	return provider
 }
 
 // GetAgentRecords returns the current process's in-memory agent activity.

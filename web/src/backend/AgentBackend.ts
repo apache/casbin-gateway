@@ -33,6 +33,16 @@ export function unpatchAgent(target: PatchTarget) {
   return request<{followup?: string}>("/api/unpatch-agent", "POST", target);
 }
 
+export interface SwitchResult {
+  configPath: string;
+  changed: boolean;
+  backedUp: boolean;
+}
+
+export function switchAgentProvider(target: PatchTarget, channelId: string) {
+  return request<SwitchResult>("/api/switch-agent-provider", "POST", {...target, channelId: channelId});
+}
+
 export function getAgentRecords(agent = "", eventType = "", outcome = "", session = "", limit = 200) {
   return request<AgentRecord[]>(
     `/api/get-agent-records${query({
