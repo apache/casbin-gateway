@@ -27,7 +27,16 @@ import (
 // configuration: an unresolvable owner is an error rather than a fallback to
 // whichever account happens to run Gateway.
 func homeOf(target Target) (string, error) {
-	owner := strings.TrimSpace(target.Owner)
+	return HomeOf(target.Owner)
+}
+
+// HomeOf resolves the home directory of the account named owner (which may be a
+// bare name, DOMAIN\user or user@domain). An empty owner resolves to the account
+// Gateway runs as. It is exported so other packages that write into a user's
+// own configuration resolve the exact directory the monitoring patchers use,
+// rather than reimplementing the cross-platform account lookup.
+func HomeOf(owner string) (string, error) {
+	owner = strings.TrimSpace(owner)
 	if owner == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {

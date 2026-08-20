@@ -18,6 +18,7 @@ require (
 	github.com/lib/pq v1.10.2
 	github.com/likexian/whois v1.15.1
 	github.com/likexian/whois-parser v1.24.9
+	github.com/pelletier/go-toml/v2 v2.1.1
 	github.com/siddontang/go-log v0.0.0-20190221022429-1e957dd83bed
 	github.com/xorm-io/core v0.7.4
 	github.com/xorm-io/xorm v1.1.6
