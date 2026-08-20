@@ -71,6 +71,10 @@ func (c *ApiController) FetchChannelModels() {
 		c.ResponseError("invalid channel auth type: " + input.AuthType)
 		return
 	}
+	if models, ok := object.ProviderModels(input.Provider); ok {
+		c.ResponseOk(models)
+		return
+	}
 
 	candidates, err := object.BuildModelEndpointCandidates(input.BaseUrl, input.Provider)
 	if err != nil {

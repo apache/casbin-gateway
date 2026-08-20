@@ -372,6 +372,7 @@ func BuildAnthropicMessagesUrl(baseUrl, requestQuery string) (string, error) {
 type providerModelEndpoint struct {
 	Url      string
 	AuthType string
+	Models   []string
 }
 
 var providerModelEndpoints = map[string]providerModelEndpoint{
@@ -381,6 +382,19 @@ var providerModelEndpoints = map[string]providerModelEndpoint{
 	"minimax":         {Url: "https://api.minimaxi.com/anthropic/v1/models", AuthType: "x-api-key"},
 	"openrouter":      {Url: "https://openrouter.ai/api/v1/models", AuthType: "bearer"},
 	"longcat":         {Url: "https://api.longcat.chat/anthropic/v1/models", AuthType: "bearer"},
+	// Zhipu documents the models available to Coding Plan users, but does not
+	// publish a model-list API for its Anthropic-compatible endpoint.
+	"zhipu": {AuthType: "x-api-key", Models: []string{"glm-4.7", "glm-5-turbo", "glm-5.3"}},
+}
+
+// ProviderModels returns the documented static model list for providers that
+// do not expose a model-list API.
+func ProviderModels(provider string) ([]string, bool) {
+	endpoint, ok := providerModelEndpoints[provider]
+	if !ok || len(endpoint.Models) == 0 {
+		return nil, false
+	}
+	return append([]string(nil), endpoint.Models...), true
 }
 
 func BuildModelEndpointCandidates(baseUrl, provider string) ([]string, error) {
@@ -389,6 +403,9 @@ func BuildModelEndpointCandidates(baseUrl, provider string) ([]string, error) {
 		return nil, fmt.Errorf("invalid base URL")
 	}
 	if endpoint, ok := providerModelEndpoints[provider]; ok {
+		if endpoint.Url == "" {
+			return nil, fmt.Errorf("the provider does not publish a model-list endpoint")
+		}
 		explicit, parseErr := url.Parse(endpoint.Url)
 		if parseErr != nil || explicit.Scheme != base.Scheme || !strings.EqualFold(explicit.Host, base.Host) {
 			return nil, fmt.Errorf("provider model endpoint must use the channel origin")

@@ -96,4 +96,11 @@ func TestKnownProviderModelEndpoint(t *testing.T) {
 	if _, err := BuildModelEndpointCandidates("https://example.com/anthropic", "deepseek"); err == nil {
 		t.Fatal("DeepSeek endpoint was allowed for a different origin")
 	}
+	if _, err := BuildModelEndpointCandidates("https://open.bigmodel.cn/api/anthropic", "zhipu"); err == nil {
+		t.Fatal("Zhipu unexpectedly exposed a model-list endpoint")
+	}
+	models, ok := ProviderModels("zhipu")
+	if !ok || len(models) != 3 || models[0] != "glm-4.7" || models[2] != "glm-5.3" {
+		t.Fatalf("Zhipu models = %v", models)
+	}
 }
