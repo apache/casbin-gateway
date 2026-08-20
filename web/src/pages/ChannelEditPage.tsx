@@ -248,6 +248,16 @@ export default function ChannelEditPage({account}: {account: Account}) {
 
   const upstreamUrl = buildOpenAiUrl(channel.baseUrl, channel.type === "anthropic" ? "/messages" : "/chat/completions");
   const preset = anthropicPreset(channel.provider);
+  const isZhipuChannel = channel.type === "anthropic" && channel.provider === "zhipu";
+  const pageTitle = creating
+    ? i18next.t("channel:New Channel")
+    : i18next.t("channel:Edit Channel");
+  const anthropicModelFields = [
+    {field: "defaultModel", label: i18next.t("channel:Default model")},
+    {field: "haikuModel", label: i18next.t("channel:Haiku model")},
+    {field: "sonnetModel", label: i18next.t("channel:Sonnet model")},
+    {field: "opusModel", label: i18next.t("channel:Opus model")},
+  ] as const;
   const modelOptions = Array.from(new Set([
     ...(preset ? [preset.defaultModel, preset.haikuModel, preset.sonnetModel, preset.opusModel] : []),
     ...fetchedModels,
@@ -255,8 +265,8 @@ export default function ChannelEditPage({account}: {account: Account}) {
 
   return (
     <div className="p-4 md:p-6">
-      <PageHeader title={`${i18next.t(creating ? "channel:New Channel" : "channel:Edit Channel")}: ${channel.displayName}`}>
-        <Button variant="outline" onClick={test} disabled={testing || creating}>
+      <PageHeader title={`${pageTitle}: ${channel.displayName}`}>
+        <Button variant="outline" onClick={test} disabled={testing || creating || isZhipuChannel}>
           {testing ? <Spinner /> : <Zap />}
           {i18next.t("channel:Test Connectivity")}
         </Button>
@@ -341,8 +351,8 @@ export default function ChannelEditPage({account}: {account: Account}) {
           </FormRow> : (
             <>
               <FormRow label={i18next.t("channel:Upstream format")}><Input readOnly value={i18next.t("channel:Anthropic Messages (native)")} /></FormRow>
-              {(["defaultModel", "haikuModel", "sonnetModel", "opusModel"] as const).map(field => (
-                <FormRow key={field} label={i18next.t(`channel:${field}`)}>
+              {anthropicModelFields.map(({field, label}) => (
+                <FormRow key={field} label={label}>
                   <Combobox allowCustomValue value={channel[field]} options={modelOptions} onChange={value => setField(field, value)} />
                 </FormRow>
               ))}

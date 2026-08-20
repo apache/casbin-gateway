@@ -54,7 +54,10 @@ export default function AgentsPage({account}: {account: Account}) {
     (restore ? AgentBackend.restoreAgentGateway(target) : AgentBackend.configureAgentGateway(target))
       .then(res => {
         if (res.status === "ok") {
-          Setting.showMessage("success", `${i18next.t(restore ? "agent:Gateway restored" : "agent:Gateway connected")}. ${i18next.t("agent:Restart Claude Code")}`);
+          const successMessage = restore
+            ? i18next.t("agent:Gateway configuration restored")
+            : i18next.t("agent:Gateway connected");
+          Setting.showMessage("success", `${successMessage}. ${i18next.t("agent:Restart Claude Code")}`);
           scan();
         } else {
           Setting.showMessage("error", res.msg);
@@ -150,7 +153,9 @@ export default function AgentsPage({account}: {account: Account}) {
               <span>
                 <Button size="sm" variant="outline" disabled={busy || !hasAnthropicChannel} onClick={() => changeGateway(record, false)}>
                   {busy ? <Spinner /> : <PlugZap />}
-                  {i18next.t(record.gatewayConfig.configured ? "agent:Reconfigure Gateway" : "agent:Connect Gateway")}
+                  {record.gatewayConfig.configured
+                    ? i18next.t("agent:Reconfigure Gateway")
+                    : i18next.t("agent:Connect Gateway")}
                 </Button>
               </span>
             </Tooltip>

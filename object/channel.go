@@ -384,7 +384,7 @@ var providerModelEndpoints = map[string]providerModelEndpoint{
 	"longcat":         {Url: "https://api.longcat.chat/anthropic/v1/models", AuthType: "bearer"},
 	// Zhipu documents the models available to Coding Plan users, but does not
 	// publish a model-list API for its Anthropic-compatible endpoint.
-	"zhipu": {AuthType: "x-api-key", Models: []string{"glm-4.7", "glm-5-turbo", "glm-5.3"}},
+	"zhipu": {AuthType: "x-api-key", Models: []string{"glm-4.7", "glm-5-turbo", "glm-5.2"}},
 }
 
 // ProviderModels returns the documented static model list for providers that

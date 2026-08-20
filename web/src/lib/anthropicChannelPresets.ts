@@ -83,10 +83,10 @@ export const anthropicChannelPresets: AnthropicChannelPreset[] = [
     apiKeyUrl: "https://bigmodel.cn/usercenter/apikeys",
     baseUrl: "https://open.bigmodel.cn/api/anthropic",
     authType: "x-api-key",
-    defaultModel: "glm-5.3",
+    defaultModel: "glm-5.2",
     haikuModel: "glm-4.7",
-    sonnetModel: "glm-5.3",
-    opusModel: "glm-5.3",
+    sonnetModel: "glm-5.2",
+    opusModel: "glm-5.2",
   },
   {
     id: "openrouter",

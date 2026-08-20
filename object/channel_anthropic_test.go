@@ -114,7 +114,7 @@ func TestKnownProviderModelEndpoint(t *testing.T) {
 		t.Fatal("Zhipu unexpectedly exposed a model-list endpoint")
 	}
 	models, ok := ProviderModels("zhipu")
-	if !ok || len(models) != 3 || models[0] != "glm-4.7" || models[2] != "glm-5.3" {
+	if !ok || len(models) != 3 || models[0] != "glm-4.7" || models[1] != "glm-5-turbo" || models[2] != "glm-5.2" {
 		t.Fatalf("Zhipu models = %v", models)
 	}
 }
