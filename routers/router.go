@@ -97,6 +97,7 @@ func initAPI() {
 	beego.Router("/api/get-llm-records", &controllers.ApiController{}, "GET:GetLlmRecords")
 	beego.Router("/api/get-llm-record", &controllers.ApiController{}, "GET:GetLlmRecord")
 	beego.Router("/api/get-llm-record-status", &controllers.ApiController{}, "GET:GetLlmRecordStatus")
+	beego.Router("/api/get-llm-usage", &controllers.ApiController{}, "GET:GetLlmUsage")
 	beego.Router("/api/delete-llm-record", &controllers.ApiController{}, "POST:DeleteLlmRecord")
 	beego.Router("/api/clear-llm-records", &controllers.ApiController{}, "POST:ClearLlmRecords")
 

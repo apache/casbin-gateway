@@ -18,6 +18,7 @@ import i18next from "i18next";
 
 import * as LlmRecordBackend from "@/backend/LlmRecordBackend";
 import * as Setting from "@/Setting";
+import {LlmUsagePanel} from "@/components/LlmUsagePanel";
 import {DataTable, type Column} from "@/components/shared/data-table";
 import {ConfirmDialog} from "@/components/shared/confirm-dialog";
 import {CodeBlock, CodeText, DescriptionList, UnauthorizedResult} from "@/components/shared/misc";
@@ -328,6 +329,8 @@ export default function LlmRecordsPage({account}: {account: Account}) {
         />
       ) : null}
       {error ? <MessageAlert title={error} /> : null}
+
+      {modeOff ? null : <LlmUsagePanel />}
 
       <form
         className="flex flex-wrap items-center gap-2"

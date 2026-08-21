@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import {query, request} from "@/backend/request";
-import type {LlmRecord, LlmRecordStatus} from "@/types";
+import type {LlmRecord, LlmRecordStatus, LlmUsage} from "@/types";
 
 export interface LlmRecordFilter {
   model?: string;
@@ -35,6 +35,12 @@ export function getLlmRecord(id: number) {
 
 export function getLlmRecordStatus() {
   return request<LlmRecordStatus>("/api/get-llm-record-status");
+}
+
+export function getLlmUsage(rangeType: string, count: number, granularity: string) {
+  return request<LlmUsage>(
+    `/api/get-llm-usage${query({rangeType: rangeType, count: count, granularity: granularity})}`,
+  );
 }
 
 export function deleteLlmRecord(id: number) {

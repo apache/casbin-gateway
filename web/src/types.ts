@@ -250,6 +250,21 @@ export interface MetricPoint {
   count: number;
 }
 
+export interface LlmUsageTotals {
+  requests: number;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+}
+
+export interface LlmUsage {
+  totals: LlmUsageTotals;
+  overTime: MetricPoint[];
+  byModel: MetricPoint[];
+  byChannel: MetricPoint[];
+  byAgent: MetricPoint[];
+}
+
 export interface Provider {
   name: string;
   category: string;

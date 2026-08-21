@@ -16,6 +16,7 @@ package object
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -223,7 +224,7 @@ func (writer *llmRecordWriter) prune() {
 	}
 
 	oldest := []LlmRecord{}
-	if err := ormer.Engine.Cols("id").Asc("id").Limit(int(count-maximum)).Find(&oldest); err != nil {
+	if err := ormer.Engine.Cols("id").Asc("id").Limit(int(count - maximum)).Find(&oldest); err != nil {
 		beego.Error("LLM record retention lookup failed:", err)
 		return
 	}
@@ -376,6 +377,78 @@ func DeleteLlmRecord(id int64) error {
 func ClearLlmRecords() error {
 	_, err := ormer.Engine.Where("id > 0").Delete(&LlmRecord{})
 	return err
+}
+
+// LlmUsageTotals is the headline token usage over the queried window.
+type LlmUsageTotals struct {
+	Requests         int64 `json:"requests"`
+	PromptTokens     int64 `json:"promptTokens"`
+	CompletionTokens int64 `json:"completionTokens"`
+	TotalTokens      int64 `json:"totalTokens"`
+}
+
+// llmUsageDimensions whitelists the columns a caller may group usage by. The
+// value is interpolated into the SELECT/GROUP BY clause, so it must never come
+// straight from the request.
+var llmUsageDimensions = map[string]bool{"model": true, "channel": true, "agent": true}
+
+// llmUsageSession applies the record filter and the time window shared by every
+// usage query.
+func llmUsageSession(filter LlmRecordFilter, startAt time.Time) *xorm.Session {
+	return llmRecordSession(filter).Table("llm_record").And("created_time > ?", util.FormatTime(startAt))
+}
+
+// GetLlmUsageTotals returns the request count and summed token usage over the
+// window.
+func GetLlmUsageTotals(filter LlmRecordFilter, startAt time.Time) (*LlmUsageTotals, error) {
+	session := llmUsageSession(filter, startAt)
+	defer session.Close()
+
+	totals := &LlmUsageTotals{}
+	_, err := session.Select("COUNT(*) AS requests, " +
+		"COALESCE(SUM(prompt_tokens), 0) AS prompt_tokens, " +
+		"COALESCE(SUM(completion_tokens), 0) AS completion_tokens, " +
+		"COALESCE(SUM(total_tokens), 0) AS total_tokens").Get(totals)
+	return totals, err
+}
+
+// GetLlmTokensByDimension totals the tokens per model, channel or agent, largest
+// first, so the caller can chart where the usage goes. Rows with an empty
+// dimension (e.g. the agent of a model-routed request) are left out.
+func GetLlmTokensByDimension(filter LlmRecordFilter, startAt time.Time, dimension string, top int) ([]*DataCount, error) {
+	if !llmUsageDimensions[dimension] {
+		return nil, fmt.Errorf("invalid usage dimension: %s", dimension)
+	}
+
+	session := llmUsageSession(filter, startAt)
+	defer session.Close()
+
+	rows := []*DataCount{}
+	err := session.
+		And(dimension + " <> ''").
+		Select(dimension + " AS data, COALESCE(SUM(total_tokens), 0) AS count").
+		GroupBy(dimension).
+		Desc("count").
+		Limit(top).
+		Find(&rows)
+	return rows, err
+}
+
+// GetLlmTokensOverTime totals the tokens per time bucket (hour, day, month) so
+// the caller can chart usage over the window.
+func GetLlmTokensOverTime(filter LlmRecordFilter, startAt time.Time, timeType string) ([]*DataCount, error) {
+	bucket := getCreatedTimeBucket(ormer.driverName, timeType)
+
+	session := llmUsageSession(filter, startAt)
+	defer session.Close()
+
+	rows := []*DataCount{}
+	err := session.
+		Select(bucket + " AS data, COALESCE(SUM(total_tokens), 0) AS count").
+		GroupBy(bucket).
+		Asc("data").
+		Find(&rows)
+	return rows, err
 }
 
 func GetLlmRecordStatus() (*LlmRecordStatus, error) {
