@@ -225,7 +225,31 @@ func (c *ApiController) proxyByAgent(target proxyTarget) {
 		return
 	}
 
-	c.forwardToChannels([]*object.Channel{channel}, route)
+	// The bound channel is always tried first, honouring the binding. If it
+	// fails, fall over to the other enabled channels that serve the requested
+	// model, in priority order, so a single dead upstream does not take the
+	// agent down. A fallback lookup error is non-fatal: the bound channel is
+	// still tried on its own.
+	fallbacks, err := object.GetChannelsByModel(route.model)
+	if err != nil && !errors.Is(err, object.ErrNoChannelAvailable) {
+		beego.Error("agent fallback channel lookup failed:", err)
+		fallbacks = nil
+	}
+
+	c.forwardToChannels(agentChannels(channel, fallbacks), route)
+}
+
+// agentChannels puts the agent's bound channel first, then the model-matched
+// fallbacks in priority order, dropping any duplicate of the bound channel so a
+// failover never retries the same upstream twice.
+func agentChannels(bound *object.Channel, fallbacks []*object.Channel) []*object.Channel {
+	channels := []*object.Channel{bound}
+	for _, fallback := range fallbacks {
+		if fallback.GetId() != bound.GetId() {
+			channels = append(channels, fallback)
+		}
+	}
+	return channels
 }
 
 func (c *ApiController) readProxyRoute(target proxyTarget) (*proxyRoute, bool) {
