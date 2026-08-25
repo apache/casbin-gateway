@@ -20,6 +20,7 @@ import {
   Eye,
   Minus,
   Package,
+  Pencil,
   Plus,
   RefreshCw,
   Send,
@@ -33,6 +34,7 @@ import {AgentIcon} from "@/components/AgentIcon";
 import {AddMcpDialog} from "@/components/agent-config/add-mcp-dialog";
 import {CopyDialog} from "@/components/agent-config/copy-dialog";
 import {DetailDialog, type DetailTarget} from "@/components/agent-config/detail-dialog";
+import {PromptDialog, type PromptTarget} from "@/components/agent-config/prompt-dialog";
 import {TrashDialog} from "@/components/agent-config/trash-dialog";
 import {ConfirmDialog} from "@/components/shared/confirm-dialog";
 import {DataTable, type Column} from "@/components/shared/data-table";
@@ -51,6 +53,7 @@ import {
   compareVersions,
   copiesOf,
   counted,
+  displayName,
   endpointOf,
   formatBytes,
   formatModified,
@@ -59,6 +62,7 @@ import {
   locationOf,
   newerHolders,
   originTitle,
+  selectable as canSelect,
   sharedName,
   supports,
   updateBadge,
@@ -105,6 +109,9 @@ function SourcePicker({
                 {i18next.t("agentConfig:Skills")} {inventory.skills.length}
                 {" · "}
                 {i18next.t("agentConfig:MCP")} {inventory.mcpServers.length}
+                {inventory.promptSupported
+                  ? ` · ${i18next.t("agentConfig:Prompts")} ${inventory.prompts.filter(prompt => !prompt.missing).length}`
+                  : ""}
               </span>
             </span>
           </button>
@@ -152,6 +159,7 @@ export default function AgentConfigsPage({account}: {account: Account}) {
   const [sourceKey, setSourceKey] = React.useState("");
   const [selected, setSelected] = React.useState<string[]>([]);
   const [detail, setDetail] = React.useState<DetailTarget | null>(null);
+  const [editing, setEditing] = React.useState<PromptTarget | null>(null);
   const [copyOpen, setCopyOpen] = React.useState(false);
   const [addOpen, setAddOpen] = React.useState(false);
   const [trashOpen, setTrashOpen] = React.useState(false);
@@ -168,7 +176,8 @@ export default function AgentConfigsPage({account}: {account: Account}) {
   // source the reader is working from.
   React.useEffect(() => {
     if (sourceKey === "" && inventories.length > 0) {
-      const landing = inventories.find(inventory => itemsOf(inventory, kind).length > 0) ?? inventories[0];
+      const landing =
+        inventories.find(inventory => itemsOf(inventory, kind).some(canSelect)) ?? inventories[0];
       setSourceKey(inventoryKey(landing));
     }
   }, [inventories, kind, sourceKey]);
@@ -184,7 +193,7 @@ export default function AgentConfigsPage({account}: {account: Account}) {
   const peers = source ? inventories.filter(inventory => inventoryKey(inventory) !== inventoryKey(source)) : [];
   const items = source ? itemsOf(source, kind) : [];
   const copies = copiesOf(inventories, kind);
-  const selectable = items.filter(item => !item.managed);
+  const selectable = items.filter(canSelect);
   const agentNames = new Map(inventories.map(inventory => [inventory.agentId, inventory.name]));
   const allSelected = selectable.length > 0 && selected.length === selectable.length;
 
@@ -243,7 +252,7 @@ export default function AgentConfigsPage({account}: {account: Account}) {
         />
       ),
       render: (_value, record) =>
-        record.managed ? null : (
+        !canSelect(record) ? null : (
           <input
             type="checkbox"
             className="accent-primary size-4 align-middle"
@@ -264,7 +273,7 @@ export default function AgentConfigsPage({account}: {account: Account}) {
         return (
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="truncate font-medium">{sharedName(record.name)}</span>
+              <span className="truncate font-medium">{displayName(record)}</span>
               {record.origin ? (
                 <SimpleTooltip title={originTitle(record)}>
                   <Badge variant="muted">{record.origin}</Badge>
@@ -289,6 +298,11 @@ export default function AgentConfigsPage({account}: {account: Account}) {
                   <Badge variant="info">{i18next.t("agentConfig:Managed by Gateway")}</Badge>
                 </SimpleTooltip>
               ) : null}
+              {record.missing ? (
+                <SimpleTooltip title={i18next.t("agentConfig:Not written yet detail")}>
+                  <Badge variant="muted">{i18next.t("agentConfig:Not written yet")}</Badge>
+                </SimpleTooltip>
+              ) : null}
             </div>
             {record.description ? (
               <p className="text-muted-foreground line-clamp-2 text-xs">{record.description}</p>
@@ -300,9 +314,22 @@ export default function AgentConfigsPage({account}: {account: Account}) {
     {
       key: "summary",
       width: "220px",
-      title: kind === "skill" ? i18next.t("agentConfig:Contents") : i18next.t("agentConfig:Endpoint"),
+      title:
+        kind === "mcp" ? i18next.t("agentConfig:Endpoint") : i18next.t("agentConfig:Contents"),
       render: (_value, record) =>
-        kind === "skill" ? (
+        kind === "prompt" ? (
+          <span className="text-muted-foreground text-xs">
+            {record.missing || !record.bytes
+              ? i18next.t("agentConfig:Nothing here")
+              : formatBytes(record.bytes)}
+            {formatModified(record.modified) ? (
+              <>
+                <br />
+                {`${i18next.t("agentConfig:Changed")} ${formatModified(record.modified)}`}
+              </>
+            ) : null}
+          </span>
+        ) : kind === "skill" ? (
           <span className="text-muted-foreground text-xs">
             {counted(record.files ?? 0, "agentConfig:1 file", "agentConfig:{files} files", "{files}")}
             {record.bytes ? ` · ${formatBytes(record.bytes)}` : ""}
@@ -338,8 +365,11 @@ export default function AgentConfigsPage({account}: {account: Account}) {
         if (!supports(peer, kind)) {
           return <span className="text-muted-foreground/50 text-xs">—</span>;
         }
-        const other = copies.get(sharedName(record.name))?.get(inventoryKey(peer));
-        return <PeerCell state={other ? compareVersions(record, other) : "missing"} />;
+        const other = copies.get(sharedName(record))?.get(inventoryKey(peer));
+        // An instruction file is listed even when nobody has written it, so a
+        // peer that has none holds nothing rather than a different version.
+        const held = other && !other.missing && !record.missing ? other : undefined;
+        return <PeerCell state={held ? compareVersions(record, held) : "missing"} />;
       },
     })),
     {
@@ -375,19 +405,36 @@ export default function AgentConfigsPage({account}: {account: Account}) {
               </SimpleTooltip>
             </ConfirmDialog>
           ) : null}
-          <SimpleTooltip title={i18next.t("agentConfig:View")}>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={i18next.t("agentConfig:View")}
-              onClick={() => setDetail({item: record, agentName: source?.name ?? record.agentId})}
-            >
-              <Eye className="size-4" />
-            </Button>
-          </SimpleTooltip>
+          {kind === "prompt" ? (
+            <SimpleTooltip title={i18next.t("general:Edit")}>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={i18next.t("general:Edit")}
+                onClick={() => setEditing({item: record, agentName: source?.name ?? record.agentId})}
+              >
+                <Pencil className="size-4" />
+              </Button>
+            </SimpleTooltip>
+          ) : (
+            <SimpleTooltip title={i18next.t("agentConfig:View")}>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={i18next.t("agentConfig:View")}
+                onClick={() => setDetail({item: record, agentName: source?.name ?? record.agentId})}
+              >
+                <Eye className="size-4" />
+              </Button>
+            </SimpleTooltip>
+          )}
           <ConfirmDialog
             title={i18next.t(
-              kind === "skill" ? "agentConfig:Delete this skill?" : "agentConfig:Delete this MCP server?",
+              kind === "skill"
+                ? "agentConfig:Delete this skill?"
+                : kind === "prompt"
+                  ? "agentConfig:Delete these instructions?"
+                  : "agentConfig:Delete this MCP server?",
             )}
             description={
               <span className="flex flex-col gap-1">
@@ -422,7 +469,7 @@ export default function AgentConfigsPage({account}: {account: Account}) {
   return (
     <PageContainer>
       <PageHeader
-        title={i18next.t("agentConfig:Skills & MCP")}
+        title={i18next.t("agentConfig:Skills, MCP & Prompts")}
         description={i18next.t("agentConfig:Page description")}
         actions={
           <>
@@ -477,6 +524,10 @@ export default function AgentConfigsPage({account}: {account: Account}) {
                   {i18next.t("agentConfig:MCP servers")}
                   <Badge variant="muted">{source.mcpServers.length}</Badge>
                 </TabsTrigger>
+                <TabsTrigger value="prompt">
+                  {i18next.t("agentConfig:Prompts")}
+                  <Badge variant="muted">{source.prompts.filter(prompt => !prompt.missing).length}</Badge>
+                </TabsTrigger>
               </TabsList>
             </Tabs>
 
@@ -522,7 +573,11 @@ export default function AgentConfigsPage({account}: {account: Account}) {
               pageSize={20}
               emptyIcon={Package}
               emptyText={i18next.t(
-                kind === "skill" ? "agentConfig:No skills yet" : "agentConfig:No MCP servers yet",
+                kind === "skill"
+                  ? "agentConfig:No skills yet"
+                  : kind === "prompt"
+                    ? "agentConfig:No instructions yet"
+                    : "agentConfig:No MCP servers yet",
               )}
               toolbar={
                 <Button disabled={selected.length === 0} onClick={() => setCopyOpen(true)}>
@@ -568,6 +623,12 @@ export default function AgentConfigsPage({account}: {account: Account}) {
       />
 
       <DetailDialog target={detail} onOpenChange={open => !open && setDetail(null)} />
+
+      <PromptDialog
+        target={editing}
+        onOpenChange={open => !open && setEditing(null)}
+        onSaved={refresh}
+      />
     </PageContainer>
   );
 }

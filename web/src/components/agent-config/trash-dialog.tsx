@@ -146,7 +146,13 @@ export function TrashDialog({
                   <span className="truncate text-sm font-medium">{entry.name}</span>
                   <Badge variant="muted">{agentNames.get(entry.agentId) ?? entry.agentId}</Badge>
                   <Badge variant="outline">
-                    {i18next.t(entry.kind === "skill" ? "agentConfig:Skill" : "agentConfig:MCP")}
+                    {i18next.t(
+                      entry.kind === "skill"
+                        ? "agentConfig:Skill"
+                        : entry.kind === "prompt"
+                          ? "agentConfig:Prompt"
+                          : "agentConfig:MCP",
+                    )}
                   </Badge>
                 </div>
                 <p className="text-muted-foreground truncate text-xs">

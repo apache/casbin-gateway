@@ -86,7 +86,7 @@ Gateway installed some other way, or in a directory it cannot write to, says so 
 | Page | What you get | What it needs |
 | --- | --- | --- |
 | **Agents** | Every AI coding agent installed on this machine — Claude Code, Codex CLI, Cursor and more. Click **Patch** on one and its activity streams into the page live. | Nothing |
-| **Skills & MCP** | Every skill and MCP server of every agent in one table. Add an MCP server to one agent or to several at once, open one, delete it, or copy it into another agent. | Nothing |
+| **Skills, MCP & Prompts** | Every skill, MCP server and instruction file of every agent in one table. Add an MCP server to one agent or to several at once, edit the instructions an agent reads before every session, open one, delete it, or copy it into another agent. | Nothing |
 | **Providers** | One endpoint in front of your model vendors. Gateway holds the API key, so the agents never have it — or forwards the agent's own sign-in and holds nothing. | A vendor API key, or nothing at all |
 | **LLM Records** | Every request an agent relayed: the full system prompt, every message and tool call, the schema of every tool the model was offered, plus tokens and cost. | A provider, and `llmRecordMode` — see [Recording prompts](#recording-prompts) |
 | **Advanced → Sites** | The reverse-proxy WAF: per-site routing, rules, certificates and analytics. | Turning the proxy on — see [Turning the WAF proxy on](#turning-the-waf-proxy-on) |
@@ -140,7 +140,7 @@ To serve other machines anyway, set `httpaddr = 0.0.0.0` in `conf/app.conf`, and
 
 ### Running in Docker or Podman
 
-**A container cannot see the agents on your machine.** Agents are discovered by reading the home directories and install paths of the machine Gateway runs on, and inside a container that is the container's own filesystem. **Agents**, **Skills & MCP** and agent monitoring therefore stay empty there, and the pages say so rather than pretending nothing is installed. Everything that does not depend on the host works normally: **Providers**, **LLM Records** and the reverse-proxy WAF.
+**A container cannot see the agents on your machine.** Agents are discovered by reading the home directories and install paths of the machine Gateway runs on, and inside a container that is the container's own filesystem. **Agents**, **Skills, MCP & Prompts** and agent monitoring therefore stay empty there, and the pages say so rather than pretending nothing is installed. Everything that does not depend on the host works normally: **Providers**, **LLM Records** and the reverse-proxy WAF.
 
 So run the one-command install above on the machine whose agents you want to watch, and use a container when Gateway is only a model endpoint or a reverse proxy for other machines.
 

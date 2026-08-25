@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package agentconfig reads and edits the skills and MCP servers that AI coding
-// agents keep in their own configuration files, so the agents installed on one
-// host can be compared and their configuration moved between them.
+// Package agentconfig reads and edits the skills, MCP servers and instruction
+// files that AI coding agents keep in their own configuration files, so the
+// agents installed on one host can be compared and their configuration moved
+// between them.
 //
-// Every agent stores the same two things in a different place and a different
+// Every agent stores the same three things in a different place and a different
 // format. layout.go holds that per-agent knowledge, and nothing else does.
 package agentconfig
 
@@ -27,27 +28,35 @@ import (
 	"strings"
 )
 
-// The two kinds of configuration Gateway manages.
+// The kinds of configuration Gateway manages.
 const (
 	KindSkill = "skill"
 	KindMcp   = "mcp"
+	// KindPrompt is the Markdown file an agent reads before every session.
+	KindPrompt = "prompt"
 )
 
 // ErrUnsupported reports a kind an agent has no known location for, which is
 // different from an agent that has one and it is empty.
 var ErrUnsupported = errors.New("Gateway does not know where this agent keeps that configuration")
 
-// Item is one skill or MCP server as it exists in an agent's own configuration.
+// Item is one skill, MCP server or instruction file as it exists in an agent's
+// own configuration.
 type Item struct {
 	AgentId string `json:"agentId"`
 	Owner   string `json:"owner"`
 	Kind    string `json:"kind"`
 	Name    string `json:"name"`
 
+	// Shared is the name two agents' copies of this item are matched by, when
+	// that is not the name itself. Every agent's instruction file holds the same
+	// thing under a different file name.
+	Shared string `json:"shared,omitempty"`
+
 	Description string `json:"description,omitempty"`
 
-	// Path is what an edit would change: the skill's own directory, or the
-	// config file the MCP server is one entry of.
+	// Path is what an edit would change: the skill's own directory, the config
+	// file the MCP server is one entry of, or the instruction file itself.
 	Path string `json:"path"`
 
 	// Transport, Command and Url summarize an MCP server in a list.
@@ -82,6 +91,10 @@ type Item struct {
 	// ReadOnly explains why Gateway will not delete this item. Empty for the
 	// items it may.
 	ReadOnly string `json:"readOnly,omitempty"`
+	// Missing marks an item listed because the agent would read it, not because
+	// it is there. An instruction file nobody has written is still the answer to
+	// what that agent is told.
+	Missing bool `json:"missing,omitempty"`
 }
 
 // Inventory is everything Gateway can read for one installation. A location it
@@ -99,9 +112,11 @@ type Inventory struct {
 	SkillsDir  string   `json:"skillsDir,omitempty"`
 	SkillsDirs []string `json:"skillsDirs,omitempty"`
 	McpFile    string   `json:"mcpFile,omitempty"`
+	PromptFile string   `json:"promptFile,omitempty"`
 
 	SkillsSupported bool `json:"skillsSupported"`
 	McpSupported    bool `json:"mcpSupported"`
+	PromptSupported bool `json:"promptSupported"`
 	// McpWritable is false for a config Gateway can read but must not rewrite,
 	// because writing it back would lose something it cannot represent.
 	McpWritable bool   `json:"mcpWritable"`
@@ -109,13 +124,15 @@ type Inventory struct {
 
 	Skills     []*Item  `json:"skills"`
 	McpServers []*Item  `json:"mcpServers"`
+	Prompts    []*Item  `json:"prompts"`
 	Errors     []string `json:"errors,omitempty"`
 }
 
 // Detail is one item's full definition, for the viewer.
 type Detail struct {
 	Item *Item `json:"item"`
-	// Content is the SKILL.md of a skill, or the JSON of one MCP server entry.
+	// Content is the SKILL.md of a skill, the JSON of one MCP server entry, or
+	// the instruction file itself.
 	Content string `json:"content"`
 	// Files lists the other files a skill directory carries.
 	Files []string `json:"files,omitempty"`
@@ -137,6 +154,7 @@ func Read(agentId string, owner string) *Inventory {
 		Owner:      owner,
 		Skills:     []*Item{},
 		McpServers: []*Item{},
+		Prompts:    []*Item{},
 	}
 
 	found, ok := layoutOf(agentId)
@@ -145,6 +163,7 @@ func Read(agentId string, owner string) *Inventory {
 	}
 	inventory.SkillsSupported = found.skills != nil
 	inventory.McpSupported = found.mcp != nil
+	inventory.PromptSupported = found.prompt != nil
 	if found.mcp != nil {
 		inventory.McpWritable = found.mcp.readOnly == ""
 		inventory.McpReadOnly = found.mcp.readOnly
@@ -174,6 +193,11 @@ func Read(agentId string, owner string) *Inventory {
 		}
 		inventory.McpServers = mcpItems(agentId, owner, inventory.McpFile, entries)
 	}
+
+	if found.prompt != nil {
+		inventory.PromptFile = found.prompt.path(home)
+		inventory.Prompts = []*Item{readPrompt(agentId, owner, inventory.PromptFile)}
+	}
 	return inventory
 }
 
@@ -183,10 +207,13 @@ func ReadDetail(agentId string, owner string, kind string, name string) (*Detail
 	if err != nil {
 		return nil, err
 	}
-	if kind == KindSkill {
+	if kind == KindSkill || kind == KindPrompt {
 		item, err := findItem(agentId, owner, kind, name)
 		if err != nil {
 			return nil, err
+		}
+		if kind == KindPrompt {
+			return promptDetail(item)
 		}
 		return skillDetail(item)
 	}
@@ -221,6 +248,9 @@ func Delete(agentId string, owner string, kind string, name string) error {
 
 	if kind == KindSkill {
 		return trashSkill(home, item)
+	}
+	if kind == KindPrompt {
+		return trashPath(home, item)
 	}
 	if found.mcp.readOnly != "" {
 		return fmt.Errorf("%s: %s", agentId, found.mcp.readOnly)
@@ -298,12 +328,17 @@ func plan(request CopyRequest, sources map[string]*source) []*PlanItem {
 		for _, name := range request.Names {
 			item := &PlanItem{AgentId: agentId, Name: name}
 			from := sources[name]
-			target := existing[targetName(request.Kind, name)]
+			var target *Item
+			if from != nil {
+				target = existing[sharedKey(from.item)]
+			}
 			switch {
 			case err != nil:
 				item.Action, item.Reason = ActionSkip, err.Error()
 			case from == nil:
 				item.Action, item.Reason = ActionSkip, "not found in the source agent"
+			case from.item.Missing:
+				item.Action, item.Reason = ActionSkip, "there is nothing there to copy"
 			case from.item.Managed:
 				item.Action, item.Reason = ActionSkip, "written by Gateway, not migrated"
 			case target == nil:
@@ -338,6 +373,16 @@ func replaces(from *Item, target *Item) string {
 		return "replaces a newer version"
 	}
 	return "replaces an older version"
+}
+
+// sharedKey is what one agent's copy of an item is matched to another's. Two
+// agents' instruction files are the same item under two file names, so they say
+// so rather than being matched by name.
+func sharedKey(item *Item) string {
+	if item.Shared != "" {
+		return item.Shared
+	}
+	return targetName(item.Kind, item.Name)
 }
 
 // targetName is the name an item takes at the target. A skill from a plugin or
@@ -392,6 +437,9 @@ func writeItem(request CopyRequest, from *source, agentId string) (string, error
 		recordSkillOrigin(home, path, request.From, from.item.Name, from.item.Path)
 		return path, nil
 	}
+	if request.Kind == KindPrompt {
+		return copyPrompt(home, agentId, request.Owner, found.prompt.path(home), from.item)
+	}
 	if found.mcp.readOnly != "" {
 		return "", errors.New(found.mcp.readOnly)
 	}
@@ -408,7 +456,7 @@ func readSources(request CopyRequest) (map[string]*source, error) {
 		return nil, errors.New("no target agent was selected")
 	case len(request.Names) == 0:
 		return nil, errors.New("nothing was selected to copy")
-	case request.Kind != KindSkill && request.Kind != KindMcp:
+	case request.Kind != KindSkill && request.Kind != KindMcp && request.Kind != KindPrompt:
 		return nil, fmt.Errorf("unknown configuration kind: %s", request.Kind)
 	}
 	for _, agentId := range request.To {
@@ -456,14 +504,22 @@ func targetItems(agentId string, owner string, kind string) (map[string]*Item, e
 
 	items := map[string]*Item{}
 	for _, item := range itemsOf(inventory, kind) {
-		items[targetName(kind, item.Name)] = item
+		// A listed instruction file the target has not written is nothing to
+		// replace, so a copy into it creates rather than overwrites.
+		if item.Missing {
+			continue
+		}
+		items[sharedKey(item)] = item
 	}
 	return items, nil
 }
 
 func itemsOf(inventory *Inventory, kind string) []*Item {
-	if kind == KindSkill {
+	switch kind {
+	case KindSkill:
 		return inventory.Skills
+	case KindPrompt:
+		return inventory.Prompts
 	}
 	return inventory.McpServers
 }
@@ -475,7 +531,9 @@ func resolve(agentId string, owner string, kind string) (layout, string, error) 
 	if !ok {
 		return layout{}, "", fmt.Errorf("unknown agent: %s", agentId)
 	}
-	if (kind == KindSkill && found.skills == nil) || (kind == KindMcp && found.mcp == nil) {
+	if (kind == KindSkill && found.skills == nil) ||
+		(kind == KindMcp && found.mcp == nil) ||
+		(kind == KindPrompt && found.prompt == nil) {
 		return layout{}, "", fmt.Errorf("%s: %w", agentId, ErrUnsupported)
 	}
 	home, err := homeOf(owner)

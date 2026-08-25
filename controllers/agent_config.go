@@ -38,8 +38,8 @@ type agentConfigView struct {
 	SharedWith []string `json:"sharedWith,omitempty"`
 }
 
-// GetAgentConfigs lists the skills and MCP servers of every agent on this host
-// whose configuration layout Gateway knows.
+// GetAgentConfigs lists the skills, MCP servers and instructions of every agent
+// on this host whose configuration layout Gateway knows.
 func (c *ApiController) GetAgentConfigs() {
 	if c.RequireAdmin() {
 		return
@@ -86,7 +86,7 @@ func (collected *agentConfigs) add(agentId string, owner string, name string, pa
 	}
 
 	inventory := agentconfig.Read(agentId, owner)
-	key := inventory.SkillsDir + "\x00" + inventory.McpFile
+	key := inventory.SkillsDir + "\x00" + inventory.McpFile + "\x00" + inventory.PromptFile
 	if first, ok := collected.seen[key]; ok {
 		if first.AgentId != agentId && !contains(first.SharedWith, name) {
 			first.SharedWith = append(first.SharedWith, name)
@@ -113,7 +113,33 @@ func contains(names []string, name string) bool {
 	return false
 }
 
-// GetAgentConfigItem returns one skill's manifest or one MCP server's entry.
+// SaveAgentConfigPrompt replaces the instructions one agent reads before every
+// session, writing the file in that agent's own place and under its own name.
+func (c *ApiController) SaveAgentConfigPrompt() {
+	if c.RequireAdmin() {
+		return
+	}
+
+	var form struct {
+		AgentId string `json:"agentId"`
+		Owner   string `json:"owner"`
+		Content string `json:"content"`
+	}
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &form); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	item, err := agentconfig.SavePrompt(form.AgentId, form.Owner, form.Content)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(item)
+}
+
+// GetAgentConfigItem returns one skill's manifest, one MCP server's entry, or
+// one agent's instructions.
 func (c *ApiController) GetAgentConfigItem() {
 	if c.RequireAdmin() {
 		return
@@ -128,8 +154,8 @@ func (c *ApiController) GetAgentConfigItem() {
 	c.ResponseOk(detail)
 }
 
-// DeleteAgentConfigItem removes one skill or MCP server from the agent's own
-// configuration.
+// DeleteAgentConfigItem removes one skill, MCP server or instruction file from
+// the agent's own configuration.
 func (c *ApiController) DeleteAgentConfigItem() {
 	if c.RequireAdmin() {
 		return
@@ -157,8 +183,8 @@ func (c *ApiController) DeleteAgentConfigItem() {
 	c.ResponseOk(form.Name)
 }
 
-// GetAgentConfigTrash lists the skills and MCP servers deleting has removed and
-// that can still be put back.
+// GetAgentConfigTrash lists what deleting has removed and can still be put
+// back.
 func (c *ApiController) GetAgentConfigTrash() {
 	if c.RequireAdmin() {
 		return
@@ -287,8 +313,8 @@ func (c *ApiController) PlanAgentConfigCopy() {
 	c.ResponseOk(planned)
 }
 
-// CopyAgentConfig migrates the selected skills or MCP servers into the target
-// agents' own configuration files.
+// CopyAgentConfig migrates the selected skills, MCP servers or instructions
+// into the target agents' own configuration files.
 func (c *ApiController) CopyAgentConfig() {
 	if c.RequireAdmin() {
 		return

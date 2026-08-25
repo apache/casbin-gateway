@@ -70,7 +70,7 @@ export const navGroups: NavGroup[] = [
   {key: "/agents", label: "agent:Advanced view", icon: Table2, path: "/agents", adminOnly: true, hidden: true},
   {
     key: "/agent-configs",
-    label: "agentConfig:Skills & MCP",
+    label: "agentConfig:Skills, MCP & Prompts",
     icon: Blocks,
     path: "/agent-configs",
     adminOnly: true,

@@ -30,7 +30,7 @@ const (
 	trashRoot   = ".casbin-gateway"
 	trashFolder = "trash"
 	// trashRecord names the metadata of one deleted item, and trashPayload the
-	// skill folder beside it.
+	// folder or file beside it.
 	trashRecord  = "gateway-trash.json"
 	trashPayload = "payload"
 	// trashKeepDays is how long a deleted item can be restored. After that a
@@ -38,8 +38,8 @@ const (
 	trashKeepDays = 30
 )
 
-// TrashEntry is one deleted skill or MCP server, kept so a delete can be taken
-// back.
+// TrashEntry is one deleted skill, MCP server or instruction file, kept so a
+// delete can be taken back.
 type TrashEntry struct {
 	Id          string `json:"id"`
 	AgentId     string `json:"agentId"`
@@ -61,6 +61,28 @@ type TrashEntry struct {
 // trashSkill moves a skill folder out of the agent's reach instead of deleting
 // it, so an accidental delete is one restore away.
 func trashSkill(home string, item *Item) error {
+	if err := trashPath(home, item); err != nil {
+		return err
+	}
+
+	// Nothing is at that path now, so the next skill written there is not the
+	// one this record was about.
+	forgetSkillOrigin(home, item.Path)
+	return nil
+}
+
+// trashItem recycles one item by its kind, so replacing a skill keeps its
+// origin bookkeeping in step.
+func trashItem(home string, item *Item) error {
+	if item.Kind == KindSkill {
+		return trashSkill(home, item)
+	}
+	return trashPath(home, item)
+}
+
+// trashPath moves whatever is at the item's path into the recycle bin: a
+// skill folder, or one agent's instruction file.
+func trashPath(home string, item *Item) error {
 	entry := newTrashEntry(item)
 	dir, err := makeTrashDir(home, entry.Id)
 	if err != nil {
@@ -78,10 +100,6 @@ func trashSkill(home string, item *Item) error {
 		os.RemoveAll(dir)
 		return err
 	}
-
-	// Nothing is at that path now, so the next skill written there is not the
-	// one this record was about.
-	forgetSkillOrigin(home, item.Path)
 	return nil
 }
 
@@ -161,10 +179,10 @@ func RestoreTrash(owner string, id string, replace bool) (*TrashEntry, error) {
 		return nil, err
 	}
 
-	if entry.Kind == KindSkill {
-		err = restoreSkill(home, dir, entry, replace)
-	} else {
+	if entry.Kind == KindMcp {
 		err = restoreMcp(owner, entry, replace)
+	} else {
+		err = restorePayload(home, dir, entry, replace)
 	}
 	if err != nil {
 		return nil, err
@@ -175,12 +193,12 @@ func RestoreTrash(owner string, id string, replace bool) (*TrashEntry, error) {
 	return entry, nil
 }
 
-func restoreSkill(home string, dir string, entry *TrashEntry, replace bool) error {
+func restorePayload(home string, dir string, entry *TrashEntry, replace bool) error {
 	if exists(entry.Path) {
 		if !replace {
 			return fmt.Errorf("%s already exists again; restore it as a replacement, or move it aside first", entry.Path)
 		}
-		if err := trashSkill(home, occupant(entry)); err != nil {
+		if err := trashItem(home, occupant(entry)); err != nil {
 			return err
 		}
 	}

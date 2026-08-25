@@ -50,6 +50,15 @@ export function addAgentConfigMcp(body: McpRequest) {
   return request<AgentConfigPlanItem[]>("/api/add-agent-config-mcp", "POST", body);
 }
 
+/** Replaces the instructions one agent reads before every session. */
+export function saveAgentConfigPrompt(agentId: string, owner: string, content: string) {
+  return request<AgentConfigItem>("/api/save-agent-config-prompt", "POST", {
+    agentId: agentId,
+    owner: owner,
+    content: content,
+  });
+}
+
 export function getAgentConfigs(forceRefresh = false) {
   return request<AgentConfigInventory[]>(`/api/get-agent-configs${forceRefresh ? "?refresh=true" : ""}`);
 }

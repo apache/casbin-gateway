@@ -24,22 +24,31 @@ import type {
 } from "@/types";
 import type {BadgeVariant} from "@/components/ui/badge";
 
-/** Skills and MCP servers belong to an account, so an id alone is not unique. */
+/** An agent's configuration belongs to an account, so an id alone is not unique. */
 export function inventoryKey(inventory: Pick<AgentConfigInventory, "agentId" | "owner">) {
   return `${inventory.owner}:${inventory.agentId}`;
 }
 
 export function itemsOf(inventory: AgentConfigInventory, kind: AgentConfigKind) {
-  return kind === "skill" ? inventory.skills : inventory.mcpServers;
+  if (kind === "skill") {
+    return inventory.skills;
+  }
+  return kind === "prompt" ? inventory.prompts : inventory.mcpServers;
 }
 
 export function supports(inventory: AgentConfigInventory, kind: AgentConfigKind) {
-  return kind === "skill" ? inventory.skillsSupported : inventory.mcpSupported;
+  if (kind === "skill") {
+    return inventory.skillsSupported;
+  }
+  return kind === "prompt" ? inventory.promptSupported : inventory.mcpSupported;
 }
 
 /** Where the items of one kind live, shown under the agent it belongs to. */
 export function locationOf(inventory: AgentConfigInventory, kind: AgentConfigKind) {
-  return (kind === "skill" ? inventory.skillsDir : inventory.mcpFile) ?? "";
+  if (kind === "skill") {
+    return inventory.skillsDir ?? "";
+  }
+  return (kind === "prompt" ? inventory.promptFile : inventory.mcpFile) ?? "";
 }
 
 /**
@@ -59,11 +68,21 @@ export function blockedReason(inventory: AgentConfigInventory, kind: AgentConfig
 /**
  * The name two agents' copies of one item share. A skill from a plugin or from
  * a group inside the skills directory carries that in its name, but it is the
- * same skill once copied, so comparisons key on the last part.
+ * same skill once copied, so comparisons key on the last part. An item the
+ * server matches some other way says so itself.
  */
-export function sharedName(name: string) {
-  const cut = Math.max(name.lastIndexOf(":"), name.lastIndexOf("/"));
-  return cut < 0 ? name : name.slice(cut + 1);
+export function sharedName(item: AgentConfigItem) {
+  if (item.shared) {
+    return item.shared;
+  }
+  const cut = Math.max(item.name.lastIndexOf(":"), item.name.lastIndexOf("/"));
+  return cut < 0 ? item.name : item.name.slice(cut + 1);
+}
+
+/** What a row is titled: the file or folder, not the key it is matched by. */
+export function displayName(item: AgentConfigItem) {
+  const cut = Math.max(item.name.lastIndexOf(":"), item.name.lastIndexOf("/"));
+  return cut < 0 ? item.name : item.name.slice(cut + 1);
 }
 
 /** The item of each name every agent holds, keyed by shared name then agent. */
@@ -71,11 +90,11 @@ export function copiesOf(inventories: AgentConfigInventory[], kind: AgentConfigK
   const copies = new Map<string, Map<string, AgentConfigItem>>();
   inventories.forEach(inventory => {
     itemsOf(inventory, kind).forEach(item => {
-      const holders = copies.get(sharedName(item.name)) ?? new Map<string, AgentConfigItem>();
+      const holders = copies.get(sharedName(item)) ?? new Map<string, AgentConfigItem>();
       if (!holders.has(inventoryKey(inventory))) {
         holders.set(inventoryKey(inventory), item);
       }
-      copies.set(sharedName(item.name), holders);
+      copies.set(sharedName(item), holders);
     });
   });
   return copies;
@@ -100,7 +119,7 @@ export function newerHolders(
   copies: Map<string, Map<string, AgentConfigItem>>,
   peers: AgentConfigInventory[],
 ) {
-  const holders = copies.get(sharedName(item.name));
+  const holders = copies.get(sharedName(item));
   if (!holders) {
     return [];
   }
@@ -212,15 +231,20 @@ export function formatBytes(bytes: number | undefined) {
   return `${value >= 10 || unit === 0 ? Math.round(value) : value.toFixed(1)} ${units[unit]}`;
 }
 
+/** Whether this item can be picked for a copy to other agents. */
+export function selectable(item: AgentConfigItem) {
+  return !item.managed && !item.missing;
+}
+
 /** The one-line summary of an MCP server: what it runs, or what it connects to. */
 export function endpointOf(item: AgentConfigItem) {
   return item.command || item.url || "";
 }
 
 /**
- * useAgentConfigs owns the host scan behind the Skills & MCP page. Deleting and
- * copying both change files this page has already read, so every one of them
- * ends by calling refresh().
+ * useAgentConfigs owns the host scan behind the Skills, MCP & Prompts page.
+ * Deleting, editing and copying all change files this page has already read, so
+ * every one of them ends by calling refresh().
  */
 export function useAgentConfigs() {
   const [inventories, setInventories] = React.useState<AgentConfigInventory[]>([]);

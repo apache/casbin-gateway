@@ -28,12 +28,14 @@ import (
 // migrated or deleted from here: turning monitoring off is what removes it.
 const ManagedEntryName = "casbin-gateway-agent-monitor"
 
-// layout is where one agent keeps its skills and MCP servers. A nil half means
-// the agent has no such location that Gateway knows about, which the UI shows
-// as unsupported rather than as empty.
+// layout is where one agent keeps its skills, its MCP servers and the
+// instructions it reads at the start of every session. A nil part means the
+// agent has no such location that Gateway knows about, which the UI shows as
+// unsupported rather than as empty.
 type layout struct {
 	skills *skillLayout
 	mcp    *mcpLayout
+	prompt *promptLayout
 }
 
 // Where a skill came from. A plugin's skills are read like any other but are
@@ -121,6 +123,23 @@ func (l *mcpLayout) path(home string) string {
 	return l.file(home)
 }
 
+// promptLayout is the one Markdown file an agent reads before every session.
+// The agents spell it differently — CLAUDE.md, AGENTS.md, global_rules.md — and
+// hold the same thing in it.
+type promptLayout struct {
+	segments []string
+}
+
+func (l *promptLayout) path(home string) string {
+	return filepath.Join(append([]string{home}, l.segments...)...)
+}
+
+// promptFile names one agent's instruction file, last segment first so the file
+// name reads before the directory it sits in.
+func promptFile(name string, dir ...string) *promptLayout {
+	return &promptLayout{segments: append(dir, name)}
+}
+
 // mcpStore is the file format half: JSON objects for most agents, TOML tables
 // for Codex. Entries are keyed by server name and hold that server's own
 // fields, in whatever spelling the file used.
@@ -140,7 +159,8 @@ var layouts = map[string]layout{
 			pluginSkills(".claude", "plugins"),
 			projectSkills(jsonProjects(".claude.json"), ".claude", "skills"),
 		}},
-		mcp: &mcpLayout{file: under(".claude.json"), store: &jsonStore{paths: [][]string{{"mcpServers"}}}},
+		mcp:    &mcpLayout{file: under(".claude.json"), store: &jsonStore{paths: [][]string{{"mcpServers"}}}},
+		prompt: promptFile("CLAUDE.md", ".claude"),
 	},
 	"claude-desktop": {
 		mcp: &mcpLayout{file: claudeDesktopConfig, store: &jsonStore{paths: [][]string{{"mcpServers"}}}},
@@ -156,6 +176,7 @@ var layouts = map[string]layout{
 			file:  under(".codeium", "windsurf", "mcp_config.json"),
 			store: &jsonStore{paths: [][]string{{"mcpServers"}}},
 		},
+		prompt: promptFile("global_rules.md", ".codeium", "windsurf", "memories"),
 	},
 	// dsh reads the shared ~/.agents skills too, but writes go to its own
 	// directory, which is the first user source.
@@ -178,6 +199,7 @@ var layouts = map[string]layout{
 			// all three; the first is where a new entry goes.
 			store: &jsonStore{paths: [][]string{{"mcp", "servers"}, {"mcp", "mcpServers"}, {"mcpServers"}}},
 		},
+		prompt: promptFile("AGENTS.md", ".openclaw"),
 	},
 	"opencode":         opencodeLayout,
 	"opencode-desktop": opencodeLayout,
@@ -188,7 +210,8 @@ var codexLayout = layout{
 		userSkills(".codex", "skills"),
 		pluginSkills(".codex", "plugins"),
 	}},
-	mcp: &mcpLayout{file: under(".codex", "config.toml"), store: &tomlStore{table: "mcp_servers"}},
+	mcp:    &mcpLayout{file: under(".codex", "config.toml"), store: &tomlStore{table: "mcp_servers"}},
+	prompt: promptFile("AGENTS.md", ".codex"),
 }
 
 // The opencode CLI and its desktop app read one ~/.config/opencode, on every
@@ -198,7 +221,8 @@ var opencodeLayout = layout{
 		userSkills(".config", "opencode", "skill"),
 		userSkills(".config", "opencode", "skills"),
 	}},
-	mcp: &mcpLayout{file: opencodeConfig, store: newOpencodeStore()},
+	mcp:    &mcpLayout{file: opencodeConfig, store: newOpencodeStore()},
+	prompt: promptFile("AGENTS.md", ".config", "opencode"),
 }
 
 var cursorLayout = layout{
@@ -299,7 +323,10 @@ func Configured(agentId string, owner string) bool {
 			}
 		}
 	}
-	return found.mcp != nil && exists(found.mcp.path(home))
+	if found.mcp != nil && exists(found.mcp.path(home)) {
+		return true
+	}
+	return found.prompt != nil && exists(found.prompt.path(home))
 }
 
 func exists(path string) bool {

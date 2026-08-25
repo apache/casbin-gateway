@@ -88,6 +88,7 @@ func initAPI() {
 	beego.Router("/api/purge-agent-config-trash", &controllers.ApiController{}, "POST:PurgeAgentConfigTrash")
 	beego.Router("/api/update-agent-config-skill", &controllers.ApiController{}, "POST:UpdateAgentConfigSkill")
 	beego.Router("/api/add-agent-config-mcp", &controllers.ApiController{}, "POST:AddAgentConfigMcp")
+	beego.Router("/api/save-agent-config-prompt", &controllers.ApiController{}, "POST:SaveAgentConfigPrompt")
 	beego.Router("/api/plan-agent-config-copy", &controllers.ApiController{}, "POST:PlanAgentConfigCopy")
 	beego.Router("/api/plan-agent-provider", &controllers.ApiController{}, "POST:PlanAgentProvider")
 	beego.Router("/api/apply-agent-provider", &controllers.ApiController{}, "POST:ApplyAgentProvider")

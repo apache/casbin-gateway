@@ -500,16 +500,25 @@ export interface Setting {
   dbPass: string;
 }
 
-/** The two kinds of configuration the Skills & MCP page manages. */
-export type AgentConfigKind = "skill" | "mcp";
+/** The kinds of configuration the Skills, MCP & Prompts page manages. */
+export type AgentConfigKind = "skill" | "mcp" | "prompt";
 
 export interface AgentConfigItem {
   agentId: string;
   owner: string;
   kind: AgentConfigKind;
   name: string;
+  /**
+   * What two agents' copies of this item are matched by, when that is not the
+   * name: every agent's instruction file holds the same thing under its own
+   * file name.
+   */
+  shared?: string;
   description?: string;
-  /** The skill's own folder, or the config file the MCP server is an entry of. */
+  /**
+   * The skill's own folder, the config file the MCP server is an entry of, or
+   * the instruction file itself.
+   */
   path: string;
   transport?: string;
   command?: string;
@@ -535,6 +544,8 @@ export interface AgentConfigItem {
   managed?: boolean;
   /** Why Gateway will not delete this item. Empty when it may. */
   readOnly?: string;
+  /** Listed because the agent would read it, not because it is there. */
+  missing?: boolean;
 }
 
 /**
@@ -556,7 +567,7 @@ export interface AgentConfigSkillUpdate {
   copiedAt?: number;
 }
 
-/** One installation's skills and MCP servers, as they exist in its own files. */
+/** One installation's configuration, as it exists in its own files. */
 export interface AgentConfigInventory {
   agentId: string;
   owner: string;
@@ -572,12 +583,16 @@ export interface AgentConfigInventory {
   skillsDir?: string;
   skillsDirs?: string[];
   mcpFile?: string;
+  /** The one Markdown file this agent reads before every session. */
+  promptFile?: string;
   skillsSupported: boolean;
   mcpSupported: boolean;
+  promptSupported: boolean;
   mcpWritable: boolean;
   mcpReadOnly?: string;
   skills: AgentConfigItem[];
   mcpServers: AgentConfigItem[];
+  prompts: AgentConfigItem[];
   errors?: string[];
 }
 

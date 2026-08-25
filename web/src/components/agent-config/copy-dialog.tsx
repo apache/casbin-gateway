@@ -176,7 +176,9 @@ export function CopyDialog({
           <DialogTitle>
             {kind === "skill"
               ? counted(names.length, "agentConfig:Copy 1 skill", "agentConfig:Copy {count} skills")
-              : counted(names.length, "agentConfig:Copy 1 MCP server", "agentConfig:Copy {count} MCP servers")}
+              : kind === "prompt"
+                ? i18next.t("agentConfig:Copy these instructions")
+                : counted(names.length, "agentConfig:Copy 1 MCP server", "agentConfig:Copy {count} MCP servers")}
           </DialogTitle>
           <DialogDescription className="flex flex-wrap items-center gap-1.5">
             {i18next.t("agentConfig:From")}
