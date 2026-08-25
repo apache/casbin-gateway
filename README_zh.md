@@ -37,6 +37,18 @@
   <a href="./README.md">English</a> | <b>中文</b>
 </p>
 
+## 界面预览
+
+| 本机上的每一个 Agent | 每个模型厂商一个入口 |
+| :---: | :---: |
+| [![Agents](https://cdn.casbin.org/img/casbin-gateway-agents.png)](https://cdn.casbin.org/img/casbin-gateway-agents.png) | [![新建 Provider](https://cdn.casbin.org/img/casbin-gateway-new-provider.png)](https://cdn.casbin.org/img/casbin-gateway-new-provider.png) |
+| 每个 Agent 接在哪、在那里花了多少、此刻是不是在跑 | 27 个厂商预设，或任何 OpenAI / Anthropic 兼容的 base URL |
+
+| Agent 转发过的每一个请求 | 完整的请求，而不只是一个计数 |
+| :---: | :---: |
+| [![LLM 记录](https://cdn.casbin.org/img/casbin-gateway-llm-records.png)](https://cdn.casbin.org/img/casbin-gateway-llm-records.png) | [![单条记录](https://cdn.casbin.org/img/casbin-gateway-llm-record.png)](https://cdn.casbin.org/img/casbin-gateway-llm-record.png) |
+| 按模型统计请求数、Token、缓存命中率和成本 | 系统提示词、每一条消息，以及模型拿到的每个工具的 schema |
+
 ## 运行
 
 一条命令。不需要数据库，不需要 Go，不需要 Node，不需要配置。

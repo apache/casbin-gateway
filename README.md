@@ -37,6 +37,18 @@
   <b>English</b> | <a href="./README_zh.md">中文</a>
 </p>
 
+## Screenshots
+
+| Every agent on this machine | One endpoint per model vendor |
+| :---: | :---: |
+| [![Agents](https://cdn.casbin.org/img/casbin-gateway-agents.png)](https://cdn.casbin.org/img/casbin-gateway-agents.png) | [![New Provider](https://cdn.casbin.org/img/casbin-gateway-new-provider.png)](https://cdn.casbin.org/img/casbin-gateway-new-provider.png) |
+| What each one runs on, what it has spent there, and whether it is running | 27 vendor presets, or any OpenAI- or Anthropic-compatible base URL |
+
+| Everything the agents relayed | The whole request, not just a count |
+| :---: | :---: |
+| [![LLM Records](https://cdn.casbin.org/img/casbin-gateway-llm-records.png)](https://cdn.casbin.org/img/casbin-gateway-llm-records.png) | [![One record](https://cdn.casbin.org/img/casbin-gateway-llm-record.png)](https://cdn.casbin.org/img/casbin-gateway-llm-record.png) |
+| Requests, tokens, cache hit rate and cost, broken down by model | The system prompt, every message, and the schema of every tool the model was offered |
+
 ## Run it
 
 One command. No database, no Go, no Node, no configuration.
