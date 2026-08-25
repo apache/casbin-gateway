@@ -178,7 +178,7 @@ Everything is optional. Settings are changed on the **Settings** page of the web
 | `driverName` / `dataSourceName` | `sqlite` / `./data/casbin-gateway.db` | Where data is stored |
 | `gatewayEnabled` | `false` | Turns the reverse-proxy WAF on |
 | `gatewayHttpPort` / `gatewayHttpsPort` | `80` / `443` | Ports the proxy listens on |
-| `llmRecordMode` | `off` | How much of each relayed LLM request is kept |
+| `llmRecordMode` | `full` | How much of each relayed LLM request is kept — including the prompt, see [Recording prompts](#recording-prompts) |
 | `apiKeyEncryptionKey` | empty | Encrypts provider API keys at rest (AES-256-GCM) |
 | `casdoorEndpoint` | empty | Switches sign-in over to [Casdoor](https://casdoor.org) SSO |
 
@@ -205,12 +205,12 @@ A previous Gateway still holding one of these ports is stopped first, so a resta
 
 ### Recording prompts
 
-Nothing about a relayed request is stored until you ask for it, because a prompt can carry anything that was pasted into it. **Record metadata** and **Record metadata and bodies**, the buttons on the LLM Records page, turn it on for the next request; the Settings page holds the same choice and the limits around it, seeded from:
+**Every relayed request is recorded in full from the first one, prompt included.** That is what the LLM Records page is made of, and none of it leaves this machine — but a prompt carries whatever was pasted into it, so if that is not what you want, this is the setting to change before you route an agent through Gateway. The picker at the top of the LLM Records page switches between **Recording off**, **Record metadata** and **Record metadata and bodies**, and takes effect from the next request; the Settings page holds the same choice and the limits around it, seeded from:
 
 ```ini
-; "off" keeps nothing, "metadata" records who called which model with which
-; outcome, "full" also stores the request body — which is what LLM Records needs
-; to show prompts, messages and tool schemas.
+; The default is "full": it stores the request body, which is what LLM Records
+; needs to show prompts, messages and tool schemas. "metadata" records only who
+; called which model with which outcome, and "off" keeps nothing at all.
 llmRecordMode = "full"
 llmRecordRetentionDays = 30
 llmRecordMaxRecords = 10000

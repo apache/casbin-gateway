@@ -230,9 +230,9 @@ export default function LlmRecordsPage({account}: {account: Account}) {
     });
   }, [isAdmin]);
 
-  // Recording is off until someone asks for it. The Settings page holds the
-  // same field; changing it here is the shortcut, and it applies to the next
-  // request rather than the next restart.
+  // Recording is on by default, so this is mostly the way it gets turned down.
+  // The Settings page holds the same field; changing it here is the shortcut,
+  // and it applies to the next request rather than the next restart.
   const setRecordMode = (mode: string) => {
     setChangingMode(true);
     SettingBackend.getSetting()

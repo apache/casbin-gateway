@@ -465,7 +465,7 @@
     "Record metadata": "只记录元数据",
     "Record metadata and bodies": "记录元数据和正文",
     "Recording is off": "记录功能已关闭",
-    "Recording is off detail": "除非你主动开启，否则不会记录任何内容，因为提示词可能包含敏感数据。元数据是谁调用了哪个模型、结果如何；正文则是提示词本身。",
+    "Recording is off detail": "记录已关闭，转发请求的内容一概不会被保留。元数据是谁调用了哪个模型、结果如何；正文就是提示词本身。",
     "Recording is on": "已开启记录",
     "Recording off": "关闭记录",
     "Records were dropped": "有 {count} 条记录因写入队列已满而被丢弃。如持续出现，请调大 llmRecordQueueCapacity。",

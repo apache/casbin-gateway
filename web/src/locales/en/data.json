@@ -465,7 +465,7 @@
     "Record metadata": "Record metadata",
     "Record metadata and bodies": "Record metadata and bodies",
     "Recording is off": "Recording is off",
-    "Recording is off detail": "Nothing is recorded until you ask for it, because prompts can carry sensitive data. Metadata is who called which model with which outcome; bodies are the prompts themselves.",
+    "Recording is off detail": "Recording is turned off, so nothing about a relayed request is being kept. Metadata is who called which model with which outcome; bodies are the prompts themselves.",
     "Recording is on": "Recording is on",
     "Recording off": "Recording off",
     "Records were dropped": "{count} records were dropped because the write queue was full. Raise llmRecordQueueCapacity if this keeps happening.",

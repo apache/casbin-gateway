@@ -176,7 +176,7 @@ podman compose up -d
 | `driverName` / `dataSourceName` | `sqlite` / `./data/casbin-gateway.db` | 数据存放位置 |
 | `gatewayEnabled` | `false` | 打开反向代理 WAF |
 | `gatewayHttpPort` / `gatewayHttpsPort` | `80` / `443` | 代理监听的端口 |
-| `llmRecordMode` | `off` | 每次转发的 LLM 请求保留多少内容 |
+| `llmRecordMode` | `full` | 每次转发的 LLM 请求保留多少内容 —— 包含提示词正文，见[记录提示词](#记录提示词) |
 | `apiKeyEncryptionKey` | 空 | 加密存储 Provider 的 API Key（AES-256-GCM） |
 | `casdoorEndpoint` | 空 | 把登录切换到 [Casdoor](https://casdoor.org) SSO |
 
@@ -203,12 +203,12 @@ Gateway 启动时会打印它实际在做什么，所以可以直接看结果而
 
 ### 记录提示词
 
-在你主动要求之前，转发请求的内容一概不存储，因为提示词里可能粘进任何东西。LLM Records 页面上的 **只记录元数据** 和 **记录元数据和正文** 两个按钮会从下一次请求起打开记录；设置页面里有同样的选项和相关的上限，它们的初始值来自：
+**从第一个请求起，每次转发的请求都会被完整记录下来，包括提示词正文。** LLM Records 页面就是拿这些内容做出来的，它们也不会离开这台机器 —— 但提示词里粘进过什么它就带着什么，所以如果你不想要这样，在把 Agent 接进 Gateway 之前就该先改掉这个设置。LLM Records 页面顶部的选择框可以在 **不记录**、**只记录元数据** 和 **记录元数据和正文** 之间切换，从下一次请求起生效；设置页面里有同样的选项和相关的上限，它们的初始值来自：
 
 ```ini
-; "off" 什么都不留，"metadata" 记录谁调用了哪个模型、结果如何，
-; "full" 还会存下请求体 —— 这是 LLM Records 展示提示词、消息和
-; 工具 schema 所需要的。
+; 默认是 "full"：它会存下请求体，这是 LLM Records 展示提示词、消息和
+; 工具 schema 所需要的。"metadata" 只记录谁调用了哪个模型、结果如何，
+; "off" 则什么都不留。
 llmRecordMode = "full"
 llmRecordRetentionDays = 30
 llmRecordMaxRecords = 10000
