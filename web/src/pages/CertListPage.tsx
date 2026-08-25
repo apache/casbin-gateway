@@ -60,6 +60,7 @@ export default function CertListPage({account}: {account: Account}) {
   const [data, setData] = React.useState<Cert[]>([]);
   const [total, setTotal] = React.useState(0);
   const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState("");
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(20);
   const [addOpen, setAddOpen] = React.useState(false);
@@ -70,17 +71,20 @@ export default function CertListPage({account}: {account: Account}) {
   const fetchCerts = React.useCallback(
     (nextPage = page, nextPageSize = pageSize) => {
       setLoading(true);
-      CertBackend.getCerts(account.name, nextPage, nextPageSize).then(res => {
-        setLoading(false);
-        if (res.status === "ok") {
-          setData(res.data ?? []);
-          setTotal(res.data2 ?? 0);
-          setPage(nextPage);
-          setPageSize(nextPageSize);
-        } else {
-          Setting.showMessage("error", `${i18next.t("general:Failed to get data")}: ${res.msg}`);
-        }
-      });
+      CertBackend.getCerts(account.name, nextPage, nextPageSize)
+        .then(res => {
+          if (res.status === "ok") {
+            setData(res.data ?? []);
+            setTotal(res.data2 ?? 0);
+            setPage(nextPage);
+            setPageSize(nextPageSize);
+            setError("");
+          } else {
+            setError(res.msg || i18next.t("general:Failed to get data"));
+          }
+        })
+        .catch(err => setError(err.message || String(err)))
+        .then(() => setLoading(false));
     },
     [account.name, page, pageSize],
   );
@@ -285,6 +289,8 @@ export default function CertListPage({account}: {account: Account}) {
         dataSource={data}
         rowKey={record => `${record.owner}/${record.name}`}
         loading={loading}
+        error={error}
+        onRetry={() => fetchCerts()}
         serverPagination={{
           page: page,
           pageSize: pageSize,

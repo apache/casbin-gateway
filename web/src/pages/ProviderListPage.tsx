@@ -33,10 +33,12 @@ import {ProviderModelsField} from "@/components/ProviderModelsField";
 import {ProviderSourcePicker, sourceTitle} from "@/components/ProviderSourcePicker";
 import {ProviderTestField, useProviderTest} from "@/components/ProviderTestField";
 import {type SortOrder} from "@/components/shared/data-table";
+import {ErrorState} from "@/components/shared/empty-state";
 import {Field, FormDialog} from "@/components/shared/form-dialog";
 import {PageContainer, PageHeader} from "@/components/shared/page-header";
 import {PasswordInput} from "@/components/shared/password-input";
 import {SearchSelect, SimpleSelect} from "@/components/shared/simple-select";
+import {MessageAlert} from "@/components/ui/alert";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
@@ -110,6 +112,10 @@ export default function ProviderListPage({account}: {account: Account}) {
   const [total, setTotal] = React.useState(0);
   const [loading, setLoading] = React.useState(false);
   const [loaded, setLoaded] = React.useState(false);
+  // Empty because there is nothing, or empty because the listing failed? The
+  // two must never render the same: being told that an account which holds your
+  // API keys has no providers is alarming when it is really a dropped request.
+  const [error, setError] = React.useState("");
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
   const [sort, setSort] = React.useState<{field: string; order: SortOrder}>({
@@ -140,22 +146,21 @@ export default function ProviderListPage({account}: {account: Account}) {
         nextSort.order ?? "",
       )
         .then(res => {
-          setLoading(false);
-          setLoaded(true);
           if (res.status === "ok") {
             setData(res.data ?? []);
             setTotal(res.data2 ?? 0);
             setPage(nextPage);
             setPageSize(nextPageSize);
             setSort(nextSort);
+            setError("");
           } else {
-            Setting.showMessage("error", `${i18next.t("provider:Failed to get providers")}: ${res.msg}`);
+            setError(res.msg || i18next.t("provider:Failed to get providers"));
           }
         })
-        .catch(error => {
+        .catch(failure => setError(failure.message || String(failure)))
+        .then(() => {
           setLoading(false);
           setLoaded(true);
-          Setting.showMessage("error", `${i18next.t("provider:Failed to get providers")}: ${error}`);
         });
     },
     [account.name, page, pageSize, sort],
@@ -331,7 +336,11 @@ export default function ProviderListPage({account}: {account: Account}) {
         }
       />
 
-      {loaded && data.length === 0 ? (
+      {error !== "" && data.length === 0 ? (
+        <Card>
+          <ErrorState error={error} onRetry={() => fetchProviders()} />
+        </Card>
+      ) : loaded && error === "" && data.length === 0 ? (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -346,6 +355,9 @@ export default function ProviderListPage({account}: {account: Account}) {
         </Card>
       ) : (
         <div className="space-y-3">
+          {/* A refresh that failed leaves the last good listing on screen: the
+              providers below are stale, not gone. */}
+          {error !== "" ? <MessageAlert title={i18next.t("provider:Failed to get providers")} description={error} /> : null}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-muted-foreground text-sm">
               {`${total} ${i18next.t("provider:Providers")}`}

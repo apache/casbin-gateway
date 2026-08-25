@@ -45,6 +45,7 @@ export default function NodeListPage({account}: {account: Account}) {
   const navigate = useNavigate();
   const [data, setData] = React.useState<Node[]>([]);
   const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState("");
   const [authorized, setAuthorized] = React.useState(true);
   const [addOpen, setAddOpen] = React.useState(false);
   const [adding, setAdding] = React.useState(false);
@@ -53,16 +54,19 @@ export default function NodeListPage({account}: {account: Account}) {
 
   const fetchNodes = React.useCallback(() => {
     setLoading(true);
-    NodeBackend.getNodes(account.name).then(res => {
-      setLoading(false);
-      if (res.status === "ok") {
-        setData(res.data ?? []);
-      } else if (Setting.isResponseDenied(res)) {
-        setAuthorized(false);
-      } else {
-        Setting.showMessage("error", res.msg);
-      }
-    });
+    NodeBackend.getNodes(account.name)
+      .then(res => {
+        if (res.status === "ok") {
+          setData(res.data ?? []);
+          setError("");
+        } else if (Setting.isResponseDenied(res)) {
+          setAuthorized(false);
+        } else {
+          setError(res.msg || i18next.t("general:Failed to get data"));
+        }
+      })
+      .catch(err => setError(err.message || String(err)))
+      .then(() => setLoading(false));
   }, [account.name]);
 
   React.useEffect(() => {
@@ -210,6 +214,8 @@ export default function NodeListPage({account}: {account: Account}) {
         dataSource={data}
         rowKey={record => `${record.owner}/${record.name}`}
         loading={loading}
+        error={error}
+        onRetry={() => fetchNodes()}
         pageSize={20}
         searchable
         title={i18next.t("general:Nodes")}

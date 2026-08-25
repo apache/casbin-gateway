@@ -13,8 +13,10 @@
 // limitations under the License.
 
 import * as React from "react";
-import {Inbox} from "lucide-react";
+import {Inbox, RefreshCw, TriangleAlert} from "lucide-react";
+import i18next from "i18next";
 
+import {Button} from "@/components/ui/button";
 import {cn} from "@/lib/utils";
 
 export function EmptyState({
@@ -39,6 +41,42 @@ export function EmptyState({
       <p className="text-sm font-medium">{title}</p>
       {description ? <p className="text-muted-foreground max-w-sm text-xs">{description}</p> : null}
       {action ? <div className="mt-2">{action}</div> : null}
+    </div>
+  );
+}
+
+/**
+ * What a listing shows when it could not be read. A load that failed must never
+ * fall through to EmptyState: "you have no providers" and "the providers could
+ * not be read" look the same there, and the first one is alarming to be told
+ * about an account that holds your API keys.
+ */
+export function ErrorState({
+  title,
+  error,
+  onRetry,
+  className,
+}: {
+  title?: React.ReactNode;
+  error?: React.ReactNode;
+  onRetry?: () => void;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex flex-col items-center justify-center gap-2 px-6 py-14 text-center", className)}>
+      <div className="bg-destructive/10 text-destructive flex size-10 items-center justify-center rounded-full">
+        <TriangleAlert className="size-5" />
+      </div>
+      <p className="text-sm font-medium">{title ?? i18next.t("general:Could not load this")}</p>
+      {error ? <p className="text-muted-foreground max-w-sm text-xs break-words">{error}</p> : null}
+      {onRetry ? (
+        <div className="mt-2">
+          <Button variant="outline" size="sm" onClick={onRetry}>
+            <RefreshCw />
+            {i18next.t("general:Retry")}
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

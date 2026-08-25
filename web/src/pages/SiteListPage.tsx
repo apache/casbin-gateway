@@ -70,6 +70,7 @@ export default function SiteListPage({account}: {account: Account}) {
   const navigate = useNavigate();
   const [data, setData] = React.useState<Site[]>([]);
   const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState("");
   const [gatewayStatus, setGatewayStatus] = React.useState<GatewayStatus | null>(null);
   const [switchingGateway, setSwitchingGateway] = React.useState(false);
   const [addOpen, setAddOpen] = React.useState(false);
@@ -79,14 +80,17 @@ export default function SiteListPage({account}: {account: Account}) {
 
   const fetchSites = React.useCallback(() => {
     setLoading(true);
-    SiteBackend.getSites(account.name).then(res => {
-      setLoading(false);
-      if (res.status === "ok") {
-        setData(res.data ?? []);
-      } else {
-        Setting.showMessage("error", `${i18next.t("general:Failed to get data")}: ${res.msg}`);
-      }
-    });
+    SiteBackend.getSites(account.name)
+      .then(res => {
+        if (res.status === "ok") {
+          setData(res.data ?? []);
+          setError("");
+        } else {
+          setError(res.msg || i18next.t("general:Failed to get data"));
+        }
+      })
+      .catch(err => setError(err.message || String(err)))
+      .then(() => setLoading(false));
   }, [account.name]);
 
   const loadGatewayStatus = React.useCallback(() => {
@@ -412,6 +416,8 @@ export default function SiteListPage({account}: {account: Account}) {
         dataSource={data}
         rowKey={record => `${record.owner}/${record.name}`}
         loading={loading}
+        error={error}
+        onRetry={() => fetchSites()}
         pageSize={20}
         searchable
         title={i18next.t("general:Sites")}

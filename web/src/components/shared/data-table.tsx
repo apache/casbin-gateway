@@ -31,7 +31,7 @@ import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {Skeleton} from "@/components/ui/skeleton";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
-import {EmptyState} from "@/components/shared/empty-state";
+import {EmptyState, ErrorState} from "@/components/shared/empty-state";
 
 export type SortOrder = "ascend" | "descend" | undefined;
 
@@ -109,6 +109,10 @@ export interface DataTableProps<T> {
   onSort?: (field: string, order: SortOrder) => void;
   emptyText?: React.ReactNode;
   emptyIcon?: React.ComponentType<{className?: string}>;
+  /** Why the listing is empty when it is empty because the load failed. */
+  error?: string;
+  /** Reloads the listing from the error state. */
+  onRetry?: () => void;
   onRowClick?: (record: T) => void;
   expandable?: {
     rowExpandable?: (record: T) => boolean;
@@ -140,6 +144,8 @@ export function DataTable<T>({
   onSort,
   emptyText,
   emptyIcon,
+  error,
+  onRetry,
   onRowClick,
   expandable,
   dense = false,
@@ -324,7 +330,11 @@ export function DataTable<T>({
           ) : rows.length === 0 ? (
             <TableRow className="hover:bg-transparent">
               <TableCell colSpan={columns.length + (expandable ? 1 : 0)} className="p-0">
-                <EmptyState icon={emptyIcon} title={emptyText ?? i18next.t("general:No data")} />
+                {error ? (
+                  <ErrorState error={error} onRetry={onRetry} />
+                ) : (
+                  <EmptyState icon={emptyIcon} title={emptyText ?? i18next.t("general:No data")} />
+                )}
               </TableCell>
             </TableRow>
           ) : (

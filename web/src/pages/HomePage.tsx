@@ -21,7 +21,7 @@ import * as LlmRecordBackend from "@/backend/LlmRecordBackend";
 import * as ProviderBackend from "@/backend/ProviderBackend";
 import * as Setting from "@/Setting";
 import {AgentGridCard} from "@/components/AgentGridCard";
-import {EmptyState} from "@/components/shared/empty-state";
+import {EmptyState, ErrorState} from "@/components/shared/empty-state";
 import {Loading} from "@/components/shared/loading";
 import {UnauthorizedResult} from "@/components/shared/misc";
 import {PageContainer, PageHeader} from "@/components/shared/page-header";
@@ -67,6 +67,10 @@ export default function HomePage({account}: {account: Account}) {
   const [recording, setRecording] = React.useState(true);
   // False until the first listing lands, so "no providers" never flashes.
   const [loaded, setLoaded] = React.useState(false);
+  // A listing that failed must not read as "you have no providers": that says
+  // the accounts holding your API keys are gone when the request simply
+  // dropped.
+  const [providerError, setProviderError] = React.useState("");
   // The sessions feed is only worth polling once something is being watched.
   const watching = agents.some(agent => agent.patched);
   const {activity} = useAgentSessions(isAdmin && watching, "", refreshMs);
@@ -76,8 +80,15 @@ export default function HomePage({account}: {account: Account}) {
       return;
     }
     ProviderBackend.getProviders(account.name)
-      .then(res => setProviders(res.status === "ok" ? (res.data ?? []) : []))
-      .catch(() => setProviders([]))
+      .then(res => {
+        if (res.status === "ok") {
+          setProviders(res.data ?? []);
+          setProviderError("");
+        } else {
+          setProviderError(res.msg || i18next.t("provider:Failed to get providers"));
+        }
+      })
+      .catch(failure => setProviderError(failure.message || String(failure)))
       .then(() => setLoaded(true));
 
     // What is already known paints at once; the refresh then asks only the
@@ -160,9 +171,22 @@ export default function HomePage({account}: {account: Account}) {
         }
       />
 
-      {error ? <MessageAlert title={error} /> : null}
+      {/* With no agents to show, the failure is the whole page and is rendered
+          below instead; here it sits above the cards that are still on screen. */}
+      {error !== "" && agents.length > 0 ? <MessageAlert title={error} /> : null}
 
-      {loaded && providers.length === 0 ? (
+      {providerError !== "" ? (
+        <MessageAlert
+          title={i18next.t("provider:Failed to get providers")}
+          description={providerError}
+          action={
+            <Button variant="outline" size="sm" onClick={loadProviders}>
+              <RefreshCw />
+              {i18next.t("general:Retry")}
+            </Button>
+          }
+        />
+      ) : loaded && providers.length === 0 ? (
         <MessageAlert
           variant="info"
           title={i18next.t("provider:No providers yet")}
@@ -180,6 +204,12 @@ export default function HomePage({account}: {account: Account}) {
 
       {!scanned ? (
         <Loading tip={i18next.t("agent:Scan")} />
+      ) : error !== "" && agents.length === 0 ? (
+        // A scan that failed is not a machine without agents, and telling
+        // someone to install one they already have is the wrong instruction.
+        <Card className="py-0">
+          <ErrorState title={i18next.t("agent:Failed to scan agents")} error={error} onRetry={refresh} />
+        </Card>
       ) : agents.length === 0 ? (
         <Card className="py-0">
           <EmptyState
