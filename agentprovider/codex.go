@@ -33,6 +33,9 @@ const (
 	// through ChatGPT got "Missing environment variable: OPENAI_API_KEY"
 	// instead, so the key now travels in the header below.
 	codexAuthKey = "OPENAI_API_KEY"
+	// codexBuiltin is what Codex talks to with no provider entry of its own: the
+	// ChatGPT sign-in, whose model the CLI picks by itself.
+	codexBuiltin = "ChatGPT"
 	// codexAuthHeader carries the key on every request Codex sends to the
 	// provider, which is the one place Codex reads it from without an
 	// environment variable and without a sign-in of its own.
@@ -125,14 +128,16 @@ func (w codexWriter) Apply(target Target, endpoint Endpoint) (map[string]string,
 	}
 
 	previous := map[string]string{codexHeaderStateKey: "1"}
-	// The CLI and the VS Code integration share one ~/.codex, so the selection
-	// found here can be Gateway's own from the other one, which is not what a
-	// restore should put back.
-	if value, ok := document[codexModelProviderKey].(string); ok && value != codexProviderName {
-		previous[codexModelProviderKey] = value
-	}
-	if value, ok := document[codexModelKey].(string); ok {
-		previous[codexModelKey] = value
+	// The CLI and the VS Code integration share one ~/.codex, so what is found
+	// here can be Gateway's own selection from the other one, model included,
+	// which is not what a restore should put back.
+	if selected, _ := document[codexModelProviderKey].(string); selected != codexProviderName {
+		if selected != "" {
+			previous[codexModelProviderKey] = selected
+		}
+		if value, ok := document[codexModelKey].(string); ok {
+			previous[codexModelKey] = value
+		}
 	}
 
 	text := tomlCutTable(string(data), codexProviderPath...)
@@ -186,8 +191,10 @@ func (w codexWriter) Restore(target Target, previous map[string]string) error {
 	}
 
 	// Only a state from the release that put the key in auth.json has one to
-	// take back out; a newer one never opened the file.
-	if _, inHeader := previous[codexHeaderStateKey]; !inHeader {
+	// take back out; a newer one, and a restore with no state at all, never
+	// opened the file.
+	_, inHeader := previous[codexHeaderStateKey]
+	if previous != nil && !inHeader {
 		auth, _, err := readJSON(authPath)
 		if err != nil {
 			changes.abort()
@@ -212,15 +219,7 @@ func (w codexWriter) Restore(target Target, previous map[string]string) error {
 }
 
 func (w codexWriter) Current(target Target) (string, error) {
-	configPath, _, err := w.paths(target)
-	if err != nil {
-		return "", err
-	}
-	data, _, exists, err := readFile(configPath)
-	if err != nil || !exists {
-		return "", err
-	}
-	document, err := w.decode(configPath, data)
+	document, err := w.document(target)
 	if err != nil {
 		return "", err
 	}
@@ -237,6 +236,37 @@ func (w codexWriter) Current(target Target) (string, error) {
 	// A provider without a base URL is one Codex knows itself, which is still
 	// worth naming: it is not the endpoint Gateway wrote.
 	return selected, nil
+}
+
+func (w codexWriter) Builtin(target Target, previous map[string]string) string {
+	if previous != nil {
+		return emptyAs(previous[codexModelKey], codexBuiltin)
+	}
+
+	document, err := w.document(target)
+	if err != nil {
+		return codexBuiltin
+	}
+	// A model beside Gateway's own provider entry is Gateway's, not the one
+	// Codex would pick for itself.
+	if selected, _ := document[codexModelProviderKey].(string); selected == codexProviderName {
+		return codexBuiltin
+	}
+	model, _ := document[codexModelKey].(string)
+	return emptyAs(model, codexBuiltin)
+}
+
+// document is config.toml parsed, empty when the file is not there yet.
+func (w codexWriter) document(target Target) (map[string]any, error) {
+	configPath, _, err := w.paths(target)
+	if err != nil {
+		return nil, err
+	}
+	data, _, exists, err := readFile(configPath)
+	if err != nil || !exists {
+		return map[string]any{}, err
+	}
+	return w.decode(configPath, data)
 }
 
 // check reports why Codex cannot be pointed at endpoint.

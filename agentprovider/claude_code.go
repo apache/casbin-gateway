@@ -16,9 +16,14 @@ package agentprovider
 
 import (
 	"path/filepath"
+	"strings"
 
 	"github.com/apache/casbin-gateway/agenthome"
 )
+
+// claudeCodeBuiltin is what Claude Code talks to with no endpoint of its own:
+// the Anthropic sign-in, whose model the CLI picks by itself.
+const claudeCodeBuiltin = "Claude"
 
 // The env keys Gateway owns in settings.json. ANTHROPIC_API_KEY is one of them
 // even though a switch never sets it: a key left over from another provider
@@ -134,20 +139,43 @@ func (w claudeCodeWriter) Restore(target Target, previous map[string]string) err
 }
 
 func (w claudeCodeWriter) Current(target Target) (string, error) {
-	path, err := w.configPath(target)
-	if err != nil {
+	env, err := w.envOf(target)
+	if err != nil || env == nil {
 		return "", err
-	}
-	config, _, err := readJSON(path)
-	if err != nil {
-		return "", err
-	}
-	env := objectAt(config, "env")
-	if env == nil {
-		return "", nil
 	}
 	baseUrl, _ := env["ANTHROPIC_BASE_URL"].(string)
 	return baseUrl, nil
+}
+
+func (w claudeCodeWriter) Builtin(target Target, previous map[string]string) string {
+	if previous != nil {
+		return emptyAs(previous["ANTHROPIC_MODEL"], claudeCodeBuiltin)
+	}
+
+	env, err := w.envOf(target)
+	if err != nil || env == nil {
+		return claudeCodeBuiltin
+	}
+	// A model beside an endpoint Gateway wrote is Gateway's, not the one Claude
+	// Code would pick for itself.
+	if baseUrl, _ := env["ANTHROPIC_BASE_URL"].(string); strings.Contains(baseUrl, "/v1/agents/") {
+		return claudeCodeBuiltin
+	}
+	model, _ := env["ANTHROPIC_MODEL"].(string)
+	return emptyAs(model, claudeCodeBuiltin)
+}
+
+// envOf is the env block of settings.json, nil when the file has none.
+func (w claudeCodeWriter) envOf(target Target) (map[string]any, error) {
+	path, err := w.configPath(target)
+	if err != nil {
+		return nil, err
+	}
+	config, _, err := readJSON(path)
+	if err != nil {
+		return nil, err
+	}
+	return objectAt(config, "env"), nil
 }
 
 // env is the block written into settings.json. Claude Code authenticates with

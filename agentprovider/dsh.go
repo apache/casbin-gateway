@@ -37,6 +37,9 @@ const (
 	// dshProtocol is the wire format the route serves. The gateway answers
 	// OpenAI chat completions under the base URL dsh is pointed at.
 	dshProtocol = "openai-completions"
+	// dshBuiltin is what dsh talks to with no route of its own: the DeepSeek
+	// service it ships with.
+	dshBuiltin = "DeepSeek"
 )
 
 // The settings Gateway overwrites, remembered under these names.
@@ -244,6 +247,27 @@ func (w dshWriter) Current(target Target) (string, error) {
 	// A route without a base URL is one dsh ships itself, which is still worth
 	// naming: it is not the endpoint Gateway wrote.
 	return selected, nil
+}
+
+func (w dshWriter) Builtin(target Target, previous map[string]string) string {
+	if previous != nil {
+		return emptyAs(previous[dshModelKey], dshBuiltin)
+	}
+
+	settingsPath, _, err := w.paths(target)
+	if err != nil {
+		return dshBuiltin
+	}
+	_, root, err := w.load(settingsPath)
+	if err != nil {
+		return dshBuiltin
+	}
+	// A model beside Gateway's own route is Gateway's, not the one dsh would
+	// pick for itself.
+	if yamledit.String(root, "agent-default-model", "provider") == dshRoute {
+		return dshBuiltin
+	}
+	return emptyAs(yamledit.String(root, "agent-default-model", "model"), dshBuiltin)
 }
 
 // check reports why dsh cannot be pointed at endpoint.

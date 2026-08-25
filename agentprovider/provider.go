@@ -19,6 +19,7 @@ package agentprovider
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -81,6 +82,13 @@ type Status struct {
 	Time     string   `json:"time"`
 	Files    []string `json:"files"`
 	Detail   string   `json:"detail"`
+	// Builtin is what the agent talks to on its own, with nothing bound: the
+	// model its own configuration names, or the account it signs in to when it
+	// names none.
+	Builtin string `json:"builtin"`
+	// Current is the endpoint the agent's files name right now, whichever tool
+	// wrote them.
+	Current string `json:"current"`
 }
 
 type writer interface {
@@ -96,6 +104,10 @@ type writer interface {
 	// Current is the base URL the files point at right now, empty when the
 	// agent has no provider configured.
 	Current(Target) (string, error)
+	// Builtin names the model the agent uses without Gateway. previous is what
+	// the files held before Gateway first wrote them, nil when it never did and
+	// the files themselves are read instead.
+	Builtin(Target, map[string]string) string
 }
 
 var (
@@ -169,18 +181,28 @@ func Restore(target Target) error {
 	writerMutex.Lock()
 	defer writerMutex.Unlock()
 
-	// An installation Gateway never switched has nothing to put back, whether
-	// or not its format is one Gateway can write.
 	saved, err := loadState(target)
-	if err != nil || saved == nil {
+	if err != nil {
 		return err
 	}
 
 	value, ok := writers[target.AgentId]
 	if !ok {
+		// An installation Gateway never switched has nothing to put back,
+		// whether or not its format is one Gateway can write.
+		if saved == nil {
+			return nil
+		}
 		return fmt.Errorf("%s: %w", target.AgentId, ErrNotSupported)
 	}
-	if err := value.Restore(target, saved.Previous); err != nil {
+
+	var previous map[string]string
+	if saved != nil {
+		previous = saved.Previous
+	} else if !pointsAtGateway(value, target) {
+		return nil
+	}
+	if err := value.Restore(target, previous); err != nil {
 		return err
 	}
 	return clearState(target)
@@ -205,11 +227,18 @@ func StatusOf(target Target) Status {
 		return status
 	}
 
+	if saved == nil {
+		status.Builtin = value.Builtin(target, nil)
+	} else {
+		status.Builtin = value.Builtin(target, saved.Previous)
+	}
+
 	current, err := value.Current(target)
 	if err != nil {
 		status.Detail = err.Error()
 		return status
 	}
+	status.Current = current
 
 	if saved == nil {
 		if current == "" {
@@ -270,6 +299,15 @@ func writerFor(target Target, endpoint Endpoint) (writer, error) {
 			target.AgentId, value.Protocol(), endpoint.Provider, endpoint.Protocol, value.Protocol())
 	}
 	return value, nil
+}
+
+// pointsAtGateway reports whether the agent configuration still names the local
+// proxy. A state file can be lost while the file it wrote stays behind, and
+// putting back only what state records would leave the agent calling a proxy
+// with no provider behind it.
+func pointsAtGateway(value writer, target Target) bool {
+	current, err := value.Current(target)
+	return err == nil && strings.Contains(current, "/v1/agents/")
 }
 
 func emptyAs(value string, fallback string) string {

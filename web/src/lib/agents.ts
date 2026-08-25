@@ -24,9 +24,20 @@ import type {Agent, AgentRuntime, AgentSession, Provider} from "@/types";
 /** How long a started app is given before its process is looked for again. */
 const runtimeSettleMs = 2000;
 
+/** Radix rejects an empty item value, so "the agent's own model" needs one. */
+export const builtinProvider = "-";
+
 /** Routing through the local proxy, which is what makes a switch hot. */
 export const gatewayMode = "gateway";
 export const directMode = "direct";
+
+/**
+ * What the agent talks to with nothing bound: the model its own configuration
+ * names, or the service it signs in to. Binding nothing puts it back on this.
+ */
+export function agentBuiltin(agent: Agent) {
+  return agent.providerConfig?.builtin || i18next.t("agent:Built-in model");
+}
 
 /** The monitor keys the two Codex front ends under one agent id. */
 export function monitorAgentId(agentId: string) {
@@ -277,7 +288,7 @@ export function useAgents(enabled = true) {
             Setting.showMessage(
               "success",
               next.provider === ""
-                ? i18next.t("agent:Provider cleared")
+                ? `${i18next.t("agent:Built-in model restored")}: ${agentBuiltin(agent)}`
                 : `${i18next.t("agent:Provider saved")}: ${next.provider}`,
             );
             scan();
@@ -328,7 +339,7 @@ export function useAgents(enabled = true) {
           Setting.showMessage(
             "success",
             providerId === ""
-              ? i18next.t("agent:Provider cleared")
+              ? `${i18next.t("agent:Built-in model restored")}: ${agentBuiltin(agent)}`
               : `${i18next.t("agent:Provider enabled")}: ${providerId}`,
           );
         })

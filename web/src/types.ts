@@ -219,6 +219,10 @@ export interface AgentProviderConfig {
   time: string;
   files: string[];
   detail: string;
+  /** The model the agent uses on its own, or the account it signs in to. */
+  builtin: string;
+  /** The endpoint the agent's files name now, whichever tool wrote them. */
+  current: string;
 }
 
 export interface Agent {

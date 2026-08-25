@@ -166,6 +166,28 @@ func (w opencodeWriter) Current(target Target) (string, error) {
 	return selected, nil
 }
 
+// Builtin is the model opencode selects for itself. opencode ships no provider
+// of its own, so a file that selects none has no name to show.
+func (w opencodeWriter) Builtin(target Target, previous map[string]string) string {
+	if previous != nil {
+		return previous[opencodeModelKey]
+	}
+
+	path, err := w.configPath(target)
+	if err != nil {
+		return ""
+	}
+	config, err := w.load(path)
+	if err != nil {
+		return ""
+	}
+	model := stringAt(config, opencodeModelKey)
+	if strings.HasPrefix(model, opencodeProvider+"/") {
+		return ""
+	}
+	return model
+}
+
 // check reports why opencode cannot be pointed at endpoint.
 func (opencodeWriter) check(endpoint Endpoint) error {
 	if endpoint.ApiKey == "" {

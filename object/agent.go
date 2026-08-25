@@ -184,7 +184,7 @@ func GetProvidersByAgent(agentId string) ([]*Provider, error) {
 		return nil, err
 	}
 	if agent == nil || agent.Provider == "" {
-		return nil, fmt.Errorf("%w: %s", ErrAgentNoProvider, agentId)
+		return nil, errNoProvider(agentId)
 	}
 
 	providers := []*Provider{}
@@ -208,11 +208,19 @@ func GetProvidersByAgent(agentId string) ([]*Provider, error) {
 
 	if len(providers) == 0 {
 		if skipped == "" {
-			return nil, fmt.Errorf("%w: %s", ErrAgentNoProvider, agentId)
+			return nil, errNoProvider(agentId)
 		}
 		return nil, errors.New(skipped)
 	}
 	return providers, nil
+}
+
+// errNoProvider says what an unbound agent should do instead of calling the
+// proxy: an agent left on its own built-in model has no reason to reach Gateway
+// at all, so its configuration is what needs putting back.
+func errNoProvider(agentId string) error {
+	return fmt.Errorf("%w: %s. It is set to its own built-in model, so bind a provider, or restore its configuration so it stops calling Gateway",
+		ErrAgentNoProvider, agentId)
 }
 
 // GetProviderByAgent resolves the first provider of an agent's chain.

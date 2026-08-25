@@ -42,9 +42,11 @@ import {
 } from "@/components/ui/select";
 import {Switch} from "@/components/ui/switch";
 import {
+  agentBuiltin,
   agentNeedsResponsesApi,
   agentProxyBaseUrl,
   agentSetupNoteKey,
+  builtinProvider,
   directMode,
   gatewayMode,
 } from "@/lib/agents";
@@ -57,9 +59,6 @@ import {
 } from "@/lib/providers";
 import {cn} from "@/lib/utils";
 import type {Agent, AgentProviderFile, Provider, ProviderHealth} from "@/types";
-
-/** Radix rejects an empty item value, so "unbound" needs a stand-in. */
-const noProvider = "-";
 
 /** The file preview, loaded when the dialog opens rather than on every render. */
 function PreviewDialog({
@@ -196,6 +195,8 @@ export function ProviderCard({
     time: "",
     files: [],
     detail: "",
+    builtin: "",
+    current: "",
   };
   const noteKey = agentSetupNoteKey(agent.agentId);
   const healthOf = (id: string) => health.find(item => item.provider === id);
@@ -225,6 +226,11 @@ export function ProviderCard({
   // directly, so the choice is not offered rather than failing on the write.
   const gatewayOnly = agentNeedsResponsesApi(agent.agentId) && !servesResponsesApi(bound);
 
+  // Nothing is bound, yet the agent still calls the proxy: it gets an error
+  // back on every request until its own configuration is put back.
+  const stranded =
+    agent.provider === "" && (providerConfig.current ?? "").includes("/v1/agents/");
+
   const toggleFallback = (id: string) => {
     onRouting({
       fallbacks: fallbacks.includes(id)
@@ -240,16 +246,21 @@ export function ProviderCard({
       </CardHeader>
       <CardContent className="space-y-3 p-4 pt-0">
         <Select
-          value={agent.provider === "" ? noProvider : agent.provider}
+          value={agent.provider === "" ? builtinProvider : agent.provider}
           disabled={busy}
-          onValueChange={value => onRouting({provider: value === noProvider ? "" : value, fallbacks: []})}
+          onValueChange={value =>
+            onRouting({provider: value === builtinProvider ? "" : value, fallbacks: []})
+          }
         >
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={noProvider}>
-              <span className="text-muted-foreground">{i18next.t("agent:No provider")}</span>
+            <SelectItem value={builtinProvider}>
+              {agentBuiltin(agent)}
+              <span className="ml-2 text-xs text-muted-foreground">
+                {i18next.t("agent:Built-in")}
+              </span>
             </SelectItem>
             {options.map(provider => (
               <SelectItem key={providerIdOf(provider)} value={providerIdOf(provider)}>
@@ -274,8 +285,17 @@ export function ProviderCard({
           </p>
         ) : null}
 
-        {agent.provider === "" ? (
-          <p className="text-sm text-muted-foreground">{i18next.t("agent:Provider hint")}</p>
+        {stranded ? (
+          <div className="space-y-2 rounded-md border p-3">
+            <p className="text-sm text-warning">{i18next.t("agent:Still calling Gateway")}</p>
+            <code className="block truncate text-xs">{providerConfig.current}</code>
+            <Button variant="outline" disabled={busy} onClick={() => onWrite(true)}>
+              <RotateCcw />
+              {i18next.t("agent:Restore configuration")}
+            </Button>
+          </div>
+        ) : agent.provider === "" ? (
+          <p className="text-sm text-muted-foreground">{i18next.t("agent:Built-in hint")}</p>
         ) : bound === undefined ? null : (
           <>
             <div className="space-y-2">

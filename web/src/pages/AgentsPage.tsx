@@ -28,6 +28,7 @@ import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {SimpleTooltip} from "@/components/ui/tooltip";
 import {
+  agentBuiltin,
   agentDetailPath,
   agentKey,
   directMode,
@@ -124,7 +125,9 @@ export default function AgentsPage({account}: {account: Account}) {
             </span>
           </div>
         ) : (
-          <span className="text-muted-foreground">{i18next.t("agent:No provider")}</span>
+          <SimpleTooltip title={i18next.t("agent:Built-in hint")}>
+            <span className="text-muted-foreground">{agentBuiltin(record)}</span>
+          </SimpleTooltip>
         ),
     },
     {

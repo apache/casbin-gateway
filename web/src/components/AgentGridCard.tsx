@@ -35,8 +35,10 @@ import {
 import {Switch} from "@/components/ui/switch";
 import {SimpleTooltip} from "@/components/ui/tooltip";
 import {
+  agentBuiltin,
   agentCanUse,
   agentDetailPath,
+  builtinProvider,
   directMode,
   monitorAgentId,
   type AgentActivity,
@@ -51,9 +53,6 @@ import type {
   ProviderHealth,
   ProviderQuota,
 } from "@/types";
-
-/** Radix rejects an empty item value, so "unbound" needs a stand-in. */
-const noProvider = "-";
 
 /** One number of the card, and what it is. */
 function Metric({
@@ -215,16 +214,19 @@ export function AgentGridCard({
           </div>
 
           <Select
-            value={agent.provider === "" ? noProvider : agent.provider}
+            value={agent.provider === "" ? builtinProvider : agent.provider}
             disabled={busy}
-            onValueChange={value => onEnable(value === noProvider ? "" : value)}
+            onValueChange={value => onEnable(value === builtinProvider ? "" : value)}
           >
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={noProvider}>
-                <span className="text-muted-foreground">{i18next.t("agent:No provider")}</span>
+              <SelectItem value={builtinProvider}>
+                {agentBuiltin(agent)}
+                <span className="text-muted-foreground ml-2 text-xs">
+                  {i18next.t("agent:Built-in")}
+                </span>
               </SelectItem>
               {options.map(provider => (
                 <SelectItem key={providerIdOf(provider)} value={providerIdOf(provider)}>
