@@ -123,17 +123,43 @@ func (route *proxyRoute) passthrough(upstream protocol.Upstream) bool {
 	return route.target.protocol == upstream.Name()
 }
 
-// upstreamBody is the request body an upstream speaking the given format takes.
-func (route *proxyRoute) upstreamBody(upstream protocol.Upstream) ([]byte, error) {
+// upstreamBody is the request body an upstream speaking the given format takes,
+// asking for the model that upstream's provider serves.
+func (route *proxyRoute) upstreamBody(upstream protocol.Upstream, model string) ([]byte, error) {
 	if route.passthrough(upstream) {
-		return route.body, nil
+		if model == route.model {
+			return route.body, nil
+		}
+		return setBodyModel(route.body, model)
 	}
 
 	request, err := route.canonical()
 	if err != nil {
 		return nil, err
 	}
+	if model != request.Model {
+		// The canonical form is decoded once and forwarded to every provider of
+		// the chain, each of which names its models differently.
+		swapped := *request
+		swapped.Model = model
+		request = &swapped
+	}
 	return upstream.EncodeRequest(request)
+}
+
+// setBodyModel rewrites the model of a body relayed as-is, leaving every other
+// field exactly as the client wrote it.
+func setBodyModel(body []byte, model string) ([]byte, error) {
+	fields := map[string]json.RawMessage{}
+	if err := json.Unmarshal(body, &fields); err != nil {
+		return nil, err
+	}
+	name, err := json.Marshal(model)
+	if err != nil {
+		return nil, err
+	}
+	fields["model"] = name
+	return json.Marshal(fields)
 }
 
 // upstreamEndpoint is the path on the provider that answers this request.
@@ -390,7 +416,7 @@ func (c *ApiController) forwardToProvider(provider *object.Provider, route *prox
 		return c.answerCountTokens(route)
 	}
 
-	requestBody, err := route.upstreamBody(upstream)
+	requestBody, err := route.upstreamBody(upstream, object.ProviderModel(provider, route.model))
 	if err != nil {
 		return http.StatusBadRequest, err.Error(), false
 	}

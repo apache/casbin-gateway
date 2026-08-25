@@ -822,3 +822,22 @@ func GetProvidersByModel(model string) ([]*Provider, error) {
 	}
 	return matchedProviders, nil
 }
+
+// ProviderModel is the model name to send a provider for the model the client
+// asked for. An agent picks its model on its own - Codex Desktop remembers the
+// one chosen in its own state, whatever the config file says - so a provider
+// that never heard of it answers with an error naming the models it does serve,
+// rather than with a completion. That agent is sent the first model of the
+// provider it is bound to instead. A provider that serves no named model, which
+// is the client-auth case, takes whatever arrives.
+func ProviderModel(provider *Provider, model string) string {
+	if len(provider.Models) == 0 {
+		return model
+	}
+	for _, candidate := range provider.Models {
+		if candidate == model {
+			return model
+		}
+	}
+	return provider.Models[0]
+}
