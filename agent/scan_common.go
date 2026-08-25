@@ -29,6 +29,11 @@ import (
 	"github.com/apache/casbin-gateway/internal/hermes"
 )
 
+// InstallMethodConfig marks an agent found by the state directory it left in a
+// home rather than by a program. Nothing can be launched from it, but its
+// configuration is on disk and is what most of Gateway acts on.
+const InstallMethodConfig = "config"
+
 // maxPackageJSONSize limits reads from glob-matched manifests.
 const maxPackageJSONSize = 1024 * 1024
 
@@ -163,6 +168,52 @@ func stampAgentId(installations []Installation, mark int, agentId string) {
 	for i := mark; i < len(installations); i++ {
 		installations[i].AgentId = agentId
 	}
+}
+
+// scanStateDirs reports an agent that left its state directory in a home while
+// none of the install layouts matched it anywhere: installed by a package
+// manager Gateway does not scan, on a PATH it cannot see, or run through a
+// wrapper. Providers, skills and MCP servers are read and written through the
+// home directory rather than the program, so leaving these out reports "not
+// installed" for an agent someone uses every day.
+//
+// `found` is what this fingerprint matched already, and one hit anywhere is
+// enough to stop: a state directory is also left in the home of every service
+// account an agent sandboxes itself into, and those are not installations
+// anyone wants listed next to their own.
+func scanStateDirs(fingerprint *Fingerprint, homes []homeDir, found []Installation) []Installation {
+	if fingerprint.StateDir == "" || len(found) > 0 {
+		return nil
+	}
+
+	installations := []Installation{}
+	for _, home := range homes {
+		path := filepath.Join(home.path, "."+fingerprint.StateDir)
+		if !hasEntries(path) {
+			continue
+		}
+		installations = append(installations, Installation{
+			AgentId:       fingerprint.ID,
+			Name:          fingerprint.DisplayName,
+			Path:          path,
+			InstallMethod: InstallMethodConfig,
+			Owner:         home.owner,
+		})
+	}
+	return installations
+}
+
+// hasEntries reports a directory that holds something. An empty one is what an
+// uninstall leaves behind, and is not evidence that the agent was ever set up.
+func hasEntries(path string) bool {
+	dir, err := os.Open(path)
+	if err != nil {
+		return false
+	}
+	defer dir.Close()
+
+	names, err := dir.Readdirnames(1)
+	return err == nil && len(names) > 0
 }
 
 // dedupeInstallations returns unique installations ordered by owner and path.

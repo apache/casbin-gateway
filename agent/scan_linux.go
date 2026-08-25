@@ -51,6 +51,7 @@ func scan(ctx context.Context) []Installation {
 		installations = append(installations, scanSystemPackages(ctx, fingerprint)...)
 		installations = append(installations, scanHomebrew(ctx, fingerprint)...)
 		stampAgentId(installations, mark, fingerprint.ID)
+		installations = append(installations, scanStateDirs(fingerprint, homes, installations[mark:])...)
 		fillMissingVersions(installations, mark, fingerprint)
 	}
 	for _, home := range homes {

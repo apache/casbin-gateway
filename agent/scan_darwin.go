@@ -50,6 +50,7 @@ func scan(ctx context.Context) []Installation {
 			installations = append(installations, scanDarwinSystemNpm(ctx, fingerprint, prefix)...)
 		}
 		stampAgentId(installations, mark, fingerprint.ID)
+		installations = append(installations, scanStateDirs(fingerprint, homes, installations[mark:])...)
 		fillMissingVersions(installations, mark, fingerprint)
 	}
 	for _, home := range homes {
