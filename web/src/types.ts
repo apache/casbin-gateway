@@ -244,6 +244,8 @@ export interface Agent {
   /** "gateway" routes through the local proxy, "direct" writes the upstream. */
   mode: string;
   providerConfig: AgentProviderConfig;
+  /** Where this agent reaches its bound provider, as the server resolved it. */
+  proxyBaseUrl?: string;
 }
 
 /** The live processes of one agent installation, keyed by owner and path. */

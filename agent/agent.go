@@ -36,6 +36,19 @@ func DisplayNameOf(id string) string {
 	return ""
 }
 
+// RunsSandboxed reports whether an agent runs its sessions in a sandbox of its
+// own. Claude Desktop does: its Cowork and Code sessions run in a virtual
+// machine, where 127.0.0.1 is that machine rather than this host, so a loopback
+// endpoint never reaches Gateway.
+func RunsSandboxed(id string) bool {
+	for i := range fingerprints {
+		if fingerprints[i].ID == id {
+			return fingerprints[i].Sandboxed
+		}
+	}
+	return false
+}
+
 // IsKnownAgentId reads the fingerprints rather than a host scan, so an agent
 // stays configurable while it is not installed.
 func IsKnownAgentId(id string) bool {

@@ -27,6 +27,9 @@ type Fingerprint struct {
 	LaunchArgs []string `json:"launchArgs,omitempty"`
 	// Desktop marks a windowed app, which is launched without a console.
 	Desktop bool `json:"desktop,omitempty"`
+	// Sandboxed marks an agent that runs its sessions in a sandbox of its own,
+	// where 127.0.0.1 is the sandbox rather than this host.
+	Sandboxed bool `json:"sandboxed,omitempty"`
 
 	StateDir            string              `json:"stateDir,omitempty"`
 	NpmPackage          string              `json:"npmPackage,omitempty"`

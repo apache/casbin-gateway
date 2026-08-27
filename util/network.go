@@ -15,6 +15,7 @@
 package util
 
 import (
+	"errors"
 	"net"
 	"os"
 )
@@ -49,4 +50,50 @@ func IsIntranetIp(ip string) bool {
 		parsedIP.IsLoopback() ||
 		parsedIP.IsLinkLocalUnicast() ||
 		parsedIP.IsLinkLocalMulticast()
+}
+
+// LanIPv4 is the address this host answers at on its own network, which is what
+// a sandbox reaches Gateway at: loopback inside one is the sandbox itself. It is
+// read from the route to a public address, so the interface a sandbox is
+// bridged onto wins over the virtual ones a hypervisor adds. Nothing is sent —
+// a UDP socket is never connected.
+func LanIPv4() (string, error) {
+	conn, err := net.Dial("udp4", "8.8.8.8:53")
+	if err == nil {
+		defer conn.Close()
+		if addr, ok := conn.LocalAddr().(*net.UDPAddr); ok {
+			if ip := addr.IP.To4(); ip != nil && !ip.IsLoopback() && !ip.IsUnspecified() {
+				return ip.String(), nil
+			}
+		}
+	}
+	return firstPrivateIPv4()
+}
+
+// firstPrivateIPv4 is the fallback for a host with no route to the internet.
+func firstPrivateIPv4() (string, error) {
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return "", err
+	}
+
+	for _, item := range interfaces {
+		if item.Flags&net.FlagUp == 0 || item.Flags&net.FlagLoopback != 0 {
+			continue
+		}
+		addrs, err := item.Addrs()
+		if err != nil {
+			continue
+		}
+		for _, addr := range addrs {
+			network, ok := addr.(*net.IPNet)
+			if !ok {
+				continue
+			}
+			if ip := network.IP.To4(); ip != nil && ip.IsPrivate() {
+				return ip.String(), nil
+			}
+		}
+	}
+	return "", errors.New("this host has no address of its own on any network, so an agent that runs in a sandbox cannot reach Gateway")
 }

@@ -54,18 +54,30 @@ func PrintStartupSummary() {
 // the bind address decides whether the local admin is signed in automatically.
 func describeManagementUrl() string {
 	url := fmt.Sprintf("http://localhost:%d", conf.GetHttpPort())
-	if conf.IsHttpAddrLoopback() {
-		return url + " (this machine only)"
+	if !conf.IsHttpAddrLoopback() {
+		return fmt.Sprintf("%s, bound to %s", url, conf.GetHttpAddr())
+	}
+	if lanAccessNeeded() {
+		if host, err := LanHost(); err == nil {
+			return fmt.Sprintf("%s, and %s:%d for an agent that runs in a sandbox", url, host, conf.GetHttpPort())
+		}
 	}
 
-	return fmt.Sprintf("%s, bound to %s", url, conf.GetHttpAddr())
+	return url + " (this machine only)"
+}
+
+// lanAccessNeeded mirrors what SyncLanAccess is about to do, so the table says
+// what this process will serve rather than what httpaddr alone would suggest.
+func lanAccessNeeded() bool {
+	needed, err := sandboxedAgentIsBound()
+	return err == nil && needed
 }
 
 // describeRelayAuth explains what an agent has to send to /v1. A request off
 // this machine needs the token, which is also what Gateway writes into the
 // configuration of an agent it switches.
 func describeRelayAuth() string {
-	if conf.IsHttpAddrLoopback() {
+	if conf.IsHttpAddrLoopback() && !lanAccessNeeded() {
 		return "this machine only, no token needed"
 	}
 

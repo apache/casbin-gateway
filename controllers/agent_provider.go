@@ -16,6 +16,8 @@ package controllers
 
 import (
 	"fmt"
+	"net"
+	"strconv"
 	"strings"
 
 	"github.com/apache/casbin-gateway/agent"
@@ -23,6 +25,7 @@ import (
 	"github.com/apache/casbin-gateway/agentprovider"
 	"github.com/apache/casbin-gateway/conf"
 	"github.com/apache/casbin-gateway/object"
+	"github.com/apache/casbin-gateway/service"
 )
 
 // PlanAgentProvider renders what a switch would write, without touching a file.
@@ -166,7 +169,11 @@ func agentEndpoint(agentId string) (agentprovider.Endpoint, error) {
 		return endpoint, nil
 	}
 
-	endpoint.BaseUrl = gatewayAgentUrl(agentId)
+	baseUrl, err := gatewayAgentUrl(agentId)
+	if err != nil {
+		return endpoint, err
+	}
+	endpoint.BaseUrl = baseUrl
 	endpoint.ServesResponsesApi = true
 	// A client-auth provider forwards whatever the agent sends, so it must keep
 	// sending its own credentials: a placeholder token written into the agent's
@@ -177,11 +184,22 @@ func agentEndpoint(agentId string) (agentprovider.Endpoint, error) {
 	return endpoint, nil
 }
 
-// gatewayAgentUrl is the loopback base URL an agent reaches its own provider at.
-// One URL serves every wire format: an OpenAI client appends /chat/completions
-// to it, Codex appends /responses, and an Anthropic one appends /v1/messages.
-func gatewayAgentUrl(agentId string) string {
-	return fmt.Sprintf("http://127.0.0.1:%d/v1/agents/%s", conf.GetHttpPort(), agentId)
+// gatewayAgentUrl is the base URL an agent reaches its own provider at. One URL
+// serves every wire format: an OpenAI client appends /chat/completions to it,
+// Codex appends /responses, and an Anthropic one appends /v1/messages. An agent
+// that runs its sessions in a sandbox is named this host's own address instead
+// of loopback, which inside a sandbox is the sandbox itself.
+func gatewayAgentUrl(agentId string) (string, error) {
+	host := "127.0.0.1"
+	if agent.RunsSandboxed(agentId) {
+		lan, err := service.LanHost()
+		if err != nil {
+			return "", err
+		}
+		host = lan
+	}
+	address := net.JoinHostPort(host, strconv.Itoa(conf.GetHttpPort()))
+	return fmt.Sprintf("http://%s/v1/agents/%s", address, agentId), nil
 }
 
 // reapplyAgentProvider writes the bound provider into the configuration of every

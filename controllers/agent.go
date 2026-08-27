@@ -29,6 +29,7 @@ import (
 	"github.com/apache/casbin-gateway/agentpatch"
 	"github.com/apache/casbin-gateway/agentprovider"
 	"github.com/apache/casbin-gateway/object"
+	"github.com/apache/casbin-gateway/service"
 )
 
 type discoveredAgent struct {
@@ -44,6 +45,10 @@ type discoveredAgent struct {
 	// ProviderConfig is the state of the agent's own configuration file, which
 	// is what the config orchestrator writes.
 	ProviderConfig agentprovider.Status `json:"providerConfig"`
+	// ProxyBaseUrl is the endpoint this agent reaches its bound provider at. The
+	// page cannot build it from its own address: an agent that runs in a sandbox
+	// is given this host's network address rather than loopback.
+	ProxyBaseUrl string `json:"proxyBaseUrl"`
 }
 
 // GetAgents scans known installation locations and returns the AI agents
@@ -66,6 +71,7 @@ func (c *ApiController) GetAgents() {
 	}
 
 	result := make([]*discoveredAgent, 0, len(installations))
+	baseUrls := map[string]string{}
 	for _, installation := range installations {
 		target := targetOf(installation)
 		// Monitoring is on by default, so an installation that is not monitored
@@ -79,6 +85,14 @@ func (c *ApiController) GetAgents() {
 			Mode:           object.ModeGateway,
 			ProviderConfig: agentprovider.StatusOf(providerTarget(target)),
 		}
+		baseUrl, ok := baseUrls[installation.AgentId]
+		if !ok {
+			// A host with no address of its own cannot serve a sandboxed agent
+			// at all; the binding itself reports that, and the listing stays.
+			baseUrl, _ = gatewayAgentUrl(installation.AgentId)
+			baseUrls[installation.AgentId] = baseUrl
+		}
+		item.ProxyBaseUrl = baseUrl
 		if stored, ok := agents[installation.AgentId]; ok {
 			item.Provider = stored.Provider
 			item.Mode = stored.Mode
@@ -126,6 +140,13 @@ func (c *ApiController) UpdateAgentRouting() {
 
 	if err := object.SetAgentRouting(form.AgentId, form.Provider, form.Fallbacks, form.Mode); err != nil {
 		c.ResponseError(err.Error())
+		return
+	}
+
+	// An agent that runs in a sandbox is given this host's own address, so the
+	// management port has to answer there before that endpoint is written.
+	if err := service.SyncLanAccess(); err != nil {
+		c.ResponseError("the routing was saved, but the agent cannot reach Gateway from its sandbox: " + err.Error())
 		return
 	}
 

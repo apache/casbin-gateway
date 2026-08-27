@@ -41,6 +41,7 @@
     "Built-in model": "Built-in model",
     "Built-in model restored": "Put back on its own model",
     "Claude Code config hint": "The same variables can live in the \"env\" block of ~/.claude/settings.json, so every session picks them up without exporting anything.",
+    "Claude Desktop sandbox hint": "Claude Desktop runs its Cowork and Code sessions in a sandbox of its own, where 127.0.0.1 is that sandbox rather than this host. The URL above names this machine on its own network instead, and Gateway answers there as well as on loopback.",
     "Client auth token hint": "This provider forwards the agent's own credentials, so no token is set: the agent keeps the sign-in it already has.",
     "Codex CLI config hint": "The base URL can also be a model provider in ~/.codex/config.toml, selected with model_provider. Its wire_api has to be \"responses\", the only wire format Codex still speaks.",
     "Configuration preview": "Configuration preview",

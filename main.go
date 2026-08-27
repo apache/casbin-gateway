@@ -175,5 +175,11 @@ func main() {
 
 	service.Start()
 
+	// The agent endpoint of a sandboxed agent names this host's own address, and
+	// the configuration naming it outlives this process.
+	if err := service.SyncLanAccess(); err != nil {
+		beego.Error("the endpoint of an agent that runs in a sandbox cannot be served:", err)
+	}
+
 	beego.Run(fmt.Sprintf("%s:%v", addr, port))
 }

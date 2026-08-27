@@ -413,7 +413,7 @@ export function ProviderCard({
                 <p className="text-sm text-muted-foreground">{i18next.t("agent:Base URL hint")}</p>
                 <EnvSnippet
                   protocol={providerProtocol(bound.type)}
-                  baseUrl={agentProxyBaseUrl(agent.agentId)}
+                  baseUrl={agent.proxyBaseUrl || agentProxyBaseUrl(agent.agentId)}
                   defaultShell={shellForPath(agent.path)}
                   includeToken={!usesClientAuth(bound)}
                 />

@@ -3,6 +3,7 @@
   "displayName": "Claude Desktop",
   "execName": "claude",
   "desktop": true,
+  "sandboxed": true,
   "msixFamily": "Claude_pzs8sxrjxfjjc",
   "desktopInstallerDir": "AnthropicClaude"
 }

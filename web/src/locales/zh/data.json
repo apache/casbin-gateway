@@ -41,6 +41,7 @@
     "Built-in model": "自带模型",
     "Built-in model restored": "已恢复为自带模型",
     "Claude Code config hint": "这两个变量也可以写进 ~/.claude/settings.json 的 env 段，这样不用每次 export，所有会话都会生效。",
+    "Claude Desktop sandbox hint": "Claude Desktop 的 Cowork 和 Code 会话跑在它自己的沙箱里，那里的 127.0.0.1 是沙箱本身，不是这台主机。所以上面的地址用的是本机在局域网上的地址，Gateway 除回环外也会在该地址上监听。",
     "Client auth token hint": "该供应商转发 Agent 自己的凭据，所以不设置 token，Agent 继续用它已有的登录。",
     "Codex CLI config hint": "base URL 也可以写成 ~/.codex/config.toml 里的一个 model provider，再用 model_provider 选中它。它的 wire_api 必须是 \"responses\"，这是 Codex 现在唯一还支持的线格式。",
     "Configuration preview": "配置预览",

@@ -70,6 +70,8 @@ export function agentSetupNoteKey(agentId: string) {
   switch (agentId) {
   case "claude-code":
     return "agent:Claude Code config hint";
+  case "claude-desktop":
+    return "agent:Claude Desktop sandbox hint";
   case "codex-cli":
     return "agent:Codex CLI config hint";
   case "opencode":
