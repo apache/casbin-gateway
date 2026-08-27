@@ -110,6 +110,7 @@ func processTarget(installation agent.Installation) agentprocess.Target {
 		Path:       installation.Path,
 		Owner:      installation.Owner,
 		Executable: launch.Executable,
+		Args:       launch.Args,
 		Desktop:    launch.Desktop,
 	}
 }

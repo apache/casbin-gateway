@@ -33,7 +33,7 @@ var terminals = [][]string{
 
 func start(target Target) error {
 	if target.Desktop {
-		return spawn(target.Executable)
+		return spawn(target.Executable, target.Args...)
 	}
 
 	for _, terminal := range terminals {
@@ -41,7 +41,8 @@ func start(target Target) error {
 		if err != nil {
 			continue
 		}
-		return spawn(path, append(terminal[1:], target.Executable)...)
+		arguments := append(append([]string{}, terminal[1:]...), target.Executable)
+		return spawn(path, append(arguments, target.Args...)...)
 	}
 	return errors.New("no terminal emulator was found to run this agent in")
 }

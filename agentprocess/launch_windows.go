@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"syscall"
 )
 
@@ -27,10 +28,13 @@ import (
 // and gives a CLI the console window it needs. Its quoting rules are its own, so
 // the command line is written literally rather than assembled by os/exec.
 func start(target Target) error {
-	quoted := `"` + target.Executable + `"`
-	line := `cmd.exe /c start "" ` + quoted
+	command := `"` + target.Executable + `"`
+	if len(target.Args) > 0 {
+		command += " " + strings.Join(target.Args, " ")
+	}
+	line := `cmd.exe /c start "" ` + command
 	if !target.Desktop {
-		line = `cmd.exe /c start "" cmd.exe /k ` + quoted
+		line = `cmd.exe /c start "" cmd.exe /k ` + command
 	}
 
 	cmd := exec.Command("cmd.exe")

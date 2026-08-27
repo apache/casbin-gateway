@@ -40,6 +40,8 @@ type Target struct {
 	Owner   string
 	// Executable is the file to launch, empty when none was resolved.
 	Executable string
+	// Args are passed to the executable, literally.
+	Args []string
 	// Desktop marks a windowed app, which is started without a console.
 	Desktop bool
 }

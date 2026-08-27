@@ -25,6 +25,8 @@ import (
 type Launch struct {
 	// Executable is the file to run, empty when none was resolved.
 	Executable string
+	// Args are passed to the executable, literally.
+	Args []string
 	// Desktop marks a windowed app, which needs no console of its own.
 	Desktop bool
 }
@@ -36,6 +38,7 @@ func LaunchOf(installation Installation) Launch {
 	for i := range fingerprints {
 		if fingerprints[i].ID == installation.AgentId {
 			execName = fingerprints[i].ExecName
+			launch.Args = fingerprints[i].LaunchArgs
 			launch.Desktop = fingerprints[i].Desktop
 			break
 		}

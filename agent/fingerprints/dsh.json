@@ -2,5 +2,6 @@
   "id": "dsh",
   "displayName": "DeepSeek Harness",
   "execName": "dsh",
+  "launchArgs": ["web"],
   "npmPackage": "@deepseek-ai/dsh"
 }

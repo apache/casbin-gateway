@@ -22,6 +22,9 @@ type Fingerprint struct {
 	DisplayName string `json:"displayName"`
 
 	ExecName string `json:"execName,omitempty"`
+	// LaunchArgs are the arguments a start passes, literally: an agent that
+	// refuses to run bare needs the ones that pick its default mode.
+	LaunchArgs []string `json:"launchArgs,omitempty"`
 	// Desktop marks a windowed app, which is launched without a console.
 	Desktop bool `json:"desktop,omitempty"`
 

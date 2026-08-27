@@ -24,11 +24,38 @@ import (
 func start(target Target) error {
 	if target.Desktop {
 		if bundle := appBundle(target.Executable); bundle != "" {
-			return spawn("open", "-a", bundle)
+			arguments := []string{"-a", bundle}
+			if len(target.Args) > 0 {
+				arguments = append(append(arguments, "--args"), target.Args...)
+			}
+			return spawn("open", arguments...)
 		}
-		return spawn(target.Executable)
+		return spawn(target.Executable, target.Args...)
 	}
-	return spawn("open", "-a", "Terminal", target.Executable)
+	if len(target.Args) == 0 {
+		return spawn("open", "-a", "Terminal", target.Executable)
+	}
+
+	// open hands Terminal a file to run and has nowhere to put arguments, so a
+	// command line is scripted instead. Only an agent that needs arguments pays
+	// for it: scripting Terminal asks the user for automation access, opening it
+	// does not.
+	command := shellQuote(target.Executable)
+	for _, argument := range target.Args {
+		command += " " + shellQuote(argument)
+	}
+	return spawn("osascript",
+		"-e", `tell application "Terminal" to do script `+appleScriptString(command),
+		"-e", `tell application "Terminal" to activate`)
+}
+
+func shellQuote(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", `'\''`) + "'"
+}
+
+func appleScriptString(value string) string {
+	value = strings.ReplaceAll(value, `\`, `\\`)
+	return `"` + strings.ReplaceAll(value, `"`, `\"`) + `"`
 }
 
 // appBundle is the .app an executable lives in, empty outside a bundle. Opening
