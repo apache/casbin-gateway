@@ -16,25 +16,7 @@ package controllers
 
 import (
 	"github.com/apache/casbin-gateway/conf"
-	"github.com/apache/casbin-gateway/service"
 )
-
-// GetGatewayStatus tells the web UI whether the reverse-proxy gateway is
-// actually running. Without it, a Gateway whose reverse proxy is off accepts
-// every site and rule and silently proxies nothing.
-func (c *ApiController) GetGatewayStatus() {
-	if c.RequireSignedIn() {
-		return
-	}
-
-	c.ResponseOk(map[string]interface{}{
-		"gatewayEnabled": conf.IsGatewayEnabled(),
-		"gatewayRunning": service.IsGatewayRunning(),
-		"gatewayError":   service.GatewayError(),
-		"httpPort":       conf.GetGatewayHttpPort(),
-		"httpsPort":      conf.GetGatewayHttpsPort(),
-	})
-}
 
 // GetRelayToken hands the web UI the token an agent has to send to the relay,
 // so the snippets it shows can be pasted as they are.

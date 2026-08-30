@@ -58,7 +58,7 @@ export function ColorTag({
   );
 }
 
-// States that recur across agents, providers, sites and certificates. A page with
+// States that recur across agents and providers. A page with
 // a genuinely local vocabulary still passes its own map via `variants`.
 const defaultStatusVariants: Record<string, BadgeVariant> = {
   Active: "success",

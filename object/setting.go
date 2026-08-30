@@ -33,10 +33,6 @@ type Setting struct {
 	CreatedTime string `xorm:"varchar(100)" json:"createdTime"`
 	DisplayName string `xorm:"varchar(100)" json:"displayName"`
 
-	GatewayEnabled   bool `xorm:"bool" json:"gatewayEnabled"`
-	GatewayHttpPort  int  `xorm:"int" json:"gatewayHttpPort"`
-	GatewayHttpsPort int  `xorm:"int" json:"gatewayHttpsPort"`
-
 	LlmRecordMode            string `xorm:"varchar(100)" json:"llmRecordMode"`
 	LlmRecordQueueCapacity   int    `xorm:"int" json:"llmRecordQueueCapacity"`
 	LlmRecordRetentionDays   int    `xorm:"int" json:"llmRecordRetentionDays"`
@@ -59,22 +55,7 @@ type Setting struct {
 	// first start; clearing it on the Settings page issues a new one.
 	RelayToken string `xorm:"varchar(200)" json:"relayToken"`
 
-	HttpProxy      string `xorm:"varchar(200)" json:"httpProxy"`
-	AcmeEmail      string `xorm:"varchar(200)" json:"acmeEmail"`
-	AcmePrivateKey string `xorm:"mediumtext" json:"acmePrivateKey"`
-
-	AppDir             string `xorm:"varchar(500)" json:"appDir"`
-	Language           string `xorm:"varchar(100)" json:"language"`
-	AppMap             string `xorm:"varchar(1000)" json:"appMap"`
-	ClientIdPrefix     string `xorm:"varchar(100)" json:"clientIdPrefix"`
-	ClientSecretPrefix string `xorm:"varchar(100)" json:"clientSecretPrefix"`
-	DbRegionId         string `xorm:"varchar(100)" json:"dbRegionId"`
-	DbAccessKeyId      string `xorm:"varchar(200)" json:"dbAccessKeyId"`
-	DbAccessKeySecret  string `xorm:"varchar(200)" json:"dbAccessKeySecret"`
-	DbInstanceId       string `xorm:"varchar(100)" json:"dbInstanceId"`
-	DbHost             string `xorm:"varchar(200)" json:"dbHost"`
-	DbUser             string `xorm:"varchar(100)" json:"dbUser"`
-	DbPass             string `xorm:"varchar(200)" json:"dbPass"`
+	HttpProxy string `xorm:"varchar(200)" json:"httpProxy"`
 }
 
 // SyncSettingToConf makes the row the answer conf.GetConfigString() gives, so
@@ -85,10 +66,6 @@ type Setting struct {
 // take the Settings page that turns it off down with it.
 func SyncSettingToConf(setting *Setting) {
 	conf.SetSettingOverrides(map[string]string{
-		"gatewayEnabled":   strconv.FormatBool(setting.GatewayEnabled),
-		"gatewayHttpPort":  strconv.Itoa(setting.GatewayHttpPort),
-		"gatewayHttpsPort": strconv.Itoa(setting.GatewayHttpsPort),
-
 		"llmRecordMode":            setting.LlmRecordMode,
 		"llmRecordQueueCapacity":   strconv.Itoa(setting.LlmRecordQueueCapacity),
 		"llmRecordRetentionDays":   strconv.Itoa(setting.LlmRecordRetentionDays),
@@ -109,22 +86,7 @@ func SyncSettingToConf(setting *Setting) {
 		"apiKeyEncryptionKey": setting.ApiKeyEncryptionKey,
 		"relayToken":          setting.RelayToken,
 
-		"httpProxy":      setting.HttpProxy,
-		"acmeEmail":      setting.AcmeEmail,
-		"acmePrivateKey": setting.AcmePrivateKey,
-
-		"appDir":             setting.AppDir,
-		"language":           setting.Language,
-		"appMap":             setting.AppMap,
-		"clientIdPrefix":     setting.ClientIdPrefix,
-		"clientSecretPrefix": setting.ClientSecretPrefix,
-		"dbRegionId":         setting.DbRegionId,
-		"dbAccessKeyId":      setting.DbAccessKeyId,
-		"dbAccessKeySecret":  setting.DbAccessKeySecret,
-		"dbInstanceId":       setting.DbInstanceId,
-		"dbHost":             setting.DbHost,
-		"dbUser":             setting.DbUser,
-		"dbPass":             setting.DbPass,
+		"httpProxy": setting.HttpProxy,
 	})
 }
 
@@ -220,10 +182,6 @@ func newSettingFromConf() *Setting {
 		CreatedTime: util.GetCurrentTime(),
 		DisplayName: "Built-in Setting",
 
-		GatewayEnabled:   conf.IsGatewayEnabled(),
-		GatewayHttpPort:  conf.GetGatewayHttpPort(),
-		GatewayHttpsPort: conf.GetGatewayHttpsPort(),
-
 		LlmRecordMode:            conf.GetLlmRecordMode(),
 		LlmRecordQueueCapacity:   conf.GetLlmRecordQueueCapacity(),
 		LlmRecordRetentionDays:   conf.GetLlmRecordRetentionDays(),
@@ -244,21 +202,6 @@ func newSettingFromConf() *Setting {
 		ApiKeyEncryptionKey: conf.GetConfigStringUnquoted("apiKeyEncryptionKey"),
 		RelayToken:          newRelayToken(),
 
-		HttpProxy:      conf.GetConfigStringUnquoted("httpProxy"),
-		AcmeEmail:      conf.GetConfigStringUnquoted("acmeEmail"),
-		AcmePrivateKey: conf.GetConfigStringUnquoted("acmePrivateKey"),
-
-		AppDir:             conf.GetConfigStringUnquoted("appDir"),
-		Language:           conf.GetConfigStringUnquoted("language"),
-		AppMap:             conf.GetConfigStringUnquoted("appMap"),
-		ClientIdPrefix:     conf.GetConfigStringUnquoted("clientIdPrefix"),
-		ClientSecretPrefix: conf.GetConfigStringUnquoted("clientSecretPrefix"),
-		DbRegionId:         conf.GetConfigStringUnquoted("dbRegionId"),
-		DbAccessKeyId:      conf.GetConfigStringUnquoted("dbAccessKeyId"),
-		DbAccessKeySecret:  conf.GetConfigStringUnquoted("dbAccessKeySecret"),
-		DbInstanceId:       conf.GetConfigStringUnquoted("dbInstanceId"),
-		DbHost:             conf.GetConfigStringUnquoted("dbHost"),
-		DbUser:             conf.GetConfigStringUnquoted("dbUser"),
-		DbPass:             conf.GetConfigStringUnquoted("dbPass"),
+		HttpProxy: conf.GetConfigStringUnquoted("httpProxy"),
 	}
 }

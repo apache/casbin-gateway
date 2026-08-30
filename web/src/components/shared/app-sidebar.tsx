@@ -115,7 +115,6 @@ export function AppSidebar({
   openKeys,
   onOpenKeysChange,
   isAdmin,
-  gatewayEnabled,
   mobileOpen,
   onMobileOpenChange,
 }: {
@@ -124,7 +123,6 @@ export function AppSidebar({
   openKeys: string[];
   onOpenKeysChange: (keys: string[]) => void;
   isAdmin: boolean;
-  gatewayEnabled: boolean;
   /** On a narrow screen the rail is a drawer instead, and this is whether it is out. */
   mobileOpen: boolean;
   onMobileOpenChange: (open: boolean) => void;
@@ -138,8 +136,8 @@ export function AppSidebar({
     onOpenKeysChange(openKeys.includes(key) ? openKeys.filter(item => item !== key) : [...openKeys, key]);
   };
 
-  const visible = (entry: {adminOnly?: boolean; gatewayOnly?: boolean; hidden?: boolean}) =>
-    !entry.hidden && (!entry.adminOnly || isAdmin) && (!entry.gatewayOnly || gatewayEnabled);
+  const visible = (entry: {adminOnly?: boolean; hidden?: boolean}) =>
+    !entry.hidden && (!entry.adminOnly || isAdmin);
   const groups: NavGroup[] = navGroups
     .filter(visible)
     .map(group => (group.children ? {...group, children: group.children.filter(visible)} : group))

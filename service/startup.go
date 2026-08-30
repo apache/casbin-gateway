@@ -30,21 +30,17 @@ type summaryRow struct {
 }
 
 // PrintStartupSummary prints one table describing what this process is actually
-// going to do: which ports it serves, whether the reverse proxy is on, whether
-// the database answers, and whether Casdoor is wired up. Every one of these has
-// been a silent failure for someone starting Gateway for the first time.
+// going to do: which port it serves, whether the database answers, and whether
+// Casdoor is wired up. Every one of these has been a silent failure for someone
+// starting Gateway for the first time.
 func PrintStartupSummary() {
 	rows := []summaryRow{
 		{"Management UI", describeManagementUrl()},
 		{"Settings", describeConf()},
 		{"Web UI files", describeWebBuild()},
-		{"Reverse proxy", describeGateway()},
-		{"Gateway HTTP", describeGatewayPort(conf.GetGatewayHttpPort())},
-		{"Gateway HTTPS", describeGatewayPort(conf.GetGatewayHttpsPort())},
 		{"Database", describeDatabase()},
 		{"Sign-in", describeSignin()},
 		{"Relay auth", describeRelayAuth()},
-		{"App dir", describeAppDir()},
 	}
 
 	printSummaryTable("Casbin Gateway", rows)
@@ -107,24 +103,6 @@ func describeWebBuild() string {
 	return fmt.Sprintf("%s is missing, run \"yarn install && yarn build\" in web/", webui.BuildDir)
 }
 
-func describeGateway() string {
-	if conf.IsGatewayEnabled() {
-		return "enabled"
-	}
-
-	// Start() prints the consequence right after this table, so the row itself
-	// only has to say how to turn the proxy on.
-	return "disabled (turn it on on the Sites or Settings page of the web UI)"
-}
-
-func describeGatewayPort(port int) string {
-	if !conf.IsGatewayEnabled() {
-		return "-"
-	}
-
-	return fmt.Sprintf(":%d", port)
-}
-
 func describeDatabase() string {
 	// The connection string holds the database password, so only the driver and
 	// the database name are ever printed. A SQLite path carries no credentials,
@@ -151,16 +129,7 @@ func describeSignin() string {
 	return "built-in user table, Casdoor is not configured"
 }
 
-func describeAppDir() string {
-	appDir := unquote(conf.GetConfigString("appDir"))
-	if appDir == "" {
-		return "-"
-	}
-
-	return appDir
-}
-
-// unquote drops the quotes beego keeps around values such as appDir = "./data/apps".
+// unquote drops the quotes beego keeps around values such as dbName = "casbin_gateway".
 func unquote(value string) string {
 	return strings.Trim(value, `"' `)
 }

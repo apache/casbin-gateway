@@ -26,26 +26,13 @@ import (
 // Type aliases — re-export all SDK types used across the codebase so that
 // other packages only need to import this package, not casdoorsdk directly.
 type (
-	Application = casdoorsdk.Application
-	Cert        = casdoorsdk.Cert
-	Claims      = casdoorsdk.Claims
-	Client      = casdoorsdk.Client
-	Provider    = casdoorsdk.Provider
-	Resource    = casdoorsdk.Resource
-	User        = casdoorsdk.User
+	Claims = casdoorsdk.Claims
+	User   = casdoorsdk.User
 )
 
 // InitConfig initialises the identity-provider SDK client.
 func InitConfig(endpoint, clientId, clientSecret, jwtPublicKey, organization, application string) {
 	casdoorsdk.InitConfig(endpoint, clientId, clientSecret, jwtPublicKey, organization, application)
-}
-
-func NewClient(endpoint, clientId, clientSecret, certificate, organization, application string) *Client {
-	return casdoorsdk.NewClient(endpoint, clientId, clientSecret, certificate, organization, application)
-}
-
-func GetUrl(action string, params map[string]string) string {
-	return casdoorsdk.GetUrl(action, params)
 }
 
 func GetOAuthToken(code, state string) (*oauth2.Token, error) {
@@ -54,40 +41,4 @@ func GetOAuthToken(code, state string) (*oauth2.Token, error) {
 
 func ParseJwtToken(token string) (*Claims, error) {
 	return casdoorsdk.ParseJwtToken(token)
-}
-
-func GetUser(name string) (*User, error) {
-	return casdoorsdk.GetUser(name)
-}
-
-func GetCerts() ([]*Cert, error) {
-	return casdoorsdk.GetCerts()
-}
-
-func GetOrganizationApplications() ([]*Application, error) {
-	return casdoorsdk.GetOrganizationApplications()
-}
-
-func GetProviders() ([]*Provider, error) {
-	return casdoorsdk.GetProviders()
-}
-
-func SendEmailByProvider(title, content, sender, provider string, receivers ...string) error {
-	return casdoorsdk.SendEmailByProvider(title, content, sender, provider, receivers...)
-}
-
-func SendSmsByProvider(content, provider string, receivers ...string) error {
-	return casdoorsdk.SendSmsByProvider(content, provider, receivers...)
-}
-
-func GetResources(owner, application, field, value, sortField, sortOrder string) ([]*Resource, error) {
-	return casdoorsdk.GetResources(owner, application, field, value, sortField, sortOrder)
-}
-
-func UploadResource(user, tag, parent, fullFilePath string, fileBytes []byte) (string, string, error) {
-	return casdoorsdk.UploadResource(user, tag, parent, fullFilePath, fileBytes)
-}
-
-func DeleteResource(resource *Resource) (bool, error) {
-	return casdoorsdk.DeleteResource(resource)
 }

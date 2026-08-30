@@ -42,4 +42,3 @@ data/agent-patches/
 
 lastupdate.tmp
 commentsRouter*.go
-acme_account.key

@@ -35,23 +35,6 @@ func GetHostname() string {
 	return hostname
 }
 
-func IsIntranetIp(ip string) bool {
-	ipStr, _, err := net.SplitHostPort(ip)
-	if err != nil {
-		ipStr = ip
-	}
-
-	parsedIP := net.ParseIP(ipStr)
-	if parsedIP == nil {
-		return false
-	}
-
-	return parsedIP.IsPrivate() ||
-		parsedIP.IsLoopback() ||
-		parsedIP.IsLinkLocalUnicast() ||
-		parsedIP.IsLinkLocalMulticast()
-}
-
 // LanIPv4 is the address this host answers at on its own network, which is what
 // a sandbox reaches Gateway at: loopback inside one is the sandbox itself. It is
 // read from the route to a public address, so the interface a sandbox is

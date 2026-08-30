@@ -13,10 +13,10 @@
 // limitations under the License.
 
 // Package embedsupport wires up the assets that are baked into the binary when
-// it is built with -tags embed: conf/app.conf, the compiled web UI in
-// web/build, and the IP location database. Those are every file Gateway needs
-// to find on disk at startup, so embedding them turns it into a single
-// executable that runs with nothing next to it.
+// it is built with -tags embed: conf/app.conf and the compiled web UI in
+// web/build. Those are every file Gateway needs to find on disk at startup, so
+// embedding them turns it into a single executable that runs with nothing next
+// to it.
 //
 // The embedded copies are a fallback, never an override: whenever the matching
 // file exists on disk it wins, so an operator can drop a conf/app.conf beside
@@ -28,18 +28,13 @@ package embedsupport
 
 import "io/fs"
 
-var (
-	webFS fs.FS
-	ipDb  []byte
-)
+var webFS fs.FS
 
 // Setup must be called before any config value is read or any request is
-// served. appConf is the contents of the embedded conf/app.conf, web is the
-// embedded web/build tree, and ipDb is the embedded IP location database; each
-// of them may be empty or nil.
-func Setup(appConf string, web fs.FS, ipDatabase []byte) {
+// served. appConf is the contents of the embedded conf/app.conf and web is the
+// embedded web/build tree; either of them may be empty or nil.
+func Setup(appConf string, web fs.FS) {
 	webFS = web
-	ipDb = ipDatabase
 	setupConf(appConf)
 }
 
@@ -49,7 +44,3 @@ func WebFS() fs.FS { return webFS }
 
 // HasWeb reports whether a compiled web UI is embedded in this binary.
 func HasWeb() bool { return webFS != nil }
-
-// IpDb returns the embedded IP location database, or nil when this binary
-// carries none.
-func IpDb() []byte { return ipDb }

@@ -49,14 +49,11 @@ var embeddedAppConf string
 //go:embed web/build
 var embeddedWeb embed.FS
 
-//go:embed ip/17monipdb.dat
-var embeddedIpDb []byte
-
 func init() {
 	webFS, err := fs.Sub(embeddedWeb, "web/build")
 	if err != nil {
 		panic(err)
 	}
 
-	embedsupport.Setup(embeddedAppConf, webFS, embeddedIpDb)
+	embedsupport.Setup(embeddedAppConf, webFS)
 }

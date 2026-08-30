@@ -36,7 +36,7 @@ type error fails the build.
 | `src/backend/`       | One typed module per REST resource; `request.ts` is the single `fetch` call   |
 | `src/pages/`         | One component per route, mounted in `src/App.tsx`                            |
 | `src/components/ui/` | shadcn/ui primitives, generated with the CLI settings in `components.json`   |
-| `src/components/`    | Shared pieces: `DataTable`, `FormRow`, the rule and node sub-tables, charts   |
+| `src/components/`    | Shared pieces: `DataTable`, `FormRow`, the agent and provider cards, charts  |
 | `src/locales/`       | English and Chinese strings                                                  |
 | `src/types.ts`       | The shapes the Go API returns, including its `{status, msg, data, data2}` envelope |
 

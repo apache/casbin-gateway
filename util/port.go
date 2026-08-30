@@ -49,7 +49,7 @@ func ListenTcp(port int) (net.Listener, error) {
 }
 
 // ListenTcpAddr binds one interface rather than all of them. An empty addr
-// means every interface, which is what the reverse proxy wants.
+// means every interface.
 func ListenTcpAddr(addr string, port int) (net.Listener, error) {
 	return net.Listen("tcp", fmt.Sprintf("%s:%d", addr, port))
 }
@@ -77,7 +77,7 @@ func CheckPortAvailableOn(addr string, port int) error {
 // the process straight back into the same conflict.
 //
 // "remedy" completes the sentence "Free the port, or ...", for example
-// `set "gatewayEnabled = false" in conf/app.conf`.
+// `change "httpport" in conf/app.conf`.
 func FatalListenError(port int, remedy string, err error) {
 	fmt.Println()
 	if holder := DescribePortHolder(port); holder != "" {

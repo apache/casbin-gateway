@@ -14,31 +14,11 @@
 
 package util
 
-import (
-	"io/ioutil"
-	"os"
-)
+import "os"
 
 func FileExist(path string) bool {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return false
 	}
 	return true
-}
-
-func ListFiles(path string) ([]string, error) {
-	res := []string{}
-
-	files, err := ioutil.ReadDir(path)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, f := range files {
-		if !f.IsDir() {
-			res = append(res, f.Name())
-		}
-	}
-
-	return res, nil
 }

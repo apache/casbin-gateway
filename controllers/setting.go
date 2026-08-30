@@ -17,7 +17,6 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/apache/casbin-gateway/agentmonitor"
@@ -25,8 +24,6 @@ import (
 	"github.com/apache/casbin-gateway/conf"
 	"github.com/apache/casbin-gateway/object"
 	"github.com/apache/casbin-gateway/proxy"
-	"github.com/apache/casbin-gateway/run"
-	"github.com/apache/casbin-gateway/service"
 )
 
 func (c *ApiController) GetSetting() {
@@ -100,23 +97,6 @@ func validateSetting(setting *object.Setting) error {
 		return fmt.Errorf("llmRecordMode must be one of \"off\", \"metadata\" or \"full\"")
 	}
 
-	for _, port := range []int{setting.GatewayHttpPort, setting.GatewayHttpsPort} {
-		if port < 1 || port > 65535 {
-			return fmt.Errorf("the gateway ports must be between 1 and 65535")
-		}
-	}
-	if setting.GatewayHttpPort == setting.GatewayHttpsPort {
-		return fmt.Errorf("the two gateway ports must differ")
-	}
-
-	// run.InitAppMap() panics on a malformed value, so it is rejected here
-	// rather than taking the process down after it has been stored.
-	if appMap := strings.TrimSpace(setting.AppMap); appMap != "" {
-		if err := json.Unmarshal([]byte(appMap), &map[string]string{}); err != nil {
-			return fmt.Errorf("appMap must be a JSON object, e.g. {\"casdoor\": \"cc\"}: %s", err.Error())
-		}
-	}
-
 	return nil
 }
 
@@ -126,7 +106,6 @@ func validateSetting(setting *object.Setting) error {
 func applySetting(previous *object.Setting, setting *object.Setting) error {
 	casdoor.InitCasdoorConfig()
 	proxy.InitHttpClient()
-	run.InitAppMap()
 	object.ReloadLlmPrices()
 	agentmonitor.Configure(
 		conf.GetAgentPatchStateDir(),
@@ -143,25 +122,6 @@ func applySetting(previous *object.Setting, setting *object.Setting) error {
 			object.StopLlmRecordWriter()
 		}
 		object.StartLlmRecordWriter()
-	}
-
-	return applyGatewaySetting(previous, setting)
-}
-
-func applyGatewaySetting(previous *object.Setting, setting *object.Setting) error {
-	if !setting.GatewayEnabled {
-		service.StopGateway()
-		return nil
-	}
-
-	portsChanged := previous.GatewayHttpPort != setting.GatewayHttpPort ||
-		previous.GatewayHttpsPort != setting.GatewayHttpsPort
-	if portsChanged && service.IsGatewayRunning() {
-		service.StopGateway()
-	}
-
-	if err := service.StartGateway(); err != nil {
-		return fmt.Errorf("the reverse proxy could not start: %s", err.Error())
 	}
 
 	return nil

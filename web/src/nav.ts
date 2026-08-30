@@ -15,18 +15,11 @@
 import {
   Blocks,
   Bot,
-  ChartColumn,
   FileSearch,
-  Globe,
-  ListFilter,
   Logs,
   MessageSquare,
   Plug,
-  ScrollText,
-  Server,
   Settings,
-  SlidersHorizontal,
-  ShieldCheck,
   Table2,
   type LucideIcon,
 } from "lucide-react";
@@ -48,8 +41,6 @@ export interface NavGroup {
   path?: string;
   adminOnly?: boolean;
   hidden?: boolean;
-  /** Hidden until the reverse proxy is turned on, since nothing under it works before that. */
-  gatewayOnly?: boolean;
   children?: NavLeaf[];
 }
 
@@ -59,9 +50,7 @@ export interface NavGroup {
  * disagreeing about which section a page belongs to.
  *
  * `label` is an i18next key, resolved at render time so a language switch does
- * not need the tree rebuilt. The reverse-proxy pages are a full feature set, but
- * someone running Gateway to manage the agents on their own machine never needs
- * them, so they live in one group instead of competing with the agent pages.
+ * not need the tree rebuilt.
  */
 export const navGroups: NavGroup[] = [
   {key: "/", label: "agent:Agents", icon: Bot, path: "/"},
@@ -85,20 +74,6 @@ export const navGroups: NavGroup[] = [
   {key: "/agent-records", label: "agent:Agent Records", icon: FileSearch, path: "/agent-records", adminOnly: true},
   {key: "/providers", label: "provider:Providers", icon: Plug, path: "/providers"},
   {key: "/llm-records", label: "llm:LLM Records", icon: Logs, path: "/llm-records", adminOnly: true},
-  {
-    key: "/advanced",
-    label: "general:Advanced",
-    gatewayOnly: true,
-    icon: SlidersHorizontal,
-    children: [
-      {key: "/sites", label: "general:Sites", path: "/sites", icon: Globe},
-      {key: "/certs", label: "general:Certs", path: "/certs", icon: ShieldCheck},
-      {key: "/rules", label: "general:Rules", path: "/rules", icon: ListFilter},
-      {key: "/nodes", label: "general:Nodes", path: "/nodes", icon: Server},
-      {key: "/records", label: "general:Proxy Log", path: "/records", icon: ScrollText},
-      {key: "/proxy-analytics", label: "general:Proxy Analytics", path: "/proxy-analytics", icon: ChartColumn},
-    ],
-  },
   {key: "/settings", label: "setting:Settings", icon: Settings, path: "/settings", adminOnly: true},
 ];
 

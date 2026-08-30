@@ -98,7 +98,7 @@ func TestFatalListenError(t *testing.T) {
 			t.Fatalf("ListenTcp(%d) succeeded twice, expected the port to be held", port)
 		}
 
-		FatalListenError(port, `set "gatewayEnabled = false" in conf/app.conf`, err)
+		FatalListenError(port, `change "httpport" in conf/app.conf`, err)
 		return
 	}
 
@@ -117,7 +117,7 @@ func TestFatalListenError(t *testing.T) {
 	if !strings.Contains(string(output), "is in use") && !strings.Contains(string(output), "cannot listen on port") {
 		t.Errorf("FatalListenError() output = %q, want it to explain the port conflict", output)
 	}
-	if !strings.Contains(string(output), "gatewayEnabled") {
+	if !strings.Contains(string(output), "httpport") {
 		t.Errorf("FatalListenError() output = %q, want it to carry the remedy", output)
 	}
 }

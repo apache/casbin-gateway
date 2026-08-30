@@ -49,103 +49,6 @@ export interface SigninOptions {
   };
 }
 
-export interface SiteNode {
-  name: string;
-  version: string;
-  diff: string;
-  pid?: number;
-  status: string;
-  message: string;
-  provider?: string;
-}
-
-export interface Site {
-  owner: string;
-  name: string;
-  createdTime: string;
-  displayName: string;
-  tag: string;
-  domain: string;
-  otherDomains: string[];
-  needRedirect: boolean;
-  disableVerbose: boolean;
-  rules: string[];
-  enableAlert: boolean;
-  alertInterval: number;
-  alertTryTimes: number;
-  alertProviders: string[];
-  challenges: string[];
-  host: string;
-  port: number;
-  hosts: string[];
-  sslMode: string;
-  sslCert: string;
-  publicIp: string;
-  node: string;
-  isSelf: boolean;
-  nodes: SiteNode[];
-  casdoorApplication: string;
-  status?: string;
-}
-
-export interface Node {
-  owner: string;
-  name: string;
-  createdTime: string;
-  displayName: string;
-  tag: string;
-  clientIp: string;
-  upgradeMode: string;
-}
-
-export interface Cert {
-  owner: string;
-  name: string;
-  createdTime: string;
-  displayName: string;
-  type: string;
-  cryptoAlgorithm: string;
-  expireTime: string;
-  domainExpireTime: string;
-  provider: string;
-  account: string;
-  accessKey: string;
-  accessSecret: string;
-  certificate: string;
-  privateKey: string;
-}
-
-export interface RuleExpression {
-  name: string;
-  operator: string;
-  value: string;
-}
-
-export interface Rule {
-  owner: string;
-  name: string;
-  createdTime: string;
-  updatedTime: string;
-  type: string;
-  expressions: RuleExpression[];
-  action: string;
-  statusCode: number;
-  reason: string;
-  isVerbose: boolean;
-}
-
-export interface Record {
-  id: number;
-  owner: string;
-  name: string;
-  createdTime: string;
-  method: string;
-  host: string;
-  path: string;
-  clientIp: string;
-  userAgent: string;
-}
-
 export interface Provider {
   owner: string;
   name: string;
@@ -428,28 +331,7 @@ export interface LlmAgentStat {
   lastProvider: string;
 }
 
-export interface MetricPoint {
-  data: string;
-  count: number;
-}
-
-export interface CasdoorProvider {
-  name: string;
-  category: string;
-}
-
-export interface Application {
-  name: string;
-}
-
 /** The settings the web UI can change, so nobody has to edit conf/app.conf. */
-export interface GatewayStatus {
-  gatewayEnabled: boolean;
-  /** False while enabled means the ports refused to bind; "gatewayError" says why. */
-  gatewayRunning: boolean;
-  gatewayError: string;
-}
-
 /**
  * The one built-in row of the Setting table, holding everything that used to be
  * hand-edited in conf/app.conf. The file only seeds it on the first start.
@@ -459,10 +341,6 @@ export interface Setting {
   name: string;
   createdTime: string;
   displayName: string;
-
-  gatewayEnabled: boolean;
-  gatewayHttpPort: number;
-  gatewayHttpsPort: number;
 
   llmRecordMode: "off" | "metadata" | "full";
   llmRecordQueueCapacity: number;
@@ -485,21 +363,6 @@ export interface Setting {
   relayToken: string;
 
   httpProxy: string;
-  acmeEmail: string;
-  acmePrivateKey: string;
-
-  appDir: string;
-  language: string;
-  appMap: string;
-  clientIdPrefix: string;
-  clientSecretPrefix: string;
-  dbRegionId: string;
-  dbAccessKeyId: string;
-  dbAccessKeySecret: string;
-  dbInstanceId: string;
-  dbHost: string;
-  dbUser: string;
-  dbPass: string;
 }
 
 /** The kinds of configuration the Skills, MCP & Prompts page manages. */

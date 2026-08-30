@@ -246,39 +246,14 @@ func (a *Ormer) createTable() {
 	showSql := conf.GetConfigBool("showSql")
 	a.Engine.ShowSQL(showSql)
 
-	err := a.Engine.Sync2(new(Node))
-	if err != nil {
-		panic(err)
-	}
-
 	// The settings the web UI can change, held in one built-in row.
-	err = a.Engine.Sync2(new(Setting))
+	err := a.Engine.Sync2(new(Setting))
 	if err != nil {
 		panic(err)
 	}
 
 	// Local users, used for sign-in when no Casdoor is configured.
 	err = a.Engine.Sync2(new(User))
-	if err != nil {
-		panic(err)
-	}
-
-	err = a.Engine.Sync2(new(Site))
-	if err != nil {
-		panic(err)
-	}
-
-	err = a.Engine.Sync2(new(Cert))
-	if err != nil {
-		panic(err)
-	}
-
-	err = a.Engine.Sync2(new(Record))
-	if err != nil {
-		panic(err)
-	}
-
-	err = a.Engine.Sync2(new(Rule))
 	if err != nil {
 		panic(err)
 	}

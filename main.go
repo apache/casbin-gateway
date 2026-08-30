@@ -25,12 +25,10 @@ import (
 	"github.com/apache/casbin-gateway/agentpatch"
 	"github.com/apache/casbin-gateway/casdoor"
 	"github.com/apache/casbin-gateway/conf"
-	"github.com/apache/casbin-gateway/ip"
 	"github.com/apache/casbin-gateway/mcpserver"
 	"github.com/apache/casbin-gateway/object"
 	"github.com/apache/casbin-gateway/proxy"
 	"github.com/apache/casbin-gateway/routers"
-	"github.com/apache/casbin-gateway/run"
 	"github.com/apache/casbin-gateway/service"
 	"github.com/apache/casbin-gateway/util"
 	"github.com/apache/casbin-gateway/version"
@@ -77,12 +75,6 @@ func main() {
 	casdoor.InitCasdoorConfig()
 	object.InitUsers()
 	proxy.InitHttpClient()
-	ip.InitIpDb()
-	object.InitSiteMap()
-	object.InitRuleMap()
-	run.InitAppMap()
-	run.InitRdsClient()
-	object.StartMonitorSitesLoop()
 
 	agentmonitor.Configure(
 		conf.GetAgentPatchStateDir(),
@@ -135,45 +127,27 @@ func main() {
 	port := conf.GetHttpPort()
 	addr := conf.GetHttpAddr()
 
-	// A previous Gateway still holding one of these ports would keep this one
-	// from starting, so it is stopped first. The gateway ports come before the
-	// management port because service.Start() binds them first.
-	stopPorts := []int{}
-	if conf.IsGatewayEnabled() {
-		stopPorts = append(stopPorts, conf.GetGatewayHttpPort(), conf.GetGatewayHttpsPort())
-	}
-	stopPorts = append(stopPorts, port)
-	for _, stopPort := range stopPorts {
-		err := util.StopOldInstance(stopPort)
-		if err == nil {
-			continue
-		}
-
-		// A port held by something that is not Gateway stays with it. Saying so
-		// here would only precede the bind below, which reports the same
-		// conflict along with the remedy for that particular port.
+	// A previous Gateway still holding the management port would keep this one
+	// from starting, so it is stopped first.
+	err := util.StopOldInstance(port)
+	if err != nil {
+		// A port held by something that is not Gateway stays with it; the bind
+		// below reports the conflict in full, so a failed kill only needs a note.
 		var foreign *util.ForeignPortError
-		if errors.As(err, &foreign) {
-			continue
+		if !errors.As(err, &foreign) {
+			fmt.Printf("Casbin Gateway: could not free port %d: %v\n", port, err)
 		}
-
-		// The bind below reports the conflict in full, so a failed kill only
-		// needs a note here and never stops the startup by itself.
-		fmt.Printf("Casbin Gateway: could not free port %d: %v\n", stopPort, err)
 	}
 
 	service.PrintStartupSummary()
 
 	// beego.Run() binds the management port itself and reports a conflict as a
-	// stack trace, so the port is probed here first to explain it in one line,
-	// and before the gateway below binds anything. The gap between probe and
-	// bind is unavoidable but harmless: losing the race just puts us back to
-	// beego's own error.
+	// stack trace, so the port is probed here first to explain it in one line.
+	// The gap between probe and bind is unavoidable but harmless: losing the
+	// race just puts us back to beego's own error.
 	if err := util.CheckPortAvailableOn(addr, port); err != nil {
 		util.FatalListenError(port, `change "httpport" in conf/app.conf`, err)
 	}
-
-	service.Start()
 
 	// The agent endpoint of a sandboxed agent names this host's own address, and
 	// the configuration naming it outlives this process.

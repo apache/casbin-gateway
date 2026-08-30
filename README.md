@@ -1,5 +1,5 @@
 <h1 align="center" style="border-bottom: none;">📦⚡️ Casbin Gateway</h1>
-<h3 align="center">An open-source gateway for the AI coding agents and the web traffic on your machine, developed by Go and React.</h3>
+<h3 align="center">An open-source gateway for the AI coding agents on your machine, developed by Go and React.</h3>
 <p align="center">
   <a href="https://github.com/apache/casbin-gateway/actions/workflows/golangci-lint.yml">
     <img alt="Lint" src="https://github.com/apache/casbin-gateway/actions/workflows/golangci-lint.yml/badge.svg">
@@ -89,7 +89,6 @@ Gateway installed some other way, or in a directory it cannot write to, says so 
 | **Skills, MCP & Prompts** | Every skill, MCP server and instruction file of every agent in one table. Add an MCP server to one agent or to several at once, edit the instructions an agent reads before every session, open one, delete it, or copy it into another agent. | Nothing |
 | **Providers** | One endpoint in front of your model vendors. Gateway holds the API key, so the agents never have it — or forwards the agent's own sign-in and holds nothing. | A vendor API key, or nothing at all |
 | **LLM Records** | Every request an agent relayed: the full system prompt, every message and tool call, the schema of every tool the model was offered, plus tokens and cost. | A provider, and `llmRecordMode` — see [Recording prompts](#recording-prompts) |
-| **Advanced → Sites** | The reverse-proxy WAF: per-site routing, rules, certificates and analytics. | Turning the proxy on — see [Turning the WAF proxy on](#turning-the-waf-proxy-on) |
 
 Agents are found by reading the user accounts, home directories and install paths of **the machine Gateway runs on**, so run it on the machine whose agents you want to watch.
 
@@ -140,9 +139,9 @@ To serve other machines anyway, set `httpaddr = 0.0.0.0` in `conf/app.conf`, and
 
 ### Running in Docker or Podman
 
-**A container cannot see the agents on your machine.** Agents are discovered by reading the home directories and install paths of the machine Gateway runs on, and inside a container that is the container's own filesystem. **Agents**, **Skills, MCP & Prompts** and agent monitoring therefore stay empty there, and the pages say so rather than pretending nothing is installed. Everything that does not depend on the host works normally: **Providers**, **LLM Records** and the reverse-proxy WAF.
+**A container cannot see the agents on your machine.** Agents are discovered by reading the home directories and install paths of the machine Gateway runs on, and inside a container that is the container's own filesystem. **Agents**, **Skills, MCP & Prompts** and agent monitoring therefore stay empty there, and the pages say so rather than pretending nothing is installed. Everything that does not depend on the host works normally: **Providers** and **LLM Records**.
 
-So run the one-command install above on the machine whose agents you want to watch, and use a container when Gateway is only a model endpoint or a reverse proxy for other machines.
+So run the one-command install above on the machine whose agents you want to watch, and use a container when Gateway is only a model endpoint for other machines.
 
 No image is published, so the compose file builds one from a checkout of this repository:
 
@@ -158,15 +157,6 @@ podman compose up -d
 
 Either way the UI is on http://localhost:17000, the SQLite database lives in a named volume that survives `down`, and `conf/app.conf` is mounted from the repository, so the settings it seeds can be edited before the first start without rebuilding the image.
 
-To serve the WAF proxy from a container, turn the reverse proxy on on the **Settings** page and publish its ports too, by adding them next to `17000:17000` in `docker-compose.yml`:
-
-```yaml
-    ports:
-      - "17000:17000"
-      - "8080:80"
-      - "8443:443"
-```
-
 ## Configuration
 
 Everything is optional. Settings are changed on the **Settings** page of the web UI and stored in the database, so nothing has to be edited by hand and nothing has to be restarted. `conf/app.conf`, next to the executable, seeds them on the very first start and explains each one; the one-step install has no file beside it and seeds from the copy baked into the binary instead. Editing the file after that first start does nothing, except for the keys read before the database is open: `httpport`, `driverName`, `dataSourceName`, `dbName` and `redisEndpoint`. The settings people actually change:
@@ -176,8 +166,6 @@ Everything is optional. Settings are changed on the **Settings** page of the web
 | `httpport` | `17000` | Port of the web UI and the REST API |
 | `httpaddr` | `127.0.0.1` | Interface the web UI binds to — see [Serving other machines](#serving-other-machines) |
 | `driverName` / `dataSourceName` | `sqlite` / `./data/casbin-gateway.db` | Where data is stored |
-| `gatewayEnabled` | `false` | Turns the reverse-proxy WAF on |
-| `gatewayHttpPort` / `gatewayHttpsPort` | `80` / `443` | Ports the proxy listens on |
 | `llmRecordMode` | `full` | How much of each relayed LLM request is kept — including the prompt, see [Recording prompts](#recording-prompts) |
 | `apiKeyEncryptionKey` | empty | Encrypts provider API keys at rest (AES-256-GCM) |
 | `casdoorEndpoint` | empty | Switches sign-in over to [Casdoor](https://casdoor.org) SSO |
@@ -191,17 +179,13 @@ Gateway prints what it is actually doing when it starts, so the result can be ch
 | Management UI | http://localhost:17000 (this machine only)          |
 | Settings      | Settings page, seeded from conf/app.conf            |
 | Web UI files  | web/build                                           |
-| Reverse proxy | enabled                                             |
-| Gateway HTTP  | :8080                                               |
-| Gateway HTTPS | :8443                                               |
 | Database      | sqlite, file "./data/casbin-gateway.db" (connected) |
 | Sign-in       | built-in user table, Casdoor is not configured      |
 | Relay auth    | this machine only, no token needed                  |
-| App dir       | ./data/apps                                         |
 +---------------------------------------------------------------------+
 ```
 
-A previous Gateway still holding one of these ports is stopped first, so a restart never waits on it. A port held by anything else stays with that program: Gateway names the process holding it and stops, rather than taking the port or starting half-configured.
+A previous Gateway still holding this port is stopped first, so a restart never waits on it. A port held by anything else stays with that program: Gateway names the process holding it and stops, rather than taking the port or starting half-configured.
 
 ### Recording prompts
 
@@ -221,23 +205,9 @@ Bodies are sanitized before they are stored: anything that looks like a credenti
 
 The cost next to each record uses built-in list prices, which vendors change and resellers do not follow. Point `llmPricingFile` at a JSON file of your own rates to correct them.
 
-### Turning the WAF proxy on
-
-The reverse proxy is off by default, so installing Gateway does not take over ports 80 and 443. To use it:
-
-1. **Advanced → Sites → Add**. Set **Domain** to the hostname clients will use (`test.example.com`), **Host** and **Port** to where the traffic goes (`127.0.0.1` and `8000`), and **Mode** to `HTTP` — `HTTPS Only`, the default, redirects plain HTTP away before it reaches the backend.
-2. Flip **Reverse proxy**, the switch at the top of the Sites page. It takes effect at once and is remembered across restarts. Ports 80 and 443 need root on Linux and macOS, so for a first try set the gateway HTTP port to `8080` on the **Settings** page.
-3. Start anything on the backend port, e.g. `python -m http.server 8000`, then ask for the site by `Host` header — the gateway routes on it, so no DNS or `hosts` entry is needed:
-
-```bash
-curl -H "Host: test.example.com" http://127.0.0.1:8080/
-```
-
-You should get your backend's response. A `site not found for host` reply means the request reached Gateway but no site matches that `Host` value.
-
 ### Connecting Casdoor
 
-[Casdoor](https://casdoor.org) is optional and takes over member management. Create an organization and an application for Gateway in a Casdoor instance, then fill in the five fields of **Settings → Sign-in**. Sign-in redirects to Casdoor as soon as `casdoorEndpoint` is set, which also enables [OAuth logins](https://casdoor.org/docs/provider/oauth/overview), health-check alerts, the `CAPTCHA` rule action, per-site SSO and cloud file storage.
+[Casdoor](https://casdoor.org) is optional and takes over member management. Create an organization and an application for Gateway in a Casdoor instance, then fill in the five fields of **Settings → Sign-in**. Sign-in redirects to Casdoor as soon as `casdoorEndpoint` is set, which also enables [OAuth logins](https://casdoor.org/docs/provider/oauth/overview).
 
 ## Development
 
@@ -279,7 +249,7 @@ dbName = casbin_gateway
 
 ### Building a single binary
 
-Gateway normally reads three things from disk: `conf/app.conf`, the compiled UI in `web/build`, and the IP location database `ip/17monipdb.dat`. The `embed` build tag bakes all three into the executable, which is what the install scripts ship:
+Gateway normally reads two things from disk: `conf/app.conf` and the compiled UI in `web/build`. The `embed` build tag bakes both into the executable, which is what the install scripts ship:
 
 ```bash
 cd web && yarn install && yarn build
@@ -297,13 +267,12 @@ Files on disk always win over the embedded copies, so a single binary can still 
 | --- | --- |
 | `conf/app.conf` | `conf/app.conf` in the working directory, or next to the executable |
 | `web/build` | `web/build/index.html` in the working directory, which then serves the whole UI |
-| `ip/17monipdb.dat` | `ip/17monipdb.dat` in the working directory |
 
 The startup summary reports which source each one came from.
 
 ### Where the data goes
 
-Being self-contained is about startup, not about staying read-only. A running Gateway writes `./data` (the SQLite database, deployed apps, agent patch state), `./logs` and `./tmp` relative to its working directory — which is why the installed `casbin-gateway` command is a wrapper that always starts it in its install directory. Running the executable directly from somewhere else gives you a second, empty installation there.
+Being self-contained is about startup, not about staying read-only. A running Gateway writes `./data` (the SQLite database and agent patch state), `./logs` and `./tmp` relative to its working directory — which is why the installed `casbin-gateway` command is a wrapper that always starts it in its install directory. Running the executable directly from somewhere else gives you a second, empty installation there.
 
 ## Architecture
 

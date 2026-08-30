@@ -1,5 +1,5 @@
 <h1 align="center" style="border-bottom: none;">📦⚡️ Casbin Gateway</h1>
-<h3 align="center">一个开源网关，管理你机器上的 AI 编程 Agent 与 Web 流量，由 Go 和 React 开发。</h3>
+<h3 align="center">一个开源网关，管理你机器上的 AI 编程 Agent，由 Go 和 React 开发。</h3>
 <p align="center">
   <a href="https://github.com/apache/casbin-gateway/actions/workflows/golangci-lint.yml">
     <img alt="Lint" src="https://github.com/apache/casbin-gateway/actions/workflows/golangci-lint.yml/badge.svg">
@@ -87,7 +87,6 @@ Gateway 会在自己的窗口里打开 —— 不用登录：它只服务本机�
 | **Skills, MCP & Prompts** | 所有 Agent 的所有技能、MCP 服务器和提示词文件汇总在一张表里。可以给一个或多个 Agent 添加 MCP 服务器，编辑某个 Agent 每次会话前读到的提示词，也可以打开、删除，或复制到另一个 Agent。 | 无 |
 | **Providers** | 挡在模型厂商前面的统一入口。API Key 由 Gateway 持有，Agent 拿不到；也可以转发 Agent 自己的登录，什么都不持有。 | 一个厂商的 API Key，或者什么都不用 |
 | **LLM Records** | Agent 转发的每一次请求：完整的 system prompt、每一条消息和工具调用、模型可用的每个工具的 schema，以及 token 数和费用。 | 一个 Provider，以及 `llmRecordMode` —— 见[记录提示词](#记录提示词) |
-| **Advanced → Sites** | 反向代理 WAF：按站点的路由、规则、证书和统计。 | 打开代理 —— 见[开启 WAF 反向代理](#开启-waf-反向代理) |
 
 Agent 是通过读取 **Gateway 所在机器**的用户账户、home 目录和安装路径发现的，所以要在你想观察的那台机器上运行它。
 
@@ -138,9 +137,9 @@ Gateway 默认只监听 `127.0.0.1`，因为有两样东西对能连上这个端
 
 ### 在 Docker 或 Podman 里运行
 
-**容器看不到你机器上的 Agent。** Agent 是靠读取 Gateway 所在机器的用户主目录和安装路径发现的，而在容器里那是容器自己的文件系统。所以 **Agents**、**Skills, MCP & Prompts** 和 Agent 监控在容器里一直是空的，页面会直接说明这一点，而不是让人以为什么都没装。不依赖宿主机的部分照常可用：**Providers**、**LLM Records** 和 WAF 反向代理。
+**容器看不到你机器上的 Agent。** Agent 是靠读取 Gateway 所在机器的用户主目录和安装路径发现的，而在容器里那是容器自己的文件系统。所以 **Agents**、**Skills, MCP & Prompts** 和 Agent 监控在容器里一直是空的，页面会直接说明这一点，而不是让人以为什么都没装。不依赖宿主机的部分照常可用：**Providers** 和 **LLM Records**。
 
-因此，想监控哪台机器上的 Agent，就在那台机器上跑上面的一键安装；只把 Gateway 当作模型入口或别的机器的反向代理时，才用容器部署。
+因此，想监控哪台机器上的 Agent，就在那台机器上跑上面的一键安装；只把 Gateway 当作别的机器的模型入口时，才用容器部署。
 
 我们没有发布镜像，compose 文件会用本仓库的源码构建一个，所以先把仓库 clone 下来，在仓库根目录执行：
 
@@ -156,15 +155,6 @@ podman compose up -d
 
 两种方式下管理界面都在 http://localhost:17000，SQLite 数据库存在一个命名卷里，`down` 之后依然保留；`conf/app.conf` 从仓库挂载进去，首次启动前可以先改它播下的那份初始配置，不用重新构建镜像。
 
-想在容器里用 WAF 反向代理，在 **设置** 页面里打开反向代理，并在 `docker-compose.yml` 里 `17000:17000` 旁边补上它的端口：
-
-```yaml
-    ports:
-      - "17000:17000"
-      - "8080:80"
-      - "8443:443"
-```
-
 ## 配置
 
 所有配置都是可选的。设置在 Web UI 的 **设置** 页面里修改，保存在数据库中，既不用手工改文件，也不用重启。可执行文件旁边的 `conf/app.conf` 只在第一次启动时播下这些值，每一项在文件里都有说明；一步安装装出来的单个可执行文件旁边没有这个文件，播的是编进二进制里的那一份。第一次启动之后再改这个文件不会有任何效果，只有在数据库打开之前就要读的那几项例外：`httpport`、`driverName`、`dataSourceName`、`dbName` 和 `redisEndpoint`。真正常被改动的是这些：
@@ -174,8 +164,6 @@ podman compose up -d
 | `httpport` | `17000` | Web UI 和 REST API 的端口 |
 | `httpaddr` | `127.0.0.1` | Web UI 监听的网卡 —— 见[让其他机器也能访问](#让其他机器也能访问) |
 | `driverName` / `dataSourceName` | `sqlite` / `./data/casbin-gateway.db` | 数据存放位置 |
-| `gatewayEnabled` | `false` | 打开反向代理 WAF |
-| `gatewayHttpPort` / `gatewayHttpsPort` | `80` / `443` | 代理监听的端口 |
 | `llmRecordMode` | `full` | 每次转发的 LLM 请求保留多少内容 —— 包含提示词正文，见[记录提示词](#记录提示词) |
 | `apiKeyEncryptionKey` | 空 | 加密存储 Provider 的 API Key（AES-256-GCM） |
 | `casdoorEndpoint` | 空 | 把登录切换到 [Casdoor](https://casdoor.org) SSO |
@@ -189,17 +177,13 @@ Gateway 启动时会打印它实际在做什么，所以可以直接看结果而
 | Management UI | http://localhost:17000 (this machine only)          |
 | Settings      | Settings page, seeded from conf/app.conf            |
 | Web UI files  | web/build                                           |
-| Reverse proxy | enabled                                             |
-| Gateway HTTP  | :8080                                               |
-| Gateway HTTPS | :8443                                               |
 | Database      | sqlite, file "./data/casbin-gateway.db" (connected) |
 | Sign-in       | built-in user table, Casdoor is not configured      |
 | Relay auth    | this machine only, no token needed                  |
-| App dir       | ./data/apps                                         |
 +---------------------------------------------------------------------+
 ```
 
-还占着这些端口的上一个 Gateway 会先被停掉，所以重启不用等它。被别的程序占着的端口则留给它：Gateway 会指出是哪个进程占着并停止启动，而不是抢过端口，也不会半配置地跑起来。
+还占着这个端口的上一个 Gateway 会先被停掉，所以重启不用等它。被别的程序占着的端口则留给它：Gateway 会指出是哪个进程占着并停止启动，而不是抢过端口，也不会半配置地跑起来。
 
 ### 记录提示词
 
@@ -219,23 +203,9 @@ llmRecordMaxPayloadBytes = 1048576
 
 每条记录旁边的费用用的是内置的官方标价，而厂商会调价、经销商也不按它来。把 `llmPricingFile` 指向你自己的费率 JSON 文件即可修正。
 
-### 开启 WAF 反向代理
-
-反向代理默认关闭，所以安装 Gateway 不会占用 80 和 443 端口。要使用它：
-
-1. **Advanced → Sites → Add**。**Domain** 填客户端会使用的主机名（`test.example.com`），**Host** 和 **Port** 填流量的去向（`127.0.0.1` 和 `8000`），**Mode** 选 `HTTP` —— 默认的 `HTTPS Only` 会在请求到达后端之前把明文 HTTP 重定向走。
-2. 打开 Sites 页面顶部的 **反向代理** 开关。它立即生效，重启后依然保持。Linux 和 macOS 上 80/443 端口需要 root，所以第一次尝试可以在 **设置** 页面里把网关 HTTP 端口改成 `8080`。
-3. 在后端端口上起点什么，例如 `python -m http.server 8000`，然后用 `Host` 头请求这个站点 —— 网关就是按它路由的，所以不需要 DNS 或 `hosts` 记录：
-
-```bash
-curl -H "Host: test.example.com" http://127.0.0.1:8080/
-```
-
-你应该会拿到后端的响应。返回 `site not found for host` 说明请求到达了 Gateway，但没有站点匹配这个 `Host` 值。
-
 ### 接入 Casdoor
 
-[Casdoor](https://casdoor.org) 是可选的，接管成员管理。在一个 Casdoor 实例里为 Gateway 创建组织和应用，然后在 **设置 → 登录** 里填好那五项。只要设置了 `casdoorEndpoint`，登录就会跳转到 Casdoor，同时还会启用 [OAuth 登录](https://casdoor.org/docs/provider/oauth/overview)、健康检查告警、`CAPTCHA` 规则动作、按站点的 SSO 以及云端文件存储。
+[Casdoor](https://casdoor.org) 是可选的，接管成员管理。在一个 Casdoor 实例里为 Gateway 创建组织和应用，然后在 **设置 → 登录** 里填好那五项。只要设置了 `casdoorEndpoint`，登录就会跳转到 Casdoor，同时还会启用 [OAuth 登录](https://casdoor.org/docs/provider/oauth/overview)。
 
 ## 开发
 
@@ -277,7 +247,7 @@ dbName = casbin_gateway
 
 ### 构建单文件二进制
 
-Gateway 平时会从磁盘读三样东西：`conf/app.conf`、`web/build` 里编译好的 UI，以及 IP 地理位置库 `ip/17monipdb.dat`。`embed` 构建标签会把这三样都打进可执行文件，安装脚本发布的就是这种产物：
+Gateway 平时会从磁盘读两样东西：`conf/app.conf` 和 `web/build` 里编译好的 UI。`embed` 构建标签会把这两样都打进可执行文件，安装脚本发布的就是这种产物：
 
 ```bash
 cd web && yarn install && yarn build
@@ -295,13 +265,12 @@ go build -tags embed -o casbin-gateway .
 | --- | --- |
 | `conf/app.conf` | 工作目录下、或可执行文件旁边的 `conf/app.conf` |
 | `web/build` | 工作目录下的 `web/build/index.html`，此后整个 UI 都从那里提供 |
-| `ip/17monipdb.dat` | 工作目录下的 `ip/17monipdb.dat` |
 
 启动摘要会报告每一项实际来自哪里。
 
 ### 数据存放位置
 
-自包含说的是启动，不代表运行时只读。运行中的 Gateway 会相对于工作目录写入 `./data`（SQLite 数据库、部署的应用、Agent 的 patch 状态）、`./logs` 和 `./tmp` —— 这也是为什么安装出来的 `casbin-gateway` 命令是一个总在安装目录里启动它的包装脚本。直接在别处运行可执行文件，会在那里得到第二个空的安装。
+自包含说的是启动，不代表运行时只读。运行中的 Gateway 会相对于工作目录写入 `./data`（SQLite 数据库和 Agent 的 patch 状态）、`./logs` 和 `./tmp` —— 这也是为什么安装出来的 `casbin-gateway` 命令是一个总在安装目录里启动它的包装脚本。直接在别处运行可执行文件，会在那里得到第二个空的安装。
 
 ## 架构
 

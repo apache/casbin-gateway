@@ -27,9 +27,6 @@ import (
 	"github.com/beego/beego"
 )
 
-//go:embed waf.conf
-var WafConf string
-
 func init() {
 	ApplyEnvOverrides()
 }
@@ -165,23 +162,6 @@ func IsHttpAddrLoopback() bool {
 // be rotated from the Settings page.
 func GetRelayToken() string {
 	return strings.Trim(GetConfigString("relayToken"), `"' `)
-}
-
-// IsGatewayEnabled reports whether the reverse-proxy gateway should bind the
-// gateway ports. It defaults to false: taking over ports 80 and 443 is opt-in,
-// because those usually belong to something else on the host.
-func IsGatewayEnabled() bool {
-	return strings.EqualFold(strings.Trim(GetConfigString("gatewayEnabled"), `"' `), "true")
-}
-
-// GetGatewayHttpPort is the plain-HTTP port of the reverse-proxy gateway.
-func GetGatewayHttpPort() int {
-	return GetConfigIntDefault("gatewayHttpPort", 80)
-}
-
-// GetGatewayHttpsPort is the HTTPS port of the reverse-proxy gateway.
-func GetGatewayHttpsPort() int {
-	return GetConfigIntDefault("gatewayHttpsPort", 443)
 }
 
 func GetConfigInt64(key string) (int64, error) {

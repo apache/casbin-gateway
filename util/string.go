@@ -41,19 +41,6 @@ func ParseInt(s string) int {
 	return i
 }
 
-func ParseIntWithError(s string) (int, error) {
-	i, err := strconv.Atoi(s)
-	if err != nil {
-		return -1, err
-	}
-
-	if i < 0 {
-		return -1, errors.New("negative version number")
-	}
-
-	return i, nil
-}
-
 func ParseFloat(s string) float64 {
 	f, err := strconv.ParseFloat(s, 64)
 	if err != nil {
@@ -150,28 +137,6 @@ func GenerateToken(length int) string {
 		panic(err)
 	}
 	return token
-}
-
-func GenerateTwoUniqueRandomStrings() (string, string, error) {
-	len1 := 16 + int(big.NewInt(17).Int64())
-	len2 := 16 + int(big.NewInt(17).Int64())
-
-	str1, err := generateRandomString(len1)
-	if err != nil {
-		return "", "", err
-	}
-	str2, err := generateRandomString(len2)
-	if err != nil {
-		return "", "", err
-	}
-
-	for str1 == str2 {
-		str2, err = generateRandomString(len2)
-		if err != nil {
-			return "", "", err
-		}
-	}
-	return str1, str2, nil
 }
 
 func SnakeString(s string) string {

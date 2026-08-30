@@ -26,14 +26,11 @@ import {PasswordInput} from "@/components/shared/password-input";
 import {SimpleSelect} from "@/components/shared/simple-select";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
-import {Switch} from "@/components/ui/switch";
-import {Textarea} from "@/components/ui/textarea";
 import type {Account, Setting as SettingType} from "@/types";
 
 type KeysOfType<T> = {[K in keyof SettingType]: SettingType[K] extends T ? K : never}[keyof SettingType];
 type StringKey = KeysOfType<string>;
 type NumberKey = KeysOfType<number>;
-type BooleanKey = KeysOfType<boolean>;
 
 export default function SettingPage({account}: {account: Account}) {
   const isAdmin = Setting.isAdminUser(account);
@@ -118,14 +115,6 @@ export default function SettingPage({account}: {account: Account}) {
     </Field>
   );
 
-  const switchField = (key: BooleanKey, label: string, hint?: string) => (
-    <Field label={label} hint={hint}>
-      <div className="flex h-9 items-center">
-        <Switch checked={setting[key]} onCheckedChange={value => updateField(key, value)} />
-      </div>
-    </Field>
-  );
-
   return (
     <PageContainer>
       <PageHeader
@@ -137,12 +126,6 @@ export default function SettingPage({account}: {account: Account}) {
           </Button>
         }
       />
-
-      <Section columns={2} title={i18next.t("setting:Reverse proxy")} description={i18next.t("setting:Reverse proxy description")}>
-        {switchField("gatewayEnabled", i18next.t("setting:Enable the reverse proxy"))}
-        {numberField("gatewayHttpPort", i18next.t("setting:Gateway HTTP port"), undefined, 1, 65535)}
-        {numberField("gatewayHttpsPort", i18next.t("setting:Gateway HTTPS port"), undefined, 1, 65535)}
-      </Section>
 
       <Section columns={2} title={i18next.t("setting:LLM records")} description={i18next.t("setting:LLM records description")}>
         <Field label={i18next.t("setting:Record mode")}>
@@ -182,37 +165,8 @@ export default function SettingPage({account}: {account: Account}) {
         {textField("relayToken", i18next.t("setting:Relay token"), i18next.t("setting:Relay token hint"))}
       </Section>
 
-      <Section columns={2} collapsible title={i18next.t("setting:Network and certificates")}>
+      <Section columns={2} collapsible title={i18next.t("setting:Network")}>
         {textField("httpProxy", i18next.t("setting:Outbound SOCKS5 proxy"), i18next.t("setting:Outbound SOCKS5 proxy hint"))}
-        {textField("acmeEmail", i18next.t("setting:ACME email"), i18next.t("setting:ACME email hint"))}
-        <Field label={i18next.t("setting:ACME private key")} htmlFor="setting-acmePrivateKey" className="md:col-span-2">
-          <Textarea
-            id="setting-acmePrivateKey"
-            rows={4}
-            value={setting.acmePrivateKey}
-            onChange={event => updateField("acmePrivateKey", event.target.value)}
-          />
-        </Field>
-      </Section>
-
-      <Section
-        columns={2}
-        collapsible
-        title={i18next.t("setting:Application deployment")}
-        description={i18next.t("setting:Application deployment description")}
-      >
-        {textField("appDir", i18next.t("setting:App dir"))}
-        {textField("language", i18next.t("setting:Deployed app language"))}
-        {textField("appMap", i18next.t("setting:App map"), i18next.t("setting:App map hint"))}
-        {textField("clientIdPrefix", i18next.t("setting:Client ID prefix"))}
-        {textField("clientSecretPrefix", i18next.t("setting:Client secret prefix"))}
-        {textField("dbRegionId", i18next.t("setting:RDS region"))}
-        {textField("dbAccessKeyId", i18next.t("setting:RDS access key ID"))}
-        {secretField("dbAccessKeySecret", i18next.t("setting:RDS access key secret"))}
-        {textField("dbInstanceId", i18next.t("setting:RDS instance"))}
-        {textField("dbHost", i18next.t("setting:Database host"))}
-        {textField("dbUser", i18next.t("setting:Database user"))}
-        {secretField("dbPass", i18next.t("setting:Database password"))}
       </Section>
     </PageContainer>
   );

@@ -18,7 +18,6 @@ import {useTranslation} from "react-i18next";
 import i18next from "i18next";
 
 import * as AccountBackend from "@/backend/AccountBackend";
-import * as MiscBackend from "@/backend/MiscBackend";
 import * as Conf from "@/Conf";
 import * as Setting from "@/Setting";
 import {findGroupOf, selectedKeyOf} from "@/nav";
@@ -35,28 +34,13 @@ import AgentSessionPage from "@/pages/AgentSessionPage";
 import AgentSessionsPage from "@/pages/AgentSessionsPage";
 import AgentsPage from "@/pages/AgentsPage";
 import AuthCallback from "@/pages/AuthCallback";
-import CertEditPage from "@/pages/CertEditPage";
-import CertListPage from "@/pages/CertListPage";
 import HomePage from "@/pages/HomePage";
 import ProviderEditPage from "@/pages/ProviderEditPage";
 import ProviderListPage from "@/pages/ProviderListPage";
 import LlmRecordsPage from "@/pages/LlmRecordsPage";
-import NodeEditPage from "@/pages/NodeEditPage";
-import NodeListPage from "@/pages/NodeListPage";
-import RecordEditPage from "@/pages/RecordEditPage";
-import RecordListPage from "@/pages/RecordListPage";
-import RuleEditPage from "@/pages/RuleEditPage";
-import RuleListPage from "@/pages/RuleListPage";
 import SettingPage from "@/pages/SettingPage";
 import SigninPage from "@/pages/SigninPage";
-import SiteEditPage from "@/pages/SiteEditPage";
-import SiteListPage from "@/pages/SiteListPage";
 import type {Account, ThemeAlgorithm} from "@/types";
-
-// The gateway analytics page is the only one that draws charts, and the
-// charting runtime is by far the largest dependency here, so it is fetched only
-// when that page is opened.
-const DashboardPage = React.lazy(() => import("@/pages/DashboardPage"));
 
 Setting.initCasdoorSdk(Conf.AuthConfig);
 
@@ -67,9 +51,6 @@ export default function App() {
   useTranslation();
   // undefined while the account request is in flight, null when signed out.
   const [account, setAccount] = React.useState<Account | null | undefined>(undefined);
-  // The reverse-proxy pages are hidden until the proxy is on, so this decides
-  // whether the sidebar shows them at all.
-  const [gatewayEnabled, setGatewayEnabled] = React.useState(false);
   const [themeAlgorithm, setThemeAlgorithm] = React.useState<ThemeAlgorithm>(() => {
     const stored = Setting.readThemeAlgorithm();
     // Applied before the first paint so a dark-mode reload never flashes the
@@ -181,15 +162,6 @@ export default function App() {
       .catch(() => getAccount());
   }, [getAccount]);
 
-  React.useEffect(() => {
-    if (!account) {
-      return;
-    }
-    MiscBackend.getGatewayStatus()
-      .then(res => setGatewayEnabled(res.status === "ok" && (res.data?.gatewayEnabled ?? false)))
-      .catch(() => setGatewayEnabled(false));
-  }, [account]);
-
   const signout = () => {
     AccountBackend.signout().then(res => {
       if (res.status === "ok") {
@@ -242,7 +214,6 @@ export default function App() {
           openKeys={openKeys}
           onOpenKeysChange={setOpenKeys}
           isAdmin={Setting.isAdminUser(account)}
-          gatewayEnabled={gatewayEnabled}
           mobileOpen={mobileNavOpen}
           onMobileOpenChange={setMobileNavOpen}
         />
@@ -277,7 +248,7 @@ export default function App() {
                       // The home screen is about the agents on this host, which
                       // only an admin may see, so everyone else lands on the
                       // first page they can actually use.
-                      <Navigate to="/sites" replace />
+                      <Navigate to="/providers" replace />
                     ),
                   )}
                 />
@@ -303,20 +274,7 @@ export default function App() {
                   path="/agent-sessions/:sessionKey"
                   element={requireSignin(user => <AgentSessionPage account={user} />)}
                 />
-                <Route path="/nodes" element={requireSignin(user => <NodeListPage account={user} />)} />
-                <Route path="/nodes/:owner/:nodeName" element={requireSignin(() => <NodeEditPage />)} />
                 <Route path="/settings" element={requireSignin(user => <SettingPage account={user} />)} />
-                <Route path="/sites" element={requireSignin(user => <SiteListPage account={user} />)} />
-                <Route
-                  path="/sites/:owner/:siteName"
-                  element={requireSignin(user => <SiteEditPage account={user} />)}
-                />
-                <Route path="/certs" element={requireSignin(user => <CertListPage account={user} />)} />
-                <Route path="/certs/:owner/:certName" element={requireSignin(() => <CertEditPage />)} />
-                <Route path="/records" element={requireSignin(user => <RecordListPage account={user} />)} />
-                <Route path="/records/:owner/:id" element={requireSignin(() => <RecordEditPage />)} />
-                <Route path="/rules" element={requireSignin(user => <RuleListPage account={user} />)} />
-                <Route path="/rules/:owner/:ruleName" element={requireSignin(() => <RuleEditPage />)} />
                 <Route path="/providers" element={requireSignin(user => <ProviderListPage account={user} />)} />
                 <Route
                   path="/providers/:owner/:providerName"
@@ -326,7 +284,6 @@ export default function App() {
                   path="/llm-records"
                   element={requireSignin(user => <LlmRecordsPage account={user} />)}
                 />
-                <Route path="/proxy-analytics" element={requireSignin(() => <DashboardPage />)} />
               </Routes>
             </React.Suspense>
           </main>
