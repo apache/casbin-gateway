@@ -30,8 +30,10 @@ type Info struct {
 	// CheckError is a failed lookup rather than a failed update: the version in
 	// hand is still worth showing.
 	CheckError string `json:"checkError"`
-	Update     Status `json:"update"`
-	ReleaseUrl string `json:"releaseUrl"`
+	// CheckNetwork means the lookup failed because GitHub could not be reached.
+	CheckNetwork bool   `json:"checkNetwork"`
+	Update       Status `json:"update"`
+	ReleaseUrl   string `json:"releaseUrl"`
 	// InstallCommand is the manual way in, shown when CanUpdate is false.
 	InstallCommand string `json:"installCommand"`
 }
@@ -52,6 +54,7 @@ func Describe(force bool) Info {
 	release, err := LatestRelease(force)
 	if err != nil {
 		info.CheckError = err.Error()
+		info.CheckNetwork = IsNetworkError(err)
 		return info
 	}
 

@@ -31,29 +31,34 @@ import (
 var ProxyHttpClient *http.Client
 
 var (
-	proxyUrlOnce sync.Once
-	proxyUrl     *url.URL
+	proxyLock sync.Mutex
+	proxyRead bool
+	proxyRaw  string
+	proxyUrl  *url.URL
 
 	transportOnce sync.Once
 	transport     *http.Transport
 )
 
 func InitHttpClient() {
-	proxyUrlOnce.Do(initProxyUrl)
+	// Reading the setting here rather than on first use keeps the "proxy
+	// enabled" line in the startup log.
+	currentProxyUrl()
 	ProxyHttpClient = &http.Client{Transport: Transport()}
 }
 
 // Proxy picks the proxy to reach req through. It is meant to be assigned to
 // http.Transport.Proxy, which calls it per request, so the httpProxy setting is
-// read on first use instead of at package initialization: in -tags embed builds
-// the embedded conf/app.conf is only loaded once main's init() runs, after every
-// imported package has already initialized its own variables.
+// read on use instead of at package initialization: in -tags embed builds the
+// embedded conf/app.conf is only loaded once main's init() runs, after every
+// imported package has already initialized its own variables. Reading it per
+// request also means a proxy set on the Settings page applies straight away.
 func Proxy(req *http.Request) (*url.URL, error) {
-	proxyUrlOnce.Do(initProxyUrl)
-	if proxyUrl == nil {
-		return http.ProxyFromEnvironment(req)
+	if parsedUrl := currentProxyUrl(); parsedUrl != nil {
+		return parsedUrl, nil
 	}
-	return proxyUrl, nil
+
+	return http.ProxyFromEnvironment(req)
 }
 
 // Transport returns the shared transport for outbound requests. Sharing one
@@ -66,14 +71,31 @@ func Transport() *http.Transport {
 	return transport
 }
 
-// initProxyUrl parses the httpProxy setting. A bare "host:port" means SOCKS5,
-// which is what the setting has always been taken to mean; "socks5://",
-// "socks5h://", "http://" and "https://" addresses are honoured as written, and
-// may carry credentials.
-func initProxyUrl() {
+// currentProxyUrl parses the httpProxy setting, re-parsing it only when the
+// setting itself has changed.
+func currentProxyUrl() *url.URL {
 	httpProxy := strings.TrimSpace(conf.GetConfigStringUnquoted("httpProxy"))
+
+	proxyLock.Lock()
+	defer proxyLock.Unlock()
+
+	if proxyRead && httpProxy == proxyRaw {
+		return proxyUrl
+	}
+
+	proxyRead = true
+	proxyRaw = httpProxy
+	proxyUrl = parseProxyUrl(httpProxy)
+	return proxyUrl
+}
+
+// parseProxyUrl reads a proxy address. A bare "host:port" means SOCKS5, which
+// is what the setting has always been taken to mean; "socks5://", "socks5h://",
+// "http://" and "https://" addresses are honoured as written, and may carry
+// credentials.
+func parseProxyUrl(httpProxy string) *url.URL {
 	if httpProxy == "" {
-		return
+		return nil
 	}
 
 	if !strings.Contains(httpProxy, "://") {
@@ -83,9 +105,9 @@ func initProxyUrl() {
 	parsedUrl, err := url.Parse(httpProxy)
 	if err != nil || parsedUrl.Host == "" {
 		fmt.Printf("httpProxy is not a valid proxy address, outbound traffic is left unproxied: %s\n", httpProxy)
-		return
+		return nil
 	}
 
-	proxyUrl = parsedUrl
-	fmt.Printf("Proxy enabled for outbound traffic: %s\n", proxyUrl.Redacted())
+	fmt.Printf("Proxy enabled for outbound traffic: %s\n", parsedUrl.Redacted())
+	return parsedUrl
 }

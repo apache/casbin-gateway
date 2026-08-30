@@ -668,6 +668,8 @@ export interface UpdateStatus {
   total: number;
   target: string;
   error: string;
+  /** The failure was reaching GitHub, which a proxy can fix. */
+  network: boolean;
 }
 
 export interface VersionInfo {
@@ -679,6 +681,8 @@ export interface VersionInfo {
   blocked: string;
   /** A failed lookup, which leaves the current version worth showing anyway. */
   checkError: string;
+  /** The lookup failed because GitHub could not be reached. */
+  checkNetwork: boolean;
   update: UpdateStatus;
   releaseUrl: string;
   installCommand: string;

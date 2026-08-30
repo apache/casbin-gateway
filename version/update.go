@@ -55,6 +55,8 @@ type Status struct {
 	Total      int64  `json:"total"`
 	Target     string `json:"target"`
 	Error      string `json:"error"`
+	// Network means the failure was reaching GitHub, which a proxy can fix.
+	Network bool `json:"network"`
 }
 
 // stagingDir holds the download and the unpacked executable. It sits next to
@@ -121,6 +123,7 @@ func fail(err error) {
 
 	status.Stage = StageFailed
 	status.Error = err.Error()
+	status.Network = IsNetworkError(err)
 }
 
 // BlockedReason says why this installation cannot replace its own executable,

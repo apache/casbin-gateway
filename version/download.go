@@ -30,6 +30,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/apache/casbin-gateway/proxy"
 )
 
 // A single connection to the release CDN is throttled, and on some networks
@@ -109,7 +111,7 @@ func download(release *Release, path string) error {
 func newDownloadClient() *http.Client {
 	return &http.Client{
 		Transport: &http.Transport{
-			Proxy:                 http.ProxyFromEnvironment,
+			Proxy:                 proxy.Proxy,
 			DialContext:           (&net.Dialer{Timeout: connectTimeout, KeepAlive: 30 * time.Second}).DialContext,
 			TLSNextProto:          map[string]func(string, *tls.Conn) http.RoundTripper{},
 			TLSHandshakeTimeout:   connectTimeout,

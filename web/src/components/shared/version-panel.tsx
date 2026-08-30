@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import * as React from "react";
+import {Link} from "react-router-dom";
 import {ArrowUpCircle, Check, CircleAlert, Copy, ExternalLink, Loader2, RefreshCw} from "lucide-react";
 import copy from "copy-to-clipboard";
 import i18next from "i18next";
@@ -164,6 +165,8 @@ export function VersionPanel({
   const [phase, setPhase] = React.useState<Phase>("idle");
   const [status, setStatus] = React.useState<UpdateStatus | null>(null);
   const [failure, setFailure] = React.useState("");
+  // A failure that is the network, not the update: a proxy is what fixes it.
+  const [failureNetwork, setFailureNetwork] = React.useState(false);
 
   const load = React.useCallback((refresh: boolean) => {
     setChecking(refresh);
@@ -202,6 +205,7 @@ export function VersionPanel({
           setStatus(res.data);
           if (res.data.stage === "failed") {
             setFailure(res.data.error);
+            setFailureNetwork(res.data.network);
             setPhase("idle");
           } else if (res.data.stage === "restarting") {
             setPhase("waiting");
@@ -236,6 +240,7 @@ export function VersionPanel({
         stopped = true;
         window.clearInterval(timer);
         setFailure(i18next.t("general:The new version did not start, check the Gateway log"));
+        setFailureNetwork(false);
         setPhase("idle");
         return;
       }
@@ -249,6 +254,7 @@ export function VersionPanel({
             stopped = true;
             window.clearInterval(timer);
             setFailure(res.data.error);
+            setFailureNetwork(res.data.network);
             setPhase("idle");
             return;
           }
@@ -271,6 +277,7 @@ export function VersionPanel({
 
   const startUpdate = () => {
     setFailure("");
+    setFailureNetwork(false);
     setStatus(null);
     setPhase("starting");
     MiscBackend.updateGateway()
@@ -393,6 +400,15 @@ export function VersionPanel({
             <p className="text-destructive flex items-start gap-2 text-xs">
               <CircleAlert className="mt-0.5 size-3.5 shrink-0" />
               {failure}
+            </p>
+          ) : null}
+
+          {failureNetwork || (failure === "" && info.checkNetwork) ? (
+            <p className="text-muted-foreground text-xs">
+              {i18next.t("general:GitHub could not be reached, if this machine needs a proxy to reach the internet, set one and try again")}{" "}
+              <Link to="/settings" onClick={() => setOpen(false)} className="text-primary underline underline-offset-2">
+                {i18next.t("general:Set a proxy")}
+              </Link>
             </p>
           ) : null}
 

@@ -15,15 +15,21 @@
 package version
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"regexp"
 	"runtime"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/apache/casbin-gateway/proxy"
 )
 
 const (
@@ -81,7 +87,7 @@ var (
 	cached      *Release
 	cachedErr   error
 	cachedAt    time.Time
-	httpClient  = &http.Client{Timeout: checkTimeout}
+	httpClient  = &http.Client{Timeout: checkTimeout, Transport: proxy.Transport()}
 	reCommitSha = regexp.MustCompile(`\b[0-9a-f]{40}\b`)
 )
 
@@ -151,6 +157,24 @@ func fetchLatestRelease() (*Release, error) {
 	}
 
 	return release, nil
+}
+
+// IsNetworkError reports whether err is this machine failing to reach GitHub
+// rather than the update itself going wrong. Where GitHub is unreachable a
+// proxy is what fixes it, so the web UI says so instead of only quoting the
+// error.
+func IsNetworkError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	var netErr net.Error
+	var urlErr *url.Error
+	if errors.As(err, &netErr) || errors.As(err, &urlErr) {
+		return true
+	}
+
+	return errors.Is(err, context.DeadlineExceeded) || errors.Is(err, io.ErrUnexpectedEOF)
 }
 
 // releaseCommit finds the commit the nightly was built from. The release is
