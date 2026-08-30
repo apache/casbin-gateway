@@ -160,6 +160,7 @@ func agentEndpoint(agentId string) (agentprovider.Endpoint, error) {
 	endpoint.Protocol = object.ProviderProtocol(provider)
 	if len(provider.Models) > 0 {
 		endpoint.Model = provider.Models[0]
+		endpoint.Models = provider.Models
 	}
 
 	if endpoint.Mode == object.ModeDirect {

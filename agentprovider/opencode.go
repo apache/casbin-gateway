@@ -203,6 +203,10 @@ func (opencodeWriter) check(endpoint Endpoint) error {
 // catalog for a provider it does not know, so the entry carries the whole of
 // it: the SDK package, the endpoint, the key and the models.
 func (opencodeWriter) provider(endpoint Endpoint) map[string]any {
+	models := map[string]any{}
+	for _, model := range endpoint.catalog() {
+		models[model] = map[string]any{"name": model}
+	}
 	return map[string]any{
 		"name": "Casbin Gateway",
 		"npm":  opencodeNpm,
@@ -210,7 +214,7 @@ func (opencodeWriter) provider(endpoint Endpoint) map[string]any {
 			"baseURL": endpoint.BaseUrl,
 			"apiKey":  endpoint.ApiKey,
 		},
-		"models": map[string]any{endpoint.Model: map[string]any{"name": endpoint.Model}},
+		"models": models,
 	}
 }
 

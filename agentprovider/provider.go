@@ -52,8 +52,13 @@ type Endpoint struct {
 	Protocol string `json:"protocol"`
 	BaseUrl  string `json:"baseUrl"`
 	ApiKey   string `json:"apiKey"`
-	Model    string `json:"model"`
-	Mode     string `json:"mode"`
+	// Model is the one the agent starts on, the first the provider lists.
+	Model string `json:"model"`
+	// Models is every model the provider serves. An agent whose configuration
+	// carries the catalog itself is written all of them, so its own picker can
+	// switch between them without Gateway writing the file again.
+	Models []string `json:"models"`
+	Mode   string   `json:"mode"`
 	// ServesResponsesApi reports whether BaseUrl answers on the OpenAI Responses
 	// API, which is all Codex speaks. The gateway always does, since it
 	// translates; a provider's own upstream usually stops at chat completions.
@@ -308,6 +313,22 @@ func writerFor(target Target, endpoint Endpoint) (writer, error) {
 func pointsAtGateway(value writer, target Target) bool {
 	current, err := value.Current(target)
 	return err == nil && strings.Contains(current, "/v1/agents/")
+}
+
+// catalog is the models to write into an agent that carries its own list. The
+// bound default comes first, and a duplicate is dropped so the agent's picker
+// does not show one twice.
+func (endpoint Endpoint) catalog() []string {
+	models := []string{}
+	seen := map[string]bool{}
+	for _, model := range append([]string{endpoint.Model}, endpoint.Models...) {
+		if model == "" || seen[model] {
+			continue
+		}
+		seen[model] = true
+		models = append(models, model)
+	}
+	return models
 }
 
 func emptyAs(value string, fallback string) string {

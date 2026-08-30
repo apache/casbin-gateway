@@ -284,12 +284,16 @@ func (dshWriter) check(endpoint Endpoint) error {
 // route is the llm-pi-ai profile Gateway writes. dsh ships no catalog for this
 // route, so the profile carries the whole provider: protocol, endpoint, models.
 func (dshWriter) route(endpoint Endpoint) dshRouteConfig {
+	models := []dshRouteModel{}
+	for _, model := range endpoint.catalog() {
+		models = append(models, dshRouteModel{Id: model})
+	}
 	return dshRouteConfig{
 		DisplayName: "Casbin Gateway",
 		ApiKeyEnv:   dshCredentialRef,
 		Api:         dshProtocol,
 		BaseURL:     endpoint.BaseUrl,
-		Models:      []dshRouteModel{{Id: endpoint.Model}},
+		Models:      models,
 	}
 }
 
