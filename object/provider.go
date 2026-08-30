@@ -779,11 +779,18 @@ func probeDetail(body []byte) string {
 	return ": " + text
 }
 
-// GetProvidersByModel returns every enabled provider that supports the given
-// model name, ordered by priority (ascending, so the lowest value comes first)
-// so that the caller can fail over from one provider to the next. It queries all
-// providers globally (no owner filter) because /v1/chat/completions is an
-// unauthenticated public endpoint.
+// GetProvidersByModel returns the enabled providers a request naming this model
+// is forwarded to, ordered by priority (ascending, so the lowest value comes
+// first) so that the caller can fail over from one provider to the next. It
+// queries all providers globally (no owner filter) because /v1/chat/completions
+// is an unauthenticated public endpoint.
+//
+// A model no provider names falls back to every enabled provider, which is then
+// sent a model it does serve, see ProviderModel(). An Anthropic client asks for
+// model names of its own whatever it is configured with - claude-haiku-4-5 for
+// its background work, and whichever built-in it probes availability with - so
+// rejecting them leaves the client unable to talk to any third-party provider
+// at all.
 func GetProvidersByModel(model string) ([]*Provider, error) {
 	providers := []*Provider{}
 	err := ormer.Engine.Where("status = ?", "enabled").Asc("priority").Find(&providers)
@@ -815,12 +822,45 @@ func GetProvidersByModel(model string) ([]*Provider, error) {
 	}
 	matchedProviders = append(matchedProviders, wildcardProviders...)
 
-	decryptProviders(matchedProviders)
-
 	if len(matchedProviders) == 0 {
-		return nil, fmt.Errorf("%w: %s", ErrNoProviderAvailable, model)
+		if len(providers) == 0 {
+			return nil, fmt.Errorf("%w: %s", ErrNoProviderAvailable, model)
+		}
+		matchedProviders = providers
 	}
+
+	decryptProviders(matchedProviders)
 	return matchedProviders, nil
+}
+
+// ListEnabledModels is every model the enabled providers serve, in priority
+// order and without duplicates. It is what the models endpoint answers with, so
+// that a client fills its model picker with what this gateway can actually
+// reach.
+func ListEnabledModels() ([]string, error) {
+	providers := []*Provider{}
+	err := ormer.Engine.Where("status = ?", "enabled").Asc("priority").Find(&providers)
+	if err != nil {
+		return nil, fmt.Errorf("provider query failed: %w", err)
+	}
+	return ModelsOfProviders(providers), nil
+}
+
+// ModelsOfProviders flattens the model lists of providers into one, keeping the
+// order they are tried in.
+func ModelsOfProviders(providers []*Provider) []string {
+	models := []string{}
+	seen := map[string]bool{}
+	for _, provider := range providers {
+		for _, model := range provider.Models {
+			if model == "" || seen[model] {
+				continue
+			}
+			seen[model] = true
+			models = append(models, model)
+		}
+	}
+	return models
 }
 
 // ProviderModel is the model name to send a provider for the model the client
