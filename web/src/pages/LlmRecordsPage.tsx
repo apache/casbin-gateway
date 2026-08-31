@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import * as React from "react";
-import {Activity, CircleDollarSign, Database, Hash, Logs, Play, RefreshCw, Trash2} from "lucide-react";
+import {Activity, CircleDollarSign, Database, Hash, Logs, Play, RefreshCw, Square, Trash2} from "lucide-react";
 import i18next from "i18next";
 
 import * as LlmRecordBackend from "@/backend/LlmRecordBackend";
@@ -23,7 +23,7 @@ import {RequestInspector} from "@/components/llm/request-inspector";
 import {DataTable, type Column} from "@/components/shared/data-table";
 import {ConfirmDialog} from "@/components/shared/confirm-dialog";
 import {Loading} from "@/components/shared/loading";
-import {CodeText, DescriptionList, UnauthorizedResult} from "@/components/shared/misc";
+import {CodeBlock, CodeText, DescriptionList, UnauthorizedResult} from "@/components/shared/misc";
 import {PageContainer, PageHeader} from "@/components/shared/page-header";
 import {SimpleSelect} from "@/components/shared/simple-select";
 import {StatCard} from "@/components/shared/stat-card";
@@ -62,6 +62,56 @@ function tokenBreakdown(record: LlmRecord) {
     `${i18next.t("llm:Cache write")}: ${record.cacheWriteTokens.toLocaleString()}`,
     `${i18next.t("llm:Output")}: ${record.completionTokens.toLocaleString()}`,
   ].join("\n");
+}
+
+function isFailed(record: LlmRecord) {
+  return record.status < 200 || record.status >= 300;
+}
+
+/** The upstream error is stored as it arrived, so JSON is laid out to be read. */
+function formatErrorBody(body: string) {
+  try {
+    return JSON.stringify(JSON.parse(body), null, 2);
+  } catch {
+    return body;
+  }
+}
+
+/** What went wrong, which is the part a status code on its own never says. A
+ *  request that failed over and then succeeded still lists what it failed over
+ *  from. */
+function RecordFailure({record, errorBody}: {record: LlmRecord; errorBody: string}) {
+  return (
+    <div className="flex flex-col gap-2">
+      {isFailed(record) || record.error ? (
+        <MessageAlert
+          variant="destructive"
+          title={i18next.t("llm:Request failed")}
+          description={record.error || i18next.t("llm:No error message")}
+        />
+      ) : null}
+      {record.failures?.length ? (
+        <div className="flex flex-col gap-1">
+          <span className="text-muted-foreground text-xs">{i18next.t("llm:Providers tried first")}</span>
+          {record.failures.map((failure, index) => (
+            <div key={index} className="flex min-w-0 flex-wrap items-center gap-2 text-xs">
+              <Badge variant={statusVariant(failure.status)}>{failure.status || i18next.t("llm:No response")}</Badge>
+              <CodeText>{failure.provider}</CodeText>
+              <span className="text-muted-foreground min-w-0 break-all">{failure.error}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {errorBody ? (
+        <div className="flex flex-col gap-1">
+          <span className="text-muted-foreground text-xs">{i18next.t("llm:Upstream response")}</span>
+          <CodeBlock copyable maxHeight="16rem">
+            {formatErrorBody(errorBody)}
+          </CodeBlock>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 /** Mounted only once a row is expanded, which is when the body is fetched. */
@@ -120,9 +170,12 @@ function RecordDetail({record, onDelete}: {record: LlmRecord; onDelete: () => vo
           },
           {label: i18next.t("llm:Request size"), value: `${record.bytes.toLocaleString()} B`},
           {label: i18next.t("llm:Redacted values"), value: record.redactions},
-          record.error && {label: i18next.t("llm:Error"), value: record.error},
         ]}
       />
+
+      {isFailed(record) || record.error || record.failures?.length ? (
+        <RecordFailure record={record} errorBody={detail?.errorBody ?? ""} />
+      ) : null}
 
       {error ? <MessageAlert title={error} /> : null}
       {record.truncated ? <MessageAlert variant="warning" title={i18next.t("llm:Body was shortened")} /> : null}
@@ -442,7 +495,11 @@ export default function LlmRecordsPage({account}: {account: Account}) {
           <span className="truncate text-xs" title={record.summary || record.error}>
             {record.summary || record.error}
           </span>
-          {record.messageCount > 0 || record.toolCount > 0 ? (
+          {record.summary && record.error ? (
+            <span className="text-destructive truncate text-xs" title={record.error}>
+              {record.error}
+            </span>
+          ) : record.messageCount > 0 || record.toolCount > 0 ? (
             <span className="text-muted-foreground truncate text-xs">
               {record.messageCount} {i18next.t("llm:messages")} · {record.toolCount} {i18next.t("llm:tools")}
               {record.systemBytes > 0
@@ -457,6 +514,13 @@ export default function LlmRecordsPage({account}: {account: Account}) {
 
   const modeOff = status !== null && status.mode === "off";
   const modeMetadata = status !== null && status.mode === "metadata";
+  const modeFull = status !== null && status.mode === "full";
+  const stopRecording = (
+    <Button size="sm" variant="outline" onClick={() => setRecordMode("off")} loading={changingMode}>
+      <Square />
+      {i18next.t("llm:Recording off")}
+    </Button>
+  );
   const description = status
     ? i18next
       .t("llm:Mode {mode}, kept for {days} days, up to {max} records")
@@ -543,14 +607,33 @@ export default function LlmRecordsPage({account}: {account: Account}) {
       ) : null}
       {modeMetadata ? (
         <MessageAlert
-          variant="info"
+          variant="warning"
           title={i18next.t("llm:Bodies are not stored")}
           description={i18next.t("llm:Bodies are not stored detail")}
           action={
-            <Button size="sm" variant="outline" onClick={() => setRecordMode("full")} loading={changingMode}>
-              <Play />
-              {i18next.t("llm:Record metadata and bodies")}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => setRecordMode("full")} loading={changingMode}>
+                <Play />
+                {i18next.t("llm:Record metadata and bodies")}
+              </Button>
+              {stopRecording}
+            </div>
+          }
+        />
+      ) : null}
+      {modeFull ? (
+        <MessageAlert
+          variant="warning"
+          title={i18next.t("llm:Bodies are stored")}
+          description={i18next.t("llm:Bodies are stored detail")}
+          action={
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => setRecordMode("metadata")} loading={changingMode}>
+                <Logs />
+                {i18next.t("llm:Record metadata")}
+              </Button>
+              {stopRecording}
+            </div>
           }
         />
       ) : null}

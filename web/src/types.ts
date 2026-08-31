@@ -238,6 +238,12 @@ export interface AgentTranscript {
   truncated?: boolean;
 }
 
+export interface LlmFailure {
+  provider: string;
+  status: number;
+  error: string;
+}
+
 export interface LlmRecord {
   id: number;
   createdTime: string;
@@ -252,6 +258,10 @@ export interface LlmRecord {
   durationMs: number;
   attempts: number;
   error: string;
+  /** What the upstream answered a failed request with. Only returned by getLlmRecord. */
+  errorBody: string;
+  /** The attempts the provider chain failed over from, oldest first. */
+  failures: LlmFailure[];
   /** Input billed as fresh: the cached part is counted separately. */
   promptTokens: number;
   completionTokens: number;

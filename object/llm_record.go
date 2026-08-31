@@ -38,6 +38,14 @@ const llmOversizeFactor = 4
 // message and tool stays visible where dropping the body would keep none.
 var llmStringCaps = []int{16384, 4096, 1024, 256}
 
+// LlmFailure is one provider attempt that did not answer, kept on the record of
+// the request it was made for.
+type LlmFailure struct {
+	Provider string `json:"provider"`
+	Status   int    `json:"status"`
+	Error    string `json:"error"`
+}
+
 // LlmRecord is one client request relayed by the LLM proxy, together with the
 // outcome it ended in. Payload is filled only in "full" mode, and only after
 // auditutil has removed the credentials the body may carry.
@@ -57,6 +65,13 @@ type LlmRecord struct {
 	DurationMs int64  `xorm:"bigint" json:"durationMs"`
 	Attempts   int    `xorm:"int" json:"attempts"`
 	Error      string `xorm:"varchar(500)" json:"error"`
+
+	// ErrorBody is what the upstream itself answered with, which is where the
+	// reason for a failure normally is: the status code alone rarely says.
+	ErrorBody string `xorm:"mediumtext" json:"errorBody"`
+	// Failures are the attempts the chain failed over from, so a record shows
+	// which providers were tried and why each of them did not answer.
+	Failures []LlmFailure `xorm:"mediumtext" json:"failures"`
 
 	// PromptTokens counts only the input billed as fresh: the cached part is
 	// reported separately, so the counters can be added up without counting a
@@ -524,7 +539,7 @@ func GetLlmRecords(filter LlmRecordFilter, offset int, limit int) ([]*LlmRecord,
 	session := llmRecordSession(filter)
 	defer session.Close()
 	records := []*LlmRecord{}
-	err = session.Omit("payload").Desc("id").Limit(limit, offset).Find(&records)
+	err = session.Omit("payload", "error_body").Desc("id").Limit(limit, offset).Find(&records)
 	return records, count, err
 }
 
@@ -734,6 +749,7 @@ func publishLlmRecord(record *LlmRecord) {
 	}
 	summary := *record
 	summary.Payload = ""
+	summary.ErrorBody = ""
 	for _, feed := range llmHub.subscribers {
 		select {
 		case feed <- &summary:

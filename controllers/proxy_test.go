@@ -73,12 +73,12 @@ func TestIsEventStream(t *testing.T) {
 }
 
 func TestIsRetryableStatus(t *testing.T) {
-	for _, statusCode := range []int{429, 500, 502, 503} {
+	for _, statusCode := range []int{401, 402, 403, 404, 429, 500, 502, 503} {
 		if !isRetryableStatus(statusCode) {
 			t.Errorf("status %d should be retryable", statusCode)
 		}
 	}
-	for _, statusCode := range []int{200, 400, 401, 404} {
+	for _, statusCode := range []int{200, 400, 422} {
 		if isRetryableStatus(statusCode) {
 			t.Errorf("status %d should not be retryable", statusCode)
 		}
@@ -268,7 +268,7 @@ func TestForwardToProvider(t *testing.T) {
 	if written {
 		t.Fatal("a retryable status was relayed instead of failing over")
 	}
-	if statusCode != http.StatusBadGateway || !strings.Contains(message, "503") {
+	if statusCode != http.StatusServiceUnavailable || !strings.Contains(message, "overloaded") {
 		t.Errorf("statusCode = %d, message = %s", statusCode, message)
 	}
 	if recorder.Body.Len() != 0 {

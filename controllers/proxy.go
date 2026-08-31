@@ -390,6 +390,7 @@ func (c *ApiController) forwardToProviders(providers []*object.Provider, route *
 		if written {
 			return
 		}
+		route.recordFailure(provider.GetId(), status, message)
 		lastStatus, lastMessage = status, message
 	}
 
@@ -473,9 +474,14 @@ func (c *ApiController) forwardToProvider(provider *object.Provider, route *prox
 
 	if !isLast && isRetryableStatus(upstreamResp.StatusCode) {
 		beego.Error("provider", provider.GetId(), "returned a retryable status:", upstreamResp.Status)
-		// Drain a bounded amount so the connection can be pooled and reused.
-		_, _ = io.Copy(io.Discard, io.LimitReader(upstreamResp.Body, 4096))
-		return http.StatusBadGateway, fmt.Sprintf("upstream returned %s", upstreamResp.Status), false
+		// Read a bounded amount rather than discarding it: the connection can
+		// still be pooled, and the reason this provider was skipped is in there.
+		skipped, _ := io.ReadAll(io.LimitReader(upstreamResp.Body, maxErrorBodyBytes))
+		message := fmt.Sprintf("upstream returned %s", upstreamResp.Status)
+		if _, detail := protocol.ReadError(skipped, ""); detail != "" {
+			message += ": " + detail
+		}
+		return upstreamResp.StatusCode, message, false
 	}
 
 	// Abort the request when the upstream goes silent, rather than capping the
@@ -490,10 +496,15 @@ func (c *ApiController) forwardToProvider(provider *object.Provider, route *prox
 	}
 
 	// The tap reads the counters out of the upstream answer as it passes, so it
-	// sees them in the provider's own spelling, translated or not.
+	// sees them in the provider's own spelling, translated or not. On a failure
+	// the same bytes are the error the client was handed.
 	tap := &usageTap{reader: body}
 	c.relayResponse(route, upstream, upstreamResp, tap)
-	route.recordUsage(tap.tail)
+	if isSuccessStatus(upstreamResp.StatusCode) {
+		route.recordUsage(tap.tail)
+	} else {
+		route.recordErrorBody(tap.tail)
+	}
 	return 0, "", true
 }
 
@@ -514,20 +525,16 @@ func (c *ApiController) answerCountTokens(route *proxyRoute) (int, string, bool)
 	return 0, "", true
 }
 
-// reportProviderStatus feeds the breaker that decides in which order providers are
-// tried. A status the upstream itself rejected the request with counts as a
-// provider failure: a wrong key or an exhausted quota is not something the next
-// request will do better.
+// reportProviderStatus feeds the breaker that decides in which order providers
+// are tried. Every status worth failing over from counts as a provider failure:
+// a wrong key or an exhausted quota is not something the next request will do
+// better.
 func reportProviderStatus(provider *object.Provider, statusCode int) {
-	switch {
-	case isRetryableStatus(statusCode):
-		object.ReportProviderFailure(provider.GetId(), fmt.Sprintf("upstream returned %d", statusCode))
-	case statusCode == http.StatusUnauthorized || statusCode == http.StatusForbidden ||
-		statusCode == http.StatusPaymentRequired:
-		object.ReportProviderFailure(provider.GetId(), fmt.Sprintf("upstream rejected the credentials with %d", statusCode))
-	default:
+	if !isRetryableStatus(statusCode) {
 		object.ReportProviderSuccess(provider.GetId())
+		return
 	}
+	object.ReportProviderFailure(provider.GetId(), fmt.Sprintf("upstream returned %d", statusCode))
 }
 
 // allowRelay decides whether a request may use the providers stored here. A
@@ -782,10 +789,17 @@ func isSuccessStatus(statusCode int) bool {
 }
 
 // isRetryableStatus reports whether another provider is worth trying. A rate
-// limit or an upstream-side error is transient or specific to that provider,
-// while a 4xx caused by the request itself would fail the same way everywhere.
+// limit, an upstream-side error, a credential this provider rejected, a quota it
+// has run out of and a model it does not serve are all specific to that
+// provider, while a 4xx caused by the request itself would fail the same way
+// everywhere.
 func isRetryableStatus(statusCode int) bool {
-	return statusCode == http.StatusTooManyRequests || statusCode >= 500
+	switch statusCode {
+	case http.StatusUnauthorized, http.StatusPaymentRequired, http.StatusForbidden,
+		http.StatusNotFound, http.StatusRequestTimeout, http.StatusTooManyRequests:
+		return true
+	}
+	return statusCode >= 500
 }
 
 // providerUnusableReason reports why the proxy cannot forward to a provider, or

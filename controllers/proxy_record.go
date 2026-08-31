@@ -20,12 +20,21 @@ import (
 	"io"
 	"time"
 
+	"github.com/apache/casbin-gateway/auditutil"
 	"github.com/apache/casbin-gateway/object"
+	"github.com/apache/casbin-gateway/protocol"
 )
 
 // usageTailBytes is how much of the end of a response is kept to read the token
 // usage out of. Both APIs report it last, so the tail is enough.
 const usageTailBytes = 16 * 1024
+
+// llmErrorBodyBytes bounds the upstream failure kept on a record, and
+// llmErrorMessageBytes the one-line reason shown beside it.
+const (
+	llmErrorBodyBytes    = 8 * 1024
+	llmErrorMessageBytes = 500
+)
 
 // finishLlmRecord queues the record of one relayed request. Every path out of
 // forwardToProviders ends the client request, so this is the only place it is
@@ -54,7 +63,35 @@ func (route *proxyRoute) recordOutcome(status int, message string) {
 		return
 	}
 	route.record.Status = status
-	route.record.Error = message
+	route.record.Error = auditutil.BoundString(message, llmErrorMessageBytes)
+}
+
+// recordErrorBody keeps what the upstream answered a failed request with. It is
+// the only place the record learns why a status code was what it was, so it
+// runs whichever mode recording is in.
+func (route *proxyRoute) recordErrorBody(raw []byte) {
+	if route.record == nil || len(raw) == 0 {
+		return
+	}
+
+	route.record.ErrorBody = auditutil.SanitizeJSON(string(raw), llmErrorBodyBytes)
+	if route.record.Error == "" {
+		if _, message := protocol.ReadError(raw, ""); message != "" {
+			route.record.Error = auditutil.BoundString(message, llmErrorMessageBytes)
+		}
+	}
+}
+
+// recordFailure keeps one attempt the chain failed over from.
+func (route *proxyRoute) recordFailure(providerId string, status int, message string) {
+	if route.record == nil {
+		return
+	}
+	route.record.Failures = append(route.record.Failures, object.LlmFailure{
+		Provider: providerId,
+		Status:   status,
+		Error:    auditutil.BoundString(message, llmErrorMessageBytes),
+	})
 }
 
 func (route *proxyRoute) recordUsage(tail []byte) {
