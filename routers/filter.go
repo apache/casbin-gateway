@@ -27,7 +27,10 @@ import (
 
 func TransparentStatic(ctx *context.Context) {
 	urlPath := ctx.Request.URL.Path
-	if strings.HasPrefix(urlPath, "/api/") || strings.HasPrefix(urlPath, "/v1/") {
+	// "/v1beta/" is the Gemini API, which the gateway serves at the root the
+	// same way it serves the others under "/v1/".
+	if strings.HasPrefix(urlPath, "/api/") || strings.HasPrefix(urlPath, "/v1/") ||
+		strings.HasPrefix(urlPath, "/v1beta/") {
 		return
 	}
 

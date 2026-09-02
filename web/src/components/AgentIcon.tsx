@@ -29,6 +29,7 @@ const agentSites: Record<string, string> = {
   opencode: "opencode.ai",
   "opencode Desktop": "opencode.ai",
   "DeepSeek Harness": "deepseek.com",
+  "Gemini CLI": "gemini.google.com",
 };
 
 const agentKey = (agent: unknown) =>

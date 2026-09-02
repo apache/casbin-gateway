@@ -85,6 +85,8 @@ export function agentSetupNoteKey(agentId: string) {
   case "opencode":
   case "opencode-desktop":
     return "agent:opencode config hint";
+  case "gemini-cli":
+    return "agent:Gemini CLI config hint";
   default:
     return "";
   }
@@ -97,6 +99,21 @@ export function agentSetupNoteKey(agentId: string) {
  */
 export function agentNeedsResponsesApi(agentId: string) {
   return agentId.startsWith("codex");
+}
+
+/**
+ * Why an agent can only be routed through the gateway, as the key of the line
+ * that says so. Empty for an agent that can also be bound to a provider
+ * directly.
+ */
+export function agentGatewayOnlyKey(agent: Agent, bound: Provider | undefined) {
+  if (agentProtocol(agent) === "gemini") {
+    return "agent:Gemini gateway only hint";
+  }
+  if (agentNeedsResponsesApi(agent.agentId) && !servesResponsesApi(bound)) {
+    return "agent:Gateway only hint";
+  }
+  return "";
 }
 
 /**

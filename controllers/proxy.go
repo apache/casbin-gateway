@@ -258,6 +258,12 @@ func (c *ApiController) proxyByModel(target proxyTarget) {
 	if !ok {
 		return
 	}
+	c.forwardByModel(route)
+}
+
+// forwardByModel is the rest of that, for an entry point that read its route
+// somewhere other than the request body.
+func (c *ApiController) forwardByModel(route *proxyRoute) {
 	route.source = "model: " + route.model
 	// Every way out of a proxy entry point ends the client request, which is
 	// what a record describes, so this is the only place one is written.
@@ -286,6 +292,12 @@ func (c *ApiController) proxyByAgent(target proxyTarget) {
 	if !ok {
 		return
 	}
+	c.forwardByAgent(route)
+}
+
+// forwardByAgent is the rest of that, for an entry point that read its route
+// somewhere other than the request body.
+func (c *ApiController) forwardByAgent(route *proxyRoute) {
 	agentId := c.Ctx.Input.Param(":agentId")
 	route.source = "agent: " + agentId
 	if route.record != nil {
@@ -312,36 +324,51 @@ func (c *ApiController) proxyByAgent(target proxyTarget) {
 }
 
 func (c *ApiController) readProxyRoute(target proxyTarget) (*proxyRoute, bool) {
-	codec := protocol.Of(target.protocol)
-	if !c.allowRelay() {
-		c.writeProxyError(codec, http.StatusUnauthorized, "authentication_error",
-			"this relay is reachable from the network, so it needs the token shown next to the provider in Casbin Gateway")
+	if !c.allowRelayFor(target) {
 		return nil, false
 	}
-
-	rawBody := c.Ctx.Input.RequestBody
 
 	var fields routingFields
-	if err := json.Unmarshal(rawBody, &fields); err != nil {
-		c.writeProxyError(codec, http.StatusBadRequest, "invalid_request_error", "invalid request body")
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &fields); err != nil {
+		c.writeProxyError(protocol.Of(target.protocol), http.StatusBadRequest,
+			"invalid_request_error", "invalid request body")
 		return nil, false
 	}
-	if fields.Model == "" {
+	return c.newProxyRoute(target, fields.Model, fields.Stream)
+}
+
+// allowRelayFor answers an off-box caller without the relay token in the format
+// it called in, and reports whether the request may go on.
+func (c *ApiController) allowRelayFor(target proxyTarget) bool {
+	if c.allowRelay() {
+		return true
+	}
+	c.writeProxyError(protocol.Of(target.protocol), http.StatusUnauthorized, "authentication_error",
+		"this relay is reachable from the network, so it needs the token shown next to the provider in Casbin Gateway")
+	return false
+}
+
+// newProxyRoute builds the route the forwarding works off. The model and the
+// stream flag come out of the body for most APIs and out of the URL for Gemini,
+// which names them there.
+func (c *ApiController) newProxyRoute(target proxyTarget, model string, stream bool) (*proxyRoute, bool) {
+	codec := protocol.Of(target.protocol)
+	if model == "" {
 		c.writeProxyError(codec, http.StatusBadRequest, "invalid_request_error", "model is required")
 		return nil, false
 	}
 
 	route := &proxyRoute{
-		target: target, codec: codec, body: rawBody,
-		model: fields.Model, stream: fields.Stream, start: time.Now(),
+		target: target, codec: codec, body: c.Ctx.Input.RequestBody,
+		model: model, stream: stream, start: time.Now(),
 	}
 	if object.IsLlmRecording() {
 		route.record = &object.LlmRecord{
 			Protocol: target.protocol,
 			Endpoint: target.endpoint,
-			Model:    fields.Model,
+			Model:    model,
 			ClientIp: util.GetClientIp(c.Ctx.Request),
-			Stream:   fields.Stream,
+			Stream:   stream,
 		}
 	}
 	return route, true
@@ -516,13 +543,21 @@ func (c *ApiController) answerCountTokens(route *proxyRoute) (int, string, bool)
 		return http.StatusBadRequest, err.Error(), false
 	}
 
-	body, err := json.Marshal(map[string]any{"input_tokens": protocol.EstimateTokens(request)})
+	body, err := json.Marshal(countTokensBody(route.target.protocol, protocol.EstimateTokens(request)))
 	if err != nil {
 		return http.StatusBadGateway, "token count failed", false
 	}
 	route.recordOutcome(http.StatusOK, "")
 	c.writeProxyBody(http.StatusOK, body)
 	return 0, "", true
+}
+
+// countTokensBody is a token count as the client's own API reports one.
+func countTokensBody(name string, tokens int) map[string]any {
+	if name == protocol.Gemini {
+		return map[string]any{"totalTokens": tokens}
+	}
+	return map[string]any{"input_tokens": tokens}
 }
 
 // reportProviderStatus feeds the breaker that decides in which order providers
@@ -558,6 +593,9 @@ func (c *ApiController) relayCredential() string {
 	if key := strings.TrimSpace(header.Get("X-Api-Key")); key != "" {
 		return key
 	}
+	if key := strings.TrimSpace(header.Get("X-Goog-Api-Key")); key != "" {
+		return key
+	}
 
 	authorization := strings.TrimSpace(header.Get("Authorization"))
 	return strings.TrimSpace(strings.TrimPrefix(authorization, "Bearer "))
@@ -571,6 +609,7 @@ func (c *ApiController) relayCredential() string {
 var clientAuthHeaders = []string{
 	"Authorization",
 	"X-Api-Key",
+	"X-Goog-Api-Key",
 	"User-Agent",
 	"X-App",
 	"Openai-Beta",
@@ -583,7 +622,8 @@ var clientAuthHeaders = []string{
 // a client-auth provider could forward.
 func (c *ApiController) hasClientCredentials() bool {
 	header := c.Ctx.Request.Header
-	return header.Get("Authorization") != "" || header.Get("X-Api-Key") != ""
+	return header.Get("Authorization") != "" || header.Get("X-Api-Key") != "" ||
+		header.Get("X-Goog-Api-Key") != ""
 }
 
 func (c *ApiController) copyClientAuthHeaders(dst http.Header, upstream protocol.Upstream) {
@@ -591,6 +631,17 @@ func (c *ApiController) copyClientAuthHeaders(dst http.Header, upstream protocol
 		dst.Del(name)
 		for _, value := range c.Ctx.Request.Header.Values(name) {
 			dst.Add(name, value)
+		}
+	}
+
+	// A Gemini client sends its key in a header no provider reads, so it is
+	// copied into the two the upstreams do.
+	if key := dst.Get("X-Goog-Api-Key"); key != "" {
+		if dst.Get("X-Api-Key") == "" {
+			dst.Set("X-Api-Key", key)
+		}
+		if dst.Get("Authorization") == "" {
+			dst.Set("Authorization", "Bearer "+key)
 		}
 	}
 

@@ -32,6 +32,10 @@ const (
 	// Responses is the OpenAI Responses API, which recent Codex versions speak.
 	// No provider type serves it, so it is a client format only.
 	Responses = "responses"
+	// Gemini is Google's generateContent API, which the Gemini CLI speaks. Like
+	// Responses it is a client format only: a Gemini provider is reached through
+	// its OpenAI-compatible endpoint.
+	Gemini = "gemini"
 )
 
 // Codec is a format a client can call the gateway in: it reads the request and

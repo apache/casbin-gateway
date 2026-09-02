@@ -73,6 +73,8 @@
     "Gateway": "网关",
     "Gateway mode hint": "把 Agent 指向本地代理，切换供应商在下一次请求即生效，无需重启 Agent。",
     "Gateway only hint": "Codex 只会说 OpenAI Responses API。Gateway 会把它翻译成该供应商应答的 chat completions，所以 Codex 无法直连这个供应商。",
+    "Gemini CLI config hint": "Gemini CLI 不从配置文件读取 Base URL：端点是 ~/.gemini/.env 中的 GOOGLE_GEMINI_BASE_URL，旁边是 GEMINI_API_KEY，同时 ~/.gemini/settings.json 中写入 \"security.auth.selectedType\": \"gemini-api-key\"。项目自带的 .env 会被优先读取并覆盖它。",
+    "Gemini gateway only hint": "Gemini CLI 只会说 Google 的 generateContent API，这里没有供应商提供该 API。Gateway 会把它翻译成供应商应答的 API，所以 Gemini CLI 无法直连供应商。",
     "Image": "图片",
     "In use": "使用中",
     "Install": "安装",

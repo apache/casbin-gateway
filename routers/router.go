@@ -110,4 +110,11 @@ func initAPI() {
 	beego.Router("/v1/agents/:agentId/v1/models", &controllers.ApiController{}, "GET:AgentModels")
 	beego.Router("/v1/agents/:agentId/models/:modelId", &controllers.ApiController{}, "GET:AgentModel")
 	beego.Router("/v1/agents/:agentId/v1/models/:modelId", &controllers.ApiController{}, "GET:AgentModel")
+	// The Gemini API, which names the model and the call in the path: the
+	// Google client library appends "/v1beta/models/<model>:<action>" to the
+	// base URL it is given.
+	beego.Router("/v1beta/models", &controllers.ApiController{}, "GET:GeminiModels")
+	beego.Router("/v1beta/models/:model", &controllers.ApiController{}, "GET:GeminiModel;POST:GeminiGenerate")
+	beego.Router("/v1/agents/:agentId/v1beta/models", &controllers.ApiController{}, "GET:AgentGeminiModels")
+	beego.Router("/v1/agents/:agentId/v1beta/models/:model", &controllers.ApiController{}, "GET:AgentGeminiModel;POST:AgentGeminiGenerate")
 }

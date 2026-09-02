@@ -171,6 +171,18 @@ var layouts = map[string]layout{
 	"codex_vscode": codexLayout,
 	"cursor":       cursorLayout,
 	"cursor-agent": cursorLayout,
+	// The Gemini CLI reads the shared ~/.agents skills too, and prefers them
+	// over its own; writes go to its own directory, which is the first user
+	// source.
+	"gemini-cli": {
+		skills: &skillLayout{sources: []skillSource{
+			userSkills(".gemini", "skills"),
+			userSkills(".agents", "skills"),
+			pluginSkills(".gemini", "extensions"),
+		}},
+		mcp:    &mcpLayout{file: under(".gemini", "settings.json"), store: &jsonStore{paths: [][]string{{"mcpServers"}}}},
+		prompt: promptFile("GEMINI.md", ".gemini"),
+	},
 	"windsurf": {
 		mcp: &mcpLayout{
 			file:  under(".codeium", "windsurf", "mcp_config.json"),

@@ -105,7 +105,7 @@ export ANTHROPIC_AUTH_TOKEN="cg-..."
 
 这个 token 是 Gateway 自己的中继令牌，不是厂商的 Key：Agent 没有它就拒绝启动，而 Gateway 会用 Provider 自己的 Key 去认证上游。页面上的片段里已经填好了真实的值。
 
-同一个 base URL 会按 Agent 说的那套 API 应答：OpenAI 客户端走 `/chat/completions`，Anthropic 客户端走 `/v1/messages`，Codex 走 `/responses` —— 它去掉了 chat completions 这套线格式，只剩这一种。Provider 用的是哪套 API 不必与之相同：Gateway 会在这三套之间双向转换，流式回复也一样，所以 Codex 能跑在 DeepSeek、Kimi、Qwen 上，Claude Code 同样能跑在它们上面。如果 Provider 正好就说请求进来的那套 API，就原样转发，一个字节都不改。唯一由 Gateway 自己应答的是 Anthropic 客户端每轮之前问的 token 数：绑定的 Provider 没有对应接口时，由 Gateway 估算。
+同一个 base URL 会按 Agent 说的那套 API 应答：OpenAI 客户端走 `/chat/completions`，Anthropic 客户端走 `/v1/messages`，Codex 走 `/responses` —— 它去掉了 chat completions 这套线格式，只剩这一种，Gemini CLI 走 `/v1beta/models/<model>:generateContent` —— 它只会说 Google 自己那套 API。Provider 用的是哪套 API 不必与之相同：Gateway 会在这四套之间双向转换，流式回复也一样，所以 Codex 能跑在 DeepSeek、Kimi、Qwen 上，Claude Code 同样能跑在它们上面。如果 Provider 正好就说请求进来的那套 API，就原样转发，一个字节都不改。唯一由 Gateway 自己应答的是 Anthropic 和 Gemini 客户端每轮之前问的 token 数：绑定的 Provider 没有对应接口时，由 Gateway 估算。
 
 ### 没有 API Key：沿用 Agent 已有的登录
 

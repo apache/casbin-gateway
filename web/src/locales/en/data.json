@@ -73,6 +73,8 @@
     "Gateway": "Gateway",
     "Gateway mode hint": "The agent is pointed at the local proxy, so switching to another provider takes effect on the next request without restarting the agent.",
     "Gateway only hint": "Codex speaks only the OpenAI Responses API. Gateway serves it by translating to the chat completions this provider answers, so Codex cannot be pointed at it directly.",
+    "Gemini CLI config hint": "The Gemini CLI reads no base URL from a settings file: the endpoint is GOOGLE_GEMINI_BASE_URL in ~/.gemini/.env, with GEMINI_API_KEY beside it and \"security.auth.selectedType\": \"gemini-api-key\" in ~/.gemini/settings.json. A project of its own .env is read first, and that one wins.",
+    "Gemini gateway only hint": "The Gemini CLI speaks only Google's generateContent API, which no provider here serves. Gateway serves it by translating to the API the provider answers, so the CLI cannot be pointed at a provider directly.",
     "Image": "Image",
     "In use": "In use",
     "Install": "Install",

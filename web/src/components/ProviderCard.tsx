@@ -43,7 +43,7 @@ import {
 import {Switch} from "@/components/ui/switch";
 import {
   agentBuiltin,
-  agentNeedsResponsesApi,
+  agentGatewayOnlyKey,
   agentProxyBaseUrl,
   agentSetupNoteKey,
   builtinProvider,
@@ -53,7 +53,6 @@ import {
 import {
   providerIdOf,
   providerProtocol,
-  servesResponsesApi,
   shellForPath,
   usesClientAuth,
 } from "@/lib/providers";
@@ -221,10 +220,12 @@ export function ProviderCard({
     provider => providerIdOf(provider) !== agent.provider && speaksAgentApi(provider),
   );
 
-  // Codex reads nothing but the Responses API, which Gateway serves by
-  // translating it: a provider stopping at chat completions is out of its reach
-  // directly, so the choice is not offered rather than failing on the write.
-  const gatewayOnly = agentNeedsResponsesApi(agent.agentId) && !servesResponsesApi(bound);
+  // An agent whose API no provider here serves is out of reach directly: Codex
+  // reads nothing but the Responses API, the Gemini CLI nothing but Google's.
+  // Gateway serves both by translating, so the choice is not offered rather
+  // than failing on the write.
+  const gatewayOnlyKey = agentGatewayOnlyKey(agent, bound);
+  const gatewayOnly = gatewayOnlyKey !== "";
 
   // Nothing is bound, yet the agent still calls the proxy: it gets an error
   // back on every request until its own configuration is put back.
@@ -333,7 +334,7 @@ export function ProviderCard({
                 {i18next.t("agent:Route through Gateway")}
                 <span className="block text-muted-foreground">
                   {gatewayOnly
-                    ? i18next.t("agent:Gateway only hint")
+                    ? i18next.t(gatewayOnlyKey)
                     : mode === gatewayMode
                       ? i18next.t("agent:Gateway mode hint")
                       : i18next.t("agent:Direct mode hint")}

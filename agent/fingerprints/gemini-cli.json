@@ -1,0 +1,8 @@
+{
+  "id": "gemini-cli",
+  "displayName": "Gemini CLI",
+  "installUrl": "https://google-gemini.github.io/gemini-cli/",
+  "execName": "gemini",
+  "stateDir": "gemini",
+  "npmPackage": "@google/gemini-cli"
+}
