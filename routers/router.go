@@ -95,6 +95,12 @@ func initAPI() {
 	beego.Router("/api/delete-llm-record", &controllers.ApiController{}, "POST:DeleteLlmRecord")
 	beego.Router("/api/clear-llm-records", &controllers.ApiController{}, "POST:ClearLlmRecords")
 
+	beego.Router("/api/get-llm-prices", &controllers.ApiController{}, "GET:GetLlmPrices")
+	beego.Router("/api/update-llm-price", &controllers.ApiController{}, "POST:UpdateLlmPrice")
+	beego.Router("/api/delete-llm-price", &controllers.ApiController{}, "POST:DeleteLlmPrice")
+	beego.Router("/api/search-models-dev-models", &controllers.ApiController{}, "GET:SearchModelsDevModels")
+	beego.Router("/api/sync-models-dev-prices", &controllers.ApiController{}, "POST:SyncModelsDevPrices")
+
 	// The LLM gateway, in every wire format a client speaks. The agent routes
 	// carry the endpoint shapes those clients append to one base URL.
 	beego.Router("/v1/chat/completions", &controllers.ApiController{}, "POST:ChatCompletions")

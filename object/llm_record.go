@@ -592,6 +592,23 @@ func GetLlmRecordStatus() (*LlmRecordStatus, error) {
 	}, nil
 }
 
+// GetSeenLlmModels is every model name the relayed records mention. It is what
+// a pricing sync is pointed at: the catalogue holds thousands of models and
+// only the ones this machine actually ran are worth a row in a table every
+// request is matched against.
+func GetSeenLlmModels() ([]string, error) {
+	models := []string{}
+	if ormer == nil {
+		return models, nil
+	}
+	err := ormer.Engine.Table("llm_record").
+		Distinct("model").
+		Where("model <> ''").
+		Asc("model").
+		Find(&models)
+	return models, err
+}
+
 // GetLlmRecordStats totals the same records GetLlmRecords lists.
 func GetLlmRecordStats(filter LlmRecordFilter, topModels int) (*LlmRecordStats, error) {
 	countSession := llmRecordSession(filter)

@@ -26,6 +26,18 @@ export function formatCost(cost: number) {
   return `$${cost.toFixed(2)}`;
 }
 
+/**
+ * A price, which is US dollars per million tokens. Written with as many digits
+ * as the rate actually has: a cache read can be a fraction of a cent and
+ * rounding it to two places would print every one of them as "$0.00".
+ */
+export function formatRate(rate: number) {
+  if (!Number.isFinite(rate) || rate <= 0) {
+    return "$0";
+  }
+  return `$${Number(rate.toFixed(6))}`;
+}
+
 export function formatTokens(tokens: number) {
   if (tokens < 1000) {
     return String(tokens);

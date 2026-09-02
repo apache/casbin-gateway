@@ -105,10 +105,15 @@ var (
 	pricingLoaded bool
 	pricingKeys   []string
 	llmPrices     map[string]LlmPrice
+	// pricingOrigins says which layer each key in effect came from, which the
+	// Pricing page shows and "Reset" reads to know what it would fall back to.
+	pricingOrigins map[string]string
+	pricingNames   map[string]string
 )
 
-// ReloadLlmPrices re-reads the override file, so changing "llmPricingFile" on
-// the Settings page costs the next request rather than the next restart.
+// ReloadLlmPrices re-reads the override file and the stored overrides, so a
+// price edited on the Pricing page, or "llmPricingFile" changed on the Settings
+// page, costs the next request rather than the next restart.
 func ReloadLlmPrices() {
 	pricingMutex.Lock()
 	defer pricingMutex.Unlock()
@@ -131,14 +136,23 @@ func ensureLlmPrices() {
 	}
 }
 
-// loadLlmPrices merges the override file over the built-in table, longest key
-// first so a specific model wins over the family it belongs to. It rebuilds the
-// table from the built-in one, so a price dropped from the file is dropped here
-// too. The caller holds the write lock.
+// loadLlmPrices merges the layers over the built-in table, longest key first so
+// a specific model wins over the family it belongs to. It rebuilds the table
+// from the built-in one, so a price dropped from a layer is dropped here too.
+// The caller holds the write lock.
+//
+// The layers, in the order each overrides the one before it: the built-in list
+// prices, the JSON file named by "llmPricingFile", and the rows stored by the
+// Pricing page and by a models.dev sync. The stored rows are last because they
+// are the only layer somebody edited from inside Gateway, and an edit there has
+// to be the one that takes effect.
 func loadLlmPrices() {
 	prices := make(map[string]LlmPrice, len(builtInLlmPrices))
+	origins := make(map[string]string, len(builtInLlmPrices))
+	names := map[string]string{}
 	for model, price := range builtInLlmPrices {
 		prices[model] = price
+		origins[model] = LlmPriceSourceBuiltIn
 	}
 
 	path := conf.GetLlmPricingFile()
@@ -153,9 +167,25 @@ func loadLlmPrices() {
 				beego.Error("LLM pricing file is not valid JSON:", err)
 			} else {
 				for model, price := range overrides {
-					prices[strings.ToLower(model)] = price
+					key := strings.ToLower(model)
+					prices[key] = price
+					origins[key] = LlmPriceSourceFile
 				}
 			}
+		}
+	}
+
+	// A database that is not open yet leaves the stored layer out rather than
+	// failing the lookup: the built-in prices are still better than none.
+	entries, err := GetLlmPriceEntries()
+	if err != nil {
+		beego.Error("stored LLM prices could not be read:", err)
+	}
+	for _, entry := range entries {
+		prices[entry.Model] = entry.price()
+		origins[entry.Model] = entry.Source
+		if entry.DisplayName != "" {
+			names[entry.Model] = entry.DisplayName
 		}
 	}
 
@@ -166,6 +196,32 @@ func loadLlmPrices() {
 	sort.Slice(keys, func(i, j int) bool { return len(keys[i]) > len(keys[j]) })
 
 	llmPrices, pricingKeys, pricingLoaded = prices, keys, true
+	pricingOrigins, pricingNames = origins, names
+}
+
+// GetLlmPriceViews is every price in effect, in the order the page lists them:
+// by model name, because a price table is looked up by name rather than read
+// top to bottom.
+func GetLlmPriceViews() []LlmPriceView {
+	ensureLlmPrices()
+
+	pricingMutex.RLock()
+	defer pricingMutex.RUnlock()
+
+	views := make([]LlmPriceView, 0, len(llmPrices))
+	for model, price := range llmPrices {
+		_, builtIn := builtInLlmPrices[model]
+		source := pricingOrigins[model]
+		views = append(views, LlmPriceView{
+			Model:       model,
+			DisplayName: pricingNames[model],
+			LlmPrice:    price,
+			Source:      source,
+			Overridden:  builtIn && source != LlmPriceSourceBuiltIn,
+		})
+	}
+	sort.Slice(views, func(i, j int) bool { return views[i].Model < views[j].Model })
+	return views
 }
 
 // GetLlmPrice matches a model name in any of the shapes it arrives in, e.g.

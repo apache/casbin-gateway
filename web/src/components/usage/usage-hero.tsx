@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import * as React from "react";
+import {Link} from "react-router-dom";
 import {Activity, ArrowDownToLine, ArrowUpFromLine, CircleDollarSign, Database, Sparkles} from "lucide-react";
 import i18next from "i18next";
 
@@ -162,9 +163,13 @@ export function UsageHero({
         </div>
 
         {totals.unpriced > 0 ? (
-          <span className="text-muted-foreground text-xs">
+          // The count on its own leaves the reader stuck; the page that fixes
+          // it is one click away, so it is the click.
+          <Link to="/pricing" className="text-muted-foreground hover:text-foreground text-xs underline-offset-4 hover:underline">
             {i18next.t("llm:{count} records have no price").replace("{count}", totals.unpriced.toLocaleString())}
-          </span>
+            {" · "}
+            {i18next.t("usage:Set their prices")}
+          </Link>
         ) : null}
       </CardContent>
     </Card>

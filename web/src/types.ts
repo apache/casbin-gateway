@@ -311,6 +311,60 @@ export interface LlmPrice {
   cacheRead: number;
 }
 
+/** Where a price in effect came from, in the order each overrides the one before. */
+export type LlmPriceSource = "built-in" | "file" | "models.dev" | "manual";
+
+/** A stored override of what a model costs, as the edit dialog sends it. */
+export interface LlmPriceEntry {
+  model: string;
+  displayName: string;
+  input: number;
+  output: number;
+  cacheWrite: number;
+  cacheRead: number;
+  cacheWrite1h: number;
+  source: LlmPriceSource;
+  updatedTime: string;
+}
+
+/** One model's price as it is actually in effect, with the layer it came from. */
+export interface LlmPriceView {
+  model: string;
+  displayName: string;
+  input: number;
+  output: number;
+  cacheWrite: number;
+  cacheRead: number;
+  cacheWrite1h: number;
+  source: LlmPriceSource;
+  /** True where a stored row stands in front of a built-in price. */
+  overridden: boolean;
+}
+
+/** One model of the models.dev catalogue, priced at what most of the providers
+ *  listing it agree that it costs. */
+export interface ModelsDevModel {
+  model: string;
+  displayName: string;
+  releaseDate: string;
+  providers: number;
+  input: number;
+  output: number;
+  cacheRead: number;
+  cacheWrite: number;
+}
+
+/** What one models.dev sync did. `missing` is the half that matters: those are
+ *  the models still costing nothing. */
+export interface ModelsDevSync {
+  catalogue: number;
+  considered: string[];
+  updated: string[];
+  skipped: string[];
+  missing: string[];
+  syncedTime: string;
+}
+
 export interface LlmModelStat {
   model: string;
   requests: number;

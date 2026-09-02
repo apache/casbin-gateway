@@ -16,6 +16,7 @@ import {
   Blocks,
   Bot,
   ChartColumn,
+  CircleDollarSign,
   FileSearch,
   Logs,
   MessageSquare,
@@ -76,6 +77,7 @@ export const navGroups: NavGroup[] = [
   {key: "/providers", label: "provider:Providers", icon: Plug, path: "/providers"},
   {key: "/llm-records", label: "llm:LLM Records", icon: Logs, path: "/llm-records", adminOnly: true},
   {key: "/usage", label: "usage:Usage", icon: ChartColumn, path: "/usage", adminOnly: true},
+  {key: "/pricing", label: "usage:Model pricing", icon: CircleDollarSign, path: "/pricing", adminOnly: true},
   {key: "/settings", label: "setting:Settings", icon: Settings, path: "/settings", adminOnly: true},
 ];
 
