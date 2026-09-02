@@ -48,6 +48,7 @@ import {formatCost, formatTokens} from "@/lib/usage";
 import type {
   Agent,
   AgentRuntime,
+  AgentUsageStat,
   LlmAgentStat,
   Provider,
   ProviderHealth,
@@ -129,6 +130,7 @@ export function AgentGridCard({
   health,
   quota,
   stats,
+  usage,
   activity,
   status,
   recording,
@@ -145,6 +147,11 @@ export function AgentGridCard({
   health: ProviderHealth[];
   quota?: ProviderQuota;
   stats?: LlmAgentStat;
+  /**
+   * What this agent's own transcripts say it spent, which counts the requests
+   * it made straight to its vendor as well as the ones Gateway relayed.
+   */
+  usage?: AgentUsageStat;
   activity?: AgentActivity;
   status?: AgentRuntime;
   /** False while llmRecordMode is off, when a zero would be a lie. */
@@ -167,6 +174,17 @@ export function AgentGridCard({
   const monitorId = monitorAgentId(agent.agentId);
   const dash = <span className="text-muted-foreground">-</span>;
   const offHint = recording ? undefined : i18next.t("llm:Recording is off");
+  // An agent's own transcript accounts for every request it made, the ones that
+  // never came near Gateway included, so it is the fuller of the two and wins
+  // wherever it has anything to say. The relayed totals answer for the agents
+  // that keep no transcript, and for the failures a transcript cannot show.
+  const spent = usage && usage.requests > 0 ? usage : undefined;
+  const sourceHint = spent ? i18next.t("agent:Read from the agent's own logs") : offHint;
+  // Off is only the truth about the relayed totals; a transcript is written
+  // whether or not Gateway is recording anything.
+  const counted = spent !== undefined || recording;
+  const lastModel = spent?.lastModel || stats?.lastModel;
+  const lastTime = spent?.lastTime || stats?.lastTime;
 
   return (
     <Card className="gap-0 py-0">
@@ -243,11 +261,11 @@ export function AgentGridCard({
 
         <div className="flex items-center justify-between gap-2">
           <span className="text-muted-foreground text-xs">{i18next.t("agent:Model")}</span>
-          {stats?.lastModel ? (
+          {lastModel ? (
             <SimpleTooltip
-              title={`${i18next.t("agent:Last activity")}: ${new Date(stats.lastTime).toLocaleString()}`}
+              title={`${i18next.t("agent:Last activity")}: ${new Date(lastTime ?? "").toLocaleString()}`}
             >
-              <span className="min-w-0 truncate font-mono text-xs">{stats.lastModel}</span>
+              <span className="min-w-0 truncate font-mono text-xs">{lastModel}</span>
             </SimpleTooltip>
           ) : (
             <span className="text-muted-foreground text-xs">-</span>
@@ -257,9 +275,9 @@ export function AgentGridCard({
         <div className="grid grid-cols-4 gap-2 rounded-md border p-2.5">
           <Metric
             label={i18next.t("llm:Requests")}
-            value={recording ? (stats?.requests ?? 0).toLocaleString() : dash}
+            value={counted ? ((spent ?? stats)?.requests ?? 0).toLocaleString() : dash}
             hint={
-              offHint ??
+              sourceHint ??
               (stats && stats.failed > 0
                 ? `${stats.failed.toLocaleString()} ${i18next.t("llm:failed")}`
                 : undefined)
@@ -267,13 +285,19 @@ export function AgentGridCard({
           />
           <Metric
             label={i18next.t("llm:Tokens")}
-            value={recording ? formatTokens(stats?.tokens ?? 0) : dash}
-            hint={offHint}
+            value={counted ? formatTokens(spent?.totalTokens ?? stats?.tokens ?? 0) : dash}
+            hint={sourceHint}
           />
           <Metric
             label={i18next.t("llm:Cost")}
-            value={recording ? formatCost(stats?.cost ?? 0) : dash}
-            hint={offHint}
+            value={counted ? formatCost(spent?.cost ?? stats?.cost ?? 0) : dash}
+            hint={
+              spent && spent.unpriced > 0
+                ? i18next
+                  .t("llm:{count} of these requests have no list price")
+                  .replace("{count}", spent.unpriced.toLocaleString())
+                : sourceHint
+            }
           />
           <Metric
             label={i18next.t("agent:Records")}

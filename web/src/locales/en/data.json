@@ -112,6 +112,7 @@
     "Provider enabled": "Provider enabled",
     "Provider saved": "Provider saved",
     "Provider speaks another API": "This agent speaks the {protocol} API, which the bound provider does not. A direct binding needs both to speak the same one: pick another provider, or route this agent through the gateway, which translates.",
+    "Read from the agent's own logs": "Read from the agent's own logs",
     "Records": "Records",
     "Records are kept in memory only and are lost when Gateway restarts": "Records are kept in memory only and are lost when Gateway restarts",
     "Reported from": "Reported from",
@@ -468,6 +469,7 @@
     "tools": "tools",
     "written": "written",
     "{count} new records": "{count} new records",
+    "{count} of these requests have no list price": "{count} of these requests have no list price",
     "{count} records have no price": "{count} records have no price"
   },
   "provider": {

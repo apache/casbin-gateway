@@ -17,6 +17,7 @@ import {Link} from "react-router-dom";
 import {Bot, Container, Plus, RefreshCw, Table2} from "lucide-react";
 import i18next from "i18next";
 
+import * as AgentBackend from "@/backend/AgentBackend";
 import * as LlmRecordBackend from "@/backend/LlmRecordBackend";
 import * as ProviderBackend from "@/backend/ProviderBackend";
 import * as Setting from "@/Setting";
@@ -29,11 +30,25 @@ import {PageContainer, PageHeader} from "@/components/shared/page-header";
 import {MessageAlert} from "@/components/ui/alert";
 import {Button} from "@/components/ui/button";
 import {Card} from "@/components/ui/card";
-import {activityOf, agentKey, runtimeOf, useAgents, useAgentSessions} from "@/lib/agents";
-import type {Account, LlmAgentStat, Provider, ProviderHealth, ProviderQuota} from "@/types";
+import {activityOf, agentKey, runtimeOf, useAgents, useAgentSessions, usageOf} from "@/lib/agents";
+import type {
+  Account,
+  AgentUsage,
+  LlmAgentStat,
+  Provider,
+  ProviderHealth,
+  ProviderQuota,
+} from "@/types";
 
 /** How often the numbers on the cards are read again. */
 const refreshMs = 10000;
+
+/**
+ * How often the transcripts are added up again. Reading them walks every
+ * session file on the machine, so it is asked for far less often than the
+ * counters the proxy keeps in memory.
+ */
+const usageRefreshMs = 60000;
 
 /**
  * The home screen: one card per agent installed on this machine. Each card
@@ -63,6 +78,7 @@ export default function HomePage({account}: {account: Account}) {
   const [health, setHealth] = React.useState<ProviderHealth[]>([]);
   const [quotas, setQuotas] = React.useState<ProviderQuota[]>([]);
   const [stats, setStats] = React.useState<LlmAgentStat[]>([]);
+  const [usage, setUsage] = React.useState<AgentUsage>();
   // Nothing is recorded until it is asked for, and until it is a zero on a card
   // would read as "this agent relayed nothing" rather than "nobody counted".
   const [recording, setRecording] = React.useState(true);
@@ -134,6 +150,25 @@ export default function HomePage({account}: {account: Account}) {
 
     load();
     const interval = setInterval(load, refreshMs);
+    return () => clearInterval(interval);
+  }, [isAdmin]);
+
+  // What the agents wrote down themselves, which is the only account of the
+  // requests that never went through Gateway - and the only one there is at all
+  // before a provider is bound.
+  React.useEffect(() => {
+    if (!isAdmin) {
+      return undefined;
+    }
+
+    const load = () => {
+      AgentBackend.getAgentUsage()
+        .then(res => setUsage(res.status === "ok" ? (res.data ?? undefined) : undefined))
+        .catch(() => undefined);
+    };
+
+    load();
+    const interval = setInterval(load, usageRefreshMs);
     return () => clearInterval(interval);
   }, [isAdmin]);
 
@@ -235,6 +270,7 @@ export default function HomePage({account}: {account: Account}) {
               health={health}
               quota={quotas.find(item => item.provider === agent.provider)}
               stats={stats.find(item => item.agent === agent.agentId)}
+              usage={usageOf(usage, agent)}
               activity={activityOf(activity, agent)}
               status={runtimeOf(runtime, agent)}
               recording={recording}

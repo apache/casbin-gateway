@@ -353,6 +353,46 @@ export interface LlmAgentStat {
   lastProvider: string;
 }
 
+/**
+ * What one agent, one model or one day spent, read from the transcripts the
+ * agents keep themselves. Which of the three a stat counts is decided by the
+ * list it is in; `name` is that key.
+ */
+export interface AgentUsageStat {
+  name: string;
+  requests: number;
+  promptTokens: number;
+  completionTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+  reasoningTokens: number;
+  totalTokens: number;
+  cost: number;
+  /** Requests left out of `cost` because no list price matched their model. */
+  unpriced: number;
+  /** Filled for agents only, which is what the card beside the totals shows. */
+  lastTime: string;
+  lastModel: string;
+}
+
+/**
+ * What the agents on this machine spent, whether or not Gateway relayed any of
+ * it. LLM Records is empty until an agent is routed through the gateway, and
+ * stays empty for one talking to its vendor directly; this is read off the
+ * agent's own transcripts, so it counts either way.
+ */
+export interface AgentUsage {
+  totals: AgentUsageStat;
+  agents: AgentUsageStat[];
+  models: AgentUsageStat[];
+  /** Oldest first, which is the order a trend is drawn in. */
+  days: AgentUsageStat[];
+  /** How many transcripts the totals were read from. */
+  sessions: number;
+  /** The first day the totals cover, or empty when they cover everything. */
+  since: string;
+}
+
 /** The settings the web UI can change, so nobody has to edit conf/app.conf. */
 /**
  * The one built-in row of the Setting table, holding everything that used to be

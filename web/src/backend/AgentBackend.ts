@@ -22,6 +22,7 @@ import type {
   AgentRuntime,
   AgentSession,
   AgentTranscript,
+  AgentUsage,
 } from "@/types";
 
 export interface PatchTarget {
@@ -97,6 +98,18 @@ export function getAgentRecords(agent = "", eventType = "", outcome = "", sessio
 
 export function getAgentSessions(agent = "") {
   return request<AgentSession[]>(`/api/get-agent-sessions${query({agent: agent})}`);
+}
+
+/**
+ * What the agents spent, read from the transcripts they write themselves. LLM
+ * Records only holds what went through Gateway, so this is the account of an
+ * agent talking to its vendor directly - and the one with something to show
+ * before anything is routed at all.
+ *
+ * `days` bounds the window to that many calendar days ending today.
+ */
+export function getAgentUsage(agent = "", days = 0) {
+  return request<AgentUsage>(`/api/get-agent-usage${query({agent: agent, days: days})}`);
 }
 
 /** The conversation inside one session, read from the agent's own transcript. */

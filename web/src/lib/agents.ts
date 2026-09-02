@@ -24,6 +24,8 @@ import type {
   AgentCatalogEntry,
   AgentRuntime,
   AgentSession,
+  AgentUsage,
+  AgentUsageStat,
   Provider,
 } from "@/types";
 
@@ -514,6 +516,20 @@ export function useAgentSessions(enabled = true, agent = "", refreshMs = 0) {
 /** The activity of the installation, looked up under the id the monitor uses. */
 export function activityOf(activity: Record<string, AgentActivity>, agent: Agent) {
   return activity[monitorAgentId(agent.agentId)];
+}
+
+/**
+ * Transcripts are written per tool rather than per installation: every Codex
+ * front end shares one directory, so all of them read the same usage. That is
+ * also the limit of what the files can tell apart.
+ */
+export function usageAgentId(agentId: string) {
+  return agentId.startsWith("codex") ? "codex-cli" : agentId;
+}
+
+/** What one installation spent, out of the totals read off the transcripts. */
+export function usageOf(usage: AgentUsage | undefined, agent: Agent): AgentUsageStat | undefined {
+  return usage?.agents.find(item => item.name === usageAgentId(agent.agentId));
 }
 
 /** The badge colour every record table paints an outcome with. */

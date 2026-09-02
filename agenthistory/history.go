@@ -45,6 +45,10 @@ type Session struct {
 	Cwd string `json:"cwd"`
 	// Historical marks a session read off disk rather than collected by monitoring.
 	Historical bool `json:"historical"`
+	// Usage is what the transcript says the session spent. LLM Records only ever
+	// sees what went through Gateway, so this is the only account of an agent
+	// that talks to its vendor directly.
+	Usage []UsageBucket `json:"usage"`
 }
 
 const (
@@ -185,6 +189,7 @@ type line struct {
 	Type      string          `json:"type"`
 	Timestamp string          `json:"timestamp"`
 	SessionId string          `json:"sessionId"`
+	RequestId string          `json:"requestId"`
 	Cwd       string          `json:"cwd"`
 	Message   json.RawMessage `json:"message"`
 	Payload   struct {
@@ -193,6 +198,10 @@ type line struct {
 		Role    string          `json:"role"`
 		Cwd     string          `json:"cwd"`
 		Content json.RawMessage `json:"content"`
+		// Model names what a Codex turn runs on, and Info carries the token
+		// counts of the turn that just ended.
+		Model string          `json:"model"`
+		Info  json.RawMessage `json:"info"`
 	} `json:"payload"`
 }
 
@@ -255,6 +264,10 @@ func parse(agent string, file transcript) (Session, bool) {
 	// the transcript itself overrides this when it names one.
 	session.SessionKey = sessionKeyFromName(file.info.Name())
 
+	// Reading the file is the expensive part, so what it spent is added up on
+	// the same pass rather than by walking every transcript a second time.
+	usage := newUsageReader()
+
 	if _, err := eachLine(file.path, func(data []byte) {
 		var entry line
 		if err := json.Unmarshal(data, &entry); err != nil {
@@ -277,6 +290,8 @@ func parse(agent string, file transcript) (Session, bool) {
 			session.LastTime = when
 		}
 
+		usage.add(entry)
+
 		if role, content := roleAndContent(entry); role != "" {
 			session.RecordCount++
 			if session.Title == "" && role == "user" {
@@ -293,6 +308,7 @@ func parse(agent string, file transcript) (Session, bool) {
 	if session.FirstTime == "" {
 		session.FirstTime = session.LastTime
 	}
+	session.Usage = usage.buckets(dayOf(session.LastTime))
 	return session, true
 }
 

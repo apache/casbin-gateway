@@ -112,6 +112,7 @@
     "Provider enabled": "已启用供应商",
     "Provider saved": "供应商已保存",
     "Provider speaks another API": "该 Agent 使用 {protocol} API，而绑定的供应商不支持。直连模式要求两者使用同一种 API：请改选其他供应商，或将该 Agent 改为经网关转发（网关会自动转换）。",
+    "Read from the agent's own logs": "读自 agent 自己的日志",
     "Records": "记录数",
     "Records are kept in memory only and are lost when Gateway restarts": "记录仅保存在内存中，Gateway 重启后会丢失",
     "Reported from": "上报来源",
@@ -468,6 +469,7 @@
     "tools": "个工具",
     "written": "写入",
     "{count} new records": "{count} 条新记录",
+    "{count} of these requests have no list price": "其中 {count} 个请求没有对应的价目",
     "{count} records have no price": "{count} 条记录没有价格"
   },
   "provider": {

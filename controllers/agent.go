@@ -21,6 +21,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/apache/casbin-gateway/agent"
 	"github.com/apache/casbin-gateway/agenthistory"
@@ -300,6 +301,33 @@ func (c *ApiController) GetAgentSession() {
 	}
 
 	c.ResponseError("no transcript on disk for this session")
+}
+
+// GetAgentUsage totals what the agents on this machine spent, read from the
+// transcripts they write themselves rather than from the requests Gateway
+// relayed. LLM Records is empty until an agent is routed through the gateway,
+// and stays empty for one talking to its vendor directly; the transcripts are
+// what it cost either way.
+//
+// The optional days narrows the window to that many calendar days ending today,
+// and the optional agent to one agent's own transcripts.
+func (c *ApiController) GetAgentUsage() {
+	if c.RequireAdmin() {
+		return
+	}
+
+	since := ""
+	if value := c.Input().Get("days"); value != "" {
+		days, err := strconv.Atoi(value)
+		if err != nil {
+			c.ResponseError(err.Error())
+			return
+		}
+		if days > 0 {
+			since = time.Now().AddDate(0, 0, -(days - 1)).Format(time.DateOnly)
+		}
+	}
+	c.ResponseOk(object.GetAgentUsage(historicalSessions(c.Input().Get("agent")), since))
 }
 
 // sessionSeenKey identifies one session across the two sources, so a session

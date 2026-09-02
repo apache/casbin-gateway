@@ -33,31 +33,71 @@ type LlmPrice struct {
 	Output     float64 `json:"output"`
 	CacheWrite float64 `json:"cacheWrite"`
 	CacheRead  float64 `json:"cacheRead"`
+	// CacheWrite1h is what a cache written for an hour costs instead, where the
+	// vendor sells the longer life at a higher rate. Zero means there is no such
+	// option and every write is priced at CacheWrite.
+	CacheWrite1h float64 `json:"cacheWrite1h"`
 }
 
 // builtInLlmPrices are published list prices, keyed by the part of a model name that
 // identifies the model. They go stale, so llmPricingFile overrides them.
+//
+// Anthropic list prices are from platform.claude.com/docs/en/about-claude/pricing
+// and OpenAI's from developers.openai.com/api/docs/pricing, both read on
+// 2026-09-02. A key is matched as a substring, longest first, so a family entry
+// covers the dated and vendor-prefixed shapes of its own name and the
+// generations that kept its price.
 var builtInLlmPrices = map[string]LlmPrice{
-	"claude-opus-4":     {15, 75, 18.75, 1.5},
-	"claude-3-opus":     {15, 75, 18.75, 1.5},
-	"claude-sonnet-4":   {3, 15, 3.75, 0.3},
-	"claude-3-7-sonnet": {3, 15, 3.75, 0.3},
-	"claude-3-5-sonnet": {3, 15, 3.75, 0.3},
-	"claude-haiku-4-5":  {1, 5, 1.25, 0.1},
-	"claude-3-5-haiku":  {0.8, 4, 1, 0.08},
-	"claude-3-haiku":    {0.25, 1.25, 0.3, 0.03},
+	"claude-fable-5":    {10, 50, 12.5, 1, 20},
+	"claude-fable-5-1":  {10, 50, 12.5, 0.25, 20},
+	"claude-mythos-5":   {10, 50, 12.5, 1, 20},
+	"claude-mythos-5-1": {10, 50, 12.5, 0.25, 20},
+	"claude-opus-5":     {5, 25, 6.25, 0.5, 10},
+	// Opus dropped to a third of its price at 4.5; the two older ones kept theirs.
+	"claude-opus-4-5":   {5, 25, 6.25, 0.5, 10},
+	"claude-opus-4-6":   {5, 25, 6.25, 0.5, 10},
+	"claude-opus-4-7":   {5, 25, 6.25, 0.5, 10},
+	"claude-opus-4-8":   {5, 25, 6.25, 0.5, 10},
+	"claude-opus-4":     {15, 75, 18.75, 1.5, 30},
+	"claude-3-opus":     {15, 75, 18.75, 1.5, 30},
+	"claude-sonnet-5":   {2, 10, 2.5, 0.2, 4},
+	"claude-sonnet-4":   {3, 15, 3.75, 0.3, 6},
+	"claude-3-7-sonnet": {3, 15, 3.75, 0.3, 6},
+	"claude-3-5-sonnet": {3, 15, 3.75, 0.3, 6},
+	"claude-haiku-4-5":  {1, 5, 1.25, 0.1, 2},
+	"claude-3-5-haiku":  {0.8, 4, 1, 0.08, 1.6},
+	"claude-3-haiku":    {0.25, 1.25, 0.3, 0.03, 0.6},
 
-	"gpt-4o":       {2.5, 10, 0, 1.25},
-	"gpt-4o-mini":  {0.15, 0.6, 0, 0.075},
-	"gpt-4.1":      {2, 8, 0, 0.5},
-	"gpt-4.1-mini": {0.4, 1.6, 0, 0.1},
-	"gpt-4.1-nano": {0.1, 0.4, 0, 0.025},
-	"o3":           {2, 8, 0, 0.5},
-	"o3-mini":      {1.1, 4.4, 0, 0.55},
-	"o4-mini":      {1.1, 4.4, 0, 0.275},
+	"gpt-5":         {1.25, 10, 0, 0.125, 0},
+	"gpt-5-mini":    {0.25, 2, 0, 0.025, 0},
+	"gpt-5-nano":    {0.05, 0.4, 0, 0.005, 0},
+	"gpt-5-pro":     {15, 120, 0, 0, 0},
+	"gpt-5.1":       {1.25, 10, 0, 0.125, 0},
+	"gpt-5.2":       {1.75, 14, 0, 0.175, 0},
+	"gpt-5.2-pro":   {21, 168, 0, 0, 0},
+	"gpt-5.4":       {2.5, 15, 0, 0.25, 0},
+	"gpt-5.4-mini":  {0.75, 4.5, 0, 0.075, 0},
+	"gpt-5.4-nano":  {0.2, 1.25, 0, 0.02, 0},
+	"gpt-5.4-pro":   {30, 180, 0, 0, 0},
+	"gpt-5.5":       {5, 30, 0, 0.5, 0},
+	"gpt-5.5-pro":   {30, 180, 0, 0, 0},
+	"gpt-5.6-sol":   {4, 20, 0, 0.4, 0},
+	"gpt-5.6-terra": {2, 12, 0, 0.2, 0},
+	"gpt-5.6-luna":  {0.2, 1.2, 0, 0.02, 0},
 
-	"deepseek-chat":     {0.27, 1.1, 0, 0.07},
-	"deepseek-reasoner": {0.55, 2.19, 0, 0.14},
+	"gpt-4o":       {2.5, 10, 0, 1.25, 0},
+	"gpt-4o-mini":  {0.15, 0.6, 0, 0.075, 0},
+	"gpt-4.1":      {2, 8, 0, 0.5, 0},
+	"gpt-4.1-mini": {0.4, 1.6, 0, 0.1, 0},
+	"gpt-4.1-nano": {0.1, 0.4, 0, 0.025, 0},
+	"o1":           {15, 60, 0, 7.5, 0},
+	"o3":           {2, 8, 0, 0.5, 0},
+	"o3-pro":       {20, 80, 0, 0, 0},
+	"o3-mini":      {1.1, 4.4, 0, 0.55, 0},
+	"o4-mini":      {1.1, 4.4, 0, 0.275, 0},
+
+	"deepseek-chat":     {0.27, 1.1, 0, 0.07, 0},
+	"deepseek-reasoner": {0.55, 2.19, 0, 0.14, 0},
 }
 
 var (
@@ -148,14 +188,32 @@ func GetLlmPrice(model string) (LlmPrice, bool) {
 
 // GetLlmCost is what one recorded request cost, in US dollars.
 func GetLlmCost(model string, promptTokens int, completionTokens int, cacheWriteTokens int, cacheReadTokens int) (float64, bool) {
+	return GetLlmLongCacheCost(model, promptTokens, completionTokens, cacheWriteTokens, 0, cacheReadTokens)
+}
+
+// GetLlmLongCacheCost is GetLlmCost where part of the cache was written to live
+// an hour rather than five minutes, which Anthropic charges 2x base input for
+// against 1.25x. longCacheTokens is the share of cacheWriteTokens written that
+// way, not an amount on top of it; a transcript says which was used, while a
+// relayed request does not, so that path passes zero and pays the shorter rate.
+func GetLlmLongCacheCost(model string, promptTokens int, completionTokens int, cacheWriteTokens int, longCacheTokens int, cacheReadTokens int) (float64, bool) {
 	price, ok := GetLlmPrice(model)
 	if !ok {
 		return 0, false
 	}
 
+	longCacheRate := price.CacheWrite1h
+	if longCacheRate == 0 {
+		longCacheRate = price.CacheWrite
+	}
+	if longCacheTokens > cacheWriteTokens {
+		longCacheTokens = cacheWriteTokens
+	}
+
 	cost := float64(promptTokens)*price.Input +
 		float64(completionTokens)*price.Output +
-		float64(cacheWriteTokens)*price.CacheWrite +
+		float64(cacheWriteTokens-longCacheTokens)*price.CacheWrite +
+		float64(longCacheTokens)*longCacheRate +
 		float64(cacheReadTokens)*price.CacheRead
 	return cost / 1e6, true
 }
