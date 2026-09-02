@@ -22,6 +22,7 @@ import {providerProtocol, servesResponsesApi} from "@/lib/providers";
 import type {
   Agent,
   AgentCatalogEntry,
+  AgentInstallJob,
   AgentRuntime,
   AgentSession,
   AgentUsage,
@@ -456,6 +457,107 @@ export function useAgentCatalog(agents: Agent[], enabled = true) {
     () => catalog.filter(item => !agents.some(agent => agent.agentId === item.agentId)),
     [catalog, agents],
   );
+}
+
+/** How often a running install is asked about while the manager works. */
+const installPollMs = 1500;
+
+/**
+ * useAgentInstall drives the installs and upgrades Gateway runs with the host's
+ * own package managers. A package manager takes minutes, so the request that
+ * starts one returns at once and the job is polled until it ends: the button
+ * that started it keeps showing what is happening, and a reload does too.
+ *
+ * `onFinished` is called after every job that ends, which is when a rescan will
+ * see the agent that was just installed.
+ */
+export function useAgentInstall(enabled = true, onFinished?: () => void) {
+  const [jobs, setJobs] = React.useState<Record<string, AgentInstallJob>>({});
+  const [busyId, setBusyId] = React.useState("");
+  // The jobs this page is waiting on, so the one that finishes is reported
+  // once - and one left running by an earlier page is picked up on load.
+  const watched = React.useRef<Record<string, boolean>>({});
+  const finished = React.useRef(onFinished);
+  finished.current = onFinished;
+
+  const load = React.useCallback(() => {
+    if (!enabled) {
+      return;
+    }
+
+    AgentBackend.getAgentInstallJobs()
+      .then(res => {
+        const list = res.status === "ok" ? (res.data ?? []) : [];
+        setJobs(Object.fromEntries(list.map(job => [job.agentId, job])));
+      })
+      .catch(() => undefined);
+  }, [enabled]);
+
+  React.useEffect(() => load(), [load]);
+
+  const running = Object.values(jobs).some(job => job.running);
+
+  React.useEffect(() => {
+    if (!running) {
+      return;
+    }
+
+    const timer = window.setInterval(load, installPollMs);
+    return () => window.clearInterval(timer);
+  }, [running, load]);
+
+  React.useEffect(() => {
+    Object.values(jobs).forEach(job => {
+      if (job.running) {
+        watched.current[job.agentId] = true;
+        return;
+      }
+      if (!watched.current[job.agentId]) {
+        return;
+      }
+      delete watched.current[job.agentId];
+      Setting.showMessage(
+        job.ok ? "success" : "error",
+        job.ok
+          ? `${i18next.t(job.action === "upgrade" ? "agent:Agent upgraded" : "agent:Agent installed")}: ${job.name}`
+          : `${i18next.t("agent:Failed to install the agent")}: ${job.error || job.name}`,
+      );
+      finished.current?.();
+    });
+  }, [jobs]);
+
+  const start = React.useCallback(
+    (agentId: string, call: () => Promise<{status: string; msg?: string; data?: AgentInstallJob}>) => {
+      setBusyId(agentId);
+      call()
+        .then(res => {
+          if (res.status === "ok" && res.data) {
+            watched.current[agentId] = true;
+            setJobs(current => ({...current, [agentId]: res.data as AgentInstallJob}));
+          } else {
+            Setting.showMessage("error", res.msg || i18next.t("agent:Failed to install the agent"));
+          }
+        })
+        .catch(err => Setting.showMessage("error", err.message || String(err)))
+        .then(() => setBusyId(""));
+    },
+    [],
+  );
+
+  const install = React.useCallback(
+    (agentId: string) => start(agentId, () => AgentBackend.installAgent(agentId)),
+    [start],
+  );
+
+  const upgrade = React.useCallback(
+    (agent: Agent) =>
+      start(agent.agentId, () =>
+        AgentBackend.upgradeAgent({agentId: agent.agentId, path: agent.path, owner: agent.owner}),
+      ),
+    [start],
+  );
+
+  return {jobs, busyId, install, upgrade, reload: load};
 }
 
 /** The run state of one installation, before the first listing has landed. */

@@ -26,6 +26,7 @@ import (
 	"github.com/apache/casbin-gateway/agent"
 	"github.com/apache/casbin-gateway/agenthistory"
 	"github.com/apache/casbin-gateway/agenthome"
+	"github.com/apache/casbin-gateway/agentinstall"
 	"github.com/apache/casbin-gateway/agentmonitor"
 	"github.com/apache/casbin-gateway/agentpatch"
 	"github.com/apache/casbin-gateway/agentprovider"
@@ -50,6 +51,9 @@ type discoveredAgent struct {
 	// page cannot build it from its own address: an agent that runs in a sandbox
 	// is given this host's network address rather than loopback.
 	ProxyBaseUrl string `json:"proxyBaseUrl"`
+	// Upgrade is the command that would update this installation in place,
+	// through the package manager that installed it.
+	Upgrade agentinstall.Plan `json:"upgrade"`
 }
 
 // GetAgents scans known installation locations and returns the AI agents
@@ -85,6 +89,7 @@ func (c *ApiController) GetAgents() {
 			Fallbacks:      []string{},
 			Mode:           object.ModeGateway,
 			ProviderConfig: agentprovider.StatusOf(providerTarget(target)),
+			Upgrade:        agentinstall.UpgradePlan(installation.AgentId, installation.InstallMethod),
 		}
 		baseUrl, ok := baseUrls[installation.AgentId]
 		if !ok {
@@ -114,7 +119,20 @@ func (c *ApiController) GetAgentCatalog() {
 		return
 	}
 
-	c.ResponseOk(agent.KnownAgents())
+	catalog := agent.KnownAgents()
+	result := make([]*catalogEntry, 0, len(catalog))
+	for _, known := range catalog {
+		result = append(result, &catalogEntry{Known: known, Install: agentinstall.InstallPlan(known.AgentId)})
+	}
+	c.ResponseOk(result)
+}
+
+// catalogEntry is one known agent with the command that would install it here,
+// so a machine missing an agent is offered the install rather than only told
+// where to read about it.
+type catalogEntry struct {
+	agent.Known
+	Install agentinstall.Plan `json:"install"`
 }
 
 // UpdateAgentRouting binds one agent to the provider its requests are forwarded

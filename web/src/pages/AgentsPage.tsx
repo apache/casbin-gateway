@@ -20,6 +20,7 @@ import * as Setting from "@/Setting";
 import {AgentCatalog} from "@/components/AgentCatalog";
 import {AgentIcon} from "@/components/AgentIcon";
 import {RunBadge, RunButton} from "@/components/AgentRunControl";
+import {ToolUpgradeConfirmDialog} from "@/components/ToolUpgradeConfirmDialog";
 import {ConfirmDialog} from "@/components/shared/confirm-dialog";
 import {DataTable, type Column} from "@/components/shared/data-table";
 import {CodeText, UnauthorizedResult} from "@/components/shared/misc";
@@ -35,6 +36,7 @@ import {
   directMode,
   monitorAgentId,
   runtimeOf,
+  useAgentInstall,
   useAgents,
 } from "@/lib/agents";
 import type {Account, Agent} from "@/types";
@@ -55,6 +57,9 @@ export default function AgentsPage({account}: {account: Account}) {
     toggleRunning,
     togglePatch,
   } = useAgents(isAdmin);
+  // One installer for the page: it installs what is missing below the table and
+  // upgrades what is in it.
+  const installer = useAgentInstall(isAdmin, () => scan(true));
 
   if (!isAdmin) {
     return <UnauthorizedResult />;
@@ -174,6 +179,12 @@ export default function AgentsPage({account}: {account: Account}) {
             busy={runBusyKey === agentKey(record)}
             onToggle={toggleRunning}
           />
+          <ToolUpgradeConfirmDialog
+            agent={record}
+            job={installer.jobs[record.agentId]}
+            busy={installer.busyId === record.agentId}
+            onConfirm={() => installer.upgrade(record)}
+          />
           {patchButton(record)}
         </div>
       ),
@@ -256,7 +267,7 @@ export default function AgentsPage({account}: {account: Account}) {
         }
       />
 
-      <AgentCatalog agents={agents} enabled={scanned} />
+      <AgentCatalog agents={agents} enabled={scanned} installer={installer} />
     </PageContainer>
   );
 }

@@ -16,6 +16,7 @@ import {query, request} from "@/backend/request";
 import type {
   Agent,
   AgentCatalogEntry,
+  AgentInstallJob,
   AgentProviderConfig,
   AgentProviderFile,
   AgentRecord,
@@ -39,6 +40,21 @@ export function getAgents(forceRefresh = false) {
 /** Every agent Gateway knows, which is more than the ones installed here. */
 export function getAgentCatalog() {
   return request<AgentCatalogEntry[]>("/api/get-agent-catalog");
+}
+
+/** Installs an agent this machine lacks; the job runs on past this response. */
+export function installAgent(agentId: string) {
+  return request<AgentInstallJob>("/api/install-agent", "POST", {agentId: agentId});
+}
+
+/** Updates one installation through the package manager that installed it. */
+export function upgradeAgent(target: PatchTarget) {
+  return request<AgentInstallJob>("/api/upgrade-agent", "POST", target);
+}
+
+/** Every install and upgrade this Gateway process has run, newest first. */
+export function getAgentInstallJobs() {
+  return request<AgentInstallJob[]>("/api/get-agent-install-jobs");
 }
 
 export function patchAgent(target: PatchTarget) {

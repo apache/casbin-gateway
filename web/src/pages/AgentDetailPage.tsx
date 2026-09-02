@@ -24,6 +24,7 @@ import * as LlmRecordBackend from "@/backend/LlmRecordBackend";
 import * as Setting from "@/Setting";
 import {AgentIcon} from "@/components/AgentIcon";
 import {RunBadge, RunButton} from "@/components/AgentRunControl";
+import {InstallOutput, ToolUpgradeConfirmDialog} from "@/components/ToolUpgradeConfirmDialog";
 import {DataTable, type Column} from "@/components/shared/data-table";
 import {ProviderCard} from "@/components/ProviderCard";
 import {ResultScreen, UnauthorizedResult} from "@/components/shared/misc";
@@ -40,6 +41,7 @@ import {
   getOutcomeVariant,
   monitorAgentId,
   runtimeOf,
+  useAgentInstall,
   useAgents,
   useAgentSessions,
 } from "@/lib/agents";
@@ -231,6 +233,8 @@ export default function AgentDetailPage({account}: {account: Account}) {
     setRouting,
     writeProvider,
   } = useAgents(isAdmin);
+  // The upgrade rescans when it ends, so the version above is the new one.
+  const installer = useAgentInstall(isAdmin, () => scan(true));
   const [tab, setTab] = React.useState<Tab>("Agent Sessions");
   const [records, setRecords] = React.useState<AgentRecord[]>([]);
   const [recordError, setRecordError] = React.useState("");
@@ -481,7 +485,15 @@ export default function AgentDetailPage({account}: {account: Account}) {
               {agent.version || i18next.t("agent:Unknown")}
             </InfoRow>
             <InfoRow label={i18next.t("agent:Install Method")}>
-              {agent.installMethod || "-"}
+              <span className="flex flex-wrap items-center gap-2">
+                {agent.installMethod || "-"}
+                <ToolUpgradeConfirmDialog
+                  agent={agent}
+                  job={installer.jobs[agent.agentId]}
+                  busy={installer.busyId === agent.agentId}
+                  onConfirm={() => installer.upgrade(agent)}
+                />
+              </span>
             </InfoRow>
             <InfoRow label={i18next.t("general:Owner")}>{agent.owner}</InfoRow>
             <InfoRow label={i18next.t("general:Path")}>
@@ -503,6 +515,7 @@ export default function AgentDetailPage({account}: {account: Account}) {
                 </SimpleTooltip>
               </span>
             </InfoRow>
+            <InstallOutput job={installer.jobs[agent.agentId]} />
           </CardContent>
         </Card>
       </div>

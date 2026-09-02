@@ -12,20 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {Bot, Download} from "lucide-react";
 import i18next from "i18next";
 
-import {AgentIcon} from "@/components/AgentIcon";
-import {useAgentCatalog} from "@/lib/agents";
+import {ToolInstallRow} from "@/components/ToolInstallRow";
+import {useAgentCatalog, type useAgentInstall} from "@/lib/agents";
 import type {Agent} from "@/types";
 
 /**
- * The agents Gateway supports that this machine has none of, each linking to
- * the vendor's own install page. Without them a fresh machine says only that
+ * The agents Gateway supports that this machine has none of, each with the
+ * click that installs it here. Without them a fresh machine says only that
  * nothing was found, which is the one thing it cannot act on.
  */
-export function AgentCatalog({agents, enabled = true}: {agents: Agent[]; enabled?: boolean}) {
+export function AgentCatalog({
+  agents,
+  enabled = true,
+  installer,
+}: {
+  agents: Agent[];
+  enabled?: boolean;
+  /**
+   * The page's own installer. It is passed in rather than made here: the page
+   * upgrades the agents it already has through the same one, and two of them
+   * would report the same finished job twice.
+   */
+  installer: ReturnType<typeof useAgentInstall>;
+}) {
   const missing = useAgentCatalog(agents, enabled);
+  const {jobs, busyId, install} = installer;
 
   if (missing.length === 0) {
     return null;
@@ -39,44 +52,15 @@ export function AgentCatalog({agents, enabled = true}: {agents: Agent[]; enabled
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-        {missing.map(item => {
-          const inside = (
-            <>
-              {/* The icons are keyed by vendor name, which every entry has. */}
-              <AgentIcon
-                agent={item.name}
-                size={22}
-                fallback={<Bot className="text-muted-foreground size-5" />}
-              />
-              <span className="min-w-0 truncate text-sm font-medium">{item.name}</span>
-              {item.installUrl ? (
-                <span className="text-muted-foreground ml-auto inline-flex shrink-0 items-center gap-1 text-xs">
-                  <Download className="size-3.5" />
-                  {i18next.t("agent:Install")}
-                </span>
-              ) : null}
-            </>
-          );
-
-          return item.installUrl ? (
-            <a
-              key={item.agentId}
-              href={item.installUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="hover:border-primary hover:text-primary flex items-center gap-2.5 rounded-lg border p-3 transition-colors"
-            >
-              {inside}
-            </a>
-          ) : (
-            <div
-              key={item.agentId}
-              className="text-muted-foreground flex items-center gap-2.5 rounded-lg border p-3"
-            >
-              {inside}
-            </div>
-          );
-        })}
+        {missing.map(item => (
+          <ToolInstallRow
+            key={item.agentId}
+            entry={item}
+            job={jobs[item.agentId]}
+            busy={busyId === item.agentId}
+            onInstall={install}
+          />
+        ))}
       </div>
     </section>
   );

@@ -84,3 +84,40 @@ func IsKnownAgentId(id string) bool {
 	}
 	return false
 }
+
+// Packages are the package-manager ids one agent is published under, which is
+// what installing or upgrading it needs. Empty fields mean the agent is not
+// published there, so that manager cannot install it.
+type Packages struct {
+	Npm          string
+	Winget       string
+	HomebrewCask string
+	System       string
+	InstallUrl   string
+	Desktop      bool
+}
+
+// PackagesOf reads the fingerprints rather than a host scan, so the packages of
+// an agent are known while it is not installed - which is when installing it is
+// what someone wants.
+func PackagesOf(id string) Packages {
+	for i := range fingerprints {
+		if fingerprints[i].ID != id {
+			continue
+		}
+		packages := Packages{
+			Npm:        fingerprints[i].NpmPackage,
+			Winget:     fingerprints[i].WingetPackage,
+			System:     fingerprints[i].SystemPackage,
+			InstallUrl: fingerprints[i].InstallUrl,
+			Desktop:    fingerprints[i].Desktop,
+		}
+		// The rest of the list are version-pinned aliases of the first, which
+		// is the cask an install should ask for.
+		if casks := fingerprints[i].HomebrewCasks; len(casks) > 0 {
+			packages.HomebrewCask = casks[0]
+		}
+		return packages
+	}
+	return Packages{}
+}

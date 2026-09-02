@@ -46,6 +46,9 @@ func initAPI() {
 
 	beego.Router("/api/get-agents", &controllers.ApiController{}, "GET:GetAgents")
 	beego.Router("/api/get-agent-catalog", &controllers.ApiController{}, "GET:GetAgentCatalog")
+	beego.Router("/api/get-agent-install-jobs", &controllers.ApiController{}, "GET:GetAgentInstallJobs")
+	beego.Router("/api/install-agent", &controllers.ApiController{}, "POST:InstallAgent")
+	beego.Router("/api/upgrade-agent", &controllers.ApiController{}, "POST:UpgradeAgent")
 	beego.Router("/api/patch-agent", &controllers.ApiController{}, "POST:PatchAgent")
 	beego.Router("/api/unpatch-agent", &controllers.ApiController{}, "POST:UnpatchAgent")
 	beego.Router("/api/update-agent-routing", &controllers.ApiController{}, "POST:UpdateAgentRouting")

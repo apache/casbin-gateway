@@ -149,6 +149,42 @@ export interface Agent {
   providerConfig: AgentProviderConfig;
   /** Where this agent reaches its bound provider, as the server resolved it. */
   proxyBaseUrl?: string;
+  /** The command that would update this installation where it stands. */
+  upgrade?: AgentInstallPlan;
+}
+
+/**
+ * What installing or upgrading one agent would run here. The command is built
+ * on the server from what Gateway knows about the agent, so the page shows it
+ * and asks for it by agent, never by command.
+ */
+export interface AgentInstallPlan {
+  agentId: string;
+  /** "install" for an agent this machine lacks, "upgrade" for one it has. */
+  action: string;
+  /** The package manager that would do it: npm, winget or homebrew. */
+  manager?: string;
+  command?: string;
+  available: boolean;
+  /** Why there is no command, when there is none. */
+  detail?: string;
+  installUrl?: string;
+}
+
+/** One install or upgrade, polled while the package manager works. */
+export interface AgentInstallJob {
+  agentId: string;
+  name: string;
+  action: string;
+  manager: string;
+  command: string;
+  running: boolean;
+  ok: boolean;
+  /** The tail of what the package manager printed, on both streams. */
+  output: string;
+  error?: string;
+  startTime: string;
+  endTime?: string;
 }
 
 /**
@@ -161,6 +197,8 @@ export interface AgentCatalogEntry {
   /** The vendor's own install page, opened in a new tab. */
   installUrl?: string;
   desktop?: boolean;
+  /** The command that would install it here, when a package manager can. */
+  install: AgentInstallPlan;
 }
 
 /** The live processes of one agent installation, keyed by owner and path. */

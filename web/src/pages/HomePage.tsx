@@ -30,7 +30,15 @@ import {PageContainer, PageHeader} from "@/components/shared/page-header";
 import {MessageAlert} from "@/components/ui/alert";
 import {Button} from "@/components/ui/button";
 import {Card} from "@/components/ui/card";
-import {activityOf, agentKey, runtimeOf, useAgents, useAgentSessions, usageOf} from "@/lib/agents";
+import {
+  activityOf,
+  agentKey,
+  runtimeOf,
+  useAgentInstall,
+  useAgents,
+  useAgentSessions,
+  usageOf,
+} from "@/lib/agents";
 import type {
   Account,
   AgentUsage,
@@ -74,6 +82,8 @@ export default function HomePage({account}: {account: Account}) {
     togglePatch,
     activateProvider,
   } = useAgents(isAdmin);
+  // Installs the agents this machine is missing, listed under the cards.
+  const installer = useAgentInstall(isAdmin, () => scan(true));
   const [providers, setProviders] = React.useState<Provider[]>([]);
   const [health, setHealth] = React.useState<ProviderHealth[]>([]);
   const [quotas, setQuotas] = React.useState<ProviderQuota[]>([]);
@@ -285,7 +295,7 @@ export default function HomePage({account}: {account: Account}) {
       )}
 
       {/* What is not here yet, so an empty machine has somewhere to go. */}
-      <AgentCatalog agents={agents} enabled={scanned} />
+      <AgentCatalog agents={agents} enabled={scanned} installer={installer} />
     </PageContainer>
   );
 }
