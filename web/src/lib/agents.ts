@@ -19,7 +19,13 @@ import * as AgentBackend from "@/backend/AgentBackend";
 import * as Setting from "@/Setting";
 import type {BadgeVariant} from "@/components/ui/badge";
 import {providerProtocol, servesResponsesApi} from "@/lib/providers";
-import type {Agent, AgentRuntime, AgentSession, Provider} from "@/types";
+import type {
+  Agent,
+  AgentCatalogEntry,
+  AgentRuntime,
+  AgentSession,
+  Provider,
+} from "@/types";
 
 /** How long a started app is given before its process is looked for again. */
 const runtimeSettleMs = 2000;
@@ -407,6 +413,30 @@ export function useAgents(enabled = true) {
     activateProvider,
     writeProvider,
   };
+}
+
+/**
+ * useAgentCatalog lists the agents Gateway knows how to work with that this
+ * machine has none of. The catalogue is built into the binary, so it is read
+ * once and only the scan it is compared against changes.
+ */
+export function useAgentCatalog(agents: Agent[], enabled = true) {
+  const [catalog, setCatalog] = React.useState<AgentCatalogEntry[]>([]);
+
+  React.useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
+    AgentBackend.getAgentCatalog()
+      .then(res => setCatalog(res.status === "ok" ? (res.data ?? []) : []))
+      .catch(() => undefined);
+  }, [enabled]);
+
+  return React.useMemo(
+    () => catalog.filter(item => !agents.some(agent => agent.agentId === item.agentId)),
+    [catalog, agents],
+  );
 }
 
 /** The run state of one installation, before the first listing has landed. */

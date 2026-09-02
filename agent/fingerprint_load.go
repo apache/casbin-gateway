@@ -103,6 +103,10 @@ func validateFingerprint(f Fingerprint, name string) error {
 	if f.DisplayName == "" {
 		return errors.New("displayName is required")
 	}
+	// The install page is rendered as a link, so nothing but the web schemes.
+	if f.InstallUrl != "" && !strings.HasPrefix(f.InstallUrl, "https://") && !strings.HasPrefix(f.InstallUrl, "http://") {
+		return fmt.Errorf("installUrl %q is not an http(s) URL", f.InstallUrl)
+	}
 
 	if err := validateLocalServer(f.LocalServer); err != nil {
 		return err

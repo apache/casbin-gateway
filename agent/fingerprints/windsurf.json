@@ -1,6 +1,7 @@
 {
   "id": "windsurf",
   "displayName": "Windsurf",
+  "installUrl": "https://windsurf.com/download",
   "execName": "Windsurf",
   "desktop": true,
   "windowsProgramDirs": ["Windsurf"],

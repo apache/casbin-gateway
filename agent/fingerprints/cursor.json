@@ -1,6 +1,7 @@
 {
   "id": "cursor",
   "displayName": "Cursor",
+  "installUrl": "https://cursor.com/download",
   "execName": "Cursor",
   "desktop": true,
   "windowsProgramDirs": ["cursor"],

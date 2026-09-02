@@ -1,6 +1,7 @@
 {
   "id": "codex-cli",
   "displayName": "Codex CLI",
+  "installUrl": "https://developers.openai.com/codex/cli/",
   "execName": "codex",
   "stateDir": "codex",
   "npmPackage": "@openai/codex",

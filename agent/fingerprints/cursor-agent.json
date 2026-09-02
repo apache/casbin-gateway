@@ -1,6 +1,7 @@
 {
   "id": "cursor-agent",
   "displayName": "Cursor Agent",
+  "installUrl": "https://cursor.com/docs/cli/installation",
   "execName": "cursor-agent",
   "stateDir": "cursor-agent",
   "windowsProgramDirs": ["cursor-agent"]

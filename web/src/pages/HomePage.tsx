@@ -20,6 +20,7 @@ import i18next from "i18next";
 import * as LlmRecordBackend from "@/backend/LlmRecordBackend";
 import * as ProviderBackend from "@/backend/ProviderBackend";
 import * as Setting from "@/Setting";
+import {AgentCatalog} from "@/components/AgentCatalog";
 import {AgentGridCard} from "@/components/AgentGridCard";
 import {EmptyState, ErrorState} from "@/components/shared/empty-state";
 import {Loading} from "@/components/shared/loading";
@@ -246,6 +247,9 @@ export default function HomePage({account}: {account: Account}) {
           ))}
         </div>
       )}
+
+      {/* What is not here yet, so an empty machine has somewhere to go. */}
+      <AgentCatalog agents={agents} enabled={scanned} />
     </PageContainer>
   );
 }

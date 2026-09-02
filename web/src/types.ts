@@ -151,6 +151,18 @@ export interface Agent {
   proxyBaseUrl?: string;
 }
 
+/**
+ * One agent Gateway knows how to detect, whether or not it is installed here.
+ * The ones missing from a scan are listed as something to install.
+ */
+export interface AgentCatalogEntry {
+  agentId: string;
+  name: string;
+  /** The vendor's own install page, opened in a new tab. */
+  installUrl?: string;
+  desktop?: boolean;
+}
+
 /** The live processes of one agent installation, keyed by owner and path. */
 export interface AgentRuntime {
   agentId: string;

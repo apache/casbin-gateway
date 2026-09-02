@@ -15,6 +15,7 @@
 import {query, request} from "@/backend/request";
 import type {
   Agent,
+  AgentCatalogEntry,
   AgentProviderConfig,
   AgentProviderFile,
   AgentRecord,
@@ -32,6 +33,11 @@ export interface PatchTarget {
 /** `data2` tells whether the scan ran inside a container. */
 export function getAgents(forceRefresh = false) {
   return request<Agent[], boolean>(`/api/get-agents${forceRefresh ? "?refresh=true" : ""}`);
+}
+
+/** Every agent Gateway knows, which is more than the ones installed here. */
+export function getAgentCatalog() {
+  return request<AgentCatalogEntry[]>("/api/get-agent-catalog");
 }
 
 export function patchAgent(target: PatchTarget) {

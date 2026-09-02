@@ -1,6 +1,7 @@
 {
   "id": "codex",
   "displayName": "ChatGPT Desktop (Codex)",
+  "installUrl": "https://openai.com/chatgpt/download/",
   "execName": "ChatGPT",
   "desktop": true,
   "msixFamily": "OpenAI.Codex_2p2nqsd0c76g0"

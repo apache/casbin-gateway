@@ -1,6 +1,7 @@
 {
   "id": "claude-desktop",
   "displayName": "Claude Desktop",
+  "installUrl": "https://claude.ai/download",
   "execName": "claude",
   "desktop": true,
   "sandboxed": true,

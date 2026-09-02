@@ -1,6 +1,7 @@
 {
   "id": "claude-code",
   "displayName": "Claude Code",
+  "installUrl": "https://docs.claude.com/en/docs/claude-code/setup",
   "execName": "claude",
   "stateDir": "claude",
   "npmPackage": "@anthropic-ai/claude-code",

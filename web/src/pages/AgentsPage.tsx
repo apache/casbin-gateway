@@ -17,6 +17,7 @@ import {ArrowLeft, Bot, Container, RefreshCw} from "lucide-react";
 import i18next from "i18next";
 
 import * as Setting from "@/Setting";
+import {AgentCatalog} from "@/components/AgentCatalog";
 import {AgentIcon} from "@/components/AgentIcon";
 import {RunBadge, RunButton} from "@/components/AgentRunControl";
 import {ConfirmDialog} from "@/components/shared/confirm-dialog";
@@ -46,6 +47,7 @@ export default function AgentsPage({account}: {account: Account}) {
     error,
     busyKey,
     inContainer,
+    scanned,
     runtime,
     runBusyKey,
     scan,
@@ -253,6 +255,8 @@ export default function AgentsPage({account}: {account: Account}) {
           </Button>
         }
       />
+
+      <AgentCatalog agents={agents} enabled={scanned} />
     </PageContainer>
   );
 }

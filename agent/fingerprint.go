@@ -20,6 +20,9 @@ import "github.com/apache/casbin-gateway/localserver"
 type Fingerprint struct {
 	ID          string `json:"id"`
 	DisplayName string `json:"displayName"`
+	// InstallUrl is the vendor's own install page, which is all Gateway has to
+	// offer for an agent this host has not installed.
+	InstallUrl string `json:"installUrl,omitempty"`
 
 	ExecName string `json:"execName,omitempty"`
 	// LaunchArgs are the arguments a start passes, literally: an agent that

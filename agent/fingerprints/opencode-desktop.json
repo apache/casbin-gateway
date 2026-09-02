@@ -1,6 +1,7 @@
 {
   "id": "opencode-desktop",
   "displayName": "opencode Desktop",
+  "installUrl": "https://opencode.ai/download",
   "execName": "OpenCode",
   "desktop": true,
   "windowsProgramDirs": ["@opencode-aidesktop"]

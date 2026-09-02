@@ -1,6 +1,7 @@
 {
   "id": "openclaw",
   "displayName": "OpenClaw",
+  "installUrl": "https://openclaw.ai",
   "execName": "openclaw",
   "npmPackage": "openclaw",
   "extraUnixNpmDirs": [".openclaw/tools/node-v*/lib"],

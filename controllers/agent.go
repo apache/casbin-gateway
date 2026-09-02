@@ -105,6 +105,17 @@ func (c *ApiController) GetAgents() {
 	c.ResponseOk(result, agent.InContainer())
 }
 
+// GetAgentCatalog returns every agent Gateway knows how to detect, installed or
+// not, so the pages can list the ones missing from this machine and point at
+// the vendor's install page.
+func (c *ApiController) GetAgentCatalog() {
+	if c.RequireAdmin() {
+		return
+	}
+
+	c.ResponseOk(agent.KnownAgents())
+}
+
 // UpdateAgentRouting binds one agent to the provider its requests are forwarded
 // to, to the providers tried when that one cannot answer, and to the way it
 // reaches them. The binding is per agent id.

@@ -1,6 +1,7 @@
 {
   "id": "opencode",
   "displayName": "opencode",
+  "installUrl": "https://opencode.ai/docs/",
   "execName": "opencode",
   "npmPackage": "opencode-ai",
   "homeDirs": [".opencode/bin"]

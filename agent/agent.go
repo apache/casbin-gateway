@@ -25,6 +25,31 @@ type Installation struct {
 	Owner         string `json:"owner"`
 }
 
+// Known is one agent Gateway can detect, whether or not it is installed here.
+type Known struct {
+	AgentId    string `json:"agentId"`
+	Name       string `json:"name"`
+	InstallUrl string `json:"installUrl,omitempty"`
+	// Desktop marks a windowed app, which is downloaded rather than installed
+	// from a package manager.
+	Desktop bool `json:"desktop,omitempty"`
+}
+
+// KnownAgents lists every agent a fingerprint declares, so the pages can show
+// the ones this host has not installed next to the ones it has.
+func KnownAgents() []Known {
+	result := make([]Known, 0, len(fingerprints))
+	for i := range fingerprints {
+		result = append(result, Known{
+			AgentId:    fingerprints[i].ID,
+			Name:       fingerprints[i].DisplayName,
+			InstallUrl: fingerprints[i].InstallUrl,
+			Desktop:    fingerprints[i].Desktop,
+		})
+	}
+	return result
+}
+
 // DisplayNameOf is the human-readable name of a known agent id, empty for an id
 // no fingerprint declares.
 func DisplayNameOf(id string) string {

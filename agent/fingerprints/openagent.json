@@ -1,6 +1,7 @@
 {
   "id": "openagent",
   "displayName": "OpenAgent",
+  "installUrl": "https://openagentai.org",
   "execName": "openagent",
   "stateDir": "openagent",
   "windowsUserDirs": ["openagent"],

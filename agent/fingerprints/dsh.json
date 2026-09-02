@@ -1,6 +1,7 @@
 {
   "id": "dsh",
   "displayName": "DeepSeek Harness",
+  "installUrl": "https://github.com/deepseek-ai/deepseek-harness",
   "execName": "dsh",
   "launchArgs": ["web"],
   "npmPackage": "@deepseek-ai/dsh"
