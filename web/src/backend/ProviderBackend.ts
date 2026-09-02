@@ -13,7 +13,14 @@
 // limitations under the License.
 
 import {itemId, query, request} from "@/backend/request";
-import type {Provider, ProviderHealth, ProviderQuota, ProviderTestResult} from "@/types";
+import type {
+  Provider,
+  ProviderHealth,
+  ProviderProbe,
+  ProviderProbeMode,
+  ProviderQuota,
+  ProviderTestResult,
+} from "@/types";
 
 export function getProviders(
   owner: string,
@@ -81,4 +88,27 @@ export function getProviderQuotas() {
  * see is refreshed, and without force only the ones with a stale answer. */
 export function refreshProviderQuotas(id = "", force = false) {
   return request<ProviderQuota[]>("/api/refresh-provider-quotas", "POST", {id: id, force: force});
+}
+
+/**
+ * The newest probe of every provider that has one. The second payload is how
+ * probes are started, so an unprobed provider can say whether it is waiting for
+ * a sweep or for a button.
+ */
+export function getProviderProbes() {
+  return request<ProviderProbe[], ProviderProbeMode>("/api/get-provider-probes");
+}
+
+/** Every kept run for one provider, newest first. */
+export function getProviderProbeHistory(id: string) {
+  return request<ProviderProbe[]>(`/api/get-provider-probe-history${query({id: id})}`);
+}
+
+/**
+ * Runs the probe suite now. It sends four short requests to the upstream and so
+ * spends a little of that provider's credit, which is why nothing calls this on
+ * a page load.
+ */
+export function probeProvider(id: string) {
+  return request<ProviderProbe>(`/api/probe-provider${query({id: id})}`, "POST");
 }

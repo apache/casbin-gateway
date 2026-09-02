@@ -526,11 +526,16 @@ func AddProvider(provider *Provider) (bool, error) {
 	if err := encryptQuotaToken(provider); err != nil {
 		return false, err
 	}
+	// The probe needs the key as it was typed, and encryption is in place.
+	probeTarget := *provider
 	if err := encryptApiKey(provider); err != nil {
 		return false, err
 	}
 
 	affected, err := ormer.Engine.Insert(provider)
+	if err == nil && affected != 0 {
+		ProbeNewProvider(&probeTarget)
+	}
 	return affected != 0, err
 }
 
@@ -574,6 +579,14 @@ func UpdateProvider(id string, provider *Provider) (bool, error) {
 	provider.Name = name
 	provider.UpdatedTime = util.GetCurrentTime()
 
+	// Snapshotted before the key is encrypted, and before the mask that means
+	// "the field was not touched" is resolved back to the stored key.
+	keyChanged := provider.ApiKey != ApiKeyMask
+	probeTarget := *provider
+	if !keyChanged {
+		probeTarget.ApiKey = stored.ApiKey
+	}
+
 	// The quota token is masked on read like the API key, but it shares its
 	// column with the rest of the quota configuration, so the stored one is put
 	// back rather than the column left out of the write.
@@ -602,6 +615,7 @@ func UpdateProvider(id string, provider *Provider) (bool, error) {
 		// provider starts from a clean slate.
 		ClearProviderHealth(provider.GetId())
 		ClearProviderQuota(provider.GetId())
+		ProbeEditedProvider(stored, &probeTarget, keyChanged)
 	}
 	return affected != 0, err
 }
@@ -611,6 +625,9 @@ func DeleteProvider(provider *Provider) (bool, error) {
 	if err == nil {
 		ClearProviderHealth(provider.GetId())
 		ClearProviderQuota(provider.GetId())
+		if err := DeleteProviderProbes(provider.GetId()); err != nil {
+			fmt.Printf("DeleteProvider(): probes of [%s]: %v\n", provider.GetId(), err)
+		}
 	}
 	return affected != 0, err
 }

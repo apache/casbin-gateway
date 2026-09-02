@@ -14,7 +14,15 @@
 
 import {query, request} from "@/backend/request";
 import {ServerUrl} from "@/Setting";
-import type {LlmAgentStat, LlmPrice, LlmRecord, LlmRecordStats, LlmRecordStatus, LlmTrendPoint} from "@/types";
+import type {
+  LlmAgentStat,
+  LlmAuditReport,
+  LlmPrice,
+  LlmRecord,
+  LlmRecordStats,
+  LlmRecordStatus,
+  LlmTrendPoint,
+} from "@/types";
 
 export interface LlmRecordFilter {
   model?: string;
@@ -49,6 +57,11 @@ export function getLlmRecordStats(filter: LlmRecordFilter = {}) {
  */
 export function getLlmUsageTrend(filter: LlmRecordFilter = {}, bucket: "hour" | "day" = "day") {
   return request<LlmTrendPoint[]>(`/api/get-llm-usage-trend${query({...filter, bucket: bucket})}`);
+}
+
+/** The same window read for how each provider behaved rather than what it cost. */
+export function getLlmProviderAudit(filter: LlmRecordFilter = {}) {
+  return request<LlmAuditReport>(`/api/get-llm-provider-audit${query({...filter})}`);
 }
 
 /** The same totals per agent, in one request rather than one request each. */

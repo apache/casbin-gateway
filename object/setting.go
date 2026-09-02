@@ -40,6 +40,10 @@ type Setting struct {
 	LlmRecordMaxPayloadBytes int    `xorm:"int" json:"llmRecordMaxPayloadBytes"`
 	LlmPricingFile           string `xorm:"varchar(500)" json:"llmPricingFile"`
 
+	// ProviderProbeMode is "auto", "manual" or "off". An automatic probe spends
+	// a few cents of the account's own credit, so it is one setting away.
+	ProviderProbeMode string `xorm:"varchar(20)" json:"providerProbeMode"`
+
 	AgentPatchStateDir      string `xorm:"varchar(500)" json:"agentPatchStateDir"`
 	AgentRecordCapacity     int    `xorm:"int" json:"agentRecordCapacity"`
 	AgentMonitorPollSeconds int    `xorm:"int" json:"agentMonitorPollSeconds"`
@@ -72,6 +76,8 @@ func SyncSettingToConf(setting *Setting) {
 		"llmRecordMaxRecords":      strconv.Itoa(setting.LlmRecordMaxRecords),
 		"llmRecordMaxPayloadBytes": strconv.Itoa(setting.LlmRecordMaxPayloadBytes),
 		"llmPricingFile":           setting.LlmPricingFile,
+
+		"providerProbeMode": setting.ProviderProbeMode,
 
 		"agentPatchStateDir":      setting.AgentPatchStateDir,
 		"agentRecordCapacity":     strconv.Itoa(setting.AgentRecordCapacity),
@@ -169,6 +175,16 @@ func InitBuiltInSetting() {
 		}
 	}
 
+	// Likewise for a column added after the row was written: an empty value
+	// would show as an empty choice on the Settings page rather than as the
+	// default the code already applies.
+	if setting.ProviderProbeMode == "" {
+		setting.ProviderProbeMode = GetProviderProbeMode()
+		if _, err = ormer.Engine.ID(core.PK{setting.Owner, setting.Name}).Cols("provider_probe_mode").Update(setting); err != nil {
+			panic(err)
+		}
+	}
+
 	SyncSettingToConf(setting)
 }
 
@@ -188,6 +204,8 @@ func newSettingFromConf() *Setting {
 		LlmRecordMaxRecords:      conf.GetLlmRecordMaxRecords(),
 		LlmRecordMaxPayloadBytes: conf.GetLlmRecordMaxPayloadBytes(),
 		LlmPricingFile:           conf.GetLlmPricingFile(),
+
+		ProviderProbeMode: GetProviderProbeMode(),
 
 		AgentPatchStateDir:      conf.GetAgentPatchStateDir(),
 		AgentRecordCapacity:     conf.GetAgentRecordCapacity(),

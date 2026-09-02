@@ -274,6 +274,13 @@ func (a *Ormer) createTable() {
 		panic(err)
 	}
 
+	// What an active probe found the last few times it asked a provider's
+	// upstream the questions the passive records cannot answer.
+	err = a.Engine.Sync2(new(ProviderProbe))
+	if err != nil {
+		panic(err)
+	}
+
 	// Token prices edited on the Pricing page or written by a models.dev sync,
 	// which override the built-in list prices.
 	err = a.Engine.Sync2(new(LlmPriceEntry))

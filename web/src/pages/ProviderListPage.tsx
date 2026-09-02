@@ -27,6 +27,7 @@ import i18next from "i18next";
 import * as AgentBackend from "@/backend/AgentBackend";
 import * as ProviderBackend from "@/backend/ProviderBackend";
 import * as Setting from "@/Setting";
+import {ProviderAuditPanel} from "@/components/ProviderAuditPanel";
 import {ProviderIconField} from "@/components/ProviderIcon";
 import {ProviderGridCard} from "@/components/ProviderGridCard";
 import {ProviderModelsField} from "@/components/ProviderModelsField";
@@ -43,6 +44,7 @@ import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {Input} from "@/components/ui/input";
+import {Tabs, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import {Textarea} from "@/components/ui/textarea";
 import {
   authProvider,
@@ -106,8 +108,13 @@ function Advanced({defaultOpen, children}: {defaultOpen: boolean; children: Reac
   );
 }
 
+/** The grid of providers, or what the relayed records say about them. */
+type ProviderTab = "providers" | "audit";
+
 export default function ProviderListPage({account}: {account: Account}) {
   const navigate = useNavigate();
+  const isAdmin = Setting.isAdminUser(account);
+  const [tab, setTab] = React.useState<ProviderTab>("providers");
   const [data, setData] = React.useState<Provider[]>([]);
   const [total, setTotal] = React.useState(0);
   const [loading, setLoading] = React.useState(false);
@@ -199,13 +206,13 @@ export default function ProviderListPage({account}: {account: Account}) {
   // so the agents are loaded next to them. A non-admin cannot list them, and the
   // card simply leaves that line out.
   const loadAgents = React.useCallback(() => {
-    if (!Setting.isAdminUser(account)) {
+    if (!isAdmin) {
       return;
     }
     AgentBackend.getAgents()
       .then(res => setAgents(res.status === "ok" ? (res.data ?? []) : []))
       .catch(() => setAgents([]));
-  }, [account]);
+  }, [isAdmin]);
 
   React.useEffect(() => {
     loadAgents();
@@ -336,7 +343,18 @@ export default function ProviderListPage({account}: {account: Account}) {
         }
       />
 
-      {error !== "" && data.length === 0 ? (
+      {isAdmin ? (
+        <Tabs value={tab} onValueChange={value => setTab(value as ProviderTab)}>
+          <TabsList>
+            <TabsTrigger value="providers">{i18next.t("provider:Providers")}</TabsTrigger>
+            <TabsTrigger value="audit">{i18next.t("audit:Channel audit")}</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      ) : null}
+
+      {tab === "audit" ? (
+        <ProviderAuditPanel owner={account.name} />
+      ) : error !== "" && data.length === 0 ? (
         <Card>
           <ErrorState error={error} onRetry={() => fetchProviders()} />
         </Card>

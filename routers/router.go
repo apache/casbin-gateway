@@ -93,6 +93,9 @@ func initAPI() {
 	beego.Router("/api/get-provider-health", &controllers.ApiController{}, "GET:GetProviderHealth")
 	beego.Router("/api/get-provider-quotas", &controllers.ApiController{}, "GET:GetProviderQuotas")
 	beego.Router("/api/refresh-provider-quotas", &controllers.ApiController{}, "POST:RefreshProviderQuotas")
+	beego.Router("/api/get-provider-probes", &controllers.ApiController{}, "GET:GetProviderProbes")
+	beego.Router("/api/get-provider-probe-history", &controllers.ApiController{}, "GET:GetProviderProbeHistory")
+	beego.Router("/api/probe-provider", &controllers.ApiController{}, "POST:ProbeProvider")
 
 	beego.Router("/api/get-llm-records", &controllers.ApiController{}, "GET:GetLlmRecords")
 	beego.Router("/api/get-llm-record", &controllers.ApiController{}, "GET:GetLlmRecord")
@@ -100,6 +103,7 @@ func initAPI() {
 	beego.Router("/api/get-llm-record-stats", &controllers.ApiController{}, "GET:GetLlmRecordStats")
 	beego.Router("/api/get-llm-agent-stats", &controllers.ApiController{}, "GET:GetLlmAgentStats")
 	beego.Router("/api/get-llm-usage-trend", &controllers.ApiController{}, "GET:GetLlmUsageTrend")
+	beego.Router("/api/get-llm-provider-audit", &controllers.ApiController{}, "GET:GetLlmProviderAudit")
 	beego.Router("/api/stream-llm-records", &controllers.ApiController{}, "GET:StreamLlmRecords")
 	beego.Router("/api/delete-llm-record", &controllers.ApiController{}, "POST:DeleteLlmRecord")
 	beego.Router("/api/clear-llm-records", &controllers.ApiController{}, "POST:ClearLlmRecords")

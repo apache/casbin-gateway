@@ -446,6 +446,103 @@ export interface LlmTrendPoint {
   cost: number;
 }
 
+/** The checks a channel audit runs, and how sure each one is of its answer. */
+export type LlmAuditKey = "cache" | "errors" | "latency" | "pricing";
+export type LlmAuditLevel = "ok" | "warn" | "alert" | "unknown";
+
+/**
+ * One measurement of a provider. The server sends the number and the level and
+ * leaves the wording here, so a check reads as a fact with the sample it was
+ * measured over rather than as a verdict.
+ */
+export interface LlmAuditCheck {
+  key: LlmAuditKey;
+  level: LlmAuditLevel;
+  /** A share of `sample` for every check but latency, which is P95 over P50. */
+  value: number;
+  sample: number;
+}
+
+/** What the kept records say about one provider that served them. */
+export interface LlmProviderAudit {
+  provider: string;
+  requests: number;
+  failed: number;
+  /** Attempts this provider lost, which another one then answered. */
+  failedOver: number;
+  retried: number;
+  promptTokens: number;
+  completionTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+  totalTokens: number;
+  cost: number;
+  /** Answered requests a cache could have been reported on at all. */
+  cacheable: number;
+  cacheHits: number;
+  latencyP50Ms: number;
+  latencyP95Ms: number;
+  unpriced: number;
+  unpricedModels: string[];
+  models: string[];
+  firstTime: string;
+  lastTime: string;
+  checks: LlmAuditCheck[];
+}
+
+export interface LlmAuditReport {
+  scanned: number;
+  /** The window held more records than one audit reads. */
+  truncated: boolean;
+  providers: LlmProviderAudit[];
+}
+
+/** How probes are started. An automatic probe spends a little of the credit. */
+export type ProviderProbeMode = "auto" | "manual" | "off";
+
+/** The questions an active probe asks, none of which the records can answer. */
+export type ProbeKey = "identity" | "vendor" | "stream" | "cache" | "tools" | "billing";
+
+/**
+ * One probe measurement. `facts` is what actually came back, as data rather
+ * than as a sentence — the model name that answered, the headers present, the
+ * events missing, the counts that disagreed — so the page can word it in the
+ * reader's language and still quote the value the level was drawn from.
+ */
+export interface ProbeCheck {
+  key: ProbeKey;
+  level: LlmAuditLevel;
+  facts: string[];
+  value: number;
+}
+
+/** One run of the probe suite against one provider. */
+export interface ProviderProbe {
+  id: number;
+  provider: string;
+  createdTime: string;
+  /** Why it ran: "added", "edited", "unused" or "manual". */
+  trigger: string;
+  protocol: string;
+  model: string;
+  /** The model name the upstream answered with, which may not be the one asked. */
+  upstreamModel: string;
+  ok: boolean;
+  error: string;
+  ttftMs: number;
+  durationMs: number;
+  /** What the probe itself spent. */
+  requests: number;
+  promptTokens: number;
+  completionTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+  cost: number;
+  priced: boolean;
+  vendorHeaders: string[];
+  checks: ProbeCheck[];
+}
+
 /** One agent's share of the relayed requests, with what it last asked for. */
 export interface LlmAgentStat {
   agent: string;
@@ -515,6 +612,8 @@ export interface Setting {
   llmRecordMaxRecords: number;
   llmRecordMaxPayloadBytes: number;
   llmPricingFile: string;
+
+  providerProbeMode: ProviderProbeMode;
 
   agentPatchStateDir: string;
   agentRecordCapacity: number;

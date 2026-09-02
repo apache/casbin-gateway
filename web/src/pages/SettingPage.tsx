@@ -146,6 +146,24 @@ export default function SettingPage({account}: {account: Account}) {
         {textField("llmPricingFile", i18next.t("setting:Pricing file"), i18next.t("setting:Pricing file hint"))}
       </Section>
 
+      <Section
+        columns={2}
+        title={i18next.t("setting:Channel probes")}
+        description={i18next.t("setting:Channel probes description")}
+      >
+        <Field label={i18next.t("setting:Probe mode")} hint={i18next.t("setting:Probe mode hint")}>
+          <SimpleSelect
+            value={setting.providerProbeMode}
+            onChange={value => updateField("providerProbeMode", value as SettingType["providerProbeMode"])}
+            options={[
+              {label: i18next.t("audit:Probe mode auto"), value: "auto"},
+              {label: i18next.t("audit:Probe mode manual"), value: "manual"},
+              {label: i18next.t("audit:Probe mode off"), value: "off"},
+            ]}
+          />
+        </Field>
+      </Section>
+
       <Section columns={2} title={i18next.t("setting:Agents")}>
         {textField("agentPatchStateDir", i18next.t("setting:Agent state dir"), i18next.t("setting:Agent state dir hint"))}
         {numberField("agentRecordCapacity", i18next.t("setting:Agent record capacity"), i18next.t("setting:Agent record capacity hint"), 1)}

@@ -106,6 +106,23 @@ func (c *ApiController) GetLlmRecordStats() {
 	c.ResponseOk(stats)
 }
 
+// GetLlmProviderAudit reports what the kept records say about each provider
+// that served them: the same window the stats cover, read for how an upstream
+// behaved rather than for what it cost.
+func (c *ApiController) GetLlmProviderAudit() {
+	if c.RequireAdmin() {
+		return
+	}
+
+	report, err := object.GetLlmProviderAudit(c.readLlmRecordFilter())
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	c.ResponseOk(report)
+}
+
 // GetLlmUsageTrend groups the same window into time buckets, which is what the
 // usage dashboard draws. "bucket" is "hour" or "day"; anything else is a day.
 func (c *ApiController) GetLlmUsageTrend() {
