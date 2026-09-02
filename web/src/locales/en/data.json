@@ -628,5 +628,24 @@
     "Settings": "Settings",
     "Sign-in": "Sign-in",
     "Sign-in description": "Casdoor is optional: leave the endpoint empty to sign in against Gateway's own user table."
+  },
+  "usage": {
+    "Agents description": "What the agents on this machine spent, read from the transcripts they write themselves. This is the only account of a request that never went through Gateway.",
+    "By agent": "By agent",
+    "By model": "By model",
+    "By provider": "By provider",
+    "Cache writes are not reported by every protocol": "A provider serving the OpenAI protocol reports cache hits but never cache writes, so this can read as zero while the cache is being written.",
+    "Every agent": "Every agent",
+    "Every {count}s": "Every {count}s",
+    "Last {count} days": "Last {count} days",
+    "No auto refresh": "No auto refresh",
+    "Nothing was spent in this window": "Nothing was spent in this window",
+    "Recording is off detail": "llmRecordMode is \"off\", so nothing relayed is being counted. The agents' own transcripts are counted either way.",
+    "Relayed description": "What Gateway relayed on behalf of the agents. This is the only account that knows which provider answered, and whether it failed.",
+    "Tokens spent": "Tokens spent",
+    "Trend": "Trend",
+    "Usage": "Usage",
+    "What Gateway relayed": "What Gateway relayed",
+    "What the agents spent": "What the agents spent"
   }
 }

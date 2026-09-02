@@ -341,6 +341,19 @@ export interface LlmRecordStats {
   providers: LlmProviderStat[];
 }
 
+/** One time bucket of the relayed traffic, as the usage trend is drawn from. */
+export interface LlmTrendPoint {
+  bucket: string;
+  requests: number;
+  failed: number;
+  promptTokens: number;
+  completionTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+  totalTokens: number;
+  cost: number;
+}
+
 /** One agent's share of the relayed requests, with what it last asked for. */
 export interface LlmAgentStat {
   agent: string;

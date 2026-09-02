@@ -15,6 +15,7 @@
 import {
   Blocks,
   Bot,
+  ChartColumn,
   FileSearch,
   Logs,
   MessageSquare,
@@ -74,6 +75,7 @@ export const navGroups: NavGroup[] = [
   {key: "/agent-records", label: "agent:Agent Records", icon: FileSearch, path: "/agent-records", adminOnly: true},
   {key: "/providers", label: "provider:Providers", icon: Plug, path: "/providers"},
   {key: "/llm-records", label: "llm:LLM Records", icon: Logs, path: "/llm-records", adminOnly: true},
+  {key: "/usage", label: "usage:Usage", icon: ChartColumn, path: "/usage", adminOnly: true},
   {key: "/settings", label: "setting:Settings", icon: Settings, path: "/settings", adminOnly: true},
 ];
 

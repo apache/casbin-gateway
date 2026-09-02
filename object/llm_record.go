@@ -16,6 +16,7 @@ package object
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -156,6 +157,21 @@ type LlmRecordStats struct {
 	Unpriced         int64             `json:"unpriced"`
 	Models           []LlmModelStat    `json:"models"`
 	Providers        []LlmProviderStat `json:"providers"`
+}
+
+// LlmTrendPoint is one time bucket of the relayed traffic. The dashboard draws
+// these as a line, which is the one thing a total cannot show: when the spend
+// happened.
+type LlmTrendPoint struct {
+	Bucket           string  `json:"bucket"`
+	Requests         int64   `json:"requests"`
+	Failed           int64   `json:"failed"`
+	PromptTokens     int64   `json:"promptTokens"`
+	CompletionTokens int64   `json:"completionTokens"`
+	CacheReadTokens  int64   `json:"cacheReadTokens"`
+	CacheWriteTokens int64   `json:"cacheWriteTokens"`
+	TotalTokens      int64   `json:"totalTokens"`
+	Cost             float64 `json:"cost"`
 }
 
 // LlmRecordStatus is what the management page shows about the recorder itself,
@@ -655,6 +671,104 @@ func GetLlmRecordStats(filter LlmRecordFilter, topModels int) (*LlmRecordStats, 
 		return nil, err
 	}
 	return stats, nil
+}
+
+// llmTrendMaxPoints bounds a filled series, so an hourly bucket over a window
+// of months cannot answer with a point per hour of all of them.
+const llmTrendMaxPoints = 1500
+
+// llmBucketOf cuts a time down to the bucket it belongs to, the same way the
+// query cuts created_time: both read the format util.FormatTime writes, so the
+// filled buckets and the counted ones are spelled alike.
+func llmBucketOf(moment time.Time, hourly bool) string {
+	text := util.FormatTime(moment)
+	if hourly {
+		return text[:13]
+	}
+	return text[:10]
+}
+
+// GetLlmUsageTrend groups the records a filter matches into time buckets, by
+// hour or by day. The empty buckets are filled in: a day nothing was relayed
+// belongs in the chart as a zero, not as a point the line steps over.
+//
+// The bucket is cut out of created_time rather than computed with a date
+// function, because created_time is a formatted string and the three drivers
+// Gateway supports each spell their date functions differently.
+func GetLlmUsageTrend(filter LlmRecordFilter, bucket string) ([]LlmTrendPoint, error) {
+	hourly := bucket == "hour"
+	width := 10
+	if hourly {
+		width = 13
+	}
+
+	session := llmRecordSession(filter)
+	defer session.Close()
+	counted := []LlmTrendPoint{}
+	err := session.Table("llm_record").
+		Select(fmt.Sprintf("substr(created_time, 1, %d) as bucket, COUNT(*) as requests, ", width) +
+			"SUM(CASE WHEN status >= 200 AND status < 300 THEN 0 ELSE 1 END) as failed, " +
+			"SUM(prompt_tokens) as prompt_tokens, SUM(completion_tokens) as completion_tokens, " +
+			"SUM(cache_read_tokens) as cache_read_tokens, SUM(cache_write_tokens) as cache_write_tokens, " +
+			"SUM(total_tokens) as total_tokens, SUM(cost) as cost").
+		GroupBy("bucket").
+		Asc("bucket").
+		Find(&counted)
+	if err != nil {
+		return nil, err
+	}
+	if len(counted) == 0 {
+		return counted, nil
+	}
+
+	// The window starts where the filter says, and where it says nothing at the
+	// oldest record there is: filling an "all time" series from the epoch would
+	// be a leading run of zeros as long as the calendar.
+	start, err := time.Parse(time.RFC3339, filter.Since)
+	if err != nil {
+		start, err = time.Parse(time.RFC3339, llmBucketStart(counted[0].Bucket, hourly))
+		if err != nil {
+			return counted, nil
+		}
+	}
+
+	step := 24 * time.Hour
+	if hourly {
+		step = time.Hour
+	}
+	byBucket := map[string]LlmTrendPoint{}
+	for _, point := range counted {
+		byBucket[point.Bucket] = point
+	}
+
+	filled := []LlmTrendPoint{}
+	last := counted[len(counted)-1].Bucket
+	for moment := start; len(filled) < llmTrendMaxPoints; moment = moment.Add(step) {
+		key := llmBucketOf(moment, hourly)
+		if key > last {
+			break
+		}
+		point, found := byBucket[key]
+		if !found {
+			point = LlmTrendPoint{Bucket: key}
+		}
+		filled = append(filled, point)
+	}
+	if len(filled) == 0 {
+		return counted, nil
+	}
+	return filled, nil
+}
+
+// llmBucketStart completes a bucket key back into a time RFC3339 can parse. The
+// zone offset is taken from the formatter that wrote the key rather than
+// spelled out here, so the two cannot drift apart.
+func llmBucketStart(bucket string, hourly bool) string {
+	zone := util.FormatTime(time.Now())[len("2006-01-02T15:04:05"):]
+	if hourly {
+		return bucket + ":00:00" + zone
+	}
+	return bucket + "T00:00:00" + zone
 }
 
 // GetLlmAgentStats totals every agent at once, so a page showing them side by

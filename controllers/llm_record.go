@@ -31,6 +31,10 @@ const llmStreamHeartbeat = 25 * time.Second
 
 const llmStatsTopModels = 8
 
+// llmStatsMaxTop bounds what a caller may ask for, so a "top models" table
+// cannot be made to return every model name ever relayed.
+const llmStatsMaxTop = 100
+
 // A record holds what a user asked a model, so unlike the proxy endpoints
 // themselves these are limited to Gateway administrators.
 
@@ -83,13 +87,39 @@ func (c *ApiController) GetLlmRecordStats() {
 		return
 	}
 
-	stats, err := object.GetLlmRecordStats(c.readLlmRecordFilter(), llmStatsTopModels)
+	// The dashboard's tables want every model it has seen, where the records
+	// page only has room for a row of badges.
+	top, _ := strconv.Atoi(c.Input().Get("top"))
+	if top < 1 {
+		top = llmStatsTopModels
+	}
+	if top > llmStatsMaxTop {
+		top = llmStatsMaxTop
+	}
+
+	stats, err := object.GetLlmRecordStats(c.readLlmRecordFilter(), top)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
 	}
 
 	c.ResponseOk(stats)
+}
+
+// GetLlmUsageTrend groups the same window into time buckets, which is what the
+// usage dashboard draws. "bucket" is "hour" or "day"; anything else is a day.
+func (c *ApiController) GetLlmUsageTrend() {
+	if c.RequireAdmin() {
+		return
+	}
+
+	points, err := object.GetLlmUsageTrend(c.readLlmRecordFilter(), c.Input().Get("bucket"))
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	c.ResponseOk(points)
 }
 
 // GetLlmAgentStats totals what each agent has relayed, for the page that lists

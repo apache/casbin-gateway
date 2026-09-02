@@ -38,6 +38,7 @@ import HomePage from "@/pages/HomePage";
 import ProviderEditPage from "@/pages/ProviderEditPage";
 import ProviderListPage from "@/pages/ProviderListPage";
 import LlmRecordsPage from "@/pages/LlmRecordsPage";
+import UsagePage from "@/pages/UsagePage";
 import SettingPage from "@/pages/SettingPage";
 import SigninPage from "@/pages/SigninPage";
 import type {Account, ThemeAlgorithm} from "@/types";
@@ -284,6 +285,7 @@ export default function App() {
                   path="/llm-records"
                   element={requireSignin(user => <LlmRecordsPage account={user} />)}
                 />
+                <Route path="/usage" element={requireSignin(user => <UsagePage account={user} />)} />
               </Routes>
             </React.Suspense>
           </main>

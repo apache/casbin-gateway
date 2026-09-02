@@ -14,7 +14,7 @@
 
 import {query, request} from "@/backend/request";
 import {ServerUrl} from "@/Setting";
-import type {LlmAgentStat, LlmPrice, LlmRecord, LlmRecordStats, LlmRecordStatus} from "@/types";
+import type {LlmAgentStat, LlmPrice, LlmRecord, LlmRecordStats, LlmRecordStatus, LlmTrendPoint} from "@/types";
 
 export interface LlmRecordFilter {
   model?: string;
@@ -24,6 +24,8 @@ export interface LlmRecordFilter {
   outcome?: string;
   /** How far back the list and the totals reach. 0 is everything. */
   windowHours?: number;
+  /** How many rows the per-model and per-provider breakdowns may return. */
+  top?: number;
 }
 
 export function getLlmRecords(page = 1, pageSize = 25, filter: LlmRecordFilter = {}) {
@@ -39,6 +41,14 @@ export function getLlmRecord(id: number) {
 
 export function getLlmRecordStats(filter: LlmRecordFilter = {}) {
   return request<LlmRecordStats>(`/api/get-llm-record-stats${query({...filter})}`);
+}
+
+/**
+ * The same window cut into time buckets, with the empty ones filled in by the
+ * server. `bucket` is "hour" or "day".
+ */
+export function getLlmUsageTrend(filter: LlmRecordFilter = {}, bucket: "hour" | "day" = "day") {
+  return request<LlmTrendPoint[]>(`/api/get-llm-usage-trend${query({...filter, bucket: bucket})}`);
 }
 
 /** The same totals per agent, in one request rather than one request each. */

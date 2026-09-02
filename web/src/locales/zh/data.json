@@ -628,5 +628,24 @@
     "Settings": "设置",
     "Sign-in": "登录",
     "Sign-in description": "Casdoor 是可选的：地址留空则使用 Gateway 自带的用户表登录。"
+  },
+  "usage": {
+    "Agents description": "这台机器上的 agent 花掉的量，读自它们自己写的会话记录。没有经过 Gateway 的请求，只有这一份账。",
+    "By agent": "按 Agent",
+    "By model": "按模型",
+    "By provider": "按 Provider",
+    "Cache writes are not reported by every protocol": "走 OpenAI 协议的 provider 只上报缓存命中，不上报缓存写入，所以这里可能显示为 0 而缓存其实在写。",
+    "Every agent": "全部 Agent",
+    "Every {count}s": "每 {count} 秒",
+    "Last {count} days": "最近 {count} 天",
+    "No auto refresh": "不自动刷新",
+    "Nothing was spent in this window": "这个时间范围内没有消耗",
+    "Recording is off detail": "llmRecordMode 是 \"off\"，转发的请求没有被统计。Agent 自己的会话记录不受影响，照常统计。",
+    "Relayed description": "Gateway 代为转发的量。只有这一份账知道是哪个 provider 应答的，以及是否失败。",
+    "Tokens spent": "消耗 Tokens",
+    "Trend": "趋势",
+    "Usage": "用量",
+    "What Gateway relayed": "Gateway 转发的账",
+    "What the agents spent": "Agent 自己的账"
   }
 }
