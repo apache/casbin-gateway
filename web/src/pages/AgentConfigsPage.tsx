@@ -17,7 +17,9 @@ import {
   AlertTriangle,
   ArrowDownToLine,
   Check,
+  Download,
   Eye,
+  Link2,
   Minus,
   Package,
   Pencil,
@@ -34,6 +36,7 @@ import {AgentIcon} from "@/components/AgentIcon";
 import {AddMcpDialog} from "@/components/agent-config/add-mcp-dialog";
 import {CopyDialog} from "@/components/agent-config/copy-dialog";
 import {DetailDialog, type DetailTarget} from "@/components/agent-config/detail-dialog";
+import {InstallSkillDialog} from "@/components/agent-config/install-skill-dialog";
 import {PromptDialog, type PromptTarget} from "@/components/agent-config/prompt-dialog";
 import {TrashDialog} from "@/components/agent-config/trash-dialog";
 import {ConfirmDialog} from "@/components/shared/confirm-dialog";
@@ -162,6 +165,7 @@ export default function AgentConfigsPage({account}: {account: Account}) {
   const [editing, setEditing] = React.useState<PromptTarget | null>(null);
   const [copyOpen, setCopyOpen] = React.useState(false);
   const [addOpen, setAddOpen] = React.useState(false);
+  const [installOpen, setInstallOpen] = React.useState(false);
   const [trashOpen, setTrashOpen] = React.useState(false);
   const [deleting, setDeleting] = React.useState("");
   const [updating, setUpdating] = React.useState("");
@@ -291,6 +295,16 @@ export default function AgentConfigsPage({account}: {account: Account}) {
                     .replace("{agents}", outdated.join(", "))}
                 >
                   <Badge variant="warning">{i18next.t("agentConfig:Out of date")}</Badge>
+                </SimpleTooltip>
+              ) : null}
+              {record.link ? (
+                <SimpleTooltip
+                  title={i18next.t("agentConfig:Linked detail").replace("{target}", record.link)}
+                >
+                  <Badge variant="info">
+                    <Link2 className="size-3" />
+                    {i18next.t("agentConfig:Linked")}
+                  </Badge>
                 </SimpleTooltip>
               ) : null}
               {record.managed ? (
@@ -473,6 +487,12 @@ export default function AgentConfigsPage({account}: {account: Account}) {
         description={i18next.t("agentConfig:Page description")}
         actions={
           <>
+            {kind === "skill" && inventories.length > 0 ? (
+              <Button onClick={() => setInstallOpen(true)}>
+                <Download className="size-4" />
+                {i18next.t("agentConfig:Install skills")}
+              </Button>
+            ) : null}
             {kind === "mcp" && inventories.length > 0 ? (
               <Button onClick={() => setAddOpen(true)}>
                 <Plus className="size-4" />
@@ -602,6 +622,16 @@ export default function AgentConfigsPage({account}: {account: Account}) {
             onDone={refresh}
           />
         </>
+      ) : null}
+
+      {source ? (
+        <InstallSkillDialog
+          open={installOpen}
+          onOpenChange={setInstallOpen}
+          inventories={inventories}
+          source={source}
+          onDone={refresh}
+        />
       ) : null}
 
       {source ? (

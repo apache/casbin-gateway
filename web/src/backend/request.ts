@@ -62,6 +62,27 @@ export async function request<T = any, T2 = any>(
   }
 }
 
+/**
+ * The one call that sends a file rather than JSON. The Content-Type is left to
+ * the browser: it is the only party that knows the multipart boundary it just
+ * generated.
+ */
+export async function upload<T = any>(path: string, form: FormData): Promise<ApiResponse<T>> {
+  let response: Response;
+  try {
+    response = await fetch(`${ServerUrl}${path}`, {method: "POST", credentials: "include", body: form});
+  } catch {
+    throw unreachable();
+  }
+
+  const text = await response.text();
+  try {
+    return JSON.parse(text) as ApiResponse<T>;
+  } catch {
+    throw unreachable(response.ok ? undefined : response.status);
+  }
+}
+
 /** Builds a query string, dropping the parameters that were left empty. */
 export function query(params: Record<string, string | number | undefined | null>) {
   const search = new URLSearchParams();

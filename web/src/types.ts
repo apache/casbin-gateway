@@ -558,6 +558,11 @@ export interface AgentConfigItem {
   files?: number;
   bytes?: number;
   /**
+   * What a skill installed as a symbolic link points at. A linked skill follows
+   * its source; a copied one is the agent's own from the moment it lands.
+   */
+  link?: string;
+  /**
    * "user" for a skill the operator wrote, "plugin" for one a plugin ships,
    * "project" for one that belongs to a checkout the agent works in.
    */
@@ -648,6 +653,53 @@ export interface AgentConfigTrashEntry {
   bytes?: number;
   deletedAt: number;
 }
+
+/** Where a skill source's content comes from. */
+export type SkillSourceKind = "github" | "archive" | "upload" | "local";
+
+/** One place skills can be installed from. */
+export interface SkillSource {
+  id: string;
+  name: string;
+  kind: SkillSourceKind;
+  /** owner/repo for a repository, the download URL for an archive, the folder for a local source. */
+  url?: string;
+  /** The branch, tag or commit of a repository; empty follows its default branch. */
+  ref?: string;
+  /** The one folder of the source to look in, for a repository that groups its skills. */
+  subdir?: string;
+  /** Seeded by Gateway rather than added here. It can still be removed. */
+  builtin?: boolean;
+  addedAt?: number;
+  /** When Gateway last took a copy, and how many skills it held then. */
+  fetchedAt?: number;
+  skills?: number;
+}
+
+/** One skill of a source, before it is installed anywhere. */
+export interface SkillCatalogItem {
+  /** The folder it would be installed under, relative to the source. */
+  name: string;
+  path: string;
+  description?: string;
+  files?: number;
+  bytes?: number;
+  digest?: string;
+  modified?: number;
+}
+
+export interface SkillCatalog {
+  source: SkillSource;
+  /** The folder the skills below were read from. */
+  root: string;
+  skills: SkillCatalogItem[];
+}
+
+/**
+ * How an installed skill relates to its source: a copy the agent then owns, or
+ * a link that follows Gateway's copy of the source whenever it is fetched again.
+ */
+export type SkillInstallMode = "copy" | "link";
 
 /** How an MCP server is reached: a spawned command, or an HTTP endpoint. */
 export type McpTransport = "stdio" | "http";

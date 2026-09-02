@@ -68,6 +68,11 @@ type Item struct {
 	Files int   `json:"files,omitempty"`
 	Bytes int64 `json:"bytes,omitempty"`
 
+	// Link is what a skill installed as a symbolic link points at, empty for a
+	// skill that is a folder of its own. A linked skill follows its source
+	// wherever that goes, which is the difference the listing has to show.
+	Link string `json:"link,omitempty"`
+
 	// Scope tells a skill the operator wrote from one a plugin ships or one a
 	// project checkout carries, and Origin names that plugin or project.
 	Scope  string `json:"scope,omitempty"`

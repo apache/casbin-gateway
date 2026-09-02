@@ -132,13 +132,14 @@ func readSkillDir(agentId string, owner string, dir skillDir) ([]*Item, error) {
 
 	items := []*Item{}
 	for _, entry := range entries {
+		path := filepath.Join(dir.path, entry.Name())
 		// A dot directory is the agent's own bookkeeping, such as the manifest
 		// Cursor writes beside the skills it manages.
-		if !entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
+		if !isDirEntry(path, entry.IsDir(), entry.Type()&fs.ModeSymlink != 0) ||
+			strings.HasPrefix(entry.Name(), ".") {
 			continue
 		}
 
-		path := filepath.Join(dir.path, entry.Name())
 		if _, ok := manifestPath(path); ok {
 			items = append(items, newSkillItem(agentId, owner, dir, entry.Name(), path))
 			continue
@@ -149,10 +150,11 @@ func readSkillDir(agentId string, owner string, dir skillDir) ([]*Item, error) {
 			continue
 		}
 		for _, child := range nested {
-			if !child.IsDir() || strings.HasPrefix(child.Name(), ".") {
+			childPath := filepath.Join(path, child.Name())
+			if !isDirEntry(childPath, child.IsDir(), child.Type()&fs.ModeSymlink != 0) ||
+				strings.HasPrefix(child.Name(), ".") {
 				continue
 			}
-			childPath := filepath.Join(path, child.Name())
 			if _, ok := manifestPath(childPath); ok {
 				items = append(items, newSkillItem(agentId, owner, dir, entry.Name()+"/"+child.Name(), childPath))
 			}
@@ -186,6 +188,7 @@ func newSkillItem(agentId string, owner string, dir skillDir, name string, path 
 			_, item.Description = parseFrontMatter(string(raw))
 		}
 	}
+	item.Link = linkTarget(path)
 	stat := measure(path)
 	item.Files, item.Bytes, item.Digest, item.Modified = stat.files, stat.bytes, stat.digest, stat.modified
 	return item
@@ -316,6 +319,10 @@ type treeStat struct {
 }
 
 func measure(dir string) treeStat {
+	// A skill installed as a link is a link, and walking one visits the link
+	// rather than the folder it names.
+	dir = resolvedDir(dir)
+
 	stat := treeStat{}
 	hash := sha256.New()
 	// WalkDir visits in lexical order, so one folder digests the same wherever
@@ -363,6 +370,8 @@ func shortDigest(sum []byte) string {
 // listFiles names what a skill ships besides its manifest, in slash form so the
 // list reads the same on every platform.
 func listFiles(dir string) []string {
+	dir = resolvedDir(dir)
+
 	files := []string{}
 	filepath.WalkDir(dir, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil || entry.IsDir() || len(files) >= maxSkillFiles {
