@@ -89,7 +89,7 @@
 - **[Switch every agent's provider from one place](#send-an-agents-traffic-through-gateway)** — change an API key or base URL once, and every agent pointed at Gateway picks it up.
 - **[Run several instances of one agent side by side](#what-to-do-next)** — e.g. multiple Claude Desktop instances, each signed in to a different account.
 - **[See the whole request, not just a count](#recording-prompts)** — every prompt, message and tool schema an agent sent, kept on this machine.
-- **[Say what each agent may do](#what-each-agent-is-allowed-to-do)** — a switch per tool group, model and provider, enforced by Casbin on every request it relays.
+- **[Say what each agent may do](#what-each-agent-is-allowed-to-do)** — around forty switches per agent, in groups, over its tools, models and providers, enforced by Casbin on every request it relays.
 - **[Know what every agent spent, even off Gateway](#what-the-agents-spend-including-what-never-went-through-gateway)** — read straight from the agents' own transcripts.
 - **[Compare and copy skills, MCP servers and prompts across agents](#what-to-do-next)** — every agent's install list in one table.
 
@@ -203,9 +203,9 @@ Codex is the exception: its ChatGPT sign-in talks to an endpoint no provider sta
 
 ### What each agent is allowed to do
 
-Everything an agent relays through Gateway is held to the rules on its own page, so an agent can be given less than it came with without editing its own configuration. **Agents** → open one → **Permissions**:
+**Permissions** in the sidebar is the page for it: every agent on this machine down one side, what the one you picked may do beside it. The same card is on the agent's own page. Everything that agent relays through Gateway is held to what is set there, so it can be given less than it came with without editing its own configuration.
 
-- **Tools** — one switch per group: running commands, reading files, changing files, reaching the internet, and MCP servers. A tool whose switch is off is taken out of the request before it leaves this machine, so the model is never offered it and the agent never gets to call it. Every agent names its tools differently, and `Bash`, `shell` and `run_shell_command` are all the same switch.
+- **Tools** — around forty switches, in six groups: the terminal, reading the project, changing the project, the internet, planning and delegation, and one switch per MCP server that agent has installed. The switch on a group's header sets the whole group at once; open the group and the answer gets as fine as you like, since running a command, reading a running command's output and stopping one are three switches. A tool whose switch is off is taken out of the request before it leaves this machine, so the model is never offered it and the agent never gets to call it. Every agent names its tools differently, and `Bash`, `shell` and `run_shell_command` are all the same switch. Each group ends in a catch-all for the tools Gateway has never seen, which is what closes a group for good rather than for the tools that happened to be listed the day it was set.
 - **Models** — any model, only the ones you pick, or all but them. A name may end in `*`, so `claude-opus-*` covers a whole family.
 - **Providers** — which of the providers this agent's requests may be sent to.
 
@@ -214,11 +214,15 @@ A request that asks for something switched off comes back as a `permission_error
 Underneath, the switches compile to a [Casbin](https://casbin.org) policy, and every relayed request is decided by an enforcer rather than by a hand-written check. **Advanced** shows the `model.conf` and `policy.csv` they compile to, and takes extra policy lines of your own:
 
 ```
-p, claude-code, model:*, use, allow
 p, claude-code, model:claude-opus-*, use, deny
+p, claude-code, model:*, use, allow
+p, claude-code, tool:shell/run, use, deny
+p, claude-code, tool:mcp/github, use, allow
+p, claude-code, tool:mcp/*, use, deny
 p, claude-code, tool:*, use, allow
-p, claude-code, tool:shell, use, deny
 ```
+
+The first rule that matches decides, which is what lets one exception stand in front of the rule behind it: every MCP server taken away except the one that stays. The lines you write yourself are checked before the ones the switches wrote.
 
 The rules apply to what goes through the proxy, so an agent bound directly to a provider — its own configuration pointing at the vendor rather than at Gateway — is not held to them. The page says so where that is the case.
 

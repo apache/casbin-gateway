@@ -171,12 +171,22 @@ export interface Agent {
   supportsInstances?: boolean;
 }
 
-/** One group of tools the Permissions card draws a switch for. */
+/** One switch of the Permissions page: something an agent may be allowed to do,
+ *  and the tool names the agents call it by. The name is "<group>/<item>", which
+ *  is also the casbin object it is checked as. */
+export interface ToolItem {
+  name: string;
+  group: string;
+  /** Set for an item the page has no wording of its own for, such as one of the
+   *  agent's MCP servers. */
+  label?: string;
+  tools: string[];
+}
+
+/** One group of switches, which can also be set in one go. */
 export interface ToolGroup {
   name: string;
-  /** A few of the tools that fall in the group, since every agent names its own
-   *  differently. */
-  examples: string[];
+  items: ToolItem[];
 }
 
 /** What one agent is allowed to ask the gateway for. Mirrors

@@ -15,15 +15,24 @@
 import {query, request} from "@/backend/request";
 import type {AgentPermission, AgentPermissionInfo} from "@/types";
 
-/** What one agent may ask for. An agent nobody has configured answers with the
- *  unrestricted default rather than with nothing. */
-export function getAgentPermission(agentId: string) {
-  return request<AgentPermissionInfo>(`/api/get-agent-permission${query({agentId: agentId})}`);
+/** What one agent may do. An agent nobody has configured answers with the
+ *  unrestricted default rather than with nothing. The owner is the host user the
+ *  installation belongs to, which is where its MCP servers are read from. */
+export function getAgentPermission(agentId: string, owner = "") {
+  return request<AgentPermissionInfo>(
+    `/api/get-agent-permission${query({agentId: agentId, owner: owner})}`,
+  );
 }
 
-export function updateAgentPermission(agentId: string, permission: AgentPermission) {
+/** Every agent somebody has configured, for the list on the Permissions page. */
+export function getAgentPermissions() {
+  return request<AgentPermission[]>("/api/get-agent-permissions");
+}
+
+export function updateAgentPermission(agentId: string, permission: AgentPermission, owner = "") {
   return request<AgentPermissionInfo>("/api/update-agent-permission", "POST", {
     agentId: agentId,
+    owner: owner,
     permission: permission,
   });
 }

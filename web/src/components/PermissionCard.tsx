@@ -13,7 +13,19 @@
 // limitations under the License.
 
 import * as React from "react";
-import {Copy, FileCode2, FolderOpen, Globe, Pencil, Plug, ShieldCheck, Terminal} from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  FileCode2,
+  FolderOpen,
+  Globe,
+  ListChecks,
+  Pencil,
+  Plug,
+  ShieldCheck,
+  Terminal,
+} from "lucide-react";
 import copy from "copy-to-clipboard";
 import i18next from "i18next";
 
@@ -29,17 +41,68 @@ import {Textarea} from "@/components/ui/textarea";
 import {directMode} from "@/lib/agents";
 import {providerIdOf} from "@/lib/providers";
 import {cn} from "@/lib/utils";
-import type {Agent, AgentPermission, AgentPermissionInfo, Provider, ToolGroup} from "@/types";
+import type {
+  Agent,
+  AgentPermission,
+  AgentPermissionInfo,
+  Provider,
+  ToolGroup,
+  ToolItem,
+} from "@/types";
 
-/** The label and the icon of each tool group, by the name the server gives it.
- *  A group added to a later server than this page is drawn by its own name. */
+/** The name and icon of each group, by the name the server gives it. */
 const groupLabels: {[group: string]: {label: string; icon: React.ElementType}} = {
-  shell: {label: "agent:Run commands", icon: Terminal},
-  fileRead: {label: "agent:Read files", icon: FolderOpen},
-  fileWrite: {label: "agent:Change files", icon: Pencil},
-  network: {label: "agent:Reach the internet", icon: Globe},
-  mcp: {label: "agent:Use MCP servers", icon: Plug},
+  shell: {label: "agent:Terminal", icon: Terminal},
+  read: {label: "agent:Reading the project", icon: FolderOpen},
+  write: {label: "agent:Changing the project", icon: Pencil},
+  network: {label: "agent:The internet", icon: Globe},
+  agentic: {label: "agent:Planning and delegation", icon: ListChecks},
+  mcp: {label: "agent:MCP servers", icon: Plug},
 };
+
+/** What each switch is called. An item with no wording here - one of the agent's
+ *  own MCP servers - is named by the label the server sent. */
+const itemLabels: {[item: string]: string} = {
+  "shell/run": "agent:Run a command",
+  "shell/output": "agent:Read a running command's output",
+  "shell/kill": "agent:Stop a running command",
+  "shell/other": "agent:Any other command tool",
+  "read/file": "agent:Read a file",
+  "read/many": "agent:Read many files at once",
+  "read/image": "agent:Look at an image",
+  "read/list": "agent:List a directory",
+  "read/find": "agent:Find files by name",
+  "read/grep": "agent:Search inside files",
+  "read/semantic": "agent:Search the codebase by meaning",
+  "read/notebook": "agent:Read a notebook",
+  "read/other": "agent:Any other tool that reads",
+  "write/create": "agent:Create or overwrite a file",
+  "write/edit": "agent:Edit a file",
+  "write/multi": "agent:Edit several places at once",
+  "write/patch": "agent:Apply a patch",
+  "write/notebook": "agent:Edit a notebook",
+  "write/delete": "agent:Delete a file",
+  "write/move": "agent:Move or rename a file",
+  "write/mkdir": "agent:Create a directory",
+  "write/other": "agent:Any other tool that writes",
+  "network/fetch": "agent:Fetch a URL",
+  "network/search": "agent:Search the web",
+  "network/browser": "agent:Drive a browser",
+  "network/other": "agent:Any other tool that goes online",
+  "agentic/subagent": "agent:Start a sub-agent",
+  "agentic/todo": "agent:Keep a task list",
+  "agentic/plan": "agent:Leave plan mode",
+  "agentic/ask": "agent:Ask the user a question",
+  "agentic/command": "agent:Run a slash command",
+  "agentic/skill": "agent:Run a skill",
+  "agentic/memory": "agent:Remember something",
+  "mcp/other": "agent:Any other MCP server",
+};
+
+function itemLabel(item: ToolItem) {
+  const known = itemLabels[item.name];
+  return known ? i18next.t(known) : item.label || item.name.split("/")[1];
+}
 
 /** The three ways a list of models or providers is read. */
 const listModes = ["all", "allow", "deny"];
@@ -52,34 +115,97 @@ function modeOptions(anyLabel: string) {
   ];
 }
 
-/** One tool group, as the switch that turns it off. */
-function ToolSwitch({
+/** An item is allowed until somebody turns it off, so a switch this agent was
+ *  configured before it existed never takes anything away. */
+function isAllowed(tools: AgentPermission["tools"], item: string) {
+  return (tools ?? {})[item] !== false;
+}
+
+/** One group: its own switch sets every item in it at once, and the items
+ *  underneath are what a finer answer is given with. */
+function GroupBlock({
   group,
-  allowed,
+  tools,
   busy,
-  onChange,
+  onItems,
 }: {
   group: ToolGroup;
-  allowed: boolean;
+  tools: AgentPermission["tools"];
   busy: boolean;
-  onChange: (allowed: boolean) => void;
+  onItems: (changed: {[item: string]: boolean}) => void;
 }) {
+  const [open, setOpen] = React.useState(false);
   const known = groupLabels[group.name];
   const Icon = known ? known.icon : ShieldCheck;
+  const items = group.items ?? [];
+  const blocked = items.filter(item => !isAllowed(tools, item.name));
+  const Chevron = open ? ChevronDown : ChevronRight;
+
+  const setAll = (allowed: boolean) => {
+    const changed: {[item: string]: boolean} = {};
+    items.forEach(item => {
+      changed[item.name] = allowed;
+    });
+    onItems(changed);
+  };
 
   return (
-    <label className="flex items-start gap-2.5 rounded-md border p-2.5 text-sm">
-      <Switch className="mt-0.5" checked={allowed} disabled={busy} onCheckedChange={onChange} />
-      <span className="min-w-0">
-        <span className="flex items-center gap-1.5">
-          <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-          {known ? i18next.t(known.label) : group.name}
-        </span>
-        <code className="block truncate text-xs text-muted-foreground">
-          {(group.examples ?? []).join(", ")}
-        </code>
-      </span>
-    </label>
+    <div className="rounded-md border">
+      <div className="flex items-center gap-2 p-2.5">
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left text-sm"
+        >
+          <Chevron className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className="truncate font-medium">
+            {known ? i18next.t(known.label) : group.name}
+          </span>
+          {blocked.length === 0 ? (
+            <Badge variant="muted" className="shrink-0 font-normal">
+              {`${items.length} ${i18next.t("agent:allowed")}`}
+            </Badge>
+          ) : (
+            <Badge variant="warning" className="shrink-0 font-normal">
+              {`${blocked.length} ${i18next.t("agent:blocked")}`}
+            </Badge>
+          )}
+        </button>
+        <Switch
+          checked={blocked.length === 0}
+          disabled={busy}
+          aria-label={known ? i18next.t(known.label) : group.name}
+          onCheckedChange={setAll}
+        />
+      </div>
+
+      {open ? (
+        <div className="grid grid-cols-1 gap-x-4 border-t p-2.5 sm:grid-cols-2">
+          {items.map(item => (
+            <label
+              key={item.name}
+              className="flex items-start justify-between gap-3 border-b py-2 text-sm last:border-b-0 sm:[&:nth-last-child(2)]:border-b-0"
+            >
+              <span className="min-w-0">
+                {itemLabel(item)}
+                {(item.tools ?? []).length > 0 ? (
+                  <code className="block truncate text-xs text-muted-foreground">
+                    {(item.tools ?? []).join(", ")}
+                  </code>
+                ) : null}
+              </span>
+              <Switch
+                className="mt-0.5 shrink-0"
+                checked={isAllowed(tools, item.name)}
+                disabled={busy}
+                onCheckedChange={allowed => onItems({[item.name]: allowed})}
+              />
+            </label>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -144,7 +270,7 @@ function AdvancedView({
           spellCheck={false}
           value={draft}
           disabled={busy}
-          placeholder="claude-code, tool:mcp, use, deny"
+          placeholder="claude-code, tool:mcp/*, use, deny"
           onChange={event => setDraft(event.target.value)}
           onBlur={() => {
             const rules = draft.split("\n").map(line => line.trim()).filter(line => line !== "");
@@ -160,26 +286,39 @@ function AdvancedView({
 }
 
 /**
- * What one agent is allowed to ask Gateway for: the tools it may be offered,
- * the models it may name and the providers its requests may reach. The switches
- * are what is set; casbin is what decides, and the advanced view shows the
- * policy they compile to.
+ * What one agent is allowed to ask Gateway for: the tools it may be offered, the
+ * models it may name and the providers its requests may reach. The switches are
+ * what is set; casbin is what decides, and the advanced view shows the policy
+ * they compile to.
  */
-export function PermissionCard({agent, providers}: {agent: Agent; providers: Provider[]}) {
+export function PermissionCard({
+  agent,
+  providers,
+  className,
+  onSaved,
+}: {
+  agent: Agent;
+  providers: Provider[];
+  className?: string;
+  /** Told after a save, for a page that lists what every agent is held to. */
+  onSaved?: () => void;
+}) {
   const [info, setInfo] = React.useState<AgentPermissionInfo | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [advanced, setAdvanced] = React.useState(false);
 
   const agentId = agent.agentId;
+  const owner = agent.owner;
 
   React.useEffect(() => {
     if (agentId === "") {
       return;
     }
-    PermissionBackend.getAgentPermission(agentId)
+    setInfo(null);
+    PermissionBackend.getAgentPermission(agentId, owner)
       .then(res => setInfo(res.status === "ok" ? (res.data ?? null) : null))
       .catch(() => setInfo(null));
-  }, [agentId]);
+  }, [agentId, owner]);
 
   if (info === null) {
     return null;
@@ -187,15 +326,17 @@ export function PermissionCard({agent, providers}: {agent: Agent; providers: Pro
 
   const permission = info.permission;
   const groups = info.groups ?? [];
-  const blocked = groups.filter(group => permission.tools?.[group.name] === false);
+  const items = groups.flatMap(group => group.items ?? []);
+  const blocked = items.filter(item => !isAllowed(permission.tools, item.name));
 
   const save = (changed: Partial<AgentPermission>) => {
     const next = {...permission, ...changed};
     setBusy(true);
-    PermissionBackend.updateAgentPermission(agentId, next)
+    PermissionBackend.updateAgentPermission(agentId, next, owner)
       .then(res => {
         if (res.status === "ok" && res.data) {
           setInfo(res.data);
+          onSaved?.();
           Setting.showMessage("success", i18next.t("agent:Permissions saved"));
         } else {
           Setting.showMessage("error", res.msg || i18next.t("agent:Failed to save the permissions"));
@@ -205,8 +346,16 @@ export function PermissionCard({agent, providers}: {agent: Agent; providers: Pro
       .then(() => setBusy(false));
   };
 
-  const setTool = (group: string, allowed: boolean) =>
-    save({tools: {...(permission.tools ?? {}), [group]: allowed}});
+  // Every switch the page drew is sent back, so an item nobody touched is
+  // stored as allowed rather than as unknown: that is what lets a group be
+  // closed with one rule instead of one per item.
+  const saveItems = (changed: {[item: string]: boolean}) => {
+    const tools: {[item: string]: boolean} = {};
+    items.forEach(item => {
+      tools[item.name] = isAllowed(permission.tools, item.name);
+    });
+    save({tools: {...tools, ...changed}});
+  };
 
   // The models of every provider, so the field offers what this machine can
   // actually reach rather than an empty box.
@@ -217,17 +366,19 @@ export function PermissionCard({agent, providers}: {agent: Agent; providers: Pro
   const listMode = (mode: string) => (listModes.includes(mode) ? mode : "all");
 
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader className="p-4 pb-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2 text-base">
             {i18next.t("agent:Permissions")}
-            {permission.enabled ? (
-              <Badge variant={blocked.length > 0 ? "success" : "muted"}>
-                {i18next.t("agent:Enforced")}
-              </Badge>
-            ) : (
+            {!permission.enabled ? (
               <Badge variant="muted">{i18next.t("agent:Unrestricted")}</Badge>
+            ) : blocked.length === 0 ? (
+              <Badge variant="muted">{i18next.t("agent:Enforced")}</Badge>
+            ) : (
+              <Badge variant="success">
+                {`${blocked.length} ${i18next.t("agent:blocked")}`}
+              </Badge>
             )}
           </CardTitle>
           <Button variant="ghost" size="xs" onClick={() => setAdvanced(!advanced)}>
@@ -260,15 +411,20 @@ export function PermissionCard({agent, providers}: {agent: Agent; providers: Pro
 
         <div className={cn("space-y-3", !permission.enabled && "pointer-events-none opacity-50")}>
           <div className="space-y-2">
-            <div className="text-sm font-medium">{i18next.t("agent:What it may do")}</div>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-sm font-medium">{i18next.t("agent:What it may do")}</div>
+              <div className="text-xs text-muted-foreground">
+                {`${items.length} ${i18next.t("agent:switches")}`}
+              </div>
+            </div>
+            <div className="space-y-2">
               {groups.map(group => (
-                <ToolSwitch
+                <GroupBlock
                   key={group.name}
                   group={group}
-                  allowed={permission.tools?.[group.name] !== false}
+                  tools={permission.tools}
                   busy={busy || !permission.enabled}
-                  onChange={allowed => setTool(group.name, allowed)}
+                  onItems={saveItems}
                 />
               ))}
             </div>

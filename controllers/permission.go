@@ -18,12 +18,13 @@ import (
 	"encoding/json"
 
 	"github.com/apache/casbin-gateway/agent"
+	"github.com/apache/casbin-gateway/agentconfig"
 	"github.com/apache/casbin-gateway/object"
 )
 
 // agentPermissionInfo is one agent's permissions with everything the card needs
-// to draw them: the groups it has a switch for, and the casbin model and policy
-// they compile to, which is what the advanced view shows.
+// to draw them: the switches it has, and the casbin model and policy they
+// compile to, which is what the advanced view shows.
 type agentPermissionInfo struct {
 	Permission *object.AgentPermission `json:"permission"`
 	Groups     []object.ToolGroup      `json:"groups"`
@@ -31,13 +32,32 @@ type agentPermissionInfo struct {
 	Policy     []string                `json:"policy"`
 }
 
-func newAgentPermissionInfo(permission *object.AgentPermission) *agentPermissionInfo {
+func newAgentPermissionInfo(permission *object.AgentPermission, owner string) *agentPermissionInfo {
 	return &agentPermissionInfo{
 		Permission: permission,
-		Groups:     object.ToolGroups(),
+		Groups:     object.ToolGroups(mcpItemsOf(permission.Name, owner)),
 		Model:      object.PermissionModelText,
 		Policy:     permission.PolicyText(),
 	}
+}
+
+// mcpItemsOf is one switch per MCP server the agent has installed, so a server
+// can be taken away from it by name rather than all of them at once. An agent
+// whose configuration cannot be read keeps the catch-all switch alone.
+func mcpItemsOf(agentId string, owner string) []object.ToolItem {
+	items := []object.ToolItem{}
+	if owner == "" {
+		return items
+	}
+
+	inventory := agentconfig.Read(agentId, owner)
+	if !inventory.McpSupported {
+		return items
+	}
+	for _, server := range inventory.McpServers {
+		items = append(items, object.McpServerItem(server.Name))
+	}
+	return items
 }
 
 // GetAgentPermission answers with what one agent is allowed to ask for. An
@@ -60,7 +80,27 @@ func (c *ApiController) GetAgentPermission() {
 		return
 	}
 
-	c.ResponseOk(newAgentPermissionInfo(permission))
+	c.ResponseOk(newAgentPermissionInfo(permission, c.Input().Get("owner")))
+}
+
+// GetAgentPermissions lists what every configured agent is held to, for the
+// page that shows them side by side.
+func (c *ApiController) GetAgentPermissions() {
+	if c.RequireAdmin() {
+		return
+	}
+
+	permissions, err := object.GetAgentPermissions()
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	stored := []*object.AgentPermission{}
+	for _, permission := range permissions {
+		stored = append(stored, permission)
+	}
+	c.ResponseOk(stored)
 }
 
 // UpdateAgentPermission stores the switches of one agent's Permissions card.
@@ -72,6 +112,7 @@ func (c *ApiController) UpdateAgentPermission() {
 
 	var form struct {
 		AgentId    string                  `json:"agentId"`
+		Owner      string                  `json:"owner"`
 		Permission *object.AgentPermission `json:"permission"`
 	}
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &form); err != nil {
@@ -88,5 +129,5 @@ func (c *ApiController) UpdateAgentPermission() {
 		return
 	}
 
-	c.ResponseOk(newAgentPermissionInfo(form.Permission))
+	c.ResponseOk(newAgentPermissionInfo(form.Permission, form.Owner))
 }

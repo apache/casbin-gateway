@@ -36,6 +36,7 @@ import AgentsPage from "@/pages/AgentsPage";
 import AuthCallback from "@/pages/AuthCallback";
 import AuthenticityPage from "@/pages/AuthenticityPage";
 import HomePage from "@/pages/HomePage";
+import PermissionsPage from "@/pages/PermissionsPage";
 import ProviderEditPage from "@/pages/ProviderEditPage";
 import ProviderListPage from "@/pages/ProviderListPage";
 import LlmRecordsPage from "@/pages/LlmRecordsPage";
@@ -278,6 +279,10 @@ export default function App() {
                   element={requireSignin(user => <AgentSessionPage account={user} />)}
                 />
                 <Route path="/settings" element={requireSignin(user => <SettingPage account={user} />)} />
+                <Route
+                  path="/permissions"
+                  element={requireSignin(user => <PermissionsPage account={user} />)}
+                />
                 <Route path="/providers" element={requireSignin(user => <ProviderListPage account={user} />)} />
                 <Route
                   path="/authenticity"

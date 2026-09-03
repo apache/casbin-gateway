@@ -89,7 +89,7 @@
 - **[一个地方切换所有 Agent 的 API 供应商](#让-agent-的流量走-gateway)** —— 改一次 Key 或 base URL，接进 Gateway 的每个 Agent 都跟着换。
 - **[同一个 Agent 开多个实例](#接下来做什么)** —— 比如同时跑好几个 Claude Desktop，各自登录不同账号。
 - **[看到完整的请求，而不只是一个数字](#记录提示词)** —— 每一条 prompt、消息和工具 schema，都留在这台机器上。
-- **[规定每个 Agent 能做什么](#每个-agent-能做什么)** —— 工具、模型、供应商各一排开关，每个转发的请求都由 Casbin 判定。
+- **[规定每个 Agent 能做什么](#每个-agent-能做什么)** —— 每个 Agent 四十来个开关，分组管理，覆盖工具、模型和供应商，每个转发的请求都由 Casbin 判定。
 - **[统计每个 Agent 花了多少，包括没走 Gateway 的部分](#每个-agent-花了多少包括没走-gateway-的那部分)** —— 直接读 Agent 自己写的会话记录。
 - **[跨 Agent 对比、复制技能 / MCP / 提示词](#接下来做什么)** —— 一张表看到所有 Agent 装了什么。
 
@@ -200,9 +200,9 @@ Codex 是例外：它的 ChatGPT 登录走的是没有任何 Provider 能替代�
 
 ### 每个 Agent 能做什么
 
-经 Gateway 转发的每个请求，都按这个 Agent 自己页面上的规则来判。不用改 Agent 自己的配置，就能把它的能力收窄。**Agents** → 打开一个 → **Permissions**：
+侧边栏的 **Permissions** 就是这个页面：一侧是这台机器上的每个 Agent，另一侧是选中那个能做什么；Agent 自己的详情页上也有同一张卡片。这个 Agent 经 Gateway 转发的所有请求，都按这里设的来判，不用改它自己的配置，就能把能力收窄。
 
-- **工具** —— 每组一个开关：执行命令、读取文件、修改文件、访问网络、MCP 服务。关掉的工具会在请求离开这台机器之前被删掉，模型压根看不到它，Agent 也就无从调用。各家 Agent 的工具名都不一样，`Bash`、`shell`、`run_shell_command` 都归同一个开关管。
+- **工具** —— 四十来个开关，分成六组：终端、读取项目、修改项目、访问网络、规划与委派，再加上这个 Agent 装的每一个 MCP 服务各一个开关。点分组标题上的开关就能整组一起设；展开这一组，粒度想多细有多细 —— 执行命令、读取运行中命令的输出、停止命令，是三个独立开关。关掉的工具会在请求离开这台机器之前被删掉，模型压根看不到它，Agent 也就无从调用。各家 Agent 的工具名都不一样，`Bash`、`shell`、`run_shell_command` 都归同一个开关管。每组最后都有一个兜底项，管的是 Gateway 没见过的同类工具 —— 有了它，关掉一组才是真的关死，而不是只关掉设置那天恰好列出来的几个。
 - **模型** —— 任意模型、只允许勾选的、或除勾选的以外都允许。名称可以用 `*` 结尾，`claude-opus-*` 就覆盖一整个系列。
 - **供应商** —— 这个 Agent 的请求可以发给哪几个 Provider。
 
@@ -211,11 +211,15 @@ Codex 是例外：它的 ChatGPT 登录走的是没有任何 Provider 能替代�
 底层上，这些开关会编译成一份 [Casbin](https://casbin.org) 策略，每个转发的请求都由 enforcer 判定，而不是靠手写的 if。点 **Advanced** 就能看到它们编译出的真实 `model.conf` 和 `policy.csv`，也可以自己往里加策略行：
 
 ```
-p, claude-code, model:*, use, allow
 p, claude-code, model:claude-opus-*, use, deny
+p, claude-code, model:*, use, allow
+p, claude-code, tool:shell/run, use, deny
+p, claude-code, tool:mcp/github, use, allow
+p, claude-code, tool:mcp/*, use, deny
 p, claude-code, tool:*, use, allow
-p, claude-code, tool:shell, use, deny
 ```
+
+第一条匹配上的规则说了算，所以例外可以排在兜底规则前面：MCP 服务全关，只留下一个。你自己写的那几行，排在开关生成的规则之前。
 
 规则管的是走代理的流量，所以直连供应商的 Agent（它自己的配置指向厂商而不是 Gateway）不受这些规则约束，页面上会直接提示。
 

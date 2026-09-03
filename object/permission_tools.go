@@ -12,145 +12,243 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This file sorts the tools an agent offers its model into the handful of
-// groups worth a switch, and takes the ones a switch is off for back out of the
-// request. A tool the model is never offered is one the agent cannot run.
+// This file holds the catalogue of what an agent can be allowed to do, and
+// sorts the tools it offers its model into it. A tool the switch is off for is
+// taken back out of the request, so the model is never offered it.
 
 package object
 
 import (
 	"encoding/json"
 	"strings"
+	"sync"
 )
 
-// The tool groups. Each is one switch on the Permissions card and one casbin
-// object, "tool:<group>".
+// The groups the permissions are drawn in, in the order they are shown.
 const (
-	ToolShell     = "shell"
-	ToolFileRead  = "fileRead"
-	ToolFileWrite = "fileWrite"
-	ToolNetwork   = "network"
-	ToolMcp       = "mcp"
+	GroupShell   = "shell"
+	GroupRead    = "read"
+	GroupWrite   = "write"
+	GroupNetwork = "network"
+	GroupAgentic = "agentic"
+	GroupMcp     = "mcp"
 )
 
-// ToolGroup is one group as the web UI is told about it: the name its switch
-// saves, and a few of the tools that fall in it, since every agent names its
-// own differently.
+// otherItem is the last item of a group: every tool of that kind Gateway does
+// not know by name. Switching it off is what closes a group for good, rather
+// than for the tools that happened to be listed when it was set.
+const otherItem = "other"
+
+// ToolItem is one switch: a thing an agent can be allowed to do, and the tool
+// names the agents call it by. The name is "<group>/<item>", which is also the
+// casbin object it is checked as.
+type ToolItem struct {
+	Name  string `json:"name"`
+	Group string `json:"group"`
+	// Label names an item the UI has no wording of its own for, such as one MCP
+	// server of this agent. The catalogue's own items are named by the page.
+	Label string `json:"label,omitempty"`
+	// Tools are the names this covers, as the agents write them. They are shown
+	// under the switch, since every agent names the same tool differently.
+	Tools []string `json:"tools"`
+}
+
+// ToolGroup is one group of switches, which can also be set in one go.
 type ToolGroup struct {
-	Name     string   `json:"name"`
-	Examples []string `json:"examples"`
+	Name  string     `json:"name"`
+	Items []ToolItem `json:"items"`
 }
 
-// toolGroups is the order the groups are shown and matched in. Network comes
-// before the file groups so that a "web_search" is not read as a search of the
-// disk, and the file groups before shell so that "apply_patch" is a write.
-var toolGroups = []ToolGroup{
-	{Name: ToolShell, Examples: []string{"Bash", "shell", "run_shell_command"}},
-	{Name: ToolFileRead, Examples: []string{"Read", "Grep", "read_file"}},
-	{Name: ToolFileWrite, Examples: []string{"Write", "Edit", "apply_patch"}},
-	{Name: ToolNetwork, Examples: []string{"WebFetch", "WebSearch", "web_fetch"}},
-	{Name: ToolMcp, Examples: []string{"mcp__*"}},
+func item(group string, name string, tools ...string) ToolItem {
+	if tools == nil {
+		tools = []string{}
+	}
+	return ToolItem{Name: group + "/" + name, Group: group, Tools: tools}
 }
 
-// ToolGroups lists the groups, for the UI that draws a switch per group.
-func ToolGroups() []ToolGroup {
-	groups := make([]ToolGroup, len(toolGroups))
-	copy(groups, toolGroups)
+// toolCatalog is every switch there is. The order is the order they are drawn
+// in, and the "other" item of a group always comes last.
+var toolCatalog = []ToolItem{
+	item(GroupShell, "run", "Bash", "shell", "run_shell_command", "run_terminal_cmd", "execute_command"),
+	item(GroupShell, "output", "BashOutput"),
+	item(GroupShell, "kill", "KillShell", "KillBash"),
+	item(GroupShell, otherItem),
+
+	item(GroupRead, "file", "Read", "read_file", "view"),
+	item(GroupRead, "many", "read_many_files"),
+	item(GroupRead, "image", "view_image", "ReadImage"),
+	item(GroupRead, "list", "LS", "list_directory", "list_dir"),
+	item(GroupRead, "find", "Glob", "glob"),
+	item(GroupRead, "grep", "Grep", "grep_search", "search_file_content"),
+	item(GroupRead, "semantic", "codebase_search"),
+	item(GroupRead, "notebook", "NotebookRead"),
+	item(GroupRead, otherItem),
+
+	item(GroupWrite, "create", "Write", "write_file", "create_file"),
+	item(GroupWrite, "edit", "Edit", "edit_file", "replace", "str_replace_editor"),
+	item(GroupWrite, "multi", "MultiEdit"),
+	item(GroupWrite, "patch", "apply_patch"),
+	item(GroupWrite, "notebook", "NotebookEdit"),
+	item(GroupWrite, "delete", "delete_file", "remove_file"),
+	item(GroupWrite, "move", "move_file", "rename_file"),
+	item(GroupWrite, "mkdir", "create_directory", "mkdir"),
+	item(GroupWrite, otherItem),
+
+	item(GroupNetwork, "fetch", "WebFetch", "web_fetch", "fetch"),
+	item(GroupNetwork, "search", "WebSearch", "web_search", "google_web_search"),
+	item(GroupNetwork, "browser", "browser_navigate", "browser_click", "playwright"),
+	item(GroupNetwork, otherItem),
+
+	item(GroupAgentic, "subagent", "Task", "Agent"),
+	item(GroupAgentic, "todo", "TodoWrite", "TodoRead", "update_plan"),
+	item(GroupAgentic, "plan", "ExitPlanMode"),
+	item(GroupAgentic, "ask", "AskUserQuestion"),
+	item(GroupAgentic, "command", "SlashCommand"),
+	item(GroupAgentic, "skill", "Skill"),
+	item(GroupAgentic, "memory", "save_memory"),
+
+	// One switch per MCP server is added to this group per agent, from the
+	// servers that agent has installed; this one covers the rest.
+	item(GroupMcp, otherItem),
+}
+
+// groupOrder is the order the groups are drawn in.
+var groupOrder = []string{GroupShell, GroupRead, GroupWrite, GroupNetwork, GroupAgentic, GroupMcp}
+
+// ToolGroups is the catalogue as the UI draws it, with the extra items an agent
+// has of its own - its MCP servers - added to the group they belong to.
+func ToolGroups(extra []ToolItem) []ToolGroup {
+	groups := []ToolGroup{}
+	for _, name := range groupOrder {
+		group := ToolGroup{Name: name, Items: []ToolItem{}}
+		for _, entry := range toolCatalog {
+			if entry.Group != name || entry.isOther() {
+				continue
+			}
+			group.Items = append(group.Items, entry)
+		}
+		for _, entry := range extra {
+			if entry.Group == name {
+				group.Items = append(group.Items, entry)
+			}
+		}
+		// The catch-all always comes last, whatever was added above it.
+		for _, entry := range toolCatalog {
+			if entry.Group == name && entry.isOther() {
+				group.Items = append(group.Items, entry)
+			}
+		}
+		groups = append(groups, group)
+	}
 	return groups
 }
 
-// toolNames are the tools of the agents Gateway knows, named as they name them.
-// They are matched before the keywords below, which is what keeps a "TodoWrite"
-// out of the group that writes files.
-var toolNames = map[string]string{
-	"bash":              ToolShell,
-	"bashoutput":        ToolShell,
-	"killbash":          ToolShell,
-	"killshell":         ToolShell,
-	"shell":             ToolShell,
-	"localshell":        ToolShell,
-	"runshellcommand":   ToolShell,
-	"runterminalcmd":    ToolShell,
-	"executecommand":    ToolShell,
-	"runcommand":        ToolShell,
-	"terminal":          ToolShell,
-	"read":              ToolFileRead,
-	"readfile":          ToolFileRead,
-	"readmanyfiles":     ToolFileRead,
-	"view":              ToolFileRead,
-	"glob":              ToolFileRead,
-	"grep":              ToolFileRead,
-	"ls":                ToolFileRead,
-	"listdir":           ToolFileRead,
-	"listdirectory":     ToolFileRead,
-	"searchfilecontent": ToolFileRead,
-	"codebasesearch":    ToolFileRead,
-	"write":             ToolFileWrite,
-	"writefile":         ToolFileWrite,
-	"edit":              ToolFileWrite,
-	"editfile":          ToolFileWrite,
-	"multiedit":         ToolFileWrite,
-	"notebookedit":      ToolFileWrite,
-	"applypatch":        ToolFileWrite,
-	"patch":             ToolFileWrite,
-	"replace":           ToolFileWrite,
-	"strreplaceeditor":  ToolFileWrite,
-	"createfile":        ToolFileWrite,
-	"deletefile":        ToolFileWrite,
-	"webfetch":          ToolNetwork,
-	"websearch":         ToolNetwork,
-	"webfetchtool":      ToolNetwork,
-	"googlewebsearch":   ToolNetwork,
-	"fetch":             ToolNetwork,
-	// The planning and delegation tools of the agents, named here so the
-	// keywords below do not read them as something they take from the disk.
-	"todowrite":    "",
-	"todoread":     "",
-	"updateplan":   "",
-	"exitplanmode": "",
-	"task":         "",
-	"agent":        "",
+func (entry ToolItem) isOther() bool {
+	return strings.HasSuffix(entry.Name, "/"+otherItem)
 }
 
-// toolKeywords catch the tools of an agent Gateway has never seen, in the order
-// they are tried.
+// McpServerItem is the switch for one MCP server an agent has installed. The
+// tools of that server arrive named "mcp__<server>__<tool>", so the item is
+// named after the server and matches every tool it offers.
+func McpServerItem(server string) ToolItem {
+	return ToolItem{
+		Name:  GroupMcp + "/" + normalizeToolName(strings.ToLower(server)),
+		Group: GroupMcp,
+		Label: server,
+		Tools: []string{"mcp__" + server + "__*"},
+	}
+}
+
+// CatalogItemNames is every switch of the built-in catalogue, which is what a
+// stored permission is read against.
+func CatalogItemNames() []string {
+	names := []string{}
+	for _, entry := range toolCatalog {
+		names = append(names, entry.Name)
+	}
+	return names
+}
+
+// toolIndex maps a tool's name, normalized, to the item it falls under. It is
+// built from the catalogue so the two can never drift apart.
+var (
+	toolIndexOnce sync.Once
+	toolIndex     map[string]string
+)
+
+func itemOfTool(normalized string) (string, bool) {
+	toolIndexOnce.Do(func() {
+		toolIndex = map[string]string{}
+		for _, entry := range toolCatalog {
+			for _, tool := range entry.Tools {
+				toolIndex[normalizeToolName(strings.ToLower(tool))] = entry.Name
+			}
+		}
+	})
+	name, found := toolIndex[normalized]
+	return name, found
+}
+
+// toolKeywords catch the tools of an agent Gateway has never seen. A tool they
+// match belongs to that group's "other" item, in the order tried here.
 var toolKeywords = []struct {
 	group    string
 	keywords []string
 }{
-	{ToolNetwork, []string{"web", "http", "url", "browser", "curl", "download", "internet", "google", "fetch"}},
-	{ToolShell, []string{"bash", "shell", "terminal", "command", "cmd", "exec", "process", "script"}},
-	{ToolFileWrite, []string{"write", "edit", "patch", "create", "delete", "remove", "move", "rename", "insert", "replace", "mkdir"}},
-	{ToolFileRead, []string{"read", "view", "cat", "open", "glob", "grep", "search", "find", "list", "dir", "tree"}},
+	{GroupNetwork, []string{"web", "http", "url", "browser", "curl", "download", "internet", "google", "fetch"}},
+	{GroupShell, []string{"bash", "shell", "terminal", "command", "cmd", "exec", "process", "script"}},
+	{GroupWrite, []string{"write", "edit", "patch", "create", "delete", "remove", "move", "rename", "insert", "replace", "mkdir"}},
+	{GroupRead, []string{"read", "view", "cat", "open", "glob", "grep", "search", "find", "list", "dir", "tree"}},
 }
 
-// ToolGroupOf is the group one tool falls in, or "" for a tool that fits none
+// ToolItemOf is the switch one tool is held to, or "" for a tool that fits none
 // of them and is therefore always allowed.
-func ToolGroupOf(name string) string {
+func ToolItemOf(name string) string {
 	lower := strings.ToLower(strings.TrimSpace(name))
 	if lower == "" {
 		return ""
 	}
 
 	// An MCP tool is named after the server it came from, whichever agent is
-	// asking: it is the one group a name says outright.
-	if strings.HasPrefix(lower, "mcp__") || strings.HasPrefix(lower, "mcp_") || strings.HasPrefix(lower, "mcp.") {
-		return ToolMcp
+	// asking: it is the one item a name says outright.
+	if server, ok := mcpServerOf(lower); ok {
+		if server == "" {
+			return GroupMcp + "/" + otherItem
+		}
+		return GroupMcp + "/" + server
 	}
 
 	normalized := normalizeToolName(lower)
-	if group, listed := toolNames[normalized]; listed {
-		return group
+	if entry, found := itemOfTool(normalized); found {
+		return entry
 	}
 
 	for _, entry := range toolKeywords {
 		for _, keyword := range entry.keywords {
 			if strings.Contains(normalized, keyword) {
-				return entry.group
+				return entry.group + "/" + otherItem
 			}
 		}
 	}
 	return ""
+}
+
+// mcpServerOf reads the server out of an MCP tool name, which the agents write
+// as "mcp__<server>__<tool>".
+func mcpServerOf(lower string) (string, bool) {
+	for _, prefix := range []string{"mcp__", "mcp_", "mcp."} {
+		if !strings.HasPrefix(lower, prefix) {
+			continue
+		}
+		rest := strings.TrimPrefix(lower, prefix)
+		for _, separator := range []string{"__", "_", "."} {
+			if index := strings.Index(rest, separator); index > 0 {
+				return normalizeToolName(rest[:index]), true
+			}
+		}
+		return normalizeToolName(rest), true
+	}
+	return "", false
 }
 
 // normalizeToolName drops what only separates the words of a tool's name, so
@@ -165,10 +263,10 @@ func normalizeToolName(lower string) string {
 	return builder.String()
 }
 
-// FilterTools takes the tools of the groups this agent may not use back out of
-// a request body, and reports the ones it removed. The body is left untouched
-// when there is nothing to remove, so a request that changes nothing is relayed
-// byte for byte as before.
+// FilterTools takes the tools this agent may not use back out of a request
+// body, and reports the ones it removed. The body is left untouched when there
+// is nothing to remove, so a request that changes nothing is relayed byte for
+// byte as before.
 //
 // Only the "tools" array is read, which every format the gateway speaks carries
 // under that name: OpenAI names a tool in "function", Anthropic and the
@@ -186,8 +284,8 @@ func (guard *AgentGuard) FilterTools(body []byte) ([]byte, []string) {
 
 	kept := []json.RawMessage{}
 	removed := []string{}
-	for _, item := range items {
-		filtered, names := guard.filterTool(item)
+	for _, entry := range items {
+		filtered, names := guard.filterTool(entry)
 		removed = append(removed, names...)
 		if filtered != nil {
 			kept = append(kept, filtered)
@@ -220,8 +318,8 @@ func (guard *AgentGuard) FilterTools(body []byte) ([]byte, []string) {
 
 // filterTool answers with the entry to keep, nil to drop it altogether, and the
 // names of whatever it removed.
-func (guard *AgentGuard) filterTool(item json.RawMessage) (json.RawMessage, []string) {
-	entry := struct {
+func (guard *AgentGuard) filterTool(entry json.RawMessage) (json.RawMessage, []string) {
+	fields := struct {
 		Name     string `json:"name"`
 		Type     string `json:"type"`
 		Function *struct {
@@ -229,59 +327,63 @@ func (guard *AgentGuard) filterTool(item json.RawMessage) (json.RawMessage, []st
 		} `json:"function"`
 		FunctionDeclarations []json.RawMessage `json:"functionDeclarations"`
 	}{}
-	if err := json.Unmarshal(item, &entry); err != nil {
-		return item, nil
+	if err := json.Unmarshal(entry, &fields); err != nil {
+		return entry, nil
 	}
 
 	// Gemini wraps its tools in one entry, so the entry stays as long as any of
 	// the declarations inside it does.
-	if entry.FunctionDeclarations != nil {
-		kept := []json.RawMessage{}
-		removed := []string{}
-		for _, declaration := range entry.FunctionDeclarations {
-			name := struct {
-				Name string `json:"name"`
-			}{}
-			if err := json.Unmarshal(declaration, &name); err != nil || guard.AllowTool(name.Name) {
-				kept = append(kept, declaration)
-				continue
-			}
-			removed = append(removed, name.Name)
-		}
-		if len(removed) == 0 {
-			return item, nil
-		}
-		if len(kept) == 0 {
-			return nil, removed
-		}
-
-		fields := map[string]json.RawMessage{}
-		if err := json.Unmarshal(item, &fields); err != nil {
-			return item, nil
-		}
-		encoded, err := json.Marshal(kept)
-		if err != nil {
-			return item, nil
-		}
-		fields["functionDeclarations"] = encoded
-		rewritten, err := json.Marshal(fields)
-		if err != nil {
-			return item, nil
-		}
-		return rewritten, removed
+	if fields.FunctionDeclarations != nil {
+		return guard.filterDeclarations(entry, fields.FunctionDeclarations)
 	}
 
-	name := entry.Name
-	if name == "" && entry.Function != nil {
-		name = entry.Function.Name
+	name := fields.Name
+	if name == "" && fields.Function != nil {
+		name = fields.Function.Name
 	}
 	if name == "" {
 		// A built-in tool of the API itself, such as OpenAI's web search, is
 		// named by its type alone.
-		name = entry.Type
+		name = fields.Type
 	}
 	if name == "" || guard.AllowTool(name) {
-		return item, nil
+		return entry, nil
 	}
 	return nil, []string{name}
+}
+
+func (guard *AgentGuard) filterDeclarations(entry json.RawMessage, declarations []json.RawMessage) (json.RawMessage, []string) {
+	kept := []json.RawMessage{}
+	removed := []string{}
+	for _, declaration := range declarations {
+		named := struct {
+			Name string `json:"name"`
+		}{}
+		if err := json.Unmarshal(declaration, &named); err != nil || guard.AllowTool(named.Name) {
+			kept = append(kept, declaration)
+			continue
+		}
+		removed = append(removed, named.Name)
+	}
+	if len(removed) == 0 {
+		return entry, nil
+	}
+	if len(kept) == 0 {
+		return nil, removed
+	}
+
+	fields := map[string]json.RawMessage{}
+	if err := json.Unmarshal(entry, &fields); err != nil {
+		return entry, nil
+	}
+	encoded, err := json.Marshal(kept)
+	if err != nil {
+		return entry, nil
+	}
+	fields["functionDeclarations"] = encoded
+	rewritten, err := json.Marshal(fields)
+	if err != nil {
+		return entry, nil
+	}
+	return rewritten, removed
 }

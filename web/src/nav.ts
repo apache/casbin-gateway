@@ -23,6 +23,7 @@ import {
   Plug,
   Settings,
   ShieldCheck,
+  ShieldHalf,
   Table2,
   type LucideIcon,
 } from "lucide-react";
@@ -75,6 +76,7 @@ export const navGroups: NavGroup[] = [
     adminOnly: true,
   },
   {key: "/agent-records", label: "agent:Agent Records", icon: FileSearch, path: "/agent-records", adminOnly: true},
+  {key: "/permissions", label: "agent:Permissions", icon: ShieldHalf, path: "/permissions", adminOnly: true},
   {key: "/providers", label: "provider:Providers", icon: Plug, path: "/providers"},
   {key: "/authenticity", label: "audit:Authenticity", icon: ShieldCheck, path: "/authenticity", adminOnly: true},
   {key: "/llm-records", label: "llm:LLM Records", icon: Logs, path: "/llm-records", adminOnly: true},

@@ -20,6 +20,7 @@ package object
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 
@@ -28,9 +29,9 @@ import (
 )
 
 // PermissionModelText is the casbin model every agent is enforced with. The
-// effect is casbin's allow-and-deny: a request needs a rule allowing it and no
-// rule denying it, which is what lets one "everything" rule stand beside the
-// exceptions to it.
+// effect is casbin's priority effect: the first rule that matches decides, and
+// a request no rule matches is denied. Order is what lets one exception stand
+// in front of the "everything else" rule behind it.
 const PermissionModelText = `[request_definition]
 r = sub, obj, act
 
@@ -38,7 +39,7 @@ r = sub, obj, act
 p = sub, obj, act, eft
 
 [policy_effect]
-e = some(where (p.eft == allow)) && !some(where (p.eft == deny))
+e = priority(p.eft) || deny
 
 [matchers]
 m = keyMatch(r.sub, p.sub) && keyMatch(r.obj, p.obj) && keyMatch(r.act, p.act)
@@ -132,7 +133,9 @@ func newPermissionEnforcer(permission *AgentPermission) (*casbin.Enforcer, error
 }
 
 // PolicyRules compiles the switches into casbin policy lines, as
-// "sub, obj, act, eft".
+// "sub, obj, act, eft". The order is the order they are decided in: the rules
+// written by hand come first, then the exceptions, then the rule each group
+// falls back on.
 func (permission *AgentPermission) PolicyRules() [][]string {
 	rules := [][]string{}
 	seen := map[string]bool{}
@@ -146,18 +149,8 @@ func (permission *AgentPermission) PolicyRules() [][]string {
 		rules = append(rules, rule)
 	}
 
-	appendList(add, objectModel, permission.ModelMode, permission.Models)
-	appendList(add, objectProvider, permission.ProviderMode, permission.Providers)
-
-	// Every tool is allowed except the groups that are switched off, so a tool
-	// the classifier does not recognize is never taken away from the agent.
-	add(objectTool+"*", effectAllow)
-	for _, group := range ToolGroups() {
-		if allowed, listed := permission.Tools[group.Name]; listed && !allowed {
-			add(objectTool+group.Name, effectDeny)
-		}
-	}
-
+	// A hand-written rule is checked before everything the switches wrote, which
+	// is what makes the advanced view able to carve out what they cannot say.
 	for _, rule := range permission.Rules {
 		parsed, err := parsePolicyRule(rule)
 		if err != nil {
@@ -171,10 +164,103 @@ func (permission *AgentPermission) PolicyRules() [][]string {
 		rules = append(rules, parsed)
 	}
 
+	appendList(add, objectModel, permission.ModelMode, permission.Models)
+	appendList(add, objectProvider, permission.ProviderMode, permission.Providers)
+	permission.appendToolRules(add)
 	return rules
 }
 
+// appendToolRules writes the lines of the switches. A group whose catch-all is
+// off is closed with one rule for the whole group, with the items left on
+// standing in front of it; any other group only names what it took away.
+func (permission *AgentPermission) appendToolRules(add func(object string, effect string)) {
+	for _, group := range permission.toolItemsByGroup() {
+		denied := 0
+		for _, name := range group.items {
+			if permission.Tools[name] == false && permission.listed(name) {
+				denied++
+			}
+		}
+
+		closed := permission.Tools[group.name+"/"+otherItem] == false &&
+			permission.listed(group.name+"/"+otherItem)
+		if !closed && denied < len(group.items) {
+			for _, name := range group.items {
+				if permission.listed(name) && !permission.Tools[name] {
+					add(objectTool+name, effectDeny)
+				}
+			}
+			continue
+		}
+
+		for _, name := range group.items {
+			if !permission.listed(name) || permission.Tools[name] {
+				add(objectTool+name, effectAllow)
+			}
+		}
+		add(objectTool+group.name+"/*", effectDeny)
+	}
+
+	// Whatever no group took away, including the tools that fall in none of
+	// them, is allowed.
+	add(objectTool+"*", effectAllow)
+}
+
+// listed reports whether a switch was ever set. An item nobody has touched is
+// allowed, so a switch added in a later version does not silently take
+// something away from an agent configured before it existed.
+func (permission *AgentPermission) listed(name string) bool {
+	_, found := permission.Tools[name]
+	return found
+}
+
+type toolItemGroup struct {
+	name  string
+	items []string
+}
+
+// toolItemsByGroup is every switch this permission is read against: the
+// built-in catalogue, plus whatever was stored beside it, such as the MCP
+// servers of one agent.
+func (permission *AgentPermission) toolItemsByGroup() []toolItemGroup {
+	order := []string{}
+	items := map[string][]string{}
+	seen := map[string]bool{}
+
+	appendItem := func(name string) {
+		group, _, found := strings.Cut(name, "/")
+		if !found || seen[name] {
+			return
+		}
+		seen[name] = true
+		if _, known := items[group]; !known {
+			order = append(order, group)
+		}
+		items[group] = append(items[group], name)
+	}
+
+	for _, name := range CatalogItemNames() {
+		appendItem(name)
+	}
+	stored := []string{}
+	for name := range permission.Tools {
+		stored = append(stored, name)
+	}
+	sort.Strings(stored)
+	for _, name := range stored {
+		appendItem(name)
+	}
+
+	groups := []toolItemGroup{}
+	for _, name := range order {
+		groups = append(groups, toolItemGroup{name: name, items: items[name]})
+	}
+	return groups
+}
+
 // appendList writes the lines of one "all / only these / all but these" choice.
+// The exceptions come first: the first rule that matches is the one that
+// decides.
 func appendList(add func(object string, effect string), prefix string, mode string, values []string) {
 	switch mode {
 	case ListAllow:
@@ -184,10 +270,10 @@ func appendList(add func(object string, effect string), prefix string, mode stri
 			add(prefix+value, effectAllow)
 		}
 	case ListDeny:
-		add(prefix+"*", effectAllow)
 		for _, value := range values {
 			add(prefix+value, effectDeny)
 		}
+		add(prefix+"*", effectAllow)
 	default:
 		add(prefix+"*", effectAllow)
 	}
@@ -256,11 +342,11 @@ func (guard *AgentGuard) AllowProvider(providerId string) bool {
 
 // AllowTool reports whether this agent may be offered one tool, by name.
 func (guard *AgentGuard) AllowTool(name string) bool {
-	group := ToolGroupOf(name)
-	if group == "" {
+	entry := ToolItemOf(name)
+	if entry == "" {
 		return true
 	}
-	return guard.allow(objectTool + group)
+	return guard.allow(objectTool + entry)
 }
 
 // FilterProviders drops the providers this agent may not be sent to, and says
