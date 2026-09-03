@@ -24,6 +24,7 @@ import * as Setting from "@/Setting";
 import {AgentCatalog} from "@/components/AgentCatalog";
 import {AuthenticityOverview} from "@/components/AuthenticityOverview";
 import {AgentGridCard} from "@/components/AgentGridCard";
+import {OnboardingChecklist} from "@/components/OnboardingChecklist";
 import {EmptyState, ErrorState} from "@/components/shared/empty-state";
 import {Loading} from "@/components/shared/loading";
 import {UnauthorizedResult} from "@/components/shared/misc";
@@ -216,6 +217,8 @@ export default function HomePage({account}: {account: Account}) {
           </>
         }
       />
+
+      {loaded ? <OnboardingChecklist providers={providers} agents={agents} stats={stats} /> : null}
 
       {/* With no agents to show, the failure is the whole page and is rendered
           below instead; here it sits above the cards that are still on screen. */}

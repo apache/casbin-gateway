@@ -1,0 +1,144 @@
+// Copyright 2026 The casbin Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import * as React from "react";
+import {Link} from "react-router-dom";
+import {CheckCircle2, ChevronRight, Circle, Sparkles, X} from "lucide-react";
+import i18next from "i18next";
+
+import {Button} from "@/components/ui/button";
+import {Card, CardContent} from "@/components/ui/card";
+import {Progress} from "@/components/ui/progress";
+import {cn} from "@/lib/utils";
+import type {Agent, LlmAgentStat, Provider} from "@/types";
+
+const dismissedStorageKey = "onboardingChecklistDismissed";
+
+function readDismissed(): boolean {
+  try {
+    return localStorage.getItem(dismissedStorageKey) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function persistDismissed() {
+  try {
+    localStorage.setItem(dismissedStorageKey, "true");
+  } catch {
+    // Private-mode storage failures must not take the page down.
+  }
+}
+
+interface Step {
+  done: boolean;
+  title: string;
+  description: string;
+  to: string;
+}
+
+/**
+ * The three-step path from an empty machine to seeing traffic flow, taken
+ * from the README's "Send an agent's traffic through Gateway" section. It
+ * disappears once every step is done, and stays gone across reloads once
+ * dismissed by hand.
+ */
+export function OnboardingChecklist({
+  providers,
+  agents,
+  stats,
+}: {
+  providers: Provider[];
+  agents: Agent[];
+  stats: LlmAgentStat[];
+}) {
+  const [dismissed, setDismissed] = React.useState(readDismissed);
+
+  const steps: Step[] = [
+    {
+      done: providers.length > 0,
+      title: i18next.t("agent:Onboarding add provider"),
+      description: i18next.t("agent:Onboarding add provider detail"),
+      to: "/providers",
+    },
+    {
+      done: agents.some(agent => agent.provider !== ""),
+      title: i18next.t("agent:Onboarding connect agent"),
+      description: i18next.t("agent:Onboarding connect agent detail"),
+      to: "/",
+    },
+    {
+      done: stats.some(stat => stat.requests > 0),
+      title: i18next.t("agent:Onboarding see it work"),
+      description: i18next.t("agent:Onboarding see it work detail"),
+      to: "/llm-records",
+    },
+  ];
+  const doneCount = steps.filter(step => step.done).length;
+
+  if (dismissed || doneCount === steps.length) {
+    return null;
+  }
+
+  const dismiss = () => {
+    persistDismissed();
+    setDismissed(true);
+  };
+
+  return (
+    <Card className="gap-0 py-0 shadow-xs">
+      <CardContent className="flex flex-col gap-3 p-4">
+        <div className="flex items-center gap-3">
+          <Sparkles className="text-primary size-4 shrink-0" />
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-medium">{i18next.t("agent:Getting started")}</span>
+              <span className="text-muted-foreground text-xs">
+                {doneCount}/{steps.length}
+              </span>
+            </div>
+            <Progress value={(doneCount / steps.length) * 100} tone="success" className="h-1.5" />
+          </div>
+          <Button variant="ghost" size="icon-sm" onClick={dismiss} aria-label={i18next.t("general:Dismiss")}>
+            <X />
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {steps.map(step => (
+            <Link
+              key={step.title}
+              to={step.to}
+              className={cn(
+                "hover:border-foreground/20 flex items-start gap-2 rounded-lg border px-3 py-2 transition-colors",
+                step.done && "opacity-60",
+              )}
+            >
+              {step.done ? (
+                <CheckCircle2 className="text-success mt-0.5 size-4 shrink-0" />
+              ) : (
+                <Circle className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+              )}
+              <div className="flex min-w-0 flex-col">
+                <span className="text-xs font-medium">{step.title}</span>
+                <span className="text-muted-foreground text-[11px]">{step.description}</span>
+              </div>
+              {!step.done ? <ChevronRight className="text-muted-foreground ml-auto size-3.5 shrink-0" /> : null}
+            </Link>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
