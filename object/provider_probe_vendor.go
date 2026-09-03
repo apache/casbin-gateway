@@ -121,6 +121,41 @@ var probeVendors = []probeVendor{
 		hosts:  []string{"api.stepfun.com", "api.stepfun.ai"},
 		models: []string{"step-"},
 	},
+	{
+		key:    "cohere",
+		hosts:  []string{"api.cohere.com", "api.cohere.ai"},
+		models: []string{"command", "c4ai-"},
+	},
+	{
+		key:    "perplexity",
+		hosts:  []string{"api.perplexity.ai"},
+		models: []string{"sonar", "r1-1776"},
+	},
+	{
+		key:   "groq",
+		hosts: []string{"api.groq.com"},
+		// Groq serves open-weight models under their own names. A prefix an
+		// earlier vendor already claims (qwen-, gemma-, deepseek-) resolves to
+		// that vendor, so only the ones nobody else owns are listed here.
+		models: []string{"llama-", "llama3-", "gemma2-", "allam-", "groq/"},
+		headers: []string{
+			"X-Ratelimit-Limit-Requests",
+			"X-Ratelimit-Remaining-Requests",
+			"X-Ratelimit-Limit-Tokens",
+			"X-Ratelimit-Remaining-Tokens",
+			"X-Request-Id",
+		},
+	},
+	{
+		key:    "doubao",
+		hosts:  []string{"ark.cn-beijing.volces.com", "ark.ap-southeast.volces.com"},
+		models: []string{"doubao-", "skylark"},
+	},
+	{
+		key:    "ernie",
+		hosts:  []string{"qianfan.baidubce.com", "aip.baidubce.com"},
+		models: []string{"ernie-"},
+	},
 }
 
 // probeVendorOfProvider is the vendor whose own endpoint this provider points
