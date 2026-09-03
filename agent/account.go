@@ -56,10 +56,14 @@ func fillAccounts(installations []Installation, homes []homeDir) {
 		if home == "" {
 			continue
 		}
-		key := kind + "\x00" + home
+		dir := accountStateDir(kind, home)
+		if dir == "" {
+			continue
+		}
+		key := kind + "\x00" + dir
 		account, ok := cache[key]
 		if !ok {
-			account = readAccount(kind, home)
+			account = readAccountIn(kind, dir)
 			cache[key] = account
 		}
 		installations[i].Account = account
@@ -81,14 +85,36 @@ func accountKind(agentId string) string {
 	}
 }
 
-func readAccount(kind, home string) *Account {
+// AccountOfInstance reads the account one extra copy of an agent is signed in
+// to. An instance keeps the state its agent keeps under a home directory, only
+// somewhere else, so the readers are given that directory directly.
+func AccountOfInstance(agentId string, dataDir string) *Account {
+	return readAccountIn(accountKind(agentId), dataDir)
+}
+
+// accountStateDir is where one agent keeps the state its account is read from,
+// under a home directory. An instance is given a private copy of it.
+func accountStateDir(kind, home string) string {
 	switch kind {
 	case "codex":
-		return readCodexAccount(home)
+		return filepath.Join(home, ".codex")
 	case "claude-code":
-		return readClaudeCodeAccount(home)
+		return home
 	case "claude-desktop":
-		return readClaudeDesktopAccount(home)
+		return claudeDesktopDataDir(home)
+	default:
+		return ""
+	}
+}
+
+func readAccountIn(kind, dir string) *Account {
+	switch kind {
+	case "codex":
+		return readCodexAccount(dir)
+	case "claude-code":
+		return readClaudeCodeAccount(dir)
+	case "claude-desktop":
+		return readClaudeDesktopAccount(dir)
 	default:
 		return nil
 	}
@@ -96,8 +122,8 @@ func readAccount(kind, home string) *Account {
 
 // readCodexAccount decodes the profile carried in the JWT that Codex and the
 // ChatGPT desktop app store after a ChatGPT sign-in.
-func readCodexAccount(home string) *Account {
-	data := readCapped(filepath.Join(home, ".codex", "auth.json"))
+func readCodexAccount(dir string) *Account {
+	data := readCapped(filepath.Join(dir, "auth.json"))
 	if data == nil {
 		return nil
 	}
@@ -148,8 +174,8 @@ func fillString(target *string, value any) {
 
 // readClaudeCodeAccount reads the oauth account Claude Code records in its
 // top-level config file.
-func readClaudeCodeAccount(home string) *Account {
-	data := readCapped(filepath.Join(home, ".claude.json"))
+func readClaudeCodeAccount(dir string) *Account {
+	data := readCapped(filepath.Join(dir, ".claude.json"))
 	if data == nil {
 		return nil
 	}
@@ -180,11 +206,7 @@ func readClaudeCodeAccount(home string) *Account {
 // readClaudeDesktopAccount pulls the profile the desktop app leaves in its
 // IndexedDB store. The store is a Chromium format with no stable reader while
 // the app holds it open, so the fields are lifted out by their markers.
-func readClaudeDesktopAccount(home string) *Account {
-	dir := claudeDesktopDataDir(home)
-	if dir == "" {
-		return nil
-	}
+func readClaudeDesktopAccount(dir string) *Account {
 	account := &Account{}
 	scanClaudeIndexedDB(filepath.Join(dir, "IndexedDB"), account)
 	if account.Email == "" && account.Name == "" {

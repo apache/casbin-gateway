@@ -33,13 +33,13 @@ func list(ctx context.Context, withCommands bool) []Process {
 		return nil
 	}
 
-	commands := map[int]string{}
+	commands, parents := map[int]string{}, map[int]int{}
 	if withCommands {
-		commands = psCommands(ctx)
+		commands, parents = psCommands(ctx)
 	}
 	result := make([]Process, 0, len(paths))
 	for pid, path := range paths {
-		result = append(result, Process{Pid: pid, Path: path, Command: commands[pid]})
+		result = append(result, Process{Pid: pid, Parent: parents[pid], Path: path, Command: commands[pid]})
 	}
 	return result
 }
@@ -61,18 +61,34 @@ func psImages(ctx context.Context) map[int]string {
 	return paths
 }
 
-func psCommands(ctx context.Context) map[int]string {
-	commands := map[int]string{}
-	for _, line := range psLines(ctx, "pid=,command=") {
-		fields := strings.SplitN(strings.TrimSpace(line), " ", 2)
-		if len(fields) < 2 {
+func psCommands(ctx context.Context) (map[int]string, map[int]int) {
+	commands, parents := map[int]string{}, map[int]int{}
+	for _, line := range psLines(ctx, "pid=,ppid=,command=") {
+		// ps pads each number into a column of its own, so the two are cut off
+		// rather than split on a single space.
+		pidText, rest := cutField(line)
+		parentText, command := cutField(rest)
+		pid, err := strconv.Atoi(pidText)
+		if err != nil || pid <= 0 || command == "" {
 			continue
 		}
-		if pid, err := strconv.Atoi(fields[0]); err == nil && pid > 0 {
-			commands[pid] = fields[1]
+		commands[pid] = command
+		if parent, err := strconv.Atoi(parentText); err == nil {
+			parents[pid] = parent
 		}
 	}
-	return commands
+	return commands, parents
+}
+
+// cutField takes the first whitespace-separated token off a line and returns it
+// with whatever follows the spaces after it.
+func cutField(line string) (string, string) {
+	line = strings.TrimLeft(line, " \t")
+	end := strings.IndexAny(line, " \t")
+	if end < 0 {
+		return line, ""
+	}
+	return line[:end], strings.TrimLeft(line[end:], " \t")
 }
 
 func psLines(ctx context.Context, format string) []string {

@@ -35,6 +35,7 @@ import {
   agentKey,
   runtimeOf,
   useAgentInstall,
+  useAgentInstances,
   useAgents,
   useAgentSessions,
   usageOf,
@@ -84,6 +85,9 @@ export default function HomePage({account}: {account: Account}) {
   } = useAgents(isAdmin);
   // Installs the agents this machine is missing, listed under the cards.
   const installer = useAgentInstall(isAdmin, () => scan(true));
+  // Every agent's extra copies in one listing, so a page of cards costs one
+  // request rather than one per card.
+  const instances = useAgentInstances("", isAdmin);
   const [providers, setProviders] = React.useState<Provider[]>([]);
   const [health, setHealth] = React.useState<ProviderHealth[]>([]);
   const [quotas, setQuotas] = React.useState<ProviderQuota[]>([]);
@@ -190,6 +194,7 @@ export default function HomePage({account}: {account: Account}) {
     scan(true);
     loadRuntime(true);
     loadProviders();
+    instances.reload(true);
   };
 
   const rescan = (
@@ -283,6 +288,7 @@ export default function HomePage({account}: {account: Account}) {
               usage={usageOf(usage, agent)}
               activity={activityOf(activity, agent)}
               status={runtimeOf(runtime, agent)}
+              instances={instances}
               recording={recording}
               busy={busyKey === agentKey(agent)}
               runBusy={runBusyKey === agentKey(agent)}

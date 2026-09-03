@@ -31,6 +31,9 @@ import (
 const (
 	listCacheTTL = 3 * time.Second
 	listTimeout  = 10 * time.Second
+	// maxAncestorDepth caps the walk up a process tree looking for the launcher
+	// an instance was started through.
+	maxAncestorDepth = 8
 )
 
 // Target identifies one installation and says how it is run.
@@ -44,6 +47,12 @@ type Target struct {
 	Args []string
 	// Desktop marks a windowed app, which is started without a console.
 	Desktop bool
+	// Marker is the state directory one instance was started with, which its
+	// processes name on their command lines. Empty for the installation itself.
+	Marker string
+	// Exclude are the markers of the installation's instances, so its own status
+	// does not count the processes belonging to them.
+	Exclude []string
 }
 
 // Status is the run state shown beside an agent installation.
@@ -58,7 +67,10 @@ type Status struct {
 // on purpose: an installation found under one account is routinely started by
 // another, so the owner would rule out processes that do belong to it.
 type Process struct {
-	Pid     int
+	Pid int
+	// Parent is the process that started this one, 0 when it is not known. It is
+	// only read along with the command lines, which is when it is of any use.
+	Parent  int
 	Path    string
 	Command string
 }
@@ -86,13 +98,29 @@ func statusOf(target Target, withCommands bool) Status {
 	if !status.CanStart {
 		status.Detail = "no launcher was found for this installation"
 	}
-	for _, process := range snapshot(withCommands) {
-		if matches(target, process) {
+
+	processes := snapshot(withCommands)
+	byPid := indexByPid(processes, target)
+	for _, process := range processes {
+		if matches(target, process, byPid) {
 			status.Pids = append(status.Pids, process.Pid)
 		}
 	}
 	status.Running = len(status.Pids) > 0
 	return status
+}
+
+// indexByPid is only built for a target that reads instance markers: it is what
+// lets a process be recognised by the launcher that started it.
+func indexByPid(processes []Process, target Target) map[int]Process {
+	if target.Marker == "" && len(target.Exclude) == 0 {
+		return nil
+	}
+	index := make(map[int]Process, len(processes))
+	for _, process := range processes {
+		index[process.Pid] = process
+	}
+	return index
 }
 
 // Start launches the agent: a desktop app opens on its own, a CLI opens in a
@@ -136,6 +164,9 @@ func Stop(target Target) error {
 // command line: a package manager records the package directory rather than a
 // program, and what runs is the interpreter.
 func needsCommands(target Target) bool {
+	if target.Marker != "" || len(target.Exclude) > 0 {
+		return true
+	}
 	return !samePath(target.Executable, target.Path)
 }
 
@@ -170,9 +201,17 @@ func invalidate() {
 // an agent installed by a package manager runs through an interpreter, so the
 // process image is node rather than the agent, and only the command line names
 // the installation.
-func matches(target Target, process Process) bool {
+func matches(target Target, process Process, byPid map[int]Process) bool {
 	if process.Pid == os.Getpid() {
 		return false
+	}
+	if target.Marker != "" && !carriesMarker(process, target.Marker, byPid) {
+		return false
+	}
+	for _, marker := range target.Exclude {
+		if carriesMarker(process, marker, byPid) {
+			return false
+		}
 	}
 	for _, candidate := range []string{target.Executable, target.Path} {
 		if candidate == "" {
@@ -184,6 +223,24 @@ func matches(target Target, process Process) bool {
 		if isRelocatedCopy(candidate, process.Path) {
 			return true
 		}
+	}
+	return false
+}
+
+// carriesMarker reports whether a process, or the process that started it, names
+// one instance's state directory on its command line. A CLI is started through a
+// launcher script that names the directory and the agent itself is its child,
+// so only the ancestry tells one instance from another.
+func carriesMarker(process Process, marker string, byPid map[int]Process) bool {
+	for depth := 0; depth < maxAncestorDepth; depth++ {
+		if containsPath(process.Command, marker) {
+			return true
+		}
+		parent, ok := byPid[process.Parent]
+		if !ok || parent.Pid == process.Pid {
+			return false
+		}
+		process = parent
 	}
 	return false
 }

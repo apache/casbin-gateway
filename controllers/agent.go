@@ -53,6 +53,9 @@ type discoveredAgent struct {
 	// Upgrade is the command that would update this installation in place,
 	// through the package manager that installed it.
 	Upgrade agentinstall.Plan `json:"upgrade"`
+	// SupportsInstances says whether this agent can be run more than once at a
+	// time, each copy signed in to an account of its own.
+	SupportsInstances bool `json:"supportsInstances"`
 }
 
 // GetAgents scans known installation locations and returns the AI agents
@@ -89,6 +92,8 @@ func (c *ApiController) GetAgents() {
 			Mode:           object.ModeGateway,
 			ProviderConfig: agentprovider.StatusOf(providerTarget(target)),
 			Upgrade:        agentinstall.UpgradePlan(installation.AgentId, installation.InstallMethod),
+
+			SupportsInstances: agent.SupportsInstances(installation.AgentId),
 		}
 		baseUrl, ok := baseUrls[installation.AgentId]
 		if !ok {
@@ -422,18 +427,12 @@ func (c *ApiController) readAgentInstallation() (agent.Installation, bool) {
 		return agent.Installation{}, false
 	}
 
-	installations, err := agent.Scan(false)
+	installation, err := findInstallation(requested.AgentId, requested.Path, requested.Owner)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return agent.Installation{}, false
 	}
-	for _, installation := range installations {
-		if matchesTarget(targetOf(installation), requested) {
-			return installation, true
-		}
-	}
-	c.ResponseError("no discovered agent installation matches this target")
-	return agent.Installation{}, false
+	return installation, true
 }
 
 func (c *ApiController) readAgentPatchTarget() (agentpatch.Target, bool) {

@@ -23,6 +23,7 @@ import type {
   Agent,
   AgentCatalogEntry,
   AgentInstallJob,
+  AgentInstance,
   AgentRuntime,
   AgentSession,
   AgentUsage,
@@ -661,4 +662,143 @@ export function getOutcomeVariant(outcome: string | undefined): BadgeVariant {
       success: "success",
     } as const
   )[outcome as "attempted" | "denied" | "failure" | "success"] ?? "muted";
+}
+
+/**
+ * useAgentInstances owns the extra copies of one agent: the ones stored, what
+ * each is signed in to, and whether each is running. Each has a state directory
+ * of its own, so they start, stop and sign in independently of one another.
+ */
+export function useAgentInstances(agentId = "", enabled = true) {
+  const [instances, setInstances] = React.useState<AgentInstance[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [busyName, setBusyName] = React.useState("");
+
+  const load = React.useCallback(
+    (forceRefresh = false) => {
+      if (!enabled) {
+        return;
+      }
+
+      setLoading(true);
+      AgentBackend.getAgentInstances(agentId, forceRefresh)
+        .then(res => {
+          if (res.status === "ok") {
+            setInstances(res.data ?? []);
+          } else {
+            Setting.showMessage("error", res.msg);
+          }
+        })
+        .catch(err => Setting.showMessage("error", err.message || String(err)))
+        .then(() => setLoading(false));
+    },
+    [agentId, enabled],
+  );
+
+  React.useEffect(() => {
+    load();
+  }, [load]);
+
+  /**
+   * Adds one copy. The server names and lays it out, so there is nothing to ask
+   * first; the name is edited afterwards, once an account has signed in to it.
+   * The agent id stands in for the row that does not exist yet while it runs.
+   */
+  const add = React.useCallback(
+    (agent: Agent) => {
+      setBusyName(agent.agentId);
+      AgentBackend.addAgentInstance({agentId: agent.agentId, path: agent.path, owner: agent.owner})
+        .then(res => {
+          if (res.status === "ok") {
+            Setting.showMessage(
+              "success",
+              `${i18next.t("agent:Instance added")}: ${res.data?.instance ?? ""}`,
+            );
+            load(true);
+          } else {
+            Setting.showMessage("error", res.msg || i18next.t("agent:Failed to add the instance"));
+          }
+        })
+        .catch(err => Setting.showMessage("error", err.message || String(err)))
+        .then(() => setBusyName(""));
+    },
+    [load],
+  );
+
+  const rename = React.useCallback(
+    (instance: AgentInstance, displayName: string) => {
+      AgentBackend.renameAgentInstance(instance.name, displayName)
+        .then(res => {
+          if (res.status !== "ok") {
+            Setting.showMessage("error", res.msg);
+          }
+          load();
+        })
+        .catch(err => Setting.showMessage("error", err.message || String(err)));
+    },
+    [load],
+  );
+
+  const remove = React.useCallback(
+    (instance: AgentInstance) => {
+      setBusyName(instance.name);
+      AgentBackend.deleteAgentInstance(instance.name)
+        .then(res => {
+          if (res.status === "ok") {
+            Setting.showMessage("success", `${i18next.t("agent:Instance removed")}: ${instance.instance}`);
+            load(true);
+          } else {
+            Setting.showMessage("error", res.msg);
+          }
+        })
+        .catch(err => Setting.showMessage("error", err.message || String(err)))
+        .then(() => setBusyName(""));
+    },
+    [load],
+  );
+
+  /** Starts or stops one copy, leaving whatever else is running alone. */
+  const toggleRunning = React.useCallback(
+    (instance: AgentInstance) => {
+      const running = instance.running;
+
+      setBusyName(instance.name);
+      (running
+        ? AgentBackend.stopAgentInstance(instance.name)
+        : AgentBackend.startAgentInstance(instance.name))
+        .then(res => {
+          if (res.status === "ok") {
+            Setting.showMessage(
+              "success",
+              `${i18next.t(running ? "agent:Agent stopped" : "agent:Agent started")}: ${
+                instance.displayName || instance.instance
+              }`,
+            );
+            // A desktop app takes a moment to show up in the process table, so
+            // the run state is read again shortly after the call.
+            setTimeout(() => load(true), runtimeSettleMs);
+          } else {
+            Setting.showMessage(
+              "error",
+              res.msg ||
+                i18next.t(running ? "agent:Failed to stop the agent" : "agent:Failed to start the agent"),
+            );
+          }
+          load(true);
+        })
+        .catch(err => Setting.showMessage("error", err.message || String(err)))
+        .then(() => setBusyName(""));
+    },
+    [load],
+  );
+
+  return {instances, loading, busyName, reload: load, add, rename, remove, toggleRunning};
+}
+
+/** What one hook call returns, as the cards and the tables take it. */
+export type AgentInstanceControls = ReturnType<typeof useAgentInstances>;
+
+/** The instances belonging to one installation, out of a listing of them all. */
+export function instancesOf(instances: AgentInstance[], agent: Agent) {
+  return instances.filter(instance => instance.agentId === agent.agentId);
 }

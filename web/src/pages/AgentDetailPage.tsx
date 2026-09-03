@@ -23,6 +23,7 @@ import * as ProviderBackend from "@/backend/ProviderBackend";
 import * as LlmRecordBackend from "@/backend/LlmRecordBackend";
 import * as Setting from "@/Setting";
 import {AgentIcon} from "@/components/AgentIcon";
+import {AgentInstances} from "@/components/AgentInstances";
 import {accountLabel} from "@/components/AgentGridCard";
 import {RunBadge, RunButton} from "@/components/AgentRunControl";
 import {InstallOutput, ToolUpgradeConfirmDialog} from "@/components/ToolUpgradeConfirmDialog";
@@ -535,6 +536,8 @@ export default function AgentDetailPage({account}: {account: Account}) {
           </CardContent>
         </Card>
       </div>
+
+      <AgentInstances agent={agent} enabled={isAdmin} />
 
       {!watching ? (
         <Alert variant="info">

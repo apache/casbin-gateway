@@ -112,5 +112,6 @@ func processTarget(installation agent.Installation) agentprocess.Target {
 		Executable: launch.Executable,
 		Args:       launch.Args,
 		Desktop:    launch.Desktop,
+		Exclude:    instanceMarkers(installation.AgentId),
 	}
 }

@@ -269,6 +269,13 @@ func (a *Ormer) createTable() {
 		panic(err)
 	}
 
+	// The extra copies of an agent, each with a state directory of its own so
+	// that two accounts can be signed in and used at the same time.
+	err = a.Engine.Sync2(new(AgentInstance))
+	if err != nil {
+		panic(err)
+	}
+
 	err = a.Engine.Sync2(new(LlmRecord))
 	if err != nil {
 		panic(err)

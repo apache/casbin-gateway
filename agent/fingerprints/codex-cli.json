@@ -3,6 +3,7 @@
   "displayName": "Codex CLI",
   "installUrl": "https://developers.openai.com/codex/cli/",
   "execName": "codex",
+  "instanceEnv": "CODEX_HOME",
   "stateDir": "codex",
   "npmPackage": "@openai/codex",
   "homebrewCasks": ["codex", "codex@latest"],

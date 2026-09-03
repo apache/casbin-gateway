@@ -3,6 +3,7 @@
   "displayName": "Claude Code",
   "installUrl": "https://docs.claude.com/en/docs/claude-code/setup",
   "execName": "claude",
+  "instanceEnv": "CLAUDE_CONFIG_DIR",
   "stateDir": "claude",
   "npmPackage": "@anthropic-ai/claude-code",
   "wingetPackage": "Anthropic.ClaudeCode",

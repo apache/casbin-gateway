@@ -17,6 +17,7 @@ import type {
   Agent,
   AgentCatalogEntry,
   AgentInstallJob,
+  AgentInstance,
   AgentProviderConfig,
   AgentProviderFile,
   AgentRecord,
@@ -75,6 +76,42 @@ export function startAgent(target: PatchTarget) {
 
 export function stopAgent(target: PatchTarget) {
   return request<AgentRuntime>("/api/stop-agent", "POST", target);
+}
+
+/** The extra copies of one agent, each with its own account and run state. */
+export function getAgentInstances(agent = "", forceRefresh = false) {
+  return request<AgentInstance[]>(
+    `/api/get-agent-instances${query({agent: agent, refresh: forceRefresh ? "true" : ""})}`,
+  );
+}
+
+/**
+ * Registers one more copy of an installed agent and lays out its state. The
+ * server names it, so adding one is a single click; the name is edited after.
+ */
+export function addAgentInstance(target: PatchTarget) {
+  return request<AgentInstance>("/api/add-agent-instance", "POST", target);
+}
+
+/** Renames one instance in the lists; its state directory stays where it is. */
+export function renameAgentInstance(name: string, displayName: string) {
+  return request<AgentInstance>("/api/update-agent-instance", "POST", {
+    name: name,
+    displayName: displayName,
+  });
+}
+
+/** Forgets one instance; its state directory is left on disk. */
+export function deleteAgentInstance(name: string) {
+  return request<string>("/api/delete-agent-instance", "POST", {name: name});
+}
+
+export function startAgentInstance(name: string) {
+  return request<AgentInstance>("/api/start-agent-instance", "POST", {name: name});
+}
+
+export function stopAgentInstance(name: string) {
+  return request<AgentInstance>("/api/stop-agent-instance", "POST", {name: name});
 }
 
 export interface AgentRouting {

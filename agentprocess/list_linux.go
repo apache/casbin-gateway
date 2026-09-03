@@ -43,16 +43,39 @@ func list(ctx context.Context, withCommands bool) []Process {
 			continue
 		}
 		path, _ := os.Readlink(fmt.Sprintf("/proc/%d/exe", pid))
-		command := ""
+		command, parent := "", 0
 		if withCommands {
-			command = processCommand(pid)
+			command, parent = processCommand(pid), processParent(pid)
 		}
 		if path == "" && command == "" {
 			continue
 		}
-		result = append(result, Process{Pid: pid, Path: path, Command: command})
+		result = append(result, Process{Pid: pid, Parent: parent, Path: path, Command: command})
 	}
 	return result
+}
+
+// processParent reads the ppid procfs keeps as the fourth field of stat. The
+// executable name before it may hold spaces and brackets, so the fields are read
+// from after the closing one.
+func processParent(pid int) int {
+	data, err := os.ReadFile(fmt.Sprintf("/proc/%d/stat", pid))
+	if err != nil {
+		return 0
+	}
+	end := strings.LastIndexByte(string(data), ')')
+	if end < 0 {
+		return 0
+	}
+	fields := strings.Fields(string(data)[end+1:])
+	if len(fields) < 2 {
+		return 0
+	}
+	parent, err := strconv.Atoi(fields[1])
+	if err != nil {
+		return 0
+	}
+	return parent
 }
 
 // processCommand joins the NUL-separated arguments procfs stores.

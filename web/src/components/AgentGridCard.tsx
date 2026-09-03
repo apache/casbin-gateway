@@ -18,6 +18,7 @@ import {Bot, ChevronRight, UserRound} from "lucide-react";
 import i18next from "i18next";
 
 import {AgentIcon} from "@/components/AgentIcon";
+import {AgentCardInstances} from "@/components/AgentInstances";
 import {RunBadge, RunButton} from "@/components/AgentRunControl";
 import {ProviderIcon} from "@/components/ProviderIcon";
 import {QuotaBadge} from "@/components/ProviderQuota";
@@ -42,6 +43,7 @@ import {
   directMode,
   monitorAgentId,
   type AgentActivity,
+  type AgentInstanceControls,
 } from "@/lib/agents";
 import {providerIdOf, providerProtocol} from "@/lib/providers";
 import {formatCost, formatTokens} from "@/lib/usage";
@@ -157,6 +159,7 @@ export function AgentGridCard({
   usage,
   activity,
   status,
+  instances,
   recording,
   busy,
   runBusy,
@@ -178,6 +181,8 @@ export function AgentGridCard({
   usage?: AgentUsageStat;
   activity?: AgentActivity;
   status?: AgentRuntime;
+  /** The extra copies of this agent, for the agents that can run more than one. */
+  instances?: AgentInstanceControls;
   /** False while llmRecordMode is off, when a zero would be a lie. */
   recording: boolean;
   busy: boolean;
@@ -343,6 +348,8 @@ export function AgentGridCard({
         </div>
 
         <PlanUsage quota={quota} />
+
+        {instances ? <AgentCardInstances agent={agent} controls={instances} /> : null}
 
         <div className="mt-auto flex flex-wrap items-center gap-3 border-t pt-3">
           <RunButton agent={agent} status={status} busy={runBusy} onToggle={onToggleRunning} />

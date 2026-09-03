@@ -5,6 +5,7 @@
   "execName": "claude",
   "desktop": true,
   "sandboxed": true,
+  "instanceArg": "--user-data-dir",
   "msixFamily": "Claude_pzs8sxrjxfjjc",
   "desktopInstallerDir": "AnthropicClaude"
 }

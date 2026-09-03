@@ -30,7 +30,7 @@ import (
 // commandScript reads what the process was started with, which is the only way
 // an agent running under an interpreter names itself. WMI answers this in about
 // a second, so it is asked for only when an image path cannot settle it.
-const commandScript = `Get-CimInstance Win32_Process | ForEach-Object { [PSCustomObject]@{ pid = $_.ProcessId; path = $_.ExecutablePath; command = $_.CommandLine } } | ConvertTo-Json -Compress`
+const commandScript = `Get-CimInstance Win32_Process | ForEach-Object { [PSCustomObject]@{ pid = $_.ProcessId; parent = $_.ParentProcessId; path = $_.ExecutablePath; command = $_.CommandLine } } | ConvertTo-Json -Compress`
 
 func list(ctx context.Context, withCommands bool) []Process {
 	if withCommands {
@@ -60,7 +60,9 @@ func listImages() []Process {
 	for {
 		if entry.ProcessID > 0 {
 			if path := imagePath(entry.ProcessID); path != "" {
-				result = append(result, Process{Pid: int(entry.ProcessID), Path: path})
+				result = append(result, Process{
+					Pid: int(entry.ProcessID), Parent: int(entry.ParentProcessID), Path: path,
+				})
 			}
 		}
 		if windows.Process32Next(snapshot, &entry) != nil {
@@ -101,6 +103,7 @@ func listWithCommands(ctx context.Context) []Process {
 	}
 	var rows []struct {
 		Pid     int    `json:"pid"`
+		Parent  int    `json:"parent"`
 		Path    string `json:"path"`
 		Command string `json:"command"`
 	}
@@ -113,7 +116,7 @@ func listWithCommands(ctx context.Context) []Process {
 		if row.Pid <= 0 {
 			continue
 		}
-		result = append(result, Process{Pid: row.Pid, Path: row.Path, Command: row.Command})
+		result = append(result, Process{Pid: row.Pid, Parent: row.Parent, Path: row.Path, Command: row.Command})
 	}
 	return result
 }

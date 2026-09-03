@@ -34,6 +34,15 @@ type Fingerprint struct {
 	// where 127.0.0.1 is the sandbox rather than this host.
 	Sandboxed bool `json:"sandboxed,omitempty"`
 
+	// InstanceArg is the flag a private state directory is passed on the command
+	// line with, for an app that takes one - Chromium's --user-data-dir.
+	// InstanceEnv is the variable that names it for an agent that reads its
+	// state directory from the environment. Either one lets Gateway run a second
+	// copy of the agent signed in to a different account; neither means it
+	// cannot.
+	InstanceArg string `json:"instanceArg,omitempty"`
+	InstanceEnv string `json:"instanceEnv,omitempty"`
+
 	StateDir            string              `json:"stateDir,omitempty"`
 	NpmPackage          string              `json:"npmPackage,omitempty"`
 	ExtraUnixNpmDirs    []string            `json:"extraUnixNpmDirs,omitempty"`

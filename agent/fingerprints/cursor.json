@@ -4,6 +4,7 @@
   "installUrl": "https://cursor.com/download",
   "execName": "Cursor",
   "desktop": true,
+  "instanceArg": "--user-data-dir",
   "windowsProgramDirs": ["cursor"],
   "homebrewCasks": ["cursor"]
 }

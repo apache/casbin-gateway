@@ -160,6 +160,33 @@ export interface Agent {
   proxyBaseUrl?: string;
   /** The command that would update this installation where it stands. */
   upgrade?: AgentInstallPlan;
+  /** Whether a second copy of this agent can run beside the first. */
+  supportsInstances?: boolean;
+}
+
+/**
+ * One extra copy of an agent, kept apart from the others by a state directory
+ * of its own, so that each is signed in to a different account and the two can
+ * work at the same time.
+ */
+export interface AgentInstance {
+  /** The stored id, "<agentId>/<instance>", which every call names it by. */
+  name: string;
+  agentId: string;
+  instance: string;
+  displayName: string;
+  /** The private state directory this copy is started with. */
+  dataDir: string;
+  path: string;
+  hostUser: string;
+  createdTime: string;
+  /** The account this copy is signed in to, absent until someone signs in. */
+  account?: AgentAccount;
+  desktop: boolean;
+  running: boolean;
+  pids: number[];
+  canStart: boolean;
+  detail?: string;
 }
 
 /**
