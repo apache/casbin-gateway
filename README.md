@@ -37,12 +37,39 @@
   <b>English</b> | <a href="./README_zh.md">中文</a>
 </p>
 
+<p align="center">
+  <a href="https://cdn.casbin.org/img/casbin-gateway.gif"><img alt="Casbin Gateway" src="https://cdn.casbin.org/img/casbin-gateway.gif" width="900"></a>
+</p>
+
+## The killer feature: is the API behind that key what it was sold as?
+
+A reseller can sell a frontier model and serve a cheaper one, count a cached prefix as fresh input, or answer in an API it only pretends to speak. None of that shows up in the traffic, so **Authenticity** asks the upstream directly. Every provider is probed on its own — when it is added, when its endpoint, type or key changes, when it has never been probed, and again whenever its report goes stale — and comes back with a score out of 100 and a grade from A to F, on the Authenticity page and above the agents on the home page. No button to press, and nothing to configure.
+
+[![Authenticity](https://cdn.casbin.org/img/casbin-gateway-authenticity.png)](https://cdn.casbin.org/img/casbin-gateway-authenticity.png)
+
+The score is only a summary of the test cases behind it, and every one of them is on the page: whether the model that answers is the one that was asked for, whether a two-level tool schema survives a forced call, whether the event stream carries everything the API documents, whether the prompt cache is really accounted for, whether two identical requests are billed the same, whether the vendor's own headers are there. Each case names the question it puts to the upstream, the exact request it sends, how the answer is judged, and what it is worth.
+
+[![Test cases](https://cdn.casbin.org/img/casbin-gateway-authenticity-cases.png)](https://cdn.casbin.org/img/casbin-gateway-authenticity-cases.png)
+
+Reweight a case, turn it off, rewrite its question, or add one of your own — the questions worth asking of a reseller are not the same everywhere, and a score whose method is not published is not evidence. **Restore defaults** puts the shipped suite back and leaves your own cases alone.
+
+The report has a second half that costs nothing and sends no request: what the records Gateway already kept say
+about that upstream — how much of the cache it really accounted for, how many attempts failed, how long it took
+to answer, and how much of what it served has no price.
+
+A probe spends a few cents of that provider's own credit, which is on the report next to the finding. `providerProbeIntervalHours` sets how often a report goes stale, `providerProbeMode = "manual"` probes only when asked, and `"off"` never probes.
+
 ## Screenshots
 
-| Every agent on this machine | One endpoint per model vendor |
+| Every agent on this machine | Everything those agents carry |
 | :---: | :---: |
-| [![Agents](https://cdn.casbin.org/img/casbin-gateway-agents.png)](https://cdn.casbin.org/img/casbin-gateway-agents.png) | [![New Provider](https://cdn.casbin.org/img/casbin-gateway-new-provider.png)](https://cdn.casbin.org/img/casbin-gateway-new-provider.png) |
-| What each one runs on, what it has spent there, and whether it is running | 27 vendor presets, or any OpenAI- or Anthropic-compatible base URL |
+| [![Agents](https://cdn.casbin.org/img/casbin-gateway-home.png)](https://cdn.casbin.org/img/casbin-gateway-home.png) | [![Skills, MCP & Prompts](https://cdn.casbin.org/img/casbin-gateway-skills.png)](https://cdn.casbin.org/img/casbin-gateway-skills.png) |
+| What each one runs on, which account it is signed in to, what it has spent there, and whether it is running | Every skill, MCP server and instruction file of every agent, side by side, copied from one agent to another |
+
+| What the agents spent | One endpoint per model vendor |
+| :---: | :---: |
+| [![Usage](https://cdn.casbin.org/img/casbin-gateway-usage.png)](https://cdn.casbin.org/img/casbin-gateway-usage.png) | [![New Provider](https://cdn.casbin.org/img/casbin-gateway-new-provider.png)](https://cdn.casbin.org/img/casbin-gateway-new-provider.png) |
+| Read from the transcripts the agents write themselves, so it counts what never went through Gateway too | 27 vendor presets, or any OpenAI- or Anthropic-compatible base URL |
 
 | Everything the agents relayed | The whole request, not just a count |
 | :---: | :---: |
@@ -85,11 +112,15 @@ Gateway installed some other way, or in a directory it cannot write to, says so 
 
 | Page | What you get | What it needs |
 | --- | --- | --- |
-| **Agents** | Every AI coding agent installed on this machine — Claude Code, Codex CLI, Cursor and more. Click **Patch** on one and its activity streams into the page live. | Nothing |
-| **Skills, MCP & Prompts** | Every skill, MCP server and instruction file of every agent in one table. Add an MCP server to one agent or to several at once, edit the instructions an agent reads before every session, open one, delete it, or copy it into another agent. | Nothing |
+| **Agents** | Every AI coding agent installed on this machine — Claude Code, Codex CLI, Cursor, the Gemini CLI, opencode and more — four cards to a row, each naming the account it is signed in to, the provider it answers to, what it has spent, and whether it is running right now. Start or stop one from its card, or run several **instances** of the same agent at once, each with a state directory and an account of its own. An agent this machine does not have is listed too, and installed or upgraded from the page through the package manager the host already has. | Nothing |
+| **Skills, MCP & Prompts** | Every skill, MCP server and instruction file of every agent in one table. Install skills from a GitHub repository, a `.zip` or `.tar.gz`, or a folder on this machine, into one agent or several at once. Add an MCP server the same way, edit the instructions an agent reads before every session, open one, delete it, or copy it into another agent. | Nothing |
+| **Sessions** | Every session those agents have had, read from the transcripts they leave on disk: the whole conversation, message by message. | Nothing |
+| **Activity** | What a monitored agent is doing as it does it — each tool call, its target and how long it took. | Monitoring on for an agent |
 | **Providers** | One endpoint in front of your model vendors. Gateway holds the API key, so the agents never have it — or forwards the agent's own sign-in and holds nothing. | A vendor API key, or nothing at all |
-| **Authenticity** | A score out of 100 and a grade for every provider, measured without being asked: whether the model that answers is the one that was asked for, whether the prompt cache is real, whether two identical requests are billed the same. Every test case behind the score is published, and every one of them can be reweighted, turned off, rewritten or added to. | A provider with an API key |
+| **Authenticity** | A score out of 100 and a grade for every provider, measured without being asked — see [the section above](#the-killer-feature-is-the-api-behind-that-key-what-it-was-sold-as). | A provider with an API key |
 | **LLM Records** | Every request an agent relayed: the full system prompt, every message and tool call, the schema of every tool the model was offered, plus tokens and cost. | A provider, and `llmRecordMode` — see [Recording prompts](#recording-prompts) |
+| **Usage** | What every agent on this machine spent, over time and broken down by model and by agent, read from the agents' own transcripts — so it counts the requests that never went through Gateway. A second tab shows what Gateway relayed, which is the only account that knows which provider answered and whether it failed. | Nothing |
+| **Model pricing** | What a million tokens costs, which is what every figure on the Usage page is worked out from. Edit a price by hand, or let Gateway reprice the models this machine has run from the [models.dev](https://models.dev) catalogue on a schedule; a price you edited yourself is left alone. | Nothing |
 
 Agents are found by reading the user accounts, home directories and install paths of **the machine Gateway runs on**, so run it on the machine whose agents you want to watch.
 
@@ -118,22 +149,21 @@ The environment snippet for such a provider sets the base URL and nothing else �
 
 Codex is the exception: its ChatGPT sign-in talks to an endpoint no provider stands in for, so a Codex CLI still needs a provider with an API key.
 
-### Is the API behind the key what it was sold as?
+### What the agents spend, including what never went through Gateway
 
-A reseller can sell a frontier model and serve a cheaper one, count a cached prefix as fresh input, or answer
-in an API it only pretends to speak. None of that shows up in the traffic, so **Authenticity** asks the
-upstream directly. Each provider is probed when it is added, when its endpoint or key changes, and again once
-its report goes stale — no button, and `providerProbeIntervalHours` sets how often — and comes back with a
-score out of 100 and a grade from A to F.
+An agent on its own subscription relays nothing through Gateway, and a request that goes straight to the vendor
+leaves no record here — but the agent writes a transcript of it on disk anyway. **Usage** reads those
+transcripts, so the spend of every agent on this machine is on one page from the first start, with no provider
+configured and nothing routed: tokens, cache hit rate and cost, over time and broken down by model and by
+agent. The second tab, **What Gateway relayed**, is the narrower account of the traffic that did come through,
+and the only one that knows which provider answered and whether it failed.
 
-The score is only a summary of the test cases behind it, and all of them are on the page: what each one asks,
-how the answer is judged, the exact request it sends, and what it is worth. Reweight one, turn it off, rewrite
-its question, or add a case of your own — the questions worth asking of a reseller are not the same everywhere,
-and a score whose method is not published is not evidence. **Restore defaults** puts the shipped suite back and
-leaves your own cases alone.
+Every figure there is worked out from **Model pricing**, which is a table of what a million tokens costs.
+Vendors change their prices and resellers do not follow, so a price can be edited by hand, and Gateway can
+reprice the models this machine has run from the [models.dev](https://models.dev) catalogue on a schedule
+(`modelsDevSyncMode`, `modelsDevSyncIntervalHours`), leaving anything you edited yourself alone.
 
-A probe spends a few cents of that provider's own credit, which is on the report next to the finding.
-`providerProbeMode = "manual"` probes only when asked, and `"off"` never probes.
+[![Model pricing](https://cdn.casbin.org/img/casbin-gateway-pricing.png)](https://cdn.casbin.org/img/casbin-gateway-pricing.png)
 
 ### Stopping, upgrading, removing
 
@@ -157,7 +187,7 @@ To serve other machines anyway, set `httpaddr = 0.0.0.0` in `conf/app.conf`, and
 
 ### Running in Docker or Podman
 
-**A container cannot see the agents on your machine.** Agents are discovered by reading the home directories and install paths of the machine Gateway runs on, and inside a container that is the container's own filesystem. **Agents**, **Skills, MCP & Prompts** and agent monitoring therefore stay empty there, and the pages say so rather than pretending nothing is installed. Everything that does not depend on the host works normally: **Providers** and **LLM Records**.
+**A container cannot see the agents on your machine.** Agents are discovered by reading the home directories and install paths of the machine Gateway runs on, and inside a container that is the container's own filesystem. **Agents**, **Skills, MCP & Prompts** and agent monitoring therefore stay empty there, and the pages say so rather than pretending nothing is installed. Everything that does not depend on the host works normally: **Providers**, **Authenticity** and **LLM Records**.
 
 So run the one-command install above on the machine whose agents you want to watch, and use a container when Gateway is only a model endpoint for other machines.
 
@@ -185,6 +215,7 @@ Everything is optional. Settings are changed on the **Settings** page of the web
 | `httpaddr` | `127.0.0.1` | Interface the web UI binds to — see [Serving other machines](#serving-other-machines) |
 | `driverName` / `dataSourceName` | `sqlite` / `./data/casbin-gateway.db` | Where data is stored |
 | `llmRecordMode` | `full` | How much of each relayed LLM request is kept — including the prompt, see [Recording prompts](#recording-prompts) |
+| `providerProbeMode` | `auto` | Whether providers are probed for authenticity on their own, only when asked (`manual`), or never (`off`) |
 | `apiKeyEncryptionKey` | empty | Encrypts provider API keys at rest (AES-256-GCM) |
 | `casdoorEndpoint` | empty | Switches sign-in over to [Casdoor](https://casdoor.org) SSO |
 
@@ -221,7 +252,7 @@ llmRecordMaxPayloadBytes = 1048576
 
 Bodies are sanitized before they are stored: anything that looks like a credential is replaced, and the number of replacements is shown with the record. Request headers, which is where the inbound API key is, never reach a record at all. A body over `llmRecordMaxPayloadBytes` keeps its structure and loses only its longest strings, so a large conversation is still listed message by message.
 
-The cost next to each record uses built-in list prices, which vendors change and resellers do not follow. Point `llmPricingFile` at a JSON file of your own rates to correct them.
+The cost next to each record uses list prices, which vendors change and resellers do not follow. Correct them on the **Model pricing** page, or point `llmPricingFile` at a JSON file of your own rates.
 
 ### Connecting Casdoor
 
