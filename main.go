@@ -74,6 +74,12 @@ func main() {
 	// this is the only process that can now give it back.
 	agentlink.Restore()
 
+	// The tray runs as a process of its own, so the credential it presents in
+	// place of a session has to be on disk before it asks for anything.
+	if err := service.IssueLocalToken(); err != nil {
+		beego.Error("the desktop tray cannot be given a local token:", err)
+	}
+
 	object.InitFlag()
 	object.InitAdapter()
 	object.CreateTables()

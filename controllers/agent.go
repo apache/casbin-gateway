@@ -16,6 +16,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"errors"
 	"net"
 	"path/filepath"
 	"sort"
@@ -167,33 +168,42 @@ func (c *ApiController) UpdateAgentRouting() {
 		return
 	}
 
-	if err := checkAgentProtocol(form.AgentId, form.Mode, append([]string{form.Provider}, form.Fallbacks...)); err != nil {
+	if err := saveAgentRouting(form.AgentId, form.Provider, form.Fallbacks, form.Mode); err != nil {
 		c.ResponseError(err.Error())
 		return
 	}
+	c.ResponseOk(form.Provider)
+}
 
-	if err := object.SetAgentRouting(form.AgentId, form.Provider, form.Fallbacks, form.Mode); err != nil {
-		c.ResponseError(err.Error())
-		return
+// saveAgentRouting stores one agent's routing and writes it into the
+// configuration of every installation Gateway can write. Both the routing form
+// and the tray's one-click switch end here, so an agent reached from either
+// place is left in the same state.
+func saveAgentRouting(agentId string, providerId string, fallbacks []string, mode string) error {
+	if err := checkAgentProtocol(agentId, mode, append([]string{providerId}, fallbacks...)); err != nil {
+		return err
+	}
+
+	if err := object.SetAgentRouting(agentId, providerId, fallbacks, mode); err != nil {
+		return err
 	}
 
 	// An agent that runs in a sandbox is given this host's own address, so the
 	// management port has to answer there before that endpoint is written.
 	if err := service.SyncLanAccess(); err != nil {
-		c.ResponseError("the routing was saved, but the agent cannot reach Gateway from its sandbox: " + err.Error())
-		return
+		return errors.New("the routing was saved, but the agent cannot reach Gateway from its sandbox: " + err.Error())
 	}
 
-	if form.Provider == "" {
-		if failure := restoreAgentProvider(form.AgentId); failure != "" {
-			c.ResponseError("the routing was cleared, but the agent configuration was not restored: " + failure)
-			return
+	if providerId == "" {
+		if failure := restoreAgentProvider(agentId); failure != "" {
+			return errors.New("the routing was cleared, but the agent configuration was not restored: " + failure)
 		}
-	} else if failure := reapplyAgentProvider(form.AgentId); failure != "" {
-		c.ResponseError("the routing was saved, but the agent configuration was not rewritten: " + failure)
-		return
+		return nil
 	}
-	c.ResponseOk(form.Provider)
+	if failure := reapplyAgentProvider(agentId); failure != "" {
+		return errors.New("the routing was saved, but the agent configuration was not rewritten: " + failure)
+	}
+	return nil
 }
 
 // PatchAgent enables monitoring for one discovered installation.

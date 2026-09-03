@@ -14,6 +14,10 @@
 
 package controllers
 
+import (
+	"github.com/apache/casbin-gateway/service"
+)
+
 type Response struct {
 	Status string      `json:"status"`
 	Msg    string      `json:"msg"`
@@ -64,4 +68,15 @@ func (c *ApiController) RequireAdmin() bool {
 	}
 
 	return false
+}
+
+// RequireLocalAdmin admits the signed-in admin, and a program on this machine
+// that holds the local token. The tray is the second one: it offers the same
+// switch the pages do, from a process that never signed in.
+func (c *ApiController) RequireLocalAdmin() bool {
+	if service.IsLocalRequest(c.Ctx.Request) {
+		return false
+	}
+
+	return c.RequireAdmin()
 }

@@ -81,6 +81,11 @@ func initAPI() {
 	beego.Router("/api/apply-agent-provider", &controllers.ApiController{}, "POST:ApplyAgentProvider")
 	beego.Router("/api/restore-agent-provider", &controllers.ApiController{}, "POST:RestoreAgentProvider")
 	beego.Router("/api/copy-agent-config", &controllers.ApiController{}, "POST:CopyAgentConfig")
+
+	// The desktop tray, which holds the local token instead of a session.
+	beego.Router("/api/get-tray-menu", &controllers.ApiController{}, "GET:GetTrayMenu")
+	beego.Router("/api/set-agent-provider", &controllers.ApiController{}, "POST:SetAgentProvider")
+
 	beego.Router("/api/get-skill-sources", &controllers.ApiController{}, "GET:GetSkillSources")
 	beego.Router("/api/add-skill-source", &controllers.ApiController{}, "POST:AddSkillSource")
 	beego.Router("/api/upload-skill-source", &controllers.ApiController{}, "POST:UploadSkillSource")

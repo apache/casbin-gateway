@@ -62,6 +62,10 @@ func onTrayReady() {
 	mOpen := systray.AddMenuItem("Open Casbin Gateway", "Show the management window")
 	mBrowser := systray.AddMenuItem("Open in Browser", "Show the management UI in the default browser")
 	systray.AddSeparator()
+	mProviders := systray.AddMenuItem("Switch Provider (unavailable)", "Point an agent at another provider")
+	mProviders.Disable()
+	providers := newProviderMenu(mProviders)
+	systray.AddSeparator()
 	mStatus := systray.AddMenuItem("Starting...", "")
 	mStatus.Disable()
 	systray.AddSeparator()
@@ -86,6 +90,7 @@ func onTrayReady() {
 		ownsServer.Unlock()
 
 		go watchStatus(mStatus, port)
+		go providers.watch()
 		showWindow()
 	}()
 
