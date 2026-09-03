@@ -104,7 +104,7 @@ func (w geminiWriter) Apply(target Target, endpoint Endpoint) (map[string]string
 		env.set(key, value)
 	}
 
-	auth := nestedObject(settings, "security", "auth")
+	auth := ensureNested(settings, "security", "auth")
 	if value, ok := auth["selectedType"].(string); ok {
 		previous[geminiAuthKey] = value
 	}
@@ -249,19 +249,4 @@ func (geminiWriter) paths(target Target) (string, string, error) {
 		return "", "", err
 	}
 	return filepath.Join(home, ".gemini", ".env"), filepath.Join(home, ".gemini", "settings.json"), nil
-}
-
-// nestedObject is the object at a path of keys, adding the ones the file does
-// not have yet.
-func nestedObject(config map[string]any, keys ...string) map[string]any {
-	current := config
-	for _, key := range keys {
-		next := objectAt(current, key)
-		if next == nil {
-			next = map[string]any{}
-			current[key] = next
-		}
-		current = next
-	}
-	return current
 }

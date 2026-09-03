@@ -156,3 +156,46 @@ func (t *txn) undo(done []*staged) {
 		_ = os.WriteFile(item.path, item.previous, item.mode)
 	}
 }
+
+// nestedObject is the object at path, nil when a step is missing or holds
+// something else.
+func nestedObject(config map[string]any, path ...string) map[string]any {
+	for _, key := range path {
+		config = objectAt(config, key)
+		if config == nil {
+			return nil
+		}
+	}
+	return config
+}
+
+// ensureNested is nestedObject with the missing steps created. A step holding
+// something other than an object is replaced: the caller is about to own it,
+// and has saved what was there.
+func ensureNested(config map[string]any, path ...string) map[string]any {
+	for _, key := range path {
+		next := objectAt(config, key)
+		if next == nil {
+			next = map[string]any{}
+			config[key] = next
+		}
+		config = next
+	}
+	return config
+}
+
+// pruneEmpty drops the object at path once it is empty, and every parent that
+// empties with it, so removing an entry leaves the file as it was found.
+func pruneEmpty(config map[string]any, path ...string) {
+	for i := len(path); i > 0; i-- {
+		parent := nestedObject(config, path[:i-1]...)
+		if parent == nil {
+			return
+		}
+		value := objectAt(parent, path[i-1])
+		if value == nil || len(value) > 0 {
+			return
+		}
+		delete(parent, path[i-1])
+	}
+}
