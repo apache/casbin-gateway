@@ -187,6 +187,10 @@ export interface AgentInstance {
   pids: number[];
   canStart: boolean;
   detail?: string;
+  /** Whether Gateway can route this agent's own sign-in links on this host. */
+  canCapture?: boolean;
+  /** Whether the next sign-in link will open this copy. */
+  capturing?: boolean;
 }
 
 /**

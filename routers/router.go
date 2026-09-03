@@ -61,6 +61,7 @@ func initAPI() {
 	beego.Router("/api/delete-agent-instance", &controllers.ApiController{}, "POST:DeleteAgentInstance")
 	beego.Router("/api/start-agent-instance", &controllers.ApiController{}, "POST:StartAgentInstance")
 	beego.Router("/api/stop-agent-instance", &controllers.ApiController{}, "POST:StopAgentInstance")
+	beego.Router("/api/capture-agent-instance-link", &controllers.ApiController{}, "POST:CaptureAgentInstanceLink")
 	beego.Router("/api/get-agent-records", &controllers.ApiController{}, "GET:GetAgentRecords")
 	beego.Router("/api/get-agent-sessions", &controllers.ApiController{}, "GET:GetAgentSessions")
 	beego.Router("/api/get-agent-session", &controllers.ApiController{}, "GET:GetAgentSession")

@@ -764,7 +764,44 @@ export function useAgentInstances(agentId = "", enabled = true) {
     [load],
   );
 
-  return {instances, loading, busyName, reload: load, add, rename, remove, toggleRunning};
+  /**
+   * Takes the URL scheme of the agent for one copy, or gives it back. A copy
+   * started without an account takes it on its own; this is for one that is
+   * already running, or that is signing in again.
+   */
+  const toggleCapture = React.useCallback(
+    (instance: AgentInstance) => {
+      const capture = !instance.capturing;
+
+      setBusyName(instance.name);
+      AgentBackend.captureAgentInstanceLink(instance.name, capture)
+        .then(res => {
+          if (res.status === "ok") {
+            if (capture) {
+              Setting.showMessage("success", i18next.t("agent:Waiting for the sign-in link"));
+            }
+          } else {
+            Setting.showMessage("error", res.msg);
+          }
+          load();
+        })
+        .catch(err => Setting.showMessage("error", err.message || String(err)))
+        .then(() => setBusyName(""));
+    },
+    [load],
+  );
+
+  return {
+    instances,
+    loading,
+    busyName,
+    reload: load,
+    add,
+    rename,
+    remove,
+    toggleRunning,
+    toggleCapture,
+  };
 }
 
 /** What one hook call returns, as the cards and the tables take it. */

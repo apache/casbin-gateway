@@ -26,6 +26,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 )
 
 func main() {
@@ -49,6 +50,20 @@ func main() {
 	// they create is the same one the tray checkbox turns off.
 	if len(os.Args) > 2 && os.Args[1] == "autostart" {
 		if err := setAutostart(os.Args[2] == "on"); err != nil {
+			fmt.Fprintln(os.Stderr, "casbin-gateway-desktop:", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	// "open-agent-link <url>" is what a URL scheme Gateway captured opens with.
+	// The server routes the link; it is started from here because this
+	// executable is windowed and flashes no console on the way.
+	if len(os.Args) > 2 && os.Args[1] == "open-agent-link" {
+		cmd := exec.Command(serverPath(), os.Args[1], os.Args[2])
+		cmd.Dir = gatewayHome()
+		hideConsole(cmd)
+		if err := cmd.Run(); err != nil {
 			fmt.Fprintln(os.Stderr, "casbin-gateway-desktop:", err)
 			os.Exit(1)
 		}

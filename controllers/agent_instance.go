@@ -19,16 +19,24 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/apache/casbin-gateway/agent"
+	"github.com/apache/casbin-gateway/agentlink"
 	"github.com/apache/casbin-gateway/agentpatch"
 	"github.com/apache/casbin-gateway/agentprocess"
 	"github.com/apache/casbin-gateway/object"
+	"github.com/beego/beego"
 )
 
 // maxInstances caps the names Gateway will hand out on its own, so a page that
 // keeps asking cannot fill the disk with empty profiles.
 const maxInstances = 50
+
+// linkCaptureTtl is how long a copy waiting to be signed in holds the URL scheme
+// of its agent: long enough for a sign-in in a browser, short enough that a link
+// arriving later still opens whichever copy the agent registered itself for.
+const linkCaptureTtl = 15 * time.Minute
 
 // agentInstanceView is one instance as the pages show it: what was stored, the
 // account its own state is signed in to, and whether it is running right now.
@@ -38,6 +46,10 @@ type agentInstanceView struct {
 	// Desktop tells the UI what a start would open: the app itself, or a console
 	// window for a CLI.
 	Desktop bool `json:"desktop"`
+	// CanCapture is whether Gateway can route this agent's own links here at
+	// all, and Capturing whether the next one will open this copy.
+	CanCapture bool `json:"canCapture"`
+	Capturing  bool `json:"capturing"`
 	agentprocess.Status
 }
 
@@ -232,7 +244,84 @@ func (c *ApiController) StartAgentInstance() {
 		c.ResponseError(err.Error())
 		return
 	}
+	// A sign-in started in this copy comes back as a link in the agent's own
+	// scheme, which would otherwise open the copy on the default state
+	// directory. A copy with no account in it is one that is about to sign in.
+	// The start is not worth failing over it: the copy runs either way, and the
+	// pages show whether the link was captured.
+	if agentlink.Supported() && agent.AccountOfInstance(instance.AgentId, instance.DataDir) == nil {
+		if err := captureLink(instance, target); err != nil {
+			beego.Error("the sign-in link of", instance.Name, "cannot be routed to it:", err)
+		}
+	}
 	c.ResponseOk(instanceView(instance))
+}
+
+// CaptureAgentInstanceLink points the URL scheme of an agent at one copy, so
+// that the next sign-in a browser hands back opens that one. A copy started
+// without an account takes the scheme on its own; this is how a copy that is
+// already running, or already signed in, takes it too.
+func (c *ApiController) CaptureAgentInstanceLink() {
+	if c.RequireAdmin() {
+		return
+	}
+
+	instance, ok := c.readAgentInstance()
+	if !ok {
+		return
+	}
+	var form struct {
+		Capture bool `json:"capture"`
+	}
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &form); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	scheme := agent.LinkSchemeOf(instance.AgentId)
+	if scheme == "" {
+		c.ResponseError(fmt.Sprintf("gateway knows no sign-in link of %s to route", instance.AgentId))
+		return
+	}
+	if !form.Capture {
+		if err := agentlink.Release(scheme); err != nil {
+			c.ResponseError(err.Error())
+			return
+		}
+		c.ResponseOk(instanceView(instance))
+		return
+	}
+
+	installation, err := findInstallation(instance.AgentId, instance.Path, instance.HostUser)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	target, err := instanceTarget(installation, instance)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if err := captureLink(instance, target); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(instanceView(instance))
+}
+
+// captureLink hands the next link in the agent's own scheme to one copy, which
+// is opened with the same command the instance is started with.
+func captureLink(instance *object.AgentInstance, target agentprocess.Target) error {
+	scheme := agent.LinkSchemeOf(instance.AgentId)
+	if scheme == "" {
+		return fmt.Errorf("gateway knows no sign-in link of %s to route", instance.AgentId)
+	}
+
+	_, err := agentlink.Capture(scheme, instance.Name, agentlink.Target{
+		Executable: target.Executable,
+		Args:       target.Args,
+	}, linkCaptureTtl)
+	return err
 }
 
 // StopAgentInstance ends the processes of one instance, leaving the others as
@@ -291,6 +380,12 @@ func instanceView(instance *object.AgentInstance) *agentInstanceView {
 		AgentInstance: instance,
 		Account:       agent.AccountOfInstance(instance.AgentId, instance.DataDir),
 		Status:        agentprocess.Status{Pids: []int{}},
+	}
+
+	if scheme := agent.LinkSchemeOf(instance.AgentId); scheme != "" && agentlink.Supported() {
+		view.CanCapture = true
+		claim, pending := agentlink.Pending(scheme)
+		view.Capturing = pending && claim.Instance == instance.Name
 	}
 
 	installation, err := findInstallation(instance.AgentId, instance.Path, instance.HostUser)

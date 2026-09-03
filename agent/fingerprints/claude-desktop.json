@@ -6,6 +6,7 @@
   "desktop": true,
   "sandboxed": true,
   "instanceArg": "--user-data-dir",
+  "linkScheme": "claude",
   "msixFamily": "Claude_pzs8sxrjxfjjc",
   "desktopInstallerDir": "AnthropicClaude"
 }

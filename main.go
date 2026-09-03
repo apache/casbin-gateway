@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/apache/casbin-gateway/agenthook"
+	"github.com/apache/casbin-gateway/agentlink"
 	"github.com/apache/casbin-gateway/agentmonitor"
 	"github.com/apache/casbin-gateway/agentpatch"
 	"github.com/apache/casbin-gateway/casdoor"
@@ -47,6 +48,10 @@ func main() {
 	agenthook.ServeIfInvoked()
 	mcpserver.ServeIfInvoked()
 
+	// A link in the URL scheme of an agent opens this executable while Gateway
+	// is routing one to a particular copy. It is a launch, not a service.
+	agentlink.HandleIfInvoked()
+
 	// "version" prints the build and exits. An update runs it on what it just
 	// downloaded, before that executable replaces this one.
 	if version.RunCommand(os.Args) {
@@ -63,6 +68,11 @@ func main() {
 	// is running from it, which is now.
 	version.CleanupBackup()
 	version.Configure(daemonLogPath)
+
+	// A URL scheme is only Gateway while it waits for one link. A Gateway that
+	// did not get to hand one over left the scheme registered to itself, and
+	// this is the only process that can now give it back.
+	agentlink.Restore()
 
 	object.InitFlag()
 	object.InitAdapter()

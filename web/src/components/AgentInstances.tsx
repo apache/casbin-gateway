@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import * as React from "react";
-import {Play, Plus, RefreshCw, Square, Trash2, UserPlus, Users} from "lucide-react";
+import {LogIn, Play, Plus, RefreshCw, Square, Trash2, UserPlus, Users} from "lucide-react";
 import i18next from "i18next";
 
 import {accountLabel} from "@/components/AgentGridCard";
@@ -144,6 +144,45 @@ function InstanceRunButton({
 }
 
 /**
+ * Takes the sign-in link for one copy. A sign-in finished in a browser comes
+ * back through the agent's own URL scheme, which opens whichever copy the agent
+ * registered itself for - the first one, where the sign-in is of no use. While
+ * this is on, the next one opens this copy instead.
+ */
+function InstanceCaptureButton({
+  instance,
+  busy,
+  onToggle,
+}: {
+  instance: AgentInstance;
+  busy: boolean;
+  onToggle: (instance: AgentInstance) => void;
+}) {
+  if (!instance.canCapture) {
+    return null;
+  }
+
+  const waiting = instance.capturing === true;
+  const label = i18next.t(waiting ? "agent:Waiting for the sign-in link" : "agent:Capture sign-in");
+  return (
+    <SimpleTooltip title={waiting ? label : i18next.t("agent:Capture sign-in hint")}>
+      <span>
+        <Button
+          size="icon"
+          variant="ghost"
+          className={cn("size-6", waiting && "text-success")}
+          loading={busy}
+          aria-label={label}
+          onClick={() => onToggle(instance)}
+        >
+          <LogIn />
+        </Button>
+      </span>
+    </SimpleTooltip>
+  );
+}
+
+/**
  * The extra copies of one agent. Each is started against a state directory of
  * its own, so each signs in separately and the two run side by side without
  * seeing each other's sessions.
@@ -216,6 +255,11 @@ export function AgentInstances({agent, enabled = true}: {agent: Agent; enabled?:
             instance={record}
             busy={controls.busyName === record.name}
             onToggle={controls.toggleRunning}
+          />
+          <InstanceCaptureButton
+            instance={record}
+            busy={controls.busyName === record.name}
+            onToggle={controls.toggleCapture}
           />
           <ConfirmDialog
             title={`${i18next.t("agent:Remove instance")}: ${instanceLabel(record)}?`}

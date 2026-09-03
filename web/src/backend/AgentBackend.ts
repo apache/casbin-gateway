@@ -114,6 +114,18 @@ export function stopAgentInstance(name: string) {
   return request<AgentInstance>("/api/stop-agent-instance", "POST", {name: name});
 }
 
+/**
+ * Points the URL scheme of the agent at one instance, so that the sign-in a
+ * browser hands back opens that copy rather than the one the agent registered
+ * itself for.
+ */
+export function captureAgentInstanceLink(name: string, capture: boolean) {
+  return request<AgentInstance>("/api/capture-agent-instance-link", "POST", {
+    name: name,
+    capture: capture,
+  });
+}
+
 export interface AgentRouting {
   provider: string;
   fallbacks: string[];

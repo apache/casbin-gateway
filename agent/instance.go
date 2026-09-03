@@ -57,6 +57,18 @@ func SupportsInstances(agentId string) bool {
 	return isolationOf(agentId).supported()
 }
 
+// LinkSchemeOf is the URL scheme an agent registers for its own links, which is
+// what a browser hands a finished sign-in back through. Empty for an agent that
+// has none, or none Gateway knows about.
+func LinkSchemeOf(agentId string) string {
+	for i := range fingerprints {
+		if fingerprints[i].ID == agentId {
+			return fingerprints[i].LinkScheme
+		}
+	}
+	return ""
+}
+
 // InstancesRoot is where every instance of every agent keeps its state: the
 // home of the account Gateway runs as, which is also the account an instance is
 // started under. An installation owned by another account - a machine-wide one

@@ -43,6 +43,10 @@ type Fingerprint struct {
 	InstanceArg string `json:"instanceArg,omitempty"`
 	InstanceEnv string `json:"instanceEnv,omitempty"`
 
+	// LinkScheme is the URL scheme the agent registers for its own links, which
+	// is how a browser hands a finished sign-in back to it.
+	LinkScheme string `json:"linkScheme,omitempty"`
+
 	StateDir            string              `json:"stateDir,omitempty"`
 	NpmPackage          string              `json:"npmPackage,omitempty"`
 	ExtraUnixNpmDirs    []string            `json:"extraUnixNpmDirs,omitempty"`
