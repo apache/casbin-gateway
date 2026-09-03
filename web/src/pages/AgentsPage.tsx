@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import {Link} from "react-router-dom";
-import {ArrowLeft, Bot, Container, RefreshCw} from "lucide-react";
+import {ArrowLeft, Bot, Container, Eye, EyeOff, RefreshCw} from "lucide-react";
 import i18next from "i18next";
 
 import * as Setting from "@/Setting";
@@ -195,12 +195,14 @@ export default function AgentsPage({account}: {account: Account}) {
     if (!record.supported) {
       return (
         <Button size="sm" variant="outline" disabled>
+          <Eye />
           {i18next.t("agent:Patch")}
         </Button>
       );
     }
 
     const action = i18next.t(`agent:${record.patched ? "Unpatch" : "Patch"}`);
+    const Icon = record.patched ? EyeOff : Eye;
     const note = [record.notice, record.followup].filter(Boolean).join(" ");
     return (
       <ConfirmDialog
@@ -215,6 +217,7 @@ export default function AgentsPage({account}: {account: Account}) {
           variant={record.patched ? "outline" : "default"}
           loading={busyKey === agentKey(record)}
         >
+          <Icon />
           {action}
         </Button>
       </ConfirmDialog>

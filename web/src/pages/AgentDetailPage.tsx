@@ -14,7 +14,7 @@
 
 import * as React from "react";
 import {Link, useParams, useSearchParams} from "react-router-dom";
-import {ArrowLeft, Bot, ChevronRight, CircleX, Copy, RefreshCw} from "lucide-react";
+import {ArrowLeft, Bot, ChevronRight, CircleX, Copy, Eye, EyeOff, RefreshCw} from "lucide-react";
 import copy from "copy-to-clipboard";
 import i18next from "i18next";
 
@@ -84,6 +84,7 @@ function MonitoringCard({
   onToggle: () => void;
 }) {
   const action = i18next.t(`agent:${agent.patched ? "Unpatch" : "Patch"}`);
+  const Icon = agent.patched ? EyeOff : Eye;
   const note = [agent.notice, agent.followup].filter(Boolean).join(" ");
 
   return (
@@ -113,13 +114,18 @@ function MonitoringCard({
             variant={agent.patched ? "destructive" : "default"}
             onConfirm={onToggle}
           >
-            <Button variant={agent.patched ? "outline" : "default"} disabled={busy}>
-              {busy ? <AiDots size="small" /> : null}
+            <Button
+              size="sm"
+              variant={agent.patched ? "outline" : "default"}
+              loading={busy}
+            >
+              <Icon />
               {action}
             </Button>
           </ConfirmDialog>
         ) : (
-          <Button variant="outline" disabled>
+          <Button size="sm" variant="outline" disabled>
+            <Eye />
             {i18next.t("agent:Patch")}
           </Button>
         )}

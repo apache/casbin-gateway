@@ -61,23 +61,31 @@ export function ConfirmDialog({
   onOpenChange?: (open: boolean) => void;
 }) {
   const [pending, setPending] = React.useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
+  const isOpen = open ?? uncontrolledOpen;
+
+  const setOpen = (next: boolean) => {
+    if (open === undefined) {
+      setUncontrolledOpen(next);
+    }
+    onOpenChange?.(next);
+  };
 
   const handleConfirm = async(event: React.MouseEvent) => {
-    // The dialog closes itself on action; awaiting first would let it close
-    // before an async handler reports a failure, so errors are surfaced by the
-    // handler's own toast instead.
+    // Hold the dialog open while an async handler runs, then close it here, so a
+    // failure surfaces (through the handler's own toast) before it disappears.
     event.preventDefault();
     setPending(true);
     try {
       await onConfirm();
     } finally {
       setPending(false);
-      onOpenChange?.(false);
+      setOpen(false);
     }
   };
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog open={isOpen} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild disabled={disabled}>
         {children}
       </AlertDialogTrigger>
