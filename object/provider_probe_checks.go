@@ -44,7 +44,6 @@ import (
 // first request decides whether the upstream is usable at all; everything after
 // it is a question that would be meaningless if it were not.
 func runProbeCases(provider *Provider, model string, probe *ProviderProbe, cases []*ProbeCase) {
-	upstream := ProviderProtocol(provider)
 	toolCases := probeCasesOf(cases, ProbeTools)
 
 	var primary *probeBody
@@ -77,7 +76,17 @@ func runProbeCases(provider *Provider, model string, probe *ProviderProbe, cases
 		probe.addCheck(probeIdentityCheck(identityCase, model, primary.Model))
 	}
 	for _, vendorCase := range probeCasesOf(cases, ProbeVendor) {
-		found := vendorHeadersOf(vendorCase, upstream, headers)
+		wanted := vendorHeadersOf(vendorCase, provider)
+		if len(wanted) == 0 {
+			// Nothing to hold this endpoint to: the vendor it belongs to is
+			// not one whose headers this build documents, or it belongs to no
+			// vendor at all. That is a gap here, not a finding about it.
+			check := checkOf(vendorCase, LlmAuditUnknown)
+			check.Facts = []string{probeVendorUndocumented}
+			probe.addCheck(check)
+			continue
+		}
+		found := headersPresent(wanted, headers)
 		probe.VendorHeaders = mergeStrings(probe.VendorHeaders, found)
 		probe.addCheck(probeVendorCheck(vendorCase, found))
 	}
@@ -329,9 +338,15 @@ func probeOpeningCall(provider *Provider, model string, probe *ProviderProbe) (*
 	return &parsed, answer.header
 }
 
+// probeIdentityAlias marks an answer that matched because the name asked for is
+// one the vendor documents as moving, so that the report can say which of the
+// two things it found.
+const probeIdentityAlias = "alias"
+
 // probeIdentityCheck compares the model name that came back with the one that
 // was asked for. Matching proves little on its own — echoing a name back is the
-// easiest thing in the world to do — but not matching is decisive.
+// easiest thing in the world to do — but not matching is decisive, except where
+// the vendor documents the name asked for as an alias.
 func probeIdentityCheck(probeCase *ProbeCase, asked string, answered string) ProbeCheck {
 	check := checkOf(probeCase, LlmAuditUnknown)
 	if strings.TrimSpace(answered) == "" {
@@ -342,6 +357,17 @@ func probeIdentityCheck(probeCase *ProbeCase, asked string, answered string) Pro
 		check.Level = LlmAuditOk
 		return check
 	}
+
+	// "deepseek-chat" is DeepSeek's own name for whichever chat model is
+	// current, and it answers with the name of the model that ran. A different
+	// name there is the documented behaviour; what is left to check is that it
+	// is still a model of the vendor whose alias was asked for.
+	if isProbeModelAlias(asked) && sameModelVendor(asked, answered) {
+		check.Level = LlmAuditOk
+		check.Facts = []string{answered, probeIdentityAlias}
+		return check
+	}
+
 	check.Level = LlmAuditAlert
 	return check
 }
@@ -365,32 +391,27 @@ func sameModelName(asked string, answered string) bool {
 	return strings.HasPrefix(left, right) || strings.HasPrefix(right, left)
 }
 
-// The response headers each vendor's own API sets. A reseller in front of the
-// real thing usually passes some of them through; a backend that never talked
-// to the vendor has none to pass. A case may name its own list instead.
-var probeVendorHeaders = map[string][]string{
-	ProtocolAnthropic: {
-		"Request-Id",
-		"Anthropic-Organization-Id",
-		"Anthropic-Ratelimit-Requests-Limit",
-		"Anthropic-Ratelimit-Input-Tokens-Limit",
-		"X-Should-Retry",
-	},
-	ProtocolOpenAi: {
-		"X-Request-Id",
-		"Openai-Organization",
-		"Openai-Processing-Ms",
-		"Openai-Version",
-		"X-Ratelimit-Limit-Requests",
-	},
+// probeVendorUndocumented is what the header case reports when there is no
+// documented list to hold the endpoint to.
+const probeVendorUndocumented = "undocumented"
+
+// vendorHeadersOf is the list this endpoint is held to: the one the case names,
+// or failing that the response headers the vendor whose own host it is
+// documents. An endpoint that is not a vendor's own — a reseller, an
+// aggregator, a vendor this build carries no header list for — has no list, and
+// the case is then not asked. Answering an OpenAI-compatible API is not a claim
+// to be OpenAI, so OpenAI's headers are not owed by everything that speaks it.
+func vendorHeadersOf(probeCase *ProbeCase, provider *Provider) []string {
+	if len(probeCase.Params.Headers) > 0 {
+		return probeCase.Params.Headers
+	}
+	if vendor := probeVendorOfProvider(provider); vendor != nil {
+		return vendor.headers
+	}
+	return nil
 }
 
-func vendorHeadersOf(probeCase *ProbeCase, upstream string, header http.Header) []string {
-	wanted := probeCase.Params.Headers
-	if len(wanted) == 0 {
-		wanted = probeVendorHeaders[upstream]
-	}
-
+func headersPresent(wanted []string, header http.Header) []string {
 	found := []string{}
 	for _, name := range wanted {
 		if header.Get(name) != "" {

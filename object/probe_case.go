@@ -19,6 +19,8 @@
 package object
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -87,6 +89,11 @@ type ProbeCase struct {
 	// BuiltIn marks a case Gateway ships, which is what restoring the defaults
 	// puts back. An edited built-in case stays built-in.
 	BuiltIn bool `xorm:"bool" json:"builtIn"`
+	// Shipped fingerprints the built-in case this row was written from. It is
+	// what tells a case nobody has touched from one someone rewrote, which is
+	// what lets a later release improve a shipped case without overwriting
+	// anyone's words.
+	Shipped string `xorm:"varchar(64)" json:"-"`
 
 	Question string `xorm:"varchar(1000)" json:"question"`
 	Method   string `xorm:"varchar(2000)" json:"method"`
@@ -127,36 +134,44 @@ func GetProbeCases() ([]*ProbeCase, error) {
 	return cases, nil
 }
 
-// markEditedProbeCases compares each built-in case against the one Gateway
-// ships. Only the words are compared: a case that was reweighted or turned off
-// is still the shipped question, asked the shipped way.
+// markEditedProbeCases compares each built-in case against the words it was
+// written with. Only the question is compared: a case that was reweighted or
+// turned off is still the shipped question, asked the shipped way.
 func markEditedProbeCases(cases []*ProbeCase) {
-	shipped := map[string]*ProbeCase{}
-	for _, probeCase := range builtInProbeCases() {
-		shipped[probeCase.Name] = probeCase
-	}
-
 	for _, probeCase := range cases {
-		original, ok := shipped[probeCase.Name]
-		if !probeCase.BuiltIn || !ok {
-			continue
-		}
-		probeCase.Edited = probeCase.DisplayName != original.DisplayName ||
-			probeCase.Question != original.Question ||
-			probeCase.Method != original.Method ||
-			!sameProbeParams(probeCase.Params, original.Params)
+		probeCase.Edited = isProbeCaseEdited(probeCase)
 	}
 }
 
-// sameProbeParams compares two parameter sets the way a reader would: what is
-// sent and what it is compared against, slices included.
-func sameProbeParams(left ProbeCaseParams, right ProbeCaseParams) bool {
-	leftJson, leftErr := json.Marshal(left)
-	rightJson, rightErr := json.Marshal(right)
-	if leftErr != nil || rightErr != nil {
+func isProbeCaseEdited(probeCase *ProbeCase) bool {
+	if !probeCase.BuiltIn {
 		return false
 	}
-	return string(leftJson) == string(rightJson)
+	// A row stored before cases were fingerprinted has only its timestamps to
+	// go on, which are enough: a seeded case is written once, so one that was
+	// never written again is one nobody has touched.
+	if probeCase.Shipped == "" {
+		return probeCase.UpdatedTime != probeCase.CreatedTime
+	}
+	return probeCaseFingerprint(probeCase) != probeCase.Shipped
+}
+
+// probeCaseFingerprint covers what a case asks and how it judges the answer,
+// which is what a reader would call the case itself.
+func probeCaseFingerprint(probeCase *ProbeCase) string {
+	params, err := json.Marshal(probeCase.Params)
+	if err != nil {
+		params = []byte("{}")
+	}
+	sum := sha256.Sum256([]byte(strings.Join([]string{
+		probeCase.DisplayName,
+		probeCase.Check,
+		probeCase.Protocol,
+		probeCase.Question,
+		probeCase.Method,
+		string(params),
+	}, "|")))
+	return hex.EncodeToString(sum[:])
 }
 
 func sortProbeCases(cases []*ProbeCase) {
@@ -255,6 +270,7 @@ func UpdateProbeCase(name string, probeCase *ProbeCase) error {
 
 	probeCase.Name = name
 	probeCase.BuiltIn = stored.BuiltIn
+	probeCase.Shipped = stored.Shipped
 	probeCase.CreatedTime = stored.CreatedTime
 	probeCase.UpdatedTime = util.GetCurrentTime()
 	_, err = ormer.Engine.ID(name).AllCols().Update(probeCase)
@@ -310,9 +326,10 @@ func normalizeProbeCase(probeCase *ProbeCase) error {
 	return nil
 }
 
-// InitProbeCases writes the shipped suite on first start. It only ever adds the
-// cases missing by name, so an edited case survives a restart and a case added
-// in a later release still arrives.
+// InitProbeCases brings the stored suite up to what this release ships: cases
+// that are missing are added, a shipped case nobody has rewritten is rewritten
+// as it now ships, and one this release no longer ships is dropped. A case
+// someone wrote or edited is left exactly as they left it.
 func InitProbeCases() {
 	if err := seedProbeCases(); err != nil {
 		beego.Error("probe cases could not be created:", err)
@@ -328,20 +345,52 @@ func seedProbeCases() error {
 	if err != nil {
 		return err
 	}
-	known := map[string]bool{}
+	known := map[string]*ProbeCase{}
 	for _, probeCase := range stored {
-		known[probeCase.Name] = true
+		known[probeCase.Name] = probeCase
 	}
 
+	shipping := map[string]bool{}
 	for _, probeCase := range builtInProbeCases() {
-		if known[probeCase.Name] {
+		shipping[probeCase.Name] = true
+		probeCase.Shipped = probeCaseFingerprint(probeCase)
+
+		existing := known[probeCase.Name]
+		if existing == nil {
+			probeCase.CreatedTime = util.GetCurrentTime()
+			probeCase.UpdatedTime = probeCase.CreatedTime
+			if _, err := ormer.Engine.Insert(probeCase); err != nil {
+				return err
+			}
 			continue
 		}
-		probeCase.CreatedTime = util.GetCurrentTime()
-		probeCase.UpdatedTime = probeCase.CreatedTime
-		if _, err := ormer.Engine.Insert(probeCase); err != nil {
+		if existing.Edited || existing.Shipped == probeCase.Shipped {
+			continue
+		}
+		if err := refreshProbeCase(probeCase); err != nil {
+			return err
+		}
+	}
+
+	// A built-in case this release stopped shipping has nothing left to run:
+	// the engine it named or the question it asked is gone.
+	for _, probeCase := range stored {
+		if !probeCase.BuiltIn || probeCase.Edited || shipping[probeCase.Name] {
+			continue
+		}
+		if err := DeleteProbeCase(probeCase.Name); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// refreshProbeCase rewrites the question and leaves the settings: what a case
+// asks is Gateway's, what it is worth and whether it runs at all is not.
+func refreshProbeCase(probeCase *ProbeCase) error {
+	probeCase.UpdatedTime = util.GetCurrentTime()
+	_, err := ormer.Engine.ID(probeCase.Name).
+		Cols("display_name", "check", "protocol", "question", "method", "params", "shipped", "updated_time").
+		Update(probeCase)
+	return err
 }

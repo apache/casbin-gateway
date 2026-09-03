@@ -49,9 +49,11 @@ func builtInProbeCases() []*ProbeCase {
 			BuiltIn:     true,
 			Question:    "Does the model that answers name itself as the one that was asked for?",
 			Method: "The first request names a model. Every completion API answers with the model that " +
-				"ran, and a version or date suffix on the same family counts as a match. A different " +
-				"name is decisive; a matching one proves little, since echoing a name back is the " +
-				"easiest thing in the world to do.",
+				"ran, and a version or date suffix on the same family counts as a match. Where the " +
+				"name asked for is one the vendor documents as moving — deepseek-chat, anything " +
+				"ending in -latest — the answer only has to be a model of that same vendor, which is " +
+				"what the vendor says it will be. Any other mismatch is decisive; a matching name " +
+				"proves little, since echoing one back is the easiest thing in the world to do.",
 		},
 		{
 			Name:        "tools-nested-schema",
@@ -153,40 +155,21 @@ func builtInProbeCases() []*ProbeCase {
 			},
 		},
 		{
-			Name:        "vendor-headers-anthropic",
-			DisplayName: "Vendor headers (Anthropic)",
+			Name:        "vendor-headers",
+			DisplayName: "Vendor headers",
 			Check:       ProbeVendor,
-			Protocol:    ProtocolAnthropic,
 			Enabled:     true,
 			Weight:      probeWeightVendor,
 			Sort:        60,
 			BuiltIn:     true,
 			Question:    "Do the response headers of the vendor's own API come back?",
-			Method: "A reseller in front of the real thing usually passes some of these through; a " +
-				"backend that never talked to the vendor has none to pass. This case never reaches an " +
-				"alert on its own: stripping headers is being tidy, not necessarily dishonest.",
-			Params: ProbeCaseParams{
-				Headers:    probeVendorHeaders[ProtocolAnthropic],
-				MinHeaders: 2,
-			},
-		},
-		{
-			Name:        "vendor-headers-openai",
-			DisplayName: "Vendor headers (OpenAI)",
-			Check:       ProbeVendor,
-			Protocol:    ProtocolOpenAi,
-			Enabled:     true,
-			Weight:      probeWeightVendor,
-			Sort:        61,
-			BuiltIn:     true,
-			Question:    "Do the response headers of the vendor's own API come back?",
-			Method: "A reseller in front of the real thing usually passes some of these through; a " +
-				"backend that never talked to the vendor has none to pass. This case never reaches an " +
-				"alert on its own: stripping headers is being tidy, not necessarily dishonest.",
-			Params: ProbeCaseParams{
-				Headers:    probeVendorHeaders[ProtocolOpenAi],
-				MinHeaders: 2,
-			},
+			Method: "This is asked only of an endpoint that is a vendor's own, against the headers " +
+				"that vendor documents: speaking an OpenAI-compatible API is not a claim to be OpenAI. " +
+				"A reseller in front of the real thing usually passes some through and a backend that " +
+				"never talked to the vendor has none to pass, but stripping headers is also just being " +
+				"tidy, so this case never reaches an alert on its own. Leave the header list empty to " +
+				"use the vendor's own, or name headers here to ask for those instead.",
+			Params: ProbeCaseParams{MinHeaders: 2},
 		},
 	}
 }

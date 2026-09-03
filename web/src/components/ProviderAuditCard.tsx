@@ -159,13 +159,20 @@ function probeValue(check: ProbeCheck) {
  */
 function probeDetail(check: ProbeCheck, probe: ProviderProbe) {
   if (check.level === "unknown" && check.key !== "identity") {
-    return i18next.t("audit:This question could not be asked");
+    // An endpoint that is nobody's own has no documented headers to be missing,
+    // which is a gap in what Gateway knows rather than one in the answer.
+    return check.facts[0] === "undocumented"
+      ? i18next.t("audit:Vendor undocumented")
+      : i18next.t("audit:This question could not be asked");
   }
 
   switch (check.key) {
   case "identity":
     if (check.facts.length === 0) {
       return i18next.t("audit:No model name came back");
+    }
+    if (check.facts[1] === "alias") {
+      return fill("audit:Identity alias", {asked: probe.model, answered: check.facts[0]});
     }
     return check.level === "ok"
       ? fill("audit:Identity ok", {answered: check.facts[0]})

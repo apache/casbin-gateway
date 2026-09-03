@@ -100,7 +100,7 @@ func probeScoreOf(probe *ProviderProbe) (float64, string) {
 		return 0, ProbeGradeUnknown
 	}
 
-	score := math.Round(earned / possible * 1000) / 10
+	score := math.Round(earned/possible*1000) / 10
 	return score, probeGradeOf(score)
 }
 
