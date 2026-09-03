@@ -44,20 +44,40 @@ const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(functio
     return result;
   };
 
+  // Tracks the raw text so a partial value like "9." survives the keystroke
+  // instead of being reformatted back to "9" by the controlled `value` prop.
+  const [text, setText] = React.useState(value === null || value === undefined ? "" : String(value));
+  const lastEmitted = React.useRef(value);
+  React.useEffect(() => {
+    if (value !== lastEmitted.current) {
+      setText(value === null || value === undefined ? "" : String(value));
+      lastEmitted.current = value;
+    }
+  }, [value]);
+
   const field = (
     <Input
       ref={ref}
       type="number"
+      step="any"
       min={min}
       max={max}
-      value={value ?? ""}
+      value={text}
       onChange={event => {
-        const parsed = parseInt(event.target.value, 10);
-        onChange(isNaN(parsed) ? 0 : parsed);
+        const raw = event.target.value;
+        setText(raw);
+        const parsed = parseFloat(raw);
+        if (!isNaN(parsed)) {
+          lastEmitted.current = parsed;
+          onChange(parsed);
+        }
       }}
       onBlur={event => {
-        const parsed = parseInt(event.target.value, 10);
-        onChange(clamp(isNaN(parsed) ? 0 : parsed));
+        const parsed = parseFloat(event.target.value);
+        const result = clamp(isNaN(parsed) ? 0 : parsed);
+        lastEmitted.current = result;
+        setText(String(result));
+        onChange(result);
       }}
       className={cn(
         "tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
