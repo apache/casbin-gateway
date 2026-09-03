@@ -44,6 +44,15 @@ func initAPI() {
 	beego.Router("/api/get-setting", &controllers.ApiController{}, "GET:GetSetting")
 	beego.Router("/api/update-setting", &controllers.ApiController{}, "POST:UpdateSetting")
 
+	beego.Router("/api/export-snapshot", &controllers.ApiController{}, "POST:ExportSnapshot")
+	beego.Router("/api/import-snapshot", &controllers.ApiController{}, "POST:ImportSnapshot")
+	beego.Router("/api/get-backup-state", &controllers.ApiController{}, "GET:GetBackupState")
+	beego.Router("/api/get-backup", &controllers.ApiController{}, "GET:GetBackup")
+	beego.Router("/api/create-backup", &controllers.ApiController{}, "POST:CreateBackup")
+	beego.Router("/api/restore-backup", &controllers.ApiController{}, "POST:RestoreBackup")
+	beego.Router("/api/delete-backup", &controllers.ApiController{}, "POST:DeleteBackup")
+	beego.Router("/api/update-backup-schedule", &controllers.ApiController{}, "POST:UpdateBackupSchedule")
+
 	beego.Router("/api/get-agents", &controllers.ApiController{}, "GET:GetAgents")
 	beego.Router("/api/get-agent-catalog", &controllers.ApiController{}, "GET:GetAgentCatalog")
 	beego.Router("/api/get-agent-install-jobs", &controllers.ApiController{}, "GET:GetAgentInstallJobs")

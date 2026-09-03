@@ -755,6 +755,95 @@ export interface Setting {
   relayToken: string;
 
   httpProxy: string;
+
+  backupMode: BackupMode;
+  backupIntervalHours: number;
+  backupRetention: number;
+  backupDir: string;
+}
+
+export type BackupMode = "auto" | "off";
+
+/** Which sections a snapshot carries, and whether the credentials inside them
+ *  come with it. */
+export interface SnapshotScope {
+  providers: boolean;
+  agents: boolean;
+  probeCases: boolean;
+  llmPrices: boolean;
+  setting: boolean;
+  secrets: boolean;
+}
+
+export interface SnapshotCounts {
+  providers: number;
+  agents: number;
+  agentInstances: number;
+  probeCases: number;
+  llmPrices: number;
+  setting: number;
+}
+
+/** The exported document itself. It is only ever handed straight back to the
+ *  server or written to a file, so the sections stay opaque here. */
+export interface Snapshot {
+  version: number;
+  createdTime: string;
+  gateway: string;
+  host: string;
+  reason: string;
+  scope: SnapshotScope;
+  [section: string]: unknown;
+}
+
+export type ImportMode = "merge" | "overwrite" | "replace";
+
+export interface ImportChange {
+  section: string;
+  id: string;
+  action: "add" | "update" | "delete" | "skip" | "fail";
+  detail: string;
+}
+
+/** What an import did, and what a dry run says it would do: the two are the
+ *  same document, so the confirmation and the result read alike. */
+export interface ImportReport {
+  dryRun: boolean;
+  mode: ImportMode;
+  added: number;
+  updated: number;
+  deleted: number;
+  skipped: number;
+  failed: number;
+  changes: ImportChange[];
+  /** The snapshot taken before anything was written, empty on a dry run. */
+  backup: string;
+}
+
+/** One snapshot on disk. */
+export interface Backup {
+  name: string;
+  createdTime: string;
+  reason: string;
+  gateway: string;
+  host: string;
+  size: number;
+  secrets: boolean;
+  counts: SnapshotCounts;
+}
+
+/** The schedule automatic backups are on, and the files themselves. */
+export interface BackupState {
+  mode: BackupMode;
+  intervalHours: number;
+  retention: number;
+  dir: string;
+  takenTime: string;
+  /** When the schedule runs again, empty when nothing is scheduled. */
+  nextTime: string;
+  latest: string;
+  error: string;
+  backups: Backup[];
 }
 
 /** The kinds of configuration the Skills, MCP & Prompts page manages. */

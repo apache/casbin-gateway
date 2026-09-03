@@ -99,6 +99,9 @@ func main() {
 	object.StartProviderProbeSweep()
 	// Prices are read over the same transport, and only when the sync is on.
 	object.StartModelsDevSync()
+	// A snapshot of the configuration, taken on a schedule and beside the
+	// database rather than inside it.
+	object.StartBackupSchedule()
 
 	agentmonitor.Configure(
 		conf.GetAgentPatchStateDir(),

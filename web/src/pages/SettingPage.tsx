@@ -17,6 +17,8 @@ import i18next from "i18next";
 
 import * as SettingBackend from "@/backend/SettingBackend";
 import * as Setting from "@/Setting";
+import {BackupPanel} from "@/components/settings/backup-panel";
+import {ImportExportPanel} from "@/components/settings/import-export-panel";
 import {Field} from "@/components/shared/form-dialog";
 import {Loading} from "@/components/shared/loading";
 import {UnauthorizedResult} from "@/components/shared/misc";
@@ -37,7 +39,9 @@ export default function SettingPage({account}: {account: Account}) {
   const [setting, setSetting] = React.useState<SettingType | null>(null);
   const [saving, setSaving] = React.useState(false);
 
-  React.useEffect(() => {
+  // The panels below store parts of this same row, so the form is reloaded
+  // after one of them writes rather than left to save what it read on load.
+  const load = React.useCallback(() => {
     if (!isAdmin) {
       return;
     }
@@ -50,6 +54,8 @@ export default function SettingPage({account}: {account: Account}) {
       }
     });
   }, [isAdmin]);
+
+  React.useEffect(load, [load]);
 
   if (!isAdmin) {
     return <UnauthorizedResult />;
@@ -193,6 +199,10 @@ export default function SettingPage({account}: {account: Account}) {
       <Section columns={2} collapsible title={i18next.t("setting:Network")}>
         {textField("httpProxy", i18next.t("setting:Outbound SOCKS5 proxy"), i18next.t("setting:Outbound SOCKS5 proxy hint"))}
       </Section>
+
+      <BackupPanel onSettingChanged={load} />
+
+      <ImportExportPanel onSettingChanged={load} />
     </PageContainer>
   );
 }

@@ -270,6 +270,38 @@ func GetConfigBatchSize() int {
 	return res
 }
 
+// GetBackupDir is the local directory that holds configuration snapshots. They
+// sit beside the database rather than inside it, so a backup survives the
+// database it was taken from.
+func GetBackupDir() string {
+	dir := GetConfigString("backupDir")
+	if dir == "" {
+		return "./data/backups"
+	}
+	return dir
+}
+
+// GetBackupIntervalHours is how often an automatic backup is taken. The
+// configuration changes when somebody changes it, so once a day already keeps
+// more copies than most machines have edits.
+func GetBackupIntervalHours() int {
+	res, err := strconv.Atoi(GetConfigString("backupIntervalHours"))
+	if err != nil || res <= 0 {
+		res = 24
+	}
+	return res
+}
+
+// GetBackupRetention is how many snapshots are kept before the oldest is
+// dropped. Snapshots are small, but a directory nobody prunes is not a backup.
+func GetBackupRetention() int {
+	res, err := strconv.Atoi(GetConfigString("backupRetention"))
+	if err != nil || res <= 0 {
+		res = 10
+	}
+	return res
+}
+
 // GetAgentPatchStateDir is the local directory that holds agent patch
 // manifests, backups, and monitor cursors. It is operational state only; agent
 // behaviour records remain in memory.

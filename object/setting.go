@@ -54,6 +54,13 @@ type Setting struct {
 	ModelsDevSyncMode          string `xorm:"varchar(20)" json:"modelsDevSyncMode"`
 	ModelsDevSyncIntervalHours int    `xorm:"int" json:"modelsDevSyncIntervalHours"`
 
+	// BackupMode is "auto" or "off", the interval is how often a snapshot of the
+	// configuration is taken, and the retention is how many are kept.
+	BackupMode          string `xorm:"varchar(20)" json:"backupMode"`
+	BackupIntervalHours int    `xorm:"int" json:"backupIntervalHours"`
+	BackupRetention     int    `xorm:"int" json:"backupRetention"`
+	BackupDir           string `xorm:"varchar(500)" json:"backupDir"`
+
 	AgentPatchStateDir      string `xorm:"varchar(500)" json:"agentPatchStateDir"`
 	AgentRecordCapacity     int    `xorm:"int" json:"agentRecordCapacity"`
 	AgentMonitorPollSeconds int    `xorm:"int" json:"agentMonitorPollSeconds"`
@@ -92,6 +99,11 @@ func SyncSettingToConf(setting *Setting) {
 
 		"modelsDevSyncMode":          setting.ModelsDevSyncMode,
 		"modelsDevSyncIntervalHours": strconv.Itoa(setting.ModelsDevSyncIntervalHours),
+
+		"backupMode":          setting.BackupMode,
+		"backupIntervalHours": strconv.Itoa(setting.BackupIntervalHours),
+		"backupRetention":     strconv.Itoa(setting.BackupRetention),
+		"backupDir":           setting.BackupDir,
 
 		"agentPatchStateDir":      setting.AgentPatchStateDir,
 		"agentRecordCapacity":     strconv.Itoa(setting.AgentRecordCapacity),
@@ -214,6 +226,17 @@ func InitBuiltInSetting() {
 		}
 	}
 
+	if setting.BackupMode == "" {
+		setting.BackupMode = GetBackupMode()
+		setting.BackupIntervalHours = conf.GetBackupIntervalHours()
+		setting.BackupRetention = conf.GetBackupRetention()
+		setting.BackupDir = conf.GetBackupDir()
+		if _, err = ormer.Engine.ID(core.PK{setting.Owner, setting.Name}).
+			Cols("backup_mode", "backup_interval_hours", "backup_retention", "backup_dir").Update(setting); err != nil {
+			panic(err)
+		}
+	}
+
 	SyncSettingToConf(setting)
 }
 
@@ -239,6 +262,11 @@ func newSettingFromConf() *Setting {
 
 		ModelsDevSyncMode:          GetModelsDevSyncMode(),
 		ModelsDevSyncIntervalHours: conf.GetModelsDevSyncIntervalHours(),
+
+		BackupMode:          GetBackupMode(),
+		BackupIntervalHours: conf.GetBackupIntervalHours(),
+		BackupRetention:     conf.GetBackupRetention(),
+		BackupDir:           conf.GetBackupDir(),
 
 		AgentPatchStateDir:      conf.GetAgentPatchStateDir(),
 		AgentRecordCapacity:     conf.GetAgentRecordCapacity(),
