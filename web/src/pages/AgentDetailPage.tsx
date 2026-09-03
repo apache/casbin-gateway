@@ -28,6 +28,7 @@ import {accountLabel} from "@/components/AgentGridCard";
 import {RunBadge, RunButton} from "@/components/AgentRunControl";
 import {InstallOutput, ToolUpgradeConfirmDialog} from "@/components/ToolUpgradeConfirmDialog";
 import {DataTable, type Column} from "@/components/shared/data-table";
+import {PermissionCard} from "@/components/PermissionCard";
 import {ProviderCard} from "@/components/ProviderCard";
 import {ResultScreen, UnauthorizedResult} from "@/components/shared/misc";
 import {Alert, AlertDescription} from "@/components/ui/alert";
@@ -542,6 +543,8 @@ export default function AgentDetailPage({account}: {account: Account}) {
           </CardContent>
         </Card>
       </div>
+
+      <PermissionCard agent={agent} providers={providers} />
 
       <AgentInstances agent={agent} enabled={isAdmin} />
 

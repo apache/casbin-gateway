@@ -171,6 +171,43 @@ export interface Agent {
   supportsInstances?: boolean;
 }
 
+/** One group of tools the Permissions card draws a switch for. */
+export interface ToolGroup {
+  name: string;
+  /** A few of the tools that fall in the group, since every agent names its own
+   *  differently. */
+  examples: string[];
+}
+
+/** What one agent is allowed to ask the gateway for. Mirrors
+ *  object.AgentPermission on the server. */
+export interface AgentPermission {
+  owner: string;
+  name: string;
+  createdTime?: string;
+  updatedTime?: string;
+  /** Off leaves the agent unrestricted, which is what it is until this is on. */
+  enabled: boolean;
+  /** "all", "allow" for only the listed, or "deny" for everything but them. */
+  modelMode: string;
+  models: string[];
+  providerMode: string;
+  providers: string[];
+  /** One entry per tool group, false where the group is switched off. */
+  tools: {[group: string]: boolean};
+  /** Extra casbin policy lines, written by hand on the advanced view. */
+  rules: string[];
+}
+
+/** The permissions of one agent with what the card needs to draw them: the tool
+ *  groups, and the casbin model and policy they compile to. */
+export interface AgentPermissionInfo {
+  permission: AgentPermission;
+  groups: ToolGroup[];
+  model: string;
+  policy: string[];
+}
+
 /**
  * One extra copy of an agent, kept apart from the others by a state directory
  * of its own, so that each is signed in to a different account and the two can
@@ -564,7 +601,18 @@ export interface LlmAuditReport {
 export type ProviderProbeMode = "auto" | "manual" | "off";
 
 /** The questions an active probe asks, none of which the records can answer. */
-export type ProbeKey = "identity" | "vendor" | "stream" | "cache" | "tools" | "billing";
+export type ProbeKey =
+  | "identity"
+  | "vendor"
+  | "stream"
+  | "cache"
+  | "tools"
+  | "billing"
+  | "knowledge"
+  | "selfid"
+  | "hidden"
+  | "feature"
+  | "repeat";
 
 /**
  * One probe measurement. `facts` is what actually came back, as data rather
@@ -588,7 +636,7 @@ export interface ProbeCheck {
 export type ProbeGrade = "A" | "B" | "C" | "D" | "F" | "unknown";
 
 /** The knobs of the check engine a case runs on. Fields another engine owns are
- * ignored, so one shape edits all six. */
+ * ignored, so one shape edits every case in the suite. */
 export interface ProbeCaseParams {
   system: string;
   prompt: string;
@@ -606,6 +654,18 @@ export interface ProbeCaseParams {
   alertHigh: number;
   warnLow: number;
   alertLow: number;
+  /** The answers that pass, the ones that fail, and how they are compared. */
+  expect: string[];
+  forbid: string[];
+  match: "" | "contains" | "exact" | "regex";
+  /** JSON merged into the request body, and the answer fields it has to
+   * produce, as dotted paths with an optional "=pattern". */
+  extra: string;
+  require: string[];
+  /** How many times an identical request goes out. */
+  samples: number;
+  /** Vendors whose models this case applies to. Empty asks it of every model. */
+  vendors: string[];
 }
 
 /**

@@ -276,6 +276,13 @@ func (a *Ormer) createTable() {
 		panic(err)
 	}
 
+	// What each agent is allowed to ask for, as the switches of its Permissions
+	// card are set. The casbin policy is compiled from these rows.
+	err = a.Engine.Sync2(new(AgentPermission))
+	if err != nil {
+		panic(err)
+	}
+
 	err = a.Engine.Sync2(new(LlmRecord))
 	if err != nil {
 		panic(err)

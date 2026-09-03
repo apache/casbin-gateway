@@ -6,6 +6,7 @@ require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Masterminds/squirrel v1.5.4
 	github.com/beego/beego v1.12.12
+	github.com/casbin/casbin/v2 v2.135.0
 	github.com/casdoor/casdoor-go-sdk v0.52.0
 	github.com/denisenkom/go-mssqldb v0.10.0
 	github.com/go-mysql-org/go-mysql v1.7.0
@@ -24,6 +25,8 @@ require (
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/bmatcuk/doublestar/v4 v4.6.1 // indirect
+	github.com/casbin/govaluate v1.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/golang-sql/civil v0.0.0-20190719163853-cb61b32ac6fe // indirect

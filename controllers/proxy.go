@@ -305,6 +305,19 @@ func (c *ApiController) forwardByAgent(route *proxyRoute) {
 	}
 	defer c.finishLlmRecord(route)
 
+	// What this agent is allowed to ask for. A guard is nil for an agent whose
+	// permissions are off, which is every agent until someone turns them on.
+	guard, err := object.LoadAgentGuard(agentId)
+	if err != nil {
+		beego.Error("agent permission lookup failed:", err)
+		route.recordOutcome(http.StatusBadGateway, err.Error())
+		c.writeProxyError(route.codec, http.StatusBadGateway, "server_error", err.Error())
+		return
+	}
+	if guard != nil && !c.allowAgentRequest(guard, agentId, route) {
+		return
+	}
+
 	// The whole chain is forwarded to, so a bound provider that is down fails
 	// over to the agent's fallbacks instead of failing the request.
 	providers, err := object.GetProvidersByAgent(agentId)
@@ -320,7 +333,38 @@ func (c *ApiController) forwardByAgent(route *proxyRoute) {
 		return
 	}
 
+	if guard != nil {
+		allowed, reason := guard.FilterProviders(providers)
+		if len(allowed) == 0 {
+			route.recordOutcome(http.StatusForbidden, reason)
+			c.writeProxyError(route.codec, http.StatusForbidden, "permission_error", reason)
+			return
+		}
+		providers = allowed
+	}
+
 	c.forwardToProviders(providers, route)
+}
+
+// allowAgentRequest holds one relayed request to the agent's permissions: a
+// model it may not ask for is refused outright, and the tools of a group it may
+// not use are taken back out of the body before any provider sees it. A tool
+// the model is never offered is one the agent cannot run.
+func (c *ApiController) allowAgentRequest(guard *object.AgentGuard, agentId string, route *proxyRoute) bool {
+	if !guard.AllowModel(route.model) {
+		message := fmt.Sprintf("the permissions of agent %s do not allow the model %s", agentId, route.model)
+		route.recordOutcome(http.StatusForbidden, message)
+		c.writeProxyError(route.codec, http.StatusForbidden, "permission_error", message)
+		return false
+	}
+
+	if filtered, removed := guard.FilterTools(route.body); len(removed) > 0 {
+		// The record is written from the body, so it shows what was sent rather
+		// than what the agent asked to send.
+		route.body = filtered
+		beego.Info("agent", agentId, "is not allowed these tools, they were removed from the request:", strings.Join(removed, ", "))
+	}
+	return true
 }
 
 func (c *ApiController) readProxyRoute(target proxyTarget) (*proxyRoute, bool) {

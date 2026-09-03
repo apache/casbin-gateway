@@ -103,8 +103,11 @@ type Snapshot struct {
 	Providers      []*Provider      `json:"providers,omitempty"`
 	Agents         []*Agent         `json:"agents,omitempty"`
 	AgentInstances []*AgentInstance `json:"agentInstances,omitempty"`
-	ProbeCases     []*ProbeCase     `json:"probeCases,omitempty"`
-	LlmPrices      []*LlmPriceEntry `json:"llmPrices,omitempty"`
+	// AgentPermissions travel with the agents: what an agent is allowed to ask
+	// for is part of how this machine is set up, not of what happened on it.
+	AgentPermissions []*AgentPermission `json:"agentPermissions,omitempty"`
+	ProbeCases       []*ProbeCase       `json:"probeCases,omitempty"`
+	LlmPrices        []*LlmPriceEntry   `json:"llmPrices,omitempty"`
 }
 
 // SnapshotCounts is how much a snapshot holds, which is what a listing shows
@@ -213,6 +216,17 @@ func BuildSnapshot(scope SnapshotScope, reason string) (*Snapshot, error) {
 			return nil, err
 		}
 		snapshot.AgentInstances = instances
+
+		permissions, err := GetAgentPermissions()
+		if err != nil {
+			return nil, err
+		}
+		for _, permission := range permissions {
+			snapshot.AgentPermissions = append(snapshot.AgentPermissions, permission)
+		}
+		sort.Slice(snapshot.AgentPermissions, func(i, j int) bool {
+			return snapshot.AgentPermissions[i].Name < snapshot.AgentPermissions[j].Name
+		})
 	}
 
 	if scope.ProbeCases {
@@ -442,6 +456,10 @@ func importAgents(snapshot *Snapshot, mode string, dryRun bool, report *ImportRe
 		return err
 	}
 
+	if err := importAgentPermissions(snapshot, mode, dryRun, report); err != nil {
+		return err
+	}
+
 	if mode != ImportReplace {
 		return nil
 	}
@@ -459,6 +477,66 @@ func importAgents(snapshot *Snapshot, mode string, dryRun bool, report *ImportRe
 			continue
 		}
 		report.record(SectionAgents, name, ChangeDelete, "")
+	}
+	return nil
+}
+
+// importAgentPermissions restores what each agent is allowed to ask for. A
+// permission names nothing outside Gateway, so it is restored as it was taken.
+func importAgentPermissions(snapshot *Snapshot, mode string, dryRun bool, report *ImportReport) error {
+	stored, err := GetAgentPermissions()
+	if err != nil {
+		return err
+	}
+
+	named := map[string]bool{}
+	for _, incoming := range snapshot.AgentPermissions {
+		permission := *incoming
+		named[permission.Name] = true
+		id := permission.Name + " (permissions)"
+
+		_, found := stored[permission.Name]
+		if found && mode == ImportMerge {
+			report.record(SectionAgents, id, ChangeSkip, "this agent already has permissions")
+			continue
+		}
+
+		action := ChangeAdd
+		if found {
+			action = ChangeUpdate
+		}
+		if dryRun {
+			report.record(SectionAgents, id, action, "")
+			continue
+		}
+
+		if err := UpdateAgentPermission(permission.Name, &permission); err != nil {
+			report.record(SectionAgents, id, ChangeFail, err.Error())
+			continue
+		}
+		report.record(SectionAgents, id, action, "")
+	}
+
+	if mode != ImportReplace {
+		return nil
+	}
+
+	// What is left over is put back to unrestricted, which is what an agent
+	// nobody has configured is held to.
+	for name := range stored {
+		if named[name] {
+			continue
+		}
+		id := name + " (permissions)"
+		if dryRun {
+			report.record(SectionAgents, id, ChangeDelete, "")
+			continue
+		}
+		if err := UpdateAgentPermission(name, DefaultAgentPermission(name)); err != nil {
+			report.record(SectionAgents, id, ChangeFail, err.Error())
+			continue
+		}
+		report.record(SectionAgents, id, ChangeDelete, "")
 	}
 	return nil
 }

@@ -89,6 +89,7 @@
 - **[一个地方切换所有 Agent 的 API 供应商](#让-agent-的流量走-gateway)** —— 改一次 Key 或 base URL，接进 Gateway 的每个 Agent 都跟着换。
 - **[同一个 Agent 开多个实例](#接下来做什么)** —— 比如同时跑好几个 Claude Desktop，各自登录不同账号。
 - **[看到完整的请求，而不只是一个数字](#记录提示词)** —— 每一条 prompt、消息和工具 schema，都留在这台机器上。
+- **[规定每个 Agent 能做什么](#每个-agent-能做什么)** —— 工具、模型、供应商各一排开关，每个转发的请求都由 Casbin 判定。
 - **[统计每个 Agent 花了多少，包括没走 Gateway 的部分](#每个-agent-花了多少包括没走-gateway-的那部分)** —— 直接读 Agent 自己写的会话记录。
 - **[跨 Agent 对比、复制技能 / MCP / 提示词](#接下来做什么)** —— 一张表看到所有 Agent 装了什么。
 
@@ -196,6 +197,27 @@ export ANTHROPIC_AUTH_TOKEN="cg-..."
 这种 Provider 的环境变量片段只设 base URL，不设别的 —— 在这里再设一个 token 会覆盖 Agent 已有的登录。记录和路由和有 Key 的 Provider 完全一样，只是 Gateway 从头到尾没见过任何 Key。
 
 Codex 是例外：它的 ChatGPT 登录走的是没有任何 Provider 能替代的端点，所以 Codex CLI 仍然需要一个带 API Key 的 Provider。
+
+### 每个 Agent 能做什么
+
+经 Gateway 转发的每个请求，都按这个 Agent 自己页面上的规则来判。不用改 Agent 自己的配置，就能把它的能力收窄。**Agents** → 打开一个 → **Permissions**：
+
+- **工具** —— 每组一个开关：执行命令、读取文件、修改文件、访问网络、MCP 服务。关掉的工具会在请求离开这台机器之前被删掉，模型压根看不到它，Agent 也就无从调用。各家 Agent 的工具名都不一样，`Bash`、`shell`、`run_shell_command` 都归同一个开关管。
+- **模型** —— 任意模型、只允许勾选的、或除勾选的以外都允许。名称可以用 `*` 结尾，`claude-opus-*` 就覆盖一整个系列。
+- **供应商** —— 这个 Agent 的请求可以发给哪几个 Provider。
+
+请求里出现被关掉的东西，返回的是这个 Agent 所用 API 格式的 `permission_error`，读起来是一次拒绝，而不是网关坏了。
+
+底层上，这些开关会编译成一份 [Casbin](https://casbin.org) 策略，每个转发的请求都由 enforcer 判定，而不是靠手写的 if。点 **Advanced** 就能看到它们编译出的真实 `model.conf` 和 `policy.csv`，也可以自己往里加策略行：
+
+```
+p, claude-code, model:*, use, allow
+p, claude-code, model:claude-opus-*, use, deny
+p, claude-code, tool:*, use, allow
+p, claude-code, tool:shell, use, deny
+```
+
+规则管的是走代理的流量，所以直连供应商的 Agent（它自己的配置指向厂商而不是 Gateway）不受这些规则约束，页面上会直接提示。
 
 ### 每个 Agent 花了多少，包括没走 Gateway 的那部分
 
