@@ -156,16 +156,14 @@ export function SearchSelect({
             placeholder={searchPlaceholder ?? i18next.t("general:Search")}
           />
           <CommandList>
-            <CommandEmpty>
-              {allowCustomValue && search !== "" ? (
-                <button type="button" className="hover:text-foreground w-full px-2" onClick={() => pick(search)}>
-                  {search}
-                </button>
-              ) : (
-                (emptyText ?? i18next.t("general:No data"))
-              )}
-            </CommandEmpty>
+            <CommandEmpty>{emptyText ?? i18next.t("general:No data")}</CommandEmpty>
             <CommandGroup>
+              {allowCustomValue && search !== "" && !items.some(option => option.value === search) ? (
+                <CommandItem value={search} onSelect={() => pick(search)}>
+                  <Check className="size-4 opacity-0" />
+                  {search}
+                </CommandItem>
+              ) : null}
               {items.map(option => (
                 <CommandItem key={option.value} value={String(option.label)} onSelect={() => pick(option.value)}>
                   <Check className={cn("size-4", option.value === value ? "opacity-100" : "opacity-0")} />

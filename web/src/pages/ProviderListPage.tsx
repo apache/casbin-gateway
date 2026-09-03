@@ -557,6 +557,23 @@ export default function ProviderListPage({account}: {account: Account}) {
                 </Button>
               </div>
             </Field>
+            {source.key === customSource ? (
+              <Field
+                label={i18next.t("provider:Base URL")}
+                htmlFor="provider-base-url"
+                className="md:col-span-2"
+                hint={i18next.t("provider:Custom base URL hint")}
+              >
+                <SearchSelect
+                  allowCustomValue
+                  id="provider-base-url"
+                  value={form.baseUrl}
+                  placeholder={baseUrlPlaceholder(form.type)}
+                  options={baseUrlPresets(form.type)}
+                  onChange={value => setFormField("baseUrl", value)}
+                />
+              </Field>
+            ) : null}
             <Field
               label={i18next.t("general:Name")}
               htmlFor="provider-display-name"
@@ -628,7 +645,7 @@ export default function ProviderListPage({account}: {account: Account}) {
                 onChange={event => setFormField("notes", event.target.value)}
               />
             </Field>
-            <Advanced key={source.key} defaultOpen={source.key === customSource}>
+            <Advanced key={source.key} defaultOpen={false}>
               <Field label={i18next.t("provider:Type")}>
                 <SimpleSelect
                   value={form.type}
@@ -640,16 +657,18 @@ export default function ProviderListPage({account}: {account: Account}) {
                   ]}
                 />
               </Field>
-              <Field label={i18next.t("provider:Base URL")} htmlFor="provider-base-url">
-                <SearchSelect
-                  allowCustomValue
-                  id="provider-base-url"
-                  value={form.baseUrl}
-                  placeholder={baseUrlPlaceholder(form.type)}
-                  options={baseUrlPresets(form.type)}
-                  onChange={value => setFormField("baseUrl", value)}
-                />
-              </Field>
+              {source.key === customSource ? null : (
+                <Field label={i18next.t("provider:Base URL")} htmlFor="provider-base-url">
+                  <SearchSelect
+                    allowCustomValue
+                    id="provider-base-url"
+                    value={form.baseUrl}
+                    placeholder={baseUrlPlaceholder(form.type)}
+                    options={baseUrlPresets(form.type)}
+                    onChange={value => setFormField("baseUrl", value)}
+                  />
+                </Field>
+              )}
               <Field
                 label={i18next.t("provider:Authentication")}
                 hint={usesClientAuth(form) ? i18next.t("provider:Client auth hint") : undefined}
