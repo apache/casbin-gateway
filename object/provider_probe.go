@@ -46,7 +46,9 @@ const (
 	ProbeTriggerScheduled = "scheduled"
 )
 
-// The checks a probe runs.
+// The checks a probe runs. The first six read the envelope an upstream answers
+// in; the rest read the answer itself, which is the half a relay in front of a
+// cheaper model still has to produce on its own.
 const (
 	ProbeIdentity = "identity"
 	ProbeVendor   = "vendor"
@@ -54,6 +56,21 @@ const (
 	ProbeCache    = "cache"
 	ProbeTools    = "tools"
 	ProbeBilling  = "billing"
+	// ProbeKnowledge is a question with one right answer, which is the test
+	// bank: what it asks and what it accepts are rows anyone can edit.
+	ProbeKnowledge = "knowledge"
+	// ProbeSelfId asks the model whose it is and compares that with the vendor
+	// the name it was sold under belongs to.
+	ProbeSelfId = "selfid"
+	// ProbeHidden looks for instructions nobody here sent, which is how an
+	// upstream is made to answer to a name that is not its own.
+	ProbeHidden = "hidden"
+	// ProbeFeature sends a parameter the API documents and reads back whether
+	// it was honoured, refused, or accepted and quietly dropped.
+	ProbeFeature = "feature"
+	// ProbeRepeat sends one request several times over, which is what tells a
+	// single backend from a pool of them.
+	ProbeRepeat = "repeat"
 )
 
 // probeKeepPerProvider is how many past probes are kept, which is what makes a

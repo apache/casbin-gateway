@@ -72,7 +72,7 @@ func runProviderProbe(provider *Provider, trigger string) *ProviderProbe {
 	}
 	probe.Model = model
 
-	cases := probeCasesFor(ProviderProtocol(provider))
+	cases := probeCasesFor(ProviderProtocol(provider), model)
 	if len(cases) == 0 {
 		probe.Error = "no test case is enabled for this upstream API"
 		return probe

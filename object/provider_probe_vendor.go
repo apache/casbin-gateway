@@ -38,6 +38,10 @@ type probeVendor struct {
 	// this build does not document them, which leaves the header case
 	// unmeasured rather than failed.
 	headers []string
+	// names are what a model of this vendor calls itself and its maker when it
+	// is asked, in the languages it is likely to be asked in. They are what the
+	// self-identity case compares an answer against.
+	names []string
 }
 
 // The entries below were each read off the vendor's own API reference. A vendor
@@ -49,6 +53,7 @@ var probeVendors = []probeVendor{
 		hosts:   []string{"api.openai.com"},
 		models:  []string{"gpt-", "chatgpt-", "o1", "o3", "o4", "codex-", "text-embedding-"},
 		aliases: []string{"chatgpt-4o-latest"},
+		names:   []string{"openai", "chatgpt", "gpt"},
 		headers: []string{
 			"X-Request-Id",
 			"Openai-Organization",
@@ -61,6 +66,7 @@ var probeVendors = []probeVendor{
 		key:    "anthropic",
 		hosts:  []string{"api.anthropic.com"},
 		models: []string{"claude-"},
+		names:  []string{"anthropic", "claude"},
 		headers: []string{
 			"Request-Id",
 			"Anthropic-Organization-Id",
@@ -77,32 +83,38 @@ var probeVendors = []probeVendor{
 		// with every release, and the answer carries the name it changed to.
 		models:  []string{"deepseek"},
 		aliases: []string{"deepseek-chat", "deepseek-reasoner"},
+		names:   []string{"deepseek", "深度求索"},
 	},
 	{
 		key:     "moonshot",
 		hosts:   []string{"api.moonshot.cn", "api.moonshot.ai"},
 		models:  []string{"kimi", "moonshot-"},
 		aliases: []string{"kimi-latest"},
+		names:   []string{"moonshot", "kimi", "月之暗面"},
 	},
 	{
 		key:    "zhipu",
 		hosts:  []string{"open.bigmodel.cn"},
 		models: []string{"glm-", "charglm-", "codegeex-"},
+		names:  []string{"zhipu", "智谱", "glm", "chatglm"},
 	},
 	{
 		key:    "qwen",
 		hosts:  []string{"dashscope.aliyuncs.com", "dashscope-intl.aliyuncs.com"},
 		models: []string{"qwen", "qwq", "qvq"},
+		names:  []string{"qwen", "tongyi", "alibaba", "通义", "阿里"},
 	},
 	{
 		key:    "xai",
 		hosts:  []string{"api.x.ai"},
 		models: []string{"grok-"},
+		names:  []string{"xai", "x.ai", "grok"},
 	},
 	{
 		key:    "google",
 		hosts:  []string{"generativelanguage.googleapis.com"},
 		models: []string{"gemini-", "gemma-"},
+		names:  []string{"google", "gemini", "deepmind", "gemma"},
 	},
 	{
 		key:   "mistral",
@@ -110,26 +122,31 @@ var probeVendors = []probeVendor{
 		models: []string{
 			"mistral-", "ministral-", "magistral-", "codestral-", "devstral-", "pixtral-", "open-mistral-",
 		},
+		names: []string{"mistral", "le chat"},
 	},
 	{
 		key:    "minimax",
 		hosts:  []string{"api.minimaxi.com", "api.minimax.chat", "api.minimaxi.chat"},
 		models: []string{"minimax-", "abab"},
+		names:  []string{"minimax", "海螺"},
 	},
 	{
 		key:    "stepfun",
 		hosts:  []string{"api.stepfun.com", "api.stepfun.ai"},
 		models: []string{"step-"},
+		names:  []string{"stepfun", "阶跃"},
 	},
 	{
 		key:    "cohere",
 		hosts:  []string{"api.cohere.com", "api.cohere.ai"},
 		models: []string{"command", "c4ai-"},
+		names:  []string{"cohere"},
 	},
 	{
 		key:    "perplexity",
 		hosts:  []string{"api.perplexity.ai"},
 		models: []string{"sonar", "r1-1776"},
+		names:  []string{"perplexity", "sonar"},
 	},
 	{
 		key:   "groq",
@@ -138,6 +155,7 @@ var probeVendors = []probeVendor{
 		// earlier vendor already claims (qwen-, gemma-, deepseek-) resolves to
 		// that vendor, so only the ones nobody else owns are listed here.
 		models: []string{"llama-", "llama3-", "gemma2-", "allam-", "groq/"},
+		names:  []string{"groq", "meta", "llama"},
 		headers: []string{
 			"X-Ratelimit-Limit-Requests",
 			"X-Ratelimit-Remaining-Requests",
@@ -150,11 +168,13 @@ var probeVendors = []probeVendor{
 		key:    "doubao",
 		hosts:  []string{"ark.cn-beijing.volces.com", "ark.ap-southeast.volces.com"},
 		models: []string{"doubao-", "skylark"},
+		names:  []string{"doubao", "豆包", "bytedance", "字节跳动", "volcengine"},
 	},
 	{
 		key:    "ernie",
 		hosts:  []string{"qianfan.baidubce.com", "aip.baidubce.com"},
 		models: []string{"ernie-"},
+		names:  []string{"ernie", "baidu", "百度", "文心"},
 	},
 }
 
@@ -253,4 +273,33 @@ func probeModelSegment(name string) string {
 		return name[:index]
 	}
 	return name
+}
+
+// probeVendorKeyOfModel is the vendor a model name belongs to, or an empty
+// string where the name belongs to no catalogue this build carries. It is what
+// a case scoped to one vendor's models is matched against.
+func probeVendorKeyOfModel(name string) string {
+	if vendor := probeVendorOfModel(name); vendor != nil {
+		return vendor.key
+	}
+	return ""
+}
+
+// isProbeCaseForModel reports whether a case asks a question this model can be
+// held to. A case naming no vendor is asked of every model; one naming vendors
+// is a question only those vendors' own APIs document an answer to.
+func isProbeCaseForModel(probeCase *ProbeCase, model string) bool {
+	if len(probeCase.Params.Vendors) == 0 {
+		return true
+	}
+	key := probeVendorKeyOfModel(model)
+	if key == "" {
+		return false
+	}
+	for _, wanted := range probeCase.Params.Vendors {
+		if strings.EqualFold(strings.TrimSpace(wanted), key) {
+			return true
+		}
+	}
+	return false
 }

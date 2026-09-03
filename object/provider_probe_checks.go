@@ -73,23 +73,44 @@ func runProbeCases(provider *Provider, model string, probe *ProviderProbe, cases
 	probe.UpstreamModel = primary.Model
 
 	for _, identityCase := range probeCasesOf(cases, ProbeIdentity) {
-		probe.addCheck(probeIdentityCheck(identityCase, model, primary.Model))
+		probe.addCheck(probeIdentityCheck(identityCase, provider, model, primary.Model))
 	}
 	for _, vendorCase := range probeCasesOf(cases, ProbeVendor) {
 		wanted := vendorHeadersOf(vendorCase, provider)
 		if len(wanted) == 0 {
-			// Nothing to hold this endpoint to: the vendor it belongs to is
-			// not one whose headers this build documents, or it belongs to no
-			// vendor at all. That is a gap here, not a finding about it.
-			check := checkOf(vendorCase, LlmAuditUnknown)
-			check.Facts = []string{probeVendorUndocumented}
-			probe.addCheck(check)
+			probe.addCheck(probeVendorMissingCheck(vendorCase, provider, model))
 			continue
 		}
 		found := headersPresent(wanted, headers)
 		probe.VendorHeaders = mergeStrings(probe.VendorHeaders, found)
 		probe.addCheck(probeVendorCheck(vendorCase, found))
 	}
+
+	// The questions that read the answer rather than the envelope. Each sends
+	// its own request, which is why every one of them is a row that can be
+	// turned off by whoever is paying for it.
+	for _, selfCase := range probeCasesOf(cases, ProbeSelfId) {
+		if probeVendorOfModel(model) == nil {
+			check := checkOf(selfCase, LlmAuditUnknown)
+			check.Facts = []string{probeVendorUndocumented}
+			probe.addCheck(check)
+			continue
+		}
+		probe.addCheck(probeSelfIdCheck(selfCase, model, probeAsk(provider, model, probe, selfCase)))
+	}
+	for _, hiddenCase := range probeCasesOf(cases, ProbeHidden) {
+		probe.addCheck(probeHiddenCheck(hiddenCase, probeAsk(provider, model, probe, hiddenCase)))
+	}
+	for _, knowledgeCase := range probeCasesOf(cases, ProbeKnowledge) {
+		probe.addCheck(probeKnowledgeCheck(knowledgeCase, probeAsk(provider, model, probe, knowledgeCase)))
+	}
+	for _, featureCase := range probeCasesOf(cases, ProbeFeature) {
+		probe.addCheck(probeFeatureCheck(featureCase, probeAsk(provider, model, probe, featureCase)))
+	}
+	for _, repeatCase := range probeCasesOf(cases, ProbeRepeat) {
+		probe.addCheck(probeRepeatCheck(provider, model, probe, repeatCase))
+	}
+
 	for _, streamCase := range probeCasesOf(cases, ProbeStream) {
 		probeStreamShape(provider, model, probe, streamCase)
 	}
@@ -343,17 +364,27 @@ func probeOpeningCall(provider *Provider, model string, probe *ProviderProbe) (*
 // two things it found.
 const probeIdentityAlias = "alias"
 
+// probeIdentityUnverified marks a name that matched on an endpoint that is not
+// the vendor's own, where the model field is whatever the upstream typed there.
+const probeIdentityUnverified = "unverified"
+
 // probeIdentityCheck compares the model name that came back with the one that
-// was asked for. Matching proves little on its own — echoing a name back is the
-// easiest thing in the world to do — but not matching is decisive, except where
-// the vendor documents the name asked for as an alias.
-func probeIdentityCheck(probeCase *ProbeCase, asked string, answered string) ProbeCheck {
+// was asked for. Not matching is decisive, except where the vendor documents the
+// name asked for as an alias. Matching is worth much less than it looks: the
+// model field is written by whatever answered, so on an endpoint that is not the
+// vendor's own it is only the request being read back — which is why a match
+// there is half credit and says so.
+func probeIdentityCheck(probeCase *ProbeCase, provider *Provider, asked string, answered string) ProbeCheck {
 	check := checkOf(probeCase, LlmAuditUnknown)
 	if strings.TrimSpace(answered) == "" {
 		return check
 	}
 	check.Facts = []string{answered}
 	if sameModelName(asked, answered) {
+		if probeVendorOfProvider(provider) == nil {
+			check.Level, check.Facts = LlmAuditWarn, []string{answered, probeIdentityUnverified}
+			return check
+		}
 		check.Level = LlmAuditOk
 		return check
 	}
@@ -395,6 +426,10 @@ func sameModelName(asked string, answered string) bool {
 // documented list to hold the endpoint to.
 const probeVendorUndocumented = "undocumented"
 
+// probeVendorRelayed marks an endpoint selling a vendor's model names that is
+// not that vendor's own.
+const probeVendorRelayed = "relayed"
+
 // vendorHeadersOf is the list this endpoint is held to: the one the case names,
 // or failing that the response headers the vendor whose own host it is
 // documents. An endpoint that is not a vendor's own — a reseller, an
@@ -409,6 +444,25 @@ func vendorHeadersOf(probeCase *ProbeCase, provider *Provider) []string {
 		return vendor.headers
 	}
 	return nil
+}
+
+// probeVendorMissingCheck is what the header case reports where there is no
+// documented list to hold the endpoint to. Which of the two things that is
+// matters: an endpoint serving a vendor's own model names that is not that
+// vendor's own endpoint is a relay, and nothing on it can be checked against
+// the vendor it is selling — which is a fact about the chain, not a failure of
+// it, so it never reaches an alert. An endpoint this build simply carries no
+// header list for measured nothing at all.
+func probeVendorMissingCheck(probeCase *ProbeCase, provider *Provider, model string) ProbeCheck {
+	if vendor := probeVendorOfModel(model); vendor != nil && probeVendorOfProvider(provider) == nil {
+		check := checkOf(probeCase, LlmAuditWarn)
+		check.Facts = []string{probeVendorRelayed, vendor.key}
+		return check
+	}
+
+	check := checkOf(probeCase, LlmAuditUnknown)
+	check.Facts = []string{probeVendorUndocumented}
+	return check
 }
 
 func headersPresent(wanted []string, header http.Header) []string {

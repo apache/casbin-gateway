@@ -113,7 +113,19 @@ function CheckTile({
 // ---------------------------------------------------------------------------
 
 /** Strongest evidence first, so the tile that matters is the one read first. */
-const probeOrder: ProbeCheck["key"][] = ["identity", "cache", "billing", "stream", "tools", "vendor"];
+const probeOrder: ProbeCheck["key"][] = [
+  "identity",
+  "selfid",
+  "hidden",
+  "knowledge",
+  "feature",
+  "repeat",
+  "cache",
+  "billing",
+  "stream",
+  "tools",
+  "vendor",
+];
 
 function probeTitle(key: ProbeCheck["key"]) {
   switch (key) {
@@ -127,6 +139,16 @@ function probeTitle(key: ProbeCheck["key"]) {
     return i18next.t("audit:Stream shape");
   case "tools":
     return i18next.t("audit:Tool schema");
+  case "knowledge":
+    return i18next.t("audit:Test bank");
+  case "selfid":
+    return i18next.t("audit:Self-reported maker");
+  case "hidden":
+    return i18next.t("audit:Hidden instructions");
+  case "feature":
+    return i18next.t("audit:Documented parameter");
+  case "repeat":
+    return i18next.t("audit:Repeated request");
   default:
     return i18next.t("audit:Vendor headers");
   }
@@ -138,7 +160,29 @@ function probeValue(check: ProbeCheck) {
   }
   switch (check.key) {
   case "identity":
+    if (check.facts[1] === "unverified") {
+      return i18next.t("audit:Echoed");
+    }
     return check.level === "ok" ? i18next.t("audit:Matches") : i18next.t("audit:Different");
+  case "knowledge":
+    if (check.level === "ok") {
+      return i18next.t("audit:Right");
+    }
+    return check.level === "alert" ? i18next.t("audit:Wrong") : i18next.t("audit:Unsaid");
+  case "selfid":
+    if (check.level === "ok") {
+      return i18next.t("audit:Matches");
+    }
+    return check.level === "alert" ? i18next.t("audit:Different") : i18next.t("audit:Unsaid");
+  case "hidden":
+    return check.level === "ok" ? i18next.t("audit:None") : i18next.t("audit:Found");
+  case "feature":
+    return check.level === "ok" ? i18next.t("audit:Honored") : i18next.t("audit:Dropped");
+  case "repeat":
+    if (check.level === "ok") {
+      return `${check.facts[1] ?? ""}×`;
+    }
+    return check.level === "alert" ? i18next.t("audit:Different") : i18next.t("audit:Varies");
   case "cache":
     return check.level === "ok" ? formatTokens(Number(check.facts[1] ?? 0)) : i18next.t("audit:None");
   case "billing":
@@ -157,7 +201,78 @@ function probeValue(check: ProbeCheck) {
  * calls a provider dishonest: it says what was asked and what came back, which
  * is the part that can be sent to the provider and argued about.
  */
+/**
+ * The cases that read the answer rather than the envelope. Each of them carries
+ * what came back as its first fact and the answer itself as the second, so the
+ * tile can quote the sentence the level was drawn from.
+ */
+function probeAnswerDetail(check: ProbeCheck) {
+  const [outcome, answer, extra, wanted] = check.facts;
+  if (outcome === "failed") {
+    return fill("audit:Question failed", {reason: answer ?? ""});
+  }
+  if (outcome === "empty") {
+    return i18next.t("audit:Answer empty");
+  }
+
+  switch (check.key) {
+  case "knowledge":
+    if (outcome === "missed") {
+      return fill("audit:Answer wrong", {answer: answer ?? "", expected: extra ?? ""});
+    }
+    if (outcome === "forbidden") {
+      return fill("audit:Answer forbidden", {answer: answer ?? "", forbidden: extra ?? ""});
+    }
+    return fill("audit:Answer right", {answer: answer ?? ""});
+  case "selfid":
+    if (outcome === "undocumented") {
+      return i18next.t("audit:Self undocumented");
+    }
+    if (outcome === "other") {
+      return fill("audit:Self other", {answer: answer ?? "", other: extra ?? "", vendor: wanted ?? ""});
+    }
+    if (outcome === "silent") {
+      return fill("audit:Self silent", {answer: answer ?? "", vendor: extra ?? ""});
+    }
+    return fill("audit:Self match", {answer: answer ?? "", vendor: extra ?? ""});
+  case "hidden":
+    return outcome === "hidden"
+      ? fill("audit:Hidden found", {answer: answer ?? ""})
+      : i18next.t("audit:Hidden none");
+  case "feature":
+    if (outcome === "rejected") {
+      return fill("audit:Parameter rejected", {reason: answer ?? ""});
+    }
+    if (outcome === "ignored") {
+      return fill("audit:Parameter ignored", {field: answer ?? ""});
+    }
+    if (outcome === "shape") {
+      return fill("audit:Parameter shape", {field: answer ?? "", value: extra ?? "", wanted: wanted ?? ""});
+    }
+    if (outcome === "dropped") {
+      return fill("audit:Parameter dropped", {answer: answer ?? "", wanted: extra ?? ""});
+    }
+    return i18next.t("audit:Parameter honored");
+  default:
+    if (outcome === "model") {
+      return fill("audit:Repeat models", {names: check.facts.slice(1).join(", ")});
+    }
+    if (outcome === "tokens") {
+      return fill("audit:Repeat tokens", {counts: check.facts.slice(1).join(", ")});
+    }
+    if (outcome === "answers") {
+      return fill("audit:Repeat answers", {first: answer ?? "", second: extra ?? ""});
+    }
+    return fill("audit:Repeat same", {count: answer ?? ""});
+  }
+}
+
+const answerKeys: ProbeCheck["key"][] = ["knowledge", "selfid", "hidden", "feature", "repeat"];
+
 function probeDetail(check: ProbeCheck, probe: ProviderProbe) {
+  if (answerKeys.includes(check.key)) {
+    return probeAnswerDetail(check);
+  }
   if (check.level === "unknown" && check.key !== "identity") {
     // An endpoint that is nobody's own has no documented headers to be missing,
     // which is a gap in what Gateway knows rather than one in the answer.
@@ -173,6 +288,9 @@ function probeDetail(check: ProbeCheck, probe: ProviderProbe) {
     }
     if (check.facts[1] === "alias") {
       return fill("audit:Identity alias", {asked: probe.model, answered: check.facts[0]});
+    }
+    if (check.facts[1] === "unverified") {
+      return fill("audit:Identity unverified", {answered: check.facts[0]});
     }
     return check.level === "ok"
       ? fill("audit:Identity ok", {answered: check.facts[0]})
@@ -202,6 +320,9 @@ function probeDetail(check: ProbeCheck, probe: ProviderProbe) {
     }
     return check.level === "warn" ? i18next.t("audit:Tools partial") : i18next.t("audit:Tools none");
   default:
+    if (check.facts[0] === "relayed") {
+      return fill("audit:Vendor relayed", {vendor: check.facts[1] ?? ""});
+    }
     return check.facts.length === 0
       ? i18next.t("audit:No vendor header")
       : fill("audit:Vendor detail", {names: check.facts.join(", ")});

@@ -35,7 +35,26 @@ import {cn} from "@/lib/utils";
 import {caseMethod, caseQuestion, caseTitle} from "@/lib/authenticity";
 import type {ProbeCase, ProbeKey} from "@/types";
 
-const checkKeys: ProbeKey[] = ["identity", "tools", "stream", "cache", "billing", "vendor"];
+const checkKeys: ProbeKey[] = [
+  "identity",
+  "selfid",
+  "hidden",
+  "knowledge",
+  "feature",
+  "repeat",
+  "tools",
+  "stream",
+  "cache",
+  "billing",
+  "vendor",
+];
+
+/** The engines that send a question and judge what was written back. */
+const askingChecks: ProbeKey[] = ["knowledge", "selfid", "hidden", "feature", "repeat"];
+
+function asks(check: ProbeKey) {
+  return askingChecks.includes(check);
+}
 
 function checkLabel(key: ProbeKey) {
   switch (key) {
@@ -49,9 +68,29 @@ function checkLabel(key: ProbeKey) {
     return i18next.t("audit:Stream shape");
   case "tools":
     return i18next.t("audit:Tool schema");
+  case "knowledge":
+    return i18next.t("audit:Test bank");
+  case "selfid":
+    return i18next.t("audit:Self-reported maker");
+  case "hidden":
+    return i18next.t("audit:Hidden instructions");
+  case "feature":
+    return i18next.t("audit:Documented parameter");
+  case "repeat":
+    return i18next.t("audit:Repeated request");
   default:
     return i18next.t("audit:Vendor headers");
   }
+}
+
+function matchLabel(match: ProbeCase["params"]["match"]) {
+  if (match === "exact") {
+    return i18next.t("audit:Match exact");
+  }
+  if (match === "regex") {
+    return i18next.t("audit:Match regex");
+  }
+  return i18next.t("audit:Match contains");
 }
 
 function protocolLabel(protocol: ProbeCase["protocol"]) {
@@ -62,6 +101,26 @@ function protocolLabel(protocol: ProbeCase["protocol"]) {
     return "OpenAI";
   }
   return i18next.t("audit:Both APIs");
+}
+
+/**
+ * A case as this page needs it. A list a case never filled comes back as null
+ * from an older build, and every list here is read as one.
+ */
+function withLists(probeCase: ProbeCase): ProbeCase {
+  const params = probeCase.params;
+  return {
+    ...probeCase,
+    params: {
+      ...params,
+      events: params.events ?? [],
+      headers: params.headers ?? [],
+      expect: params.expect ?? [],
+      forbid: params.forbid ?? [],
+      require: params.require ?? [],
+      vendors: params.vendors ?? [],
+    },
+  };
 }
 
 /** A case someone starts from: nothing asked yet, and nothing weighted yet. */
@@ -96,6 +155,13 @@ function emptyCase(): ProbeCase {
       alertHigh: 0,
       warnLow: 0,
       alertLow: 0,
+      expect: [],
+      forbid: [],
+      match: "",
+      extra: "",
+      require: [],
+      samples: 0,
+      vendors: [],
     },
   };
 }
@@ -183,6 +249,43 @@ function CaseParams({probeCase}: {probeCase: ProbeCase}) {
   }
   if (probeCase.check === "identity") {
     rows.push({label: i18next.t("audit:Reads"), value: i18next.t("audit:Identity reads")});
+  }
+  if (asks(probeCase.check)) {
+    rows.push({label: i18next.t("audit:User prompt"), value: params.prompt || fallback});
+    if (params.system) {
+      rows.push({label: i18next.t("audit:System prompt"), value: params.system});
+    }
+    if (params.expect.length > 0) {
+      rows.push({label: i18next.t("audit:Accepted answers"), value: params.expect.join(" / ")});
+    }
+    if (params.forbid.length > 0) {
+      rows.push({label: i18next.t("audit:Rejected answers"), value: params.forbid.join(" / ")});
+    }
+    if (params.expect.length > 0 || params.forbid.length > 0) {
+      rows.push({label: i18next.t("audit:Compared as"), value: matchLabel(params.match)});
+    }
+    if (params.extra) {
+      rows.push({
+        label: i18next.t("audit:Extra request fields"),
+        value: (
+          <code className="bg-muted block max-h-40 overflow-auto rounded p-2 font-mono text-[11px]">
+            {params.extra}
+          </code>
+        ),
+      });
+    }
+    if (params.require.length > 0) {
+      rows.push({label: i18next.t("audit:Required answer fields"), value: params.require.join(", ")});
+    }
+    if (probeCase.check === "repeat") {
+      rows.push({
+        label: i18next.t("audit:Requests sent"),
+        value: params.samples > 0 ? String(params.samples) : fallback,
+      });
+    }
+  }
+  if (params.vendors.length > 0) {
+    rows.push({label: i18next.t("audit:Only these vendors"), value: params.vendors.join(", ")});
   }
   if (probeCase.check !== "identity" && probeCase.check !== "vendor" && probeCase.check !== "billing") {
     rows.push({
@@ -346,6 +449,9 @@ function CaseDialog({
             ]}
           />
         </Field>
+        <Field label={i18next.t("audit:Only these vendors")} hint={i18next.t("audit:Vendors hint")}>
+          <TagsInput value={draft.params.vendors} onChange={value => setParam({vendors: value})} />
+        </Field>
         <Field label={i18next.t("audit:Weight")} hint={i18next.t("audit:Weight hint")}>
           <NumberInput min={0} max={1000} value={draft.weight} onChange={value => set({weight: value})} />
         </Field>
@@ -367,6 +473,55 @@ function CaseDialog({
 
       {draft.check === "identity" ? (
         <p className="text-muted-foreground text-xs">{i18next.t("audit:Identity has no request")}</p>
+      ) : null}
+
+      {asks(draft.check) ? (
+        <>
+          <Field label={i18next.t("audit:User prompt")} hint={i18next.t("audit:Question prompt hint")}>
+            <Textarea rows={3} value={draft.params.prompt} onChange={event => setParam({prompt: event.target.value})} />
+          </Field>
+          <Field label={i18next.t("audit:System prompt")}>
+            <Textarea rows={2} value={draft.params.system} onChange={event => setParam({system: event.target.value})} />
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label={i18next.t("audit:Accepted answers")} hint={i18next.t("audit:Accepted answers hint")}>
+              <TagsInput value={draft.params.expect} onChange={value => setParam({expect: value})} />
+            </Field>
+            <Field label={i18next.t("audit:Rejected answers")} hint={i18next.t("audit:Rejected answers hint")}>
+              <TagsInput value={draft.params.forbid} onChange={value => setParam({forbid: value})} />
+            </Field>
+          </div>
+          <Field label={i18next.t("audit:Compared as")} hint={i18next.t("audit:Compared as hint")}>
+            <SimpleSelect
+              value={draft.params.match || "contains"}
+              onChange={value => setParam({match: value as ProbeCase["params"]["match"]})}
+              options={[
+                {label: i18next.t("audit:Match contains"), value: "contains"},
+                {label: i18next.t("audit:Match exact"), value: "exact"},
+                {label: i18next.t("audit:Match regex"), value: "regex"},
+              ]}
+            />
+          </Field>
+          <Field label={i18next.t("audit:Extra request fields")} hint={i18next.t("audit:Extra hint")}>
+            <Textarea
+              rows={3}
+              className="font-mono text-xs"
+              value={draft.params.extra}
+              onChange={event => setParam({extra: event.target.value})}
+              placeholder={"{\"logprobs\": true}"}
+            />
+          </Field>
+          {draft.check === "feature" ? (
+            <Field label={i18next.t("audit:Required answer fields")} hint={i18next.t("audit:Required hint")}>
+              <TagsInput value={draft.params.require} onChange={value => setParam({require: value})} />
+            </Field>
+          ) : null}
+          {draft.check === "repeat" ? (
+            <Field label={i18next.t("audit:Requests sent")} hint={i18next.t("audit:Requests sent hint")}>
+              <NumberInput min={0} max={6} value={draft.params.samples} onChange={value => setParam({samples: value})} />
+            </Field>
+          ) : null}
+        </>
       ) : null}
 
       {draft.check === "tools" ? (
@@ -513,7 +668,7 @@ export function ProbeCaseList({onChanged}: {onChanged?: () => void}) {
     ProbeCaseBackend.getProbeCases()
       .then(res => {
         if (res.status === "ok") {
-          setCases(res.data ?? []);
+          setCases((res.data ?? []).map(withLists));
         } else {
           Setting.showMessage("error", res.msg || i18next.t("general:Failed to get data"));
         }

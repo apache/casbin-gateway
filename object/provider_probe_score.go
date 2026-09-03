@@ -53,12 +53,17 @@ const (
 // probeDefaultWeights carry a probe stored before the suite had weights, so an
 // old report grades on the same scale as a new one rather than not at all.
 var probeDefaultWeights = map[string]int{
-	ProbeIdentity: probeWeightIdentity,
-	ProbeCache:    probeWeightCache,
-	ProbeBilling:  probeWeightBilling,
-	ProbeTools:    probeWeightTools,
-	ProbeStream:   probeWeightStream,
-	ProbeVendor:   probeWeightVendor,
+	ProbeIdentity:  probeWeightIdentity,
+	ProbeCache:     probeWeightCache,
+	ProbeBilling:   probeWeightBilling,
+	ProbeTools:     probeWeightTools,
+	ProbeStream:    probeWeightStream,
+	ProbeVendor:    probeWeightVendor,
+	ProbeKnowledge: probeWeightKnowledge,
+	ProbeSelfId:    probeWeightSelfId,
+	ProbeHidden:    probeWeightHidden,
+	ProbeFeature:   probeWeightFeature,
+	ProbeRepeat:    probeWeightRepeat,
 }
 
 func probeCheckWeight(check ProbeCheck) int {

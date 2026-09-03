@@ -64,6 +64,27 @@ type ProbeCaseParams struct {
 	AlertHigh      float64 `json:"alertHigh"`
 	WarnLow        float64 `json:"warnLow"`
 	AlertLow       float64 `json:"alertLow"`
+
+	// knowledge, selfid, hidden, feature: how the answer is judged. Expect is
+	// the answers that pass and Forbid the ones that fail, both read under
+	// Match: "contains" (the default), "exact" or "regex".
+	Expect []string `json:"expect"`
+	Forbid []string `json:"forbid"`
+	Match  string   `json:"match"`
+
+	// feature: Extra is a JSON object merged into the request body, which is
+	// how a case sends the parameter it is about; Require names the fields the
+	// answer has to carry because of it, as dotted paths — "choices.0.logprobs"
+	// — optionally with the pattern the value has to match after an "=".
+	Extra   string   `json:"extra"`
+	Require []string `json:"require"`
+
+	// repeat: how many times the identical request goes out.
+	Samples int `json:"samples"`
+
+	// Vendors limits a case to the models of those vendors, for a question only
+	// one vendor's API documents an answer to. Empty asks it of every model.
+	Vendors []string `json:"vendors"`
 }
 
 // ProbeCase is one test in the suite. It is the unit the score is built out of
@@ -75,8 +96,8 @@ type ProbeCase struct {
 	UpdatedTime string `xorm:"varchar(100)" json:"updatedTime"`
 
 	DisplayName string `xorm:"varchar(200)" json:"displayName"`
-	// Check is the engine that runs it: identity, vendor, stream, cache, tools
-	// or billing. It decides which request is sent and how the answer is read.
+	// Check is the engine that runs it. It decides which request is sent and
+	// how the answer is read.
 	Check string `xorm:"varchar(20)" json:"check"`
 	// Protocol limits a case to one upstream API. Empty runs it against both.
 	Protocol string `xorm:"varchar(20)" json:"protocol"`
@@ -89,6 +110,11 @@ type ProbeCase struct {
 	// BuiltIn marks a case Gateway ships, which is what restoring the defaults
 	// puts back. An edited built-in case stays built-in.
 	BuiltIn bool `xorm:"bool" json:"builtIn"`
+	// ShippedWeight is what this case was worth when it was written from the
+	// built-in one. It is what tells a weight nobody has touched from one
+	// someone chose, so a later release can rebalance the suite without
+	// overwriting anyone's arithmetic.
+	ShippedWeight int `xorm:"int" json:"-"`
 	// Shipped fingerprints the built-in case this row was written from. It is
 	// what tells a case nobody has touched from one someone rewrote, which is
 	// what lets a later release improve a shipped case without overwriting
@@ -108,7 +134,10 @@ type ProbeCase struct {
 }
 
 // probeCaseChecks are the engines a case may name.
-var probeCaseChecks = []string{ProbeIdentity, ProbeVendor, ProbeStream, ProbeCache, ProbeTools, ProbeBilling}
+var probeCaseChecks = []string{
+	ProbeIdentity, ProbeVendor, ProbeStream, ProbeCache, ProbeTools, ProbeBilling,
+	ProbeKnowledge, ProbeSelfId, ProbeHidden, ProbeFeature, ProbeRepeat,
+}
 
 func isProbeCaseCheck(check string) bool {
 	for _, known := range probeCaseChecks {
@@ -131,7 +160,28 @@ func GetProbeCases() ([]*ProbeCase, error) {
 	}
 	sortProbeCases(cases)
 	markEditedProbeCases(cases)
+	for _, probeCase := range cases {
+		emptyProbeCaseLists(probeCase)
+	}
 	return cases, nil
+}
+
+// emptyProbeCaseLists turns the lists a case never filled into empty ones, so
+// the page reads a list rather than a null wherever it looks.
+func emptyProbeCaseLists(probeCase *ProbeCase) {
+	lists := []*[]string{
+		&probeCase.Params.Events,
+		&probeCase.Params.Headers,
+		&probeCase.Params.Expect,
+		&probeCase.Params.Forbid,
+		&probeCase.Params.Require,
+		&probeCase.Params.Vendors,
+	}
+	for _, list := range lists {
+		if *list == nil {
+			*list = []string{}
+		}
+	}
 }
 
 // markEditedProbeCases compares each built-in case against the words it was
@@ -153,15 +203,22 @@ func isProbeCaseEdited(probeCase *ProbeCase) bool {
 	if probeCase.Shipped == "" {
 		return probeCase.UpdatedTime != probeCase.CreatedTime
 	}
-	return probeCaseFingerprint(probeCase) != probeCase.Shipped
+	if probeCaseFingerprint(probeCase) == probeCase.Shipped {
+		return false
+	}
+	return probeCaseLegacyFingerprint(probeCase) != probeCase.Shipped
 }
 
 // probeCaseFingerprint covers what a case asks and how it judges the answer,
 // which is what a reader would call the case itself.
 func probeCaseFingerprint(probeCase *ProbeCase) string {
-	params, err := json.Marshal(probeCase.Params)
+	return probeCaseSum(probeCase, probeCase.Params)
+}
+
+func probeCaseSum(probeCase *ProbeCase, params any) string {
+	written, err := json.Marshal(params)
 	if err != nil {
-		params = []byte("{}")
+		written = []byte("{}")
 	}
 	sum := sha256.Sum256([]byte(strings.Join([]string{
 		probeCase.DisplayName,
@@ -169,9 +226,53 @@ func probeCaseFingerprint(probeCase *ProbeCase) string {
 		probeCase.Protocol,
 		probeCase.Question,
 		probeCase.Method,
-		string(params),
+		string(written),
 	}, "|")))
 	return hex.EncodeToString(sum[:])
+}
+
+// probeCaseLegacyParams is the settings a case carried before the engines that
+// read the answer were added. A row stored then was fingerprinted over these
+// fields alone, so it is checked against them too: without that, every shipped
+// case on an existing install would read as rewritten the moment a release adds
+// a field, and would then never be brought up to date again.
+type probeCaseLegacyParams struct {
+	System         string   `json:"system"`
+	Prompt         string   `json:"prompt"`
+	MaxTokens      int      `json:"maxTokens"`
+	ToolName       string   `json:"toolName"`
+	Schema         string   `json:"schema"`
+	Events         []string `json:"events"`
+	FillerChars    int      `json:"fillerChars"`
+	GapMs          int      `json:"gapMs"`
+	Headers        []string `json:"headers"`
+	MinHeaders     int      `json:"minHeaders"`
+	DriftTolerance float64  `json:"driftTolerance"`
+	WarnHigh       float64  `json:"warnHigh"`
+	AlertHigh      float64  `json:"alertHigh"`
+	WarnLow        float64  `json:"warnLow"`
+	AlertLow       float64  `json:"alertLow"`
+}
+
+func probeCaseLegacyFingerprint(probeCase *ProbeCase) string {
+	params := probeCaseLegacyParams{
+		System:         probeCase.Params.System,
+		Prompt:         probeCase.Params.Prompt,
+		MaxTokens:      probeCase.Params.MaxTokens,
+		ToolName:       probeCase.Params.ToolName,
+		Schema:         probeCase.Params.Schema,
+		Events:         probeCase.Params.Events,
+		FillerChars:    probeCase.Params.FillerChars,
+		GapMs:          probeCase.Params.GapMs,
+		Headers:        probeCase.Params.Headers,
+		MinHeaders:     probeCase.Params.MinHeaders,
+		DriftTolerance: probeCase.Params.DriftTolerance,
+		WarnHigh:       probeCase.Params.WarnHigh,
+		AlertHigh:      probeCase.Params.AlertHigh,
+		WarnLow:        probeCase.Params.WarnLow,
+		AlertLow:       probeCase.Params.AlertLow,
+	}
+	return probeCaseSum(probeCase, params)
 }
 
 func sortProbeCases(cases []*ProbeCase) {
@@ -184,10 +285,10 @@ func sortProbeCases(cases []*ProbeCase) {
 }
 
 // probeCasesFor is the enabled part of the suite that applies to one upstream
-// API, which is what a run actually executes. A database that could not be read
+// API and one model, which is what a run actually executes. A database that could not be read
 // falls back to the shipped suite: a probe measured against nothing would score
 // every provider as unknown.
-func probeCasesFor(protocol string) []*ProbeCase {
+func probeCasesFor(protocol string, model string) []*ProbeCase {
 	all, err := GetProbeCases()
 	if err != nil {
 		beego.Error("probe cases could not be read:", err)
@@ -203,6 +304,9 @@ func probeCasesFor(protocol string) []*ProbeCase {
 			continue
 		}
 		if probeCase.Protocol != "" && probeCase.Protocol != protocol {
+			continue
+		}
+		if !isProbeCaseForModel(probeCase, model) {
 			continue
 		}
 		running = append(running, probeCase)
@@ -359,10 +463,14 @@ func seedProbeCases() error {
 		if existing == nil {
 			probeCase.CreatedTime = util.GetCurrentTime()
 			probeCase.UpdatedTime = probeCase.CreatedTime
+			probeCase.ShippedWeight = probeCase.Weight
 			if _, err := ormer.Engine.Insert(probeCase); err != nil {
 				return err
 			}
 			continue
+		}
+		if err := reweighProbeCase(existing, probeCase); err != nil {
+			return err
 		}
 		if existing.Edited || existing.Shipped == probeCase.Shipped {
 			continue
@@ -383,6 +491,24 @@ func seedProbeCases() error {
 		}
 	}
 	return nil
+}
+
+// reweighProbeCase carries a rebalanced suite onto a case whose weight is still
+// the one it shipped with. A weight someone chose is theirs and is left alone;
+// a row from before weights were tracked is taken as untouched, since until now
+// there was no way to tell one from the other.
+func reweighProbeCase(existing *ProbeCase, shipping *ProbeCase) error {
+	if existing.Weight == shipping.Weight && existing.ShippedWeight == shipping.Weight {
+		return nil
+	}
+	if existing.ShippedWeight != 0 && existing.Weight != existing.ShippedWeight {
+		return nil
+	}
+
+	_, err := ormer.Engine.ID(existing.Name).
+		Cols("weight", "shipped_weight").
+		Update(&ProbeCase{Weight: shipping.Weight, ShippedWeight: shipping.Weight})
+	return err
 }
 
 // refreshProbeCase rewrites the question and leaves the settings: what a case
