@@ -47,20 +47,24 @@ type Fingerprint struct {
 	// is how a browser hands a finished sign-in back to it.
 	LinkScheme string `json:"linkScheme,omitempty"`
 
-	StateDir            string              `json:"stateDir,omitempty"`
-	NpmPackage          string              `json:"npmPackage,omitempty"`
-	ExtraUnixNpmDirs    []string            `json:"extraUnixNpmDirs,omitempty"`
-	ExtraWindowsNpmDirs []string            `json:"extraWindowsNpmDirs,omitempty"`
-	WingetPackage       string              `json:"wingetPackage,omitempty"`
-	MSIXFamily          string              `json:"msixFamily,omitempty"`
-	DesktopInstallerDir string              `json:"desktopInstallerDir,omitempty"`
-	WindowsProgramDirs  []string            `json:"windowsProgramDirs,omitempty"`
-	WindowsUserDirs     []string            `json:"windowsUserDirs,omitempty"`
-	HomeDirs            []string            `json:"homeDirs,omitempty"`
-	HomebrewCasks       []string            `json:"homebrewCasks,omitempty"`
-	SystemPackage       string              `json:"systemPackage,omitempty"`
-	BuildInfoModule     string              `json:"buildInfoModule,omitempty"`
-	BuildInfoVersionVar string              `json:"buildInfoVersionVar,omitempty"`
-	VersionFile         string              `json:"versionFile,omitempty"`
-	LocalServer         *localserver.Server `json:"localServer,omitempty"`
+	StateDir            string   `json:"stateDir,omitempty"`
+	NpmPackage          string   `json:"npmPackage,omitempty"`
+	ExtraUnixNpmDirs    []string `json:"extraUnixNpmDirs,omitempty"`
+	ExtraWindowsNpmDirs []string `json:"extraWindowsNpmDirs,omitempty"`
+	WingetPackage       string   `json:"wingetPackage,omitempty"`
+	MSIXFamily          string   `json:"msixFamily,omitempty"`
+	DesktopInstallerDir string   `json:"desktopInstallerDir,omitempty"`
+	WindowsProgramDirs  []string `json:"windowsProgramDirs,omitempty"`
+	WindowsUserDirs     []string `json:"windowsUserDirs,omitempty"`
+	HomeDirs            []string `json:"homeDirs,omitempty"`
+	HomebrewCasks       []string `json:"homebrewCasks,omitempty"`
+	SystemPackage       string   `json:"systemPackage,omitempty"`
+	BuildInfoModule     string   `json:"buildInfoModule,omitempty"`
+	BuildInfoVersionVar string   `json:"buildInfoVersionVar,omitempty"`
+	VersionFile         string   `json:"versionFile,omitempty"`
+	// StateVersionGlob matches JSONL files under the state directory whose
+	// records carry the version of the agent that wrote them. It is the only
+	// version an installation found by its configuration alone can report.
+	StateVersionGlob string              `json:"stateVersionGlob,omitempty"`
+	LocalServer      *localserver.Server `json:"localServer,omitempty"`
 }

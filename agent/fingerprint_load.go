@@ -108,6 +108,10 @@ func validateFingerprint(f Fingerprint, name string) error {
 		return fmt.Errorf("installUrl %q is not an http(s) URL", f.InstallUrl)
 	}
 
+	if f.StateVersionGlob != "" && f.StateDir == "" {
+		return errors.New("stateVersionGlob has no stateDir to resolve against")
+	}
+
 	if err := validateLocalServer(f.LocalServer); err != nil {
 		return err
 	}

@@ -17,14 +17,25 @@ package agent
 import (
 	"bytes"
 	"debug/buildinfo"
+	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 )
 
 // maxVersionFileSize limits reads from version files.
 const maxVersionFileSize = 4 * 1024
+
+// maxStateVersionFiles is how many of the newest matches are opened, in case
+// the newest one was cut short before it recorded anything.
+const maxStateVersionFiles = 3
+
+// maxStateVersionHead is how much of a record file's start is read. The version
+// sits on the first records, and a later one can be megabytes of tool output.
+const maxStateVersionHead = 64 * 1024
 
 var pseudoVersion = regexp.MustCompile(`\d{14}-[0-9a-f]{12}`)
 
@@ -109,12 +120,91 @@ func executableVersionFile(binaryPath, fileName string) string {
 	return sanitizeVersion(string(data))
 }
 
+// stateDirVersion reads the version out of the newest records the agent wrote
+// under its state directory. An installation found by its configuration alone
+// has no program to read a version from, but its own records name one.
+func stateDirVersion(stateDir, glob string) string {
+	if stateDir == "" || glob == "" {
+		return ""
+	}
+	matches, err := filepath.Glob(filepath.Join(stateDir, filepath.FromSlash(glob)))
+	if err != nil {
+		return ""
+	}
+
+	type candidate struct {
+		path string
+		info os.FileInfo
+	}
+	files := make([]candidate, 0, len(matches))
+	for _, match := range matches {
+		info, err := os.Stat(match)
+		if err != nil || !info.Mode().IsRegular() || info.Size() == 0 {
+			continue
+		}
+		files = append(files, candidate{path: match, info: info})
+	}
+	sort.SliceStable(files, func(left, right int) bool {
+		return files[left].info.ModTime().After(files[right].info.ModTime())
+	})
+	if len(files) > maxStateVersionFiles {
+		files = files[:maxStateVersionFiles]
+	}
+
+	for _, file := range files {
+		if version := recordVersion(file.path); version != "" {
+			return version
+		}
+	}
+	return ""
+}
+
+// recordVersion is the "version" field of the first JSON record that has one.
+func recordVersion(path string) string {
+	file, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer file.Close()
+
+	head := make([]byte, maxStateVersionHead)
+	read, err := io.ReadFull(file, head)
+	if read == 0 || (err != nil && err != io.EOF && err != io.ErrUnexpectedEOF) {
+		return ""
+	}
+	head = head[:read]
+	// The last line is dropped unless the read stopped on a record boundary:
+	// what follows a full buffer is half a record.
+	if end := bytes.LastIndexByte(head, '\n'); end >= 0 {
+		head = head[:end]
+	} else if err == nil {
+		return ""
+	}
+
+	for _, line := range bytes.Split(head, []byte("\n")) {
+		var record struct {
+			Version string `json:"version"`
+		}
+		if json.Unmarshal(bytes.TrimSpace(line), &record) != nil {
+			continue
+		}
+		if version := sanitizeVersion(record.Version); version != "" {
+			return version
+		}
+	}
+	return ""
+}
+
 func fillMissingVersions(installations []Installation, mark int, fingerprint *Fingerprint) {
-	if fingerprint.BuildInfoModule == "" && fingerprint.VersionFile == "" {
+	if fingerprint.BuildInfoModule == "" && fingerprint.VersionFile == "" && fingerprint.StateVersionGlob == "" {
 		return
 	}
 	for i := mark; i < len(installations); i++ {
 		if installations[i].Version != "" {
+			continue
+		}
+		if installations[i].InstallMethod == InstallMethodConfig {
+			installations[i].Version = stateDirVersion(installations[i].Path, fingerprint.StateVersionGlob)
 			continue
 		}
 		version := executableBuildVersion(
