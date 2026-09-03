@@ -82,6 +82,13 @@ export interface QuotaConfig {
   total: string;
   unit: string;
   scale: number;
+  /** True asks no endpoint: the balance is `initial`, drawn down by recorded
+   * spend through this provider since `since`. */
+  manual: boolean;
+  initial: number;
+  /** Where the drawdown starts counting. The server sets it; an empty value
+   * asks the server to start over from now. */
+  since: string;
 }
 
 /** What the vendor last said is left on the account behind a provider. */

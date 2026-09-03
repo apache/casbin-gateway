@@ -28,7 +28,19 @@ export function formatQuota(amount: number, unit: string) {
 }
 
 export function emptyQuotaConfig(): QuotaConfig {
-  return {url: "", headers: {}, token: "", remaining: "", used: "", total: "", unit: "USD", scale: 0};
+  return {
+    url: "",
+    headers: {},
+    token: "",
+    remaining: "",
+    used: "",
+    total: "",
+    unit: "USD",
+    scale: 0,
+    manual: false,
+    initial: 0,
+    since: "",
+  };
 }
 
 /** A ready-made endpoint for a family of sites, so the paths do not have to be
@@ -44,13 +56,11 @@ export const quotaPresets: QuotaPreset[] = [
     key: "newapi",
     label: "New API",
     config: {
+      ...emptyQuotaConfig(),
       url: "/api/user/self",
       headers: {Authorization: "Bearer {{token}}", "New-Api-User": ""},
-      token: "",
       remaining: "data.quota",
       used: "data.used_quota",
-      total: "",
-      unit: "USD",
       // New API counts in units of 1/500000 USD.
       scale: 500000,
     },
@@ -59,13 +69,11 @@ export const quotaPresets: QuotaPreset[] = [
     key: "oneapi",
     label: "One API",
     config: {
+      ...emptyQuotaConfig(),
       url: "/api/user/self",
       headers: {Authorization: "Bearer {{token}}"},
-      token: "",
       remaining: "data.quota",
       used: "data.used_quota",
-      total: "",
-      unit: "USD",
       scale: 500000,
     },
   },

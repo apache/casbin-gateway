@@ -72,10 +72,25 @@ type QuotaConfig struct {
 	// Scale divides every number read, for a vendor that reports in an internal
 	// unit of its own. 0 and 1 both mean "as reported".
 	Scale float64 `json:"scale"`
+
+	// Manual asks no endpoint at all: the balance is Initial, drawn down by what
+	// the relay recorded spending through this provider since Since. It is the
+	// answer for a vendor with no balance API of any kind. The recorded cost is
+	// priced from the models table, so Unit only matches reality when that table
+	// is kept in the same currency.
+	Manual  bool    `json:"manual"`
+	Initial float64 `json:"initial"`
+	// Since is where the drawdown starts counting, in util.GetCurrentTime form.
+	// Set when Manual is first saved; resetting the counter moves it forward.
+	Since string `json:"since"`
 }
 
 func (config *QuotaConfig) isEmpty() bool {
 	return config == nil || strings.TrimSpace(config.Url) == ""
+}
+
+func (config *QuotaConfig) isManual() bool {
+	return config != nil && config.Manual
 }
 
 // quotaVendor is a vendor whose balance endpoint is documented, so that a
@@ -285,6 +300,10 @@ func probeQuota(provider *Provider) *ProviderQuota {
 		return quota
 	}
 
+	if provider.Quota.isManual() {
+		return manualQuota(provider, quota)
+	}
+
 	origin, err := quotaOrigin(provider.BaseUrl)
 	if err != nil {
 		quota.Error = err.Error()
@@ -325,6 +344,27 @@ func probeQuota(provider *Provider) *ProviderQuota {
 	if quota.Remaining == nil && quota.Used == nil && quota.Total == nil {
 		quota.Error = "the vendor answered, but none of the configured fields were in the answer"
 	}
+	return quota
+}
+
+// manualQuota draws the operator's starting figure down by what the relayed
+// records say was spent through this provider. Nothing is asked of any vendor.
+func manualQuota(provider *Provider, quota *ProviderQuota) *ProviderQuota {
+	config := provider.Quota
+	quota.Supported = true
+	quota.Unit = config.Unit
+
+	spent, err := sumProviderCost(provider.GetId(), config.Since)
+	if err != nil {
+		quota.Error = err.Error()
+		return quota
+	}
+
+	total := config.Initial
+	remaining := total - spent
+	quota.Total = &total
+	quota.Used = &spent
+	quota.Remaining = &remaining
 	return quota
 }
 

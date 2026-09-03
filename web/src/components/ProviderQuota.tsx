@@ -26,7 +26,6 @@ import {SimpleSelect} from "@/components/shared/simple-select";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
-import {Switch} from "@/components/ui/switch";
 import {Textarea} from "@/components/ui/textarea";
 import {SimpleTooltip} from "@/components/ui/tooltip";
 import {formatPairs, parsePairs} from "@/lib/pairs";
@@ -134,6 +133,15 @@ export function ProviderQuotaSection({
     onChange({...(config ?? emptyQuotaConfig()), [key]: value});
   };
 
+  const mode = config === null ? "auto" : config.manual ? "manual" : "custom";
+  const setMode = (next: string) => {
+    if (next === "auto") {
+      onChange(null);
+    } else {
+      onChange({...(config ?? emptyQuotaConfig()), manual: next === "manual"});
+    }
+  };
+
   return (
     <Section
       columns={2}
@@ -156,20 +164,53 @@ export function ProviderQuotaSection({
       </Field>
 
       <Field
-        label={i18next.t("provider:Custom endpoint")}
-        hint={i18next.t("provider:Custom endpoint hint")}
+        label={i18next.t("provider:Balance source")}
+        hint={i18next.t("provider:Balance source hint")}
         className="md:col-span-2"
       >
-        <label className="flex items-center gap-2 text-sm">
-          <Switch
-            checked={config !== null}
-            onCheckedChange={checked => onChange(checked ? emptyQuotaConfig() : null)}
-          />
-          {i18next.t("provider:Ask an endpoint of my own")}
-        </label>
+        <SimpleSelect
+          className="max-w-xs"
+          value={mode}
+          onChange={setMode}
+          options={[
+            {label: i18next.t("provider:Automatic"), value: "auto"},
+            {label: i18next.t("provider:Custom endpoint"), value: "custom"},
+            {label: i18next.t("provider:Manual amount"), value: "manual"},
+          ]}
+        />
       </Field>
 
-      {config === null ? null : (
+      {config !== null && config.manual ? (
+        <>
+          <Field label={i18next.t("provider:Initial amount")} hint={i18next.t("provider:Manual amount hint")}>
+            <NumberInput min={0} value={config.initial} onChange={value => setConfigField("initial", value)} />
+          </Field>
+          <Field label={i18next.t("provider:Currency")} htmlFor="quota-unit" hint={i18next.t("provider:Manual currency hint")}>
+            <Input
+              id="quota-unit"
+              placeholder="USD"
+              value={config.unit}
+              onChange={event => setConfigField("unit", event.target.value)}
+            />
+          </Field>
+          <Field
+            label={i18next.t("provider:Counting since")}
+            hint={i18next.t("provider:Reset counter hint")}
+            className="md:col-span-2"
+          >
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-muted-foreground text-sm">
+                {config.since || i18next.t("provider:Since the start")}
+              </span>
+              <Button type="button" size="sm" variant="outline" onClick={() => setConfigField("since", "")}>
+                {i18next.t("provider:Reset counter")}
+              </Button>
+            </div>
+          </Field>
+        </>
+      ) : null}
+
+      {config !== null && !config.manual ? (
         <>
           <Field label={i18next.t("provider:Preset")} hint={i18next.t("provider:Preset hint")}>
             <SimpleSelect
@@ -248,7 +289,7 @@ export function ProviderQuotaSection({
             <NumberInput min={1} value={scaleOf(config)} onChange={value => setConfigField("scale", value)} />
           </Field>
         </>
-      )}
+      ) : null}
     </Section>
   );
 }

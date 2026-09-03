@@ -609,6 +609,22 @@ func GetSeenLlmModels() ([]string, error) {
 	return models, err
 }
 
+// sumProviderCost totals what the priced records say was spent through one
+// provider. An empty since counts every record still retained. A database that
+// is not open yet answers zero rather than failing: a manual balance showing
+// the full starting figure is better than an error.
+func sumProviderCost(providerId string, since string) (float64, error) {
+	if ormer == nil || ormer.Engine == nil {
+		return 0, nil
+	}
+
+	session := ormer.Engine.Where("provider = ?", providerId).And("priced = ?", true)
+	if since != "" {
+		session = session.And("created_time >= ?", since)
+	}
+	return session.Sum(&LlmRecord{}, "cost")
+}
+
 // GetLlmRecordStats totals the same records GetLlmRecords lists.
 func GetLlmRecordStats(filter LlmRecordFilter, topModels int) (*LlmRecordStats, error) {
 	countSession := llmRecordSession(filter)

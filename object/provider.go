@@ -91,6 +91,15 @@ func encryptQuotaToken(provider *Provider) error {
 	return nil
 }
 
+// stampQuotaSince fixes the point a manual balance counts spending from, the
+// first time one is saved. A client that clears the field is asking to start
+// over, so an empty Since is always refilled with now.
+func stampQuotaSince(provider *Provider) {
+	if provider.Quota != nil && provider.Quota.Manual && provider.Quota.Since == "" {
+		provider.Quota.Since = util.GetCurrentTime()
+	}
+}
+
 func decryptQuotaToken(provider *Provider) {
 	if provider.Quota == nil || provider.Quota.Token == "" {
 		return
@@ -523,6 +532,7 @@ func AddProvider(provider *Provider) (bool, error) {
 	}
 	provider.UpdatedTime = now
 
+	stampQuotaSince(provider)
 	if err := encryptQuotaToken(provider); err != nil {
 		return false, err
 	}
@@ -593,6 +603,7 @@ func UpdateProvider(id string, provider *Provider) (bool, error) {
 	if provider.Quota != nil && provider.Quota.Token == ApiKeyMask {
 		provider.Quota.Token = stored.Quota.token()
 	}
+	stampQuotaSince(provider)
 	if err := encryptQuotaToken(provider); err != nil {
 		return false, err
 	}
