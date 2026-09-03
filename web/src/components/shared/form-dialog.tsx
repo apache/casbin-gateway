@@ -46,6 +46,8 @@ export function FormDialog({
   submitDisabled = false,
   submitVariant = "default",
   size = "default",
+  columns = 1,
+  note,
   footer,
 }: {
   open: boolean;
@@ -60,6 +62,10 @@ export function FormDialog({
   submitDisabled?: boolean;
   submitVariant?: VariantProps<typeof buttonVariants>["variant"];
   size?: "default" | "lg" | "xl";
+  /** Two columns keep a long form on one screen instead of a scrollbar. */
+  columns?: 1 | 2;
+  /** A line kept beside the buttons, out of the scrolling part of the form. */
+  note?: React.ReactNode;
   footer?: React.ReactNode;
 }) {
   const sizeClass = {
@@ -75,16 +81,17 @@ export function FormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn("max-h-[90vh] overflow-hidden", sizeClass)}>
+      <DialogContent className={cn("flex max-h-[92vh] flex-col overflow-hidden", sizeClass)}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description ? <DialogDescription>{description}</DialogDescription> : null}
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex min-h-0 flex-col gap-4">
-          <div className="scrollbar-thin -mx-1 max-h-[60vh] overflow-y-auto px-1 py-0.5">
-            <div className="grid gap-4">{children}</div>
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col gap-4">
+          <div className="scrollbar-thin -mx-1 min-h-0 flex-1 overflow-y-auto px-1 py-0.5">
+            <div className={cn("grid gap-4", columns === 2 && "md:grid-cols-2")}>{children}</div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="sm:items-center">
+            {note ? <div className="sm:mr-auto">{note}</div> : null}
             {footer ?? (
               <>
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

@@ -35,10 +35,12 @@ import type {Provider} from "@/types";
 export function ProviderModelsField({
   provider,
   hint,
+  className,
   onChange,
 }: {
   provider: Provider;
   hint?: React.ReactNode;
+  className?: string;
   onChange: (models: string[]) => void;
 }) {
   const [fetching, setFetching] = React.useState(false);
@@ -104,6 +106,7 @@ export function ProviderModelsField({
         </span>
       }
       hint={hint}
+      className={className}
     >
       <TagsInput
         value={models}

@@ -174,7 +174,7 @@ export function ProviderSourcePicker({
       )}
 
       {leading.length === 0 ? null : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {leading.map(source => (
             <SourceCard key={source.key} source={source} onPick={onPick} />
           ))}
@@ -186,7 +186,7 @@ export function ProviderSourcePicker({
           <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
             {categoryTitle(group.category)}
           </span>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {group.sources.map(source => (
               <SourceCard key={source.key} source={source} onPick={onPick} />
             ))}

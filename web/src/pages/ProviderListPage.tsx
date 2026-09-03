@@ -17,6 +17,7 @@ import {Link, useNavigate} from "react-router-dom";
 import {
   ChevronDown,
   ExternalLink,
+  FileClock,
   Plug,
   Plus,
   RefreshCw,
@@ -45,6 +46,7 @@ import {Button} from "@/components/ui/button";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {Input} from "@/components/ui/input";
 import {Textarea} from "@/components/ui/textarea";
+import {clearDraft, readDraft, writeDraft, type Draft} from "@/lib/draft";
 import {
   authProvider,
   authClient,
@@ -84,6 +86,13 @@ function providerFromSource(owner: string, source: ProviderSource): Provider {
   return {...newProvider(owner, sourceTitle(source)), ...source.provider};
 }
 
+/** A half-filled add-provider form, kept in the browser until it is submitted. */
+interface ProviderDraft {
+  provider: Provider;
+  /** Which source card it was started from, so resuming reopens the same form. */
+  source: string;
+}
+
 /**
  * The fields the source already answered. They stay reachable — a preset is a
  * starting point, not a lock — but out of the way of the one field, if any,
@@ -93,16 +102,16 @@ function Advanced({defaultOpen, children}: {defaultOpen: boolean; children: Reac
   const [open, setOpen] = React.useState(defaultOpen);
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-4 md:col-span-2">
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-sm"
+        className="text-muted-foreground hover:text-foreground flex w-fit items-center gap-1 text-sm"
       >
         <ChevronDown className={cn("size-3.5 transition-transform", open && "rotate-180")} />
         {i18next.t("general:Advanced")}
       </button>
-      {open ? children : null}
+      {open ? <div className="grid gap-4 md:grid-cols-2">{children}</div> : null}
     </div>
   );
 }
@@ -135,7 +144,26 @@ export default function ProviderListPage({account}: {account: Account}) {
   const [refreshingQuotas, setRefreshingQuotas] = React.useState(false);
   const [agents, setAgents] = React.useState<Agent[]>([]);
   const [binding, setBinding] = React.useState("");
+  const draftKey = `provider-new:${account.name}`;
+  const [draft, setDraft] = React.useState<Draft<ProviderDraft> | null>(() =>
+    readDraft<ProviderDraft>(draftKey),
+  );
   const test = useProviderTest(form);
+
+  // What a picked source fills in by itself is not worth keeping, so a draft
+  // starts existing at the first thing typed on top of it.
+  const dirty =
+    source !== null && JSON.stringify(form) !== JSON.stringify(providerFromSource(account.name, source));
+
+  // Closing the dialog — or the tab — must not cost what was typed, so the form
+  // is written down as it is filled in and only dropped once it is stored.
+  React.useEffect(() => {
+    if (!addOpen || source === null || !dirty) {
+      return;
+    }
+    const id = setTimeout(() => setDraft(writeDraft(draftKey, {provider: form, source: source.key})), 400);
+    return () => clearTimeout(id);
+  }, [addOpen, dirty, draftKey, form, source]);
 
   const fetchProviders = React.useCallback(
     (nextPage = page, nextPageSize = pageSize, nextSort = sort) => {
@@ -220,6 +248,29 @@ export default function ProviderListPage({account}: {account: Account}) {
       .then(() => loadQuotas(false));
   }, [loadQuotas]);
 
+  const discardDraft = () => {
+    clearDraft(draftKey);
+    setDraft(null);
+  };
+
+  // Reopens the form exactly where it was left, source card included.
+  const resumeDraft = () => {
+    if (draft === null) {
+      return;
+    }
+    setForm(draft.value.provider);
+    setSource(providerSources.find(item => item.key === draft.value.source) ?? null);
+    setNameError("");
+    setAddOpen(true);
+  };
+
+  const closeAddDialog = (open: boolean) => {
+    setAddOpen(open);
+    if (!open && draft !== null) {
+      Setting.showMessage("info", i18next.t("provider:Draft saved"));
+    }
+  };
+
   const openAddDialog = (start?: ProviderSource) => {
     setForm(start ? providerFromSource(account.name, start) : newProvider(account.name));
     setSource(start ?? null);
@@ -275,6 +326,7 @@ export default function ProviderListPage({account}: {account: Account}) {
           Setting.showMessage("error", `${i18next.t("provider:Failed to add")}: ${res.msg}`);
         } else {
           Setting.showMessage("success", i18next.t("provider:Provider added successfully"));
+          discardDraft();
           setAddOpen(false);
           fetchProviders();
         }
@@ -343,6 +395,12 @@ export default function ProviderListPage({account}: {account: Account}) {
                 </Link>
               </Button>
             ) : null}
+            {draft === null ? null : (
+              <Button variant="outline" onClick={resumeDraft}>
+                <FileClock />
+                {i18next.t("provider:Continue draft")}
+              </Button>
+            )}
             <Button onClick={() => openAddDialog()}>
               <Plus />
               {i18next.t("provider:New Provider")}
@@ -430,10 +488,22 @@ export default function ProviderListPage({account}: {account: Account}) {
 
       <FormDialog
         open={addOpen}
-        onOpenChange={setAddOpen}
+        onOpenChange={closeAddDialog}
         title={i18next.t("provider:New Provider")}
         description={source === null ? i18next.t("provider:Source hint") : undefined}
-        size={source === null ? "lg" : "default"}
+        size="xl"
+        columns={source === null ? 1 : 2}
+        note={
+          draft === null || source === null ? undefined : (
+            <span className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
+              <FileClock className="size-3.5" />
+              {i18next.t("provider:Draft saved")} · {new Date(draft.savedAt).toLocaleTimeString()}
+              <Button type="button" size="xs" variant="ghost" onClick={discardDraft}>
+                {i18next.t("provider:Discard draft")}
+              </Button>
+            </span>
+          )
+        }
         submitting={adding || test.testing}
         submitText={i18next.t("provider:Add provider")}
         onSubmit={submitProvider}
@@ -448,10 +518,35 @@ export default function ProviderListPage({account}: {account: Account}) {
         }
       >
         {source === null ? (
-          <ProviderSourcePicker onPick={pickSource} onLink={importLink} />
+          <>
+            {draft === null ? null : (
+              <MessageAlert
+                variant="info"
+                title={i18next.t("provider:Unfinished draft")}
+                description={
+                  <>
+                    <p>{`${draft.value.provider.displayName || i18next.t("provider:New Provider")} · ${new Date(draft.savedAt).toLocaleString()}`}</p>
+                    <p className="text-xs opacity-80">{i18next.t("provider:Draft hint")}</p>
+                  </>
+                }
+                action={
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" size="xs" onClick={resumeDraft}>
+                      <FileClock />
+                      {i18next.t("provider:Continue draft")}
+                    </Button>
+                    <Button type="button" size="xs" variant="ghost" onClick={discardDraft}>
+                      {i18next.t("provider:Discard draft")}
+                    </Button>
+                  </div>
+                }
+              />
+            )}
+            <ProviderSourcePicker onPick={pickSource} onLink={importLink} />
+          </>
         ) : (
           <>
-            <Field label={i18next.t("provider:Source")}>
+            <Field label={i18next.t("provider:Source")} className="md:col-span-2">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="info">{sourceTitle(source)}</Badge>
                 {usesClientAuth(form) ? (
@@ -516,6 +611,7 @@ export default function ProviderListPage({account}: {account: Account}) {
             )}
             <ProviderModelsField
               provider={form}
+              className="md:col-span-2"
               hint={usesClientAuth(form) ? i18next.t("provider:Any model hint") : i18next.t("provider:Models hint")}
               onChange={value => setFormField("models", value)}
             />
