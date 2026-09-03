@@ -44,6 +44,7 @@ export function ToolInstallRow({
   const plan = entry.install;
   const running = job?.running === true;
   const failed = job !== undefined && !job.running && !job.ok;
+  const fallbackUrl = !plan.available ? entry.installUrl : undefined;
 
   return (
     <div className="bg-card hover:border-foreground/25 space-y-2 rounded-xl border p-3 shadow-xs transition-colors">
@@ -56,7 +57,7 @@ export function ToolInstallRow({
         />
         <span className="min-w-0 flex-1 truncate text-sm font-medium">{entry.name}</span>
 
-        {entry.installUrl ? (
+        {entry.installUrl && !fallbackUrl ? (
           <SimpleTooltip title={i18next.t("agent:Install page")}>
             <a
               href={entry.installUrl}
@@ -71,17 +72,23 @@ export function ToolInstallRow({
         ) : null}
 
         <SimpleTooltip
-          title={plan.available ? plan.command : plan.detail}
+          title={plan.available ? plan.command : fallbackUrl ? i18next.t("agent:Install page") : plan.detail}
         >
           <span className="shrink-0">
             <Button
               size="sm"
               variant={failed ? "outline" : "default"}
-              disabled={!plan.available || running}
+              disabled={(!plan.available && !fallbackUrl) || running}
               loading={busy || running}
-              onClick={() => onInstall(entry.agentId)}
+              onClick={() => {
+                if (plan.available) {
+                  onInstall(entry.agentId);
+                } else if (fallbackUrl) {
+                  window.open(fallbackUrl, "_blank", "noreferrer");
+                }
+              }}
             >
-              <Download />
+              {fallbackUrl ? <ExternalLink /> : <Download />}
               {i18next.t(
                 running ? "agent:Installing" : failed ? "agent:Retry" : "agent:Install",
               )}
