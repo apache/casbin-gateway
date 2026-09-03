@@ -175,9 +175,10 @@ jobs:
             # macOS comes from the job that ran on a macOS runner.
             desktopBinary="${stage}/casbin-gateway-desktop"
             case "${goos}" in
+              # -H windowsgui: no console window behind the tray icon.
               windows)
                 (cd desktop && GOOS=windows GOARCH="${goarch}" CGO_ENABLED=0 \
-                  go build -trimpath -ldflags "-s -w" -o "../${desktopBinary}.exe" .)
+                  go build -trimpath -ldflags "-s -w -H windowsgui" -o "../${desktopBinary}.exe" .)
                 ;;
               linux)
                 (cd desktop && CGO_ENABLED=1 PKG_CONFIG_PATH="${RUNNER_TEMP}/pkgconfig" \

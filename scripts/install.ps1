@@ -108,7 +108,10 @@ if ($UserPath -notlike "*$BinDir*") {
 # ── desktop and Start menu shortcuts ──────────────────────────────────────────
 # Both point at the desktop launcher, not at the server: it is what shows the
 # window, and it starts the server itself if nothing is serving yet.
-$IconPath = & $DesktopExePath icon
+# The launcher is a GUI binary, whose output PowerShell cannot capture, so the
+# icon path is spelled out rather than read back.
+Start-Process -FilePath $DesktopExePath -ArgumentList 'icon' -WorkingDirectory $InstallDir -Wait
+$IconPath = Join-Path $InstallDir 'casbin-gateway.ico'
 $ShortcutName = 'Casbin Gateway.lnk'
 
 function New-GatewayShortcut {
@@ -141,7 +144,10 @@ if (-not $env:NO_SHORTCUT) {
 Remove-Item -Path (Join-Path ([System.Environment]::GetFolderPath('Startup')) $ShortcutName) -Force -ErrorAction SilentlyContinue
 if (-not $env:NO_AUTOSTART) {
     try {
-        & $DesktopExePath autostart on
+        $autostart = Start-Process -FilePath $DesktopExePath -ArgumentList 'autostart', 'on' -WorkingDirectory $InstallDir -Wait -PassThru
+        if ($autostart.ExitCode -ne 0) {
+            throw "the launcher exited with $($autostart.ExitCode)"
+        }
         Write-Info 'Casbin Gateway will start with Windows.'
     }
     catch {

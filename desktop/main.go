@@ -68,5 +68,6 @@ func main() {
 		return
 	}
 
+	dropOwnConsole()
 	runTray()
 }
