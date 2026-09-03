@@ -1,36 +1,15 @@
 <h1 align="center" style="border-bottom: none;">📦⚡️ Casbin Gateway</h1>
 <h3 align="center">An open-source gateway for the AI coding agents on your machine, developed by Go and React.</h3>
 <p align="center">
-  <a href="https://github.com/apache/casbin-gateway/actions/workflows/golangci-lint.yml">
-    <img alt="Lint" src="https://github.com/apache/casbin-gateway/actions/workflows/golangci-lint.yml/badge.svg">
-  </a>
-  <a href="https://github.com/apache/casbin-gateway/actions/workflows/build.yml">
-    <img alt="Build" src="https://github.com/apache/casbin-gateway/actions/workflows/build.yml/badge.svg">
-  </a>
-  <a href="https://pkg.go.dev/github.com/apache/casbin-gateway">
-    <img alt="Go Reference" src="https://pkg.go.dev/badge/github.com/apache/casbin-gateway.svg">
-  </a>
-  <a href="https://github.com/apache/casbin-gateway/releases/latest">
-    <img alt="GitHub Release" src="https://img.shields.io/github/v/release/apache/casbin-gateway.svg">
-  </a>
-</p>
-
-<p align="center">
-  <a href="https://github.com/apache/casbin-gateway/blob/master/LICENSE">
-    <img alt="license" src="https://img.shields.io/github/license/apache/casbin-gateway">
-  </a>
-  <a href="https://github.com/apache/casbin-gateway/issues">
-    <img alt="GitHub issues" src="https://img.shields.io/github/issues/apache/casbin-gateway">
-  </a>
-  <a href="https://github.com/apache/casbin-gateway/stargazers">
-    <img alt="GitHub stars" src="https://img.shields.io/github/stars/apache/casbin-gateway">
-  </a>
-  <a href="https://github.com/apache/casbin-gateway/network">
-    <img alt="GitHub forks" src="https://img.shields.io/github/forks/apache/casbin-gateway">
-  </a>
-  <a href="https://discord.gg/S5UjpzGZjN">
-    <img alt="Discord" src="https://img.shields.io/discord/1022748306096537660?logo=discord&label=discord&color=5865F2">
-  </a>
+  <a href="https://github.com/apache/casbin-gateway/actions/workflows/golangci-lint.yml"><img alt="Lint" src="https://img.shields.io/github/actions/workflow/status/apache/casbin-gateway/golangci-lint.yml?branch=master&style=flat-square&logo=github&logoColor=white&label=lint"></a>
+  <a href="https://github.com/apache/casbin-gateway/actions/workflows/build.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/apache/casbin-gateway/build.yml?branch=master&style=flat-square&logo=github&logoColor=white&label=build"></a>
+  <a href="https://pkg.go.dev/github.com/apache/casbin-gateway"><img alt="Go Reference" src="https://img.shields.io/badge/go.dev-reference-00ADD8?style=flat-square&logo=go&logoColor=white"></a>
+  <a href="https://github.com/apache/casbin-gateway/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/apache/casbin-gateway?style=flat-square&logo=github&logoColor=white&color=3b82f6"></a>
+  <a href="https://github.com/apache/casbin-gateway/blob/master/LICENSE"><img alt="License" src="https://img.shields.io/github/license/apache/casbin-gateway?style=flat-square&color=3b82f6"></a>
+  <a href="https://github.com/apache/casbin-gateway/issues"><img alt="Issues" src="https://img.shields.io/github/issues/apache/casbin-gateway?style=flat-square&logo=github&logoColor=white&color=3b82f6"></a>
+  <a href="https://github.com/apache/casbin-gateway/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/apache/casbin-gateway?style=flat-square&logo=github&logoColor=white&color=3b82f6"></a>
+  <a href="https://github.com/apache/casbin-gateway/network/members"><img alt="Forks" src="https://img.shields.io/github/forks/apache/casbin-gateway?style=flat-square&logo=github&logoColor=white&color=3b82f6"></a>
+  <a href="https://discord.gg/S5UjpzGZjN"><img alt="Discord" src="https://img.shields.io/discord/1022748306096537660?style=flat-square&logo=discord&logoColor=white&label=discord&color=5865F2"></a>
 </p>
 
 <p align="center">
@@ -41,23 +20,14 @@
   <a href="https://cdn.casbin.org/img/casbin-gateway.gif"><img alt="Casbin Gateway" src="https://cdn.casbin.org/img/casbin-gateway.gif" width="900"></a>
 </p>
 
-## The killer feature: is the API behind that key what it was sold as?
+## Features
 
-A reseller can sell a frontier model and serve a cheaper one, count a cached prefix as fresh input, or answer in an API it only pretends to speak. None of that shows up in the traffic, so **Authenticity** asks the upstream directly. Every provider is probed on its own — when it is added, when its endpoint, type or key changes, when it has never been probed, and again whenever its report goes stale — and comes back with a score out of 100 and a grade from A to F, on the Authenticity page and above the agents on the home page. No button to press, and nothing to configure.
-
-[![Authenticity](https://cdn.casbin.org/img/casbin-gateway-authenticity.png)](https://cdn.casbin.org/img/casbin-gateway-authenticity.png)
-
-The score is only a summary of the test cases behind it, and every one of them is on the page: whether the model that answers is the one that was asked for, whether a two-level tool schema survives a forced call, whether the event stream carries everything the API documents, whether the prompt cache is really accounted for, whether two identical requests are billed the same, whether the vendor's own headers are there. Each case names the question it puts to the upstream, the exact request it sends, how the answer is judged, and what it is worth.
-
-[![Test cases](https://cdn.casbin.org/img/casbin-gateway-authenticity-cases.png)](https://cdn.casbin.org/img/casbin-gateway-authenticity-cases.png)
-
-Reweight a case, turn it off, rewrite its question, or add one of your own — the questions worth asking of a reseller are not the same everywhere, and a score whose method is not published is not evidence. **Restore defaults** puts the shipped suite back and leaves your own cases alone.
-
-The report has a second half that costs nothing and sends no request: what the records Gateway already kept say
-about that upstream — how much of the cache it really accounted for, how many attempts failed, how long it took
-to answer, and how much of what it served has no price.
-
-A probe spends a few cents of that provider's own credit, which is on the report next to the finding. `providerProbeIntervalHours` sets how often a report goes stale, `providerProbeMode = "manual"` probes only when asked, and `"off"` never probes.
+- **[Is the API behind that key what it was sold as?](#the-killer-feature-is-the-api-behind-that-key-what-it-was-sold-as)** — a reseller can quietly swap in a cheaper model or fake a cache hit, and none of it shows up in the traffic. Authenticity asks the upstream directly and grades it A–F.
+- **[Switch every agent's provider from one place](#send-an-agents-traffic-through-gateway)** — change an API key or base URL once, and every agent pointed at Gateway picks it up.
+- **[Run several instances of one agent side by side](#what-to-do-next)** — e.g. multiple Claude Desktop instances, each signed in to a different account.
+- **[See the whole request, not just a count](#recording-prompts)** — every prompt, message and tool schema an agent sent, kept on this machine.
+- **[Know what every agent spent, even off Gateway](#what-the-agents-spend-including-what-never-went-through-gateway)** — read straight from the agents' own transcripts.
+- **[Compare and copy skills, MCP servers and prompts across agents](#what-to-do-next)** — every agent's install list in one table.
 
 ## Screenshots
 
@@ -117,12 +87,30 @@ Gateway installed some other way, or in a directory it cannot write to, says so 
 | **Sessions** | Every session those agents have had, read from the transcripts they leave on disk: the whole conversation, message by message. | Nothing |
 | **Activity** | What a monitored agent is doing as it does it — each tool call, its target and how long it took. | Monitoring on for an agent |
 | **Providers** | One endpoint in front of your model vendors. Gateway holds the API key, so the agents never have it — or forwards the agent's own sign-in and holds nothing. | A vendor API key, or nothing at all |
-| **Authenticity** | A score out of 100 and a grade for every provider, measured without being asked — see [the section above](#the-killer-feature-is-the-api-behind-that-key-what-it-was-sold-as). | A provider with an API key |
+| **Authenticity** | A score out of 100 and a grade for every provider, measured without being asked — see [the section below](#the-killer-feature-is-the-api-behind-that-key-what-it-was-sold-as). | A provider with an API key |
 | **LLM Records** | Every request an agent relayed: the full system prompt, every message and tool call, the schema of every tool the model was offered, plus tokens and cost. | A provider, and `llmRecordMode` — see [Recording prompts](#recording-prompts) |
 | **Usage** | What every agent on this machine spent, over time and broken down by model and by agent, read from the agents' own transcripts — so it counts the requests that never went through Gateway. A second tab shows what Gateway relayed, which is the only account that knows which provider answered and whether it failed. | Nothing |
 | **Model pricing** | What a million tokens costs, which is what every figure on the Usage page is worked out from. Edit a price by hand, or let Gateway reprice the models this machine has run from the [models.dev](https://models.dev) catalogue on a schedule; a price you edited yourself is left alone. | Nothing |
 
 Agents are found by reading the user accounts, home directories and install paths of **the machine Gateway runs on**, so run it on the machine whose agents you want to watch.
+
+### The killer feature: is the API behind that key what it was sold as?
+
+A reseller can sell a frontier model and serve a cheaper one, count a cached prefix as fresh input, or answer in an API it only pretends to speak. None of that shows up in the traffic, so **Authenticity** asks the upstream directly. Every provider is probed on its own — when it is added, when its endpoint, type or key changes, when it has never been probed, and again whenever its report goes stale — and comes back with a score out of 100 and a grade from A to F, on the Authenticity page and above the agents on the home page. No button to press, and nothing to configure.
+
+[![Authenticity](https://cdn.casbin.org/img/casbin-gateway-authenticity.png)](https://cdn.casbin.org/img/casbin-gateway-authenticity.png)
+
+The score is only a summary of the test cases behind it, and every one of them is on the page: whether the model that answers is the one that was asked for, whether a two-level tool schema survives a forced call, whether the event stream carries everything the API documents, whether the prompt cache is really accounted for, whether two identical requests are billed the same, whether the vendor's own headers are there. Each case names the question it puts to the upstream, the exact request it sends, how the answer is judged, and what it is worth.
+
+[![Test cases](https://cdn.casbin.org/img/casbin-gateway-authenticity-cases.png)](https://cdn.casbin.org/img/casbin-gateway-authenticity-cases.png)
+
+Reweight a case, turn it off, rewrite its question, or add one of your own — the questions worth asking of a reseller are not the same everywhere, and a score whose method is not published is not evidence. **Restore defaults** puts the shipped suite back and leaves your own cases alone.
+
+The report has a second half that costs nothing and sends no request: what the records Gateway already kept say
+about that upstream — how much of the cache it really accounted for, how many attempts failed, how long it took
+to answer, and how much of what it served has no price.
+
+A probe spends a few cents of that provider's own credit, which is on the report next to the finding. `providerProbeIntervalHours` sets how often a report goes stale, `providerProbeMode = "manual"` probes only when asked, and `"off"` never probes.
 
 ### Send an agent's traffic through Gateway
 

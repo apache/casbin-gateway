@@ -1,36 +1,15 @@
 <h1 align="center" style="border-bottom: none;">📦⚡️ Casbin Gateway</h1>
 <h3 align="center">一个开源网关，管理你机器上的 AI 编程 Agent，由 Go 和 React 开发。</h3>
 <p align="center">
-  <a href="https://github.com/apache/casbin-gateway/actions/workflows/golangci-lint.yml">
-    <img alt="Lint" src="https://github.com/apache/casbin-gateway/actions/workflows/golangci-lint.yml/badge.svg">
-  </a>
-  <a href="https://github.com/apache/casbin-gateway/actions/workflows/build.yml">
-    <img alt="Build" src="https://github.com/apache/casbin-gateway/actions/workflows/build.yml/badge.svg">
-  </a>
-  <a href="https://pkg.go.dev/github.com/apache/casbin-gateway">
-    <img alt="Go Reference" src="https://pkg.go.dev/badge/github.com/apache/casbin-gateway.svg">
-  </a>
-  <a href="https://github.com/apache/casbin-gateway/releases/latest">
-    <img alt="GitHub Release" src="https://img.shields.io/github/v/release/apache/casbin-gateway.svg">
-  </a>
-</p>
-
-<p align="center">
-  <a href="https://github.com/apache/casbin-gateway/blob/master/LICENSE">
-    <img alt="license" src="https://img.shields.io/github/license/apache/casbin-gateway">
-  </a>
-  <a href="https://github.com/apache/casbin-gateway/issues">
-    <img alt="GitHub issues" src="https://img.shields.io/github/issues/apache/casbin-gateway">
-  </a>
-  <a href="https://github.com/apache/casbin-gateway/stargazers">
-    <img alt="GitHub stars" src="https://img.shields.io/github/stars/apache/casbin-gateway">
-  </a>
-  <a href="https://github.com/apache/casbin-gateway/network">
-    <img alt="GitHub forks" src="https://img.shields.io/github/forks/apache/casbin-gateway">
-  </a>
-  <a href="https://discord.gg/S5UjpzGZjN">
-    <img alt="Discord" src="https://img.shields.io/discord/1022748306096537660?logo=discord&label=discord&color=5865F2">
-  </a>
+  <a href="https://github.com/apache/casbin-gateway/actions/workflows/golangci-lint.yml"><img alt="Lint" src="https://img.shields.io/github/actions/workflow/status/apache/casbin-gateway/golangci-lint.yml?branch=master&style=flat-square&logo=github&logoColor=white&label=lint"></a>
+  <a href="https://github.com/apache/casbin-gateway/actions/workflows/build.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/apache/casbin-gateway/build.yml?branch=master&style=flat-square&logo=github&logoColor=white&label=build"></a>
+  <a href="https://pkg.go.dev/github.com/apache/casbin-gateway"><img alt="Go Reference" src="https://img.shields.io/badge/go.dev-reference-00ADD8?style=flat-square&logo=go&logoColor=white"></a>
+  <a href="https://github.com/apache/casbin-gateway/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/apache/casbin-gateway?style=flat-square&logo=github&logoColor=white&color=3b82f6"></a>
+  <a href="https://github.com/apache/casbin-gateway/blob/master/LICENSE"><img alt="License" src="https://img.shields.io/github/license/apache/casbin-gateway?style=flat-square&color=3b82f6"></a>
+  <a href="https://github.com/apache/casbin-gateway/issues"><img alt="Issues" src="https://img.shields.io/github/issues/apache/casbin-gateway?style=flat-square&logo=github&logoColor=white&color=3b82f6"></a>
+  <a href="https://github.com/apache/casbin-gateway/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/apache/casbin-gateway?style=flat-square&logo=github&logoColor=white&color=3b82f6"></a>
+  <a href="https://github.com/apache/casbin-gateway/network/members"><img alt="Forks" src="https://img.shields.io/github/forks/apache/casbin-gateway?style=flat-square&logo=github&logoColor=white&color=3b82f6"></a>
+  <a href="https://discord.gg/S5UjpzGZjN"><img alt="Discord" src="https://img.shields.io/discord/1022748306096537660?style=flat-square&logo=discord&logoColor=white&label=discord&color=5865F2"></a>
 </p>
 
 <p align="center">
@@ -41,22 +20,14 @@
   <a href="https://cdn.casbin.org/img/casbin-gateway.gif"><img alt="Casbin Gateway" src="https://cdn.casbin.org/img/casbin-gateway.gif" width="900"></a>
 </p>
 
-## 杀手锏：那个 Key 背后的 API，真是卖给你的那个吗？
+## 功能特性
 
-中转商可以卖着前沿模型、跑着便宜模型，可以把缓存过的前缀当新输入计费，也可以假装自己会说某套 API。这些在流量里都看不出来，所以 **Authenticity** 直接去问上游。每个 Provider 都会被单独探测——加入时、端点/类型/密钥变更时、从未探测过时，以及报告过期后——测出来的是一个 100 分制的分数和一个 A 到 F 的等级，显示在 Authenticity 页面上，也显示在首页 Agent 列表的正上方。不用点按钮，也不用配置什么。
-
-[![Authenticity](https://cdn.casbin.org/img/casbin-gateway-authenticity.png)](https://cdn.casbin.org/img/casbin-gateway-authenticity.png)
-
-分数只是背后那些测试用例的汇总，而用例全都摆在页面上：作答的模型是不是点名的那个、强制调用时两层嵌套的工具 schema 能不能扛住、事件流里该有的事件是不是都到齐了、提示词缓存是不是真的在计费上体现出来、两个完全相同的请求计费是否一致、厂商自己的响应头在不在。每条用例都写明它问上游什么、实际发出去的请求长什么样、答案怎么判、占多少权重。
-
-[![测试用例](https://cdn.casbin.org/img/casbin-gateway-authenticity-cases.png)](https://cdn.casbin.org/img/casbin-gateway-authenticity-cases.png)
-
-可以改权重、停用、重写问题，也可以自己加一条——该问中转商什么，各家情况并不一样，而评分方法不公开就算不上证据。**恢复默认**会把内置用例恢复原样，你自己写的不受影响。
-
-报告还有不花钱、也不发任何请求的另一半：直接读 Gateway 已经留下的记录，看这个上游到底表现如何 —— 缓存实际被
-计入了多少、有多少次请求失败、响应有多快、有多少跑过的模型还没有价格。
-
-一次探测会花掉该 Provider 一点点额度，具体花了多少就写在报告上。`providerProbeIntervalHours` 决定报告多久算过期，`providerProbeMode = "manual"` 表示只在手动触发时探测，`"off"` 表示从不探测。
+- **[查一查那个 Key 背后的 API 是不是真的](#杀手锏那个-key-背后的-api真是卖给你的那个吗)** —— 中转商可以偷偷换成便宜模型、伪造缓存命中，流量里根本看不出来。Authenticity 直接问上游，测出 A 到 F 的等级。
+- **[一个地方切换所有 Agent 的 API 供应商](#让-agent-的流量走-gateway)** —— 改一次 Key 或 base URL，接进 Gateway 的每个 Agent 都跟着换。
+- **[同一个 Agent 开多个实例](#接下来做什么)** —— 比如同时跑好几个 Claude Desktop，各自登录不同账号。
+- **[看到完整的请求，而不只是一个数字](#记录提示词)** —— 每一条 prompt、消息和工具 schema，都留在这台机器上。
+- **[统计每个 Agent 花了多少，包括没走 Gateway 的部分](#每个-agent-花了多少包括没走-gateway-的那部分)** —— 直接读 Agent 自己写的会话记录。
+- **[跨 Agent 对比、复制技能 / MCP / 提示词](#接下来做什么)** —— 一张表看到所有 Agent 装了什么。
 
 ## 界面预览
 
@@ -114,12 +85,29 @@ Gateway 会在自己的窗口里打开 —— 不用登录：它只服务本机�
 | **Sessions** | 这些 Agent 的每一次会话，从它们留在磁盘上的会话记录里读出来：完整的对话，一条一条。 | 无 |
 | **Activity** | 被监控的 Agent 正在做什么：每一次工具调用、调用的目标，以及耗时。 | 给某个 Agent 打开监控 |
 | **Providers** | 挡在模型厂商前面的统一入口。API Key 由 Gateway 持有，Agent 拿不到；也可以转发 Agent 自己的登录，什么都不持有。 | 一个厂商的 API Key，或者什么都不用 |
-| **Authenticity** | 每个 Provider 一个 100 分制的分数和一个等级，不用点按钮就会自动测出来 —— 见[上面那一节](#杀手锏那个-key-背后的-api真是卖给你的那个吗)。 | 一个带 API Key 的 Provider |
+| **Authenticity** | 每个 Provider 一个 100 分制的分数和一个等级，不用点按钮就会自动测出来 —— 见[下面这一节](#杀手锏那个-key-背后的-api真是卖给你的那个吗)。 | 一个带 API Key 的 Provider |
 | **LLM Records** | Agent 转发的每一次请求：完整的 system prompt、每一条消息和工具调用、模型可用的每个工具的 schema，以及 token 数和费用。 | 一个 Provider，以及 `llmRecordMode` —— 见[记录提示词](#记录提示词) |
 | **Usage** | 本机每个 Agent 花了多少：按时间、按模型、按 Agent 分别统计，数据来自 Agent 自己写的会话记录 —— 所以没走 Gateway 的请求也算得上。另一个页签是 Gateway 转发过的部分，那是唯一知道由哪个 Provider 作答、是否失败的账。 | 无 |
 | **Model pricing** | 每百万 Token 多少钱，Usage 页面上的每一个金额都由它算出来。可以手工改某个价格，也可以让 Gateway 按计划从 [models.dev](https://models.dev) 的目录给本机跑过的模型重新定价；你手工改过的价格不会被覆盖。 | 无 |
 
 Agent 是通过读取 **Gateway 所在机器**的用户账户、home 目录和安装路径发现的，所以要在你想观察的那台机器上运行它。
+
+### 杀手锏：那个 Key 背后的 API，真是卖给你的那个吗？
+
+中转商可以卖着前沿模型、跑着便宜模型，可以把缓存过的前缀当新输入计费，也可以假装自己会说某套 API。这些在流量里都看不出来，所以 **Authenticity** 直接去问上游。每个 Provider 都会被单独探测——加入时、端点/类型/密钥变更时、从未探测过时，以及报告过期后——测出来的是一个 100 分制的分数和一个 A 到 F 的等级，显示在 Authenticity 页面上，也显示在首页 Agent 列表的正上方。不用点按钮，也不用配置什么。
+
+[![Authenticity](https://cdn.casbin.org/img/casbin-gateway-authenticity.png)](https://cdn.casbin.org/img/casbin-gateway-authenticity.png)
+
+分数只是背后那些测试用例的汇总，而用例全都摆在页面上：作答的模型是不是点名的那个、强制调用时两层嵌套的工具 schema 能不能扛住、事件流里该有的事件是不是都到齐了、提示词缓存是不是真的在计费上体现出来、两个完全相同的请求计费是否一致、厂商自己的响应头在不在。每条用例都写明它问上游什么、实际发出去的请求长什么样、答案怎么判、占多少权重。
+
+[![测试用例](https://cdn.casbin.org/img/casbin-gateway-authenticity-cases.png)](https://cdn.casbin.org/img/casbin-gateway-authenticity-cases.png)
+
+可以改权重、停用、重写问题，也可以自己加一条——该问中转商什么，各家情况并不一样，而评分方法不公开就算不上证据。**恢复默认**会把内置用例恢复原样，你自己写的不受影响。
+
+报告还有不花钱、也不发任何请求的另一半：直接读 Gateway 已经留下的记录，看这个上游到底表现如何 —— 缓存实际被
+计入了多少、有多少次请求失败、响应有多快、有多少跑过的模型还没有价格。
+
+一次探测会花掉该 Provider 一点点额度，具体花了多少就写在报告上。`providerProbeIntervalHours` 决定报告多久算过期，`providerProbeMode = "manual"` 表示只在手动触发时探测，`"off"` 表示从不探测。
 
 ### 让 Agent 的流量走 Gateway
 
