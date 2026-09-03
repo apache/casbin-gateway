@@ -25,7 +25,6 @@ import (
 
 	"github.com/apache/casbin-gateway/agent"
 	"github.com/apache/casbin-gateway/agenthistory"
-	"github.com/apache/casbin-gateway/agenthome"
 	"github.com/apache/casbin-gateway/agentinstall"
 	"github.com/apache/casbin-gateway/agentmonitor"
 	"github.com/apache/casbin-gateway/agentpatch"
@@ -275,7 +274,7 @@ func (c *ApiController) GetAgentSessions() {
 			LastTime:    session.LastTime,
 		})
 	}
-	for _, session := range historicalSessions(agentId) {
+	for _, session := range object.HistoricalSessions(agentId) {
 		if seen[sessionSeenKey(session.Agent, session.SessionKey)] {
 			continue
 		}
@@ -304,7 +303,7 @@ func (c *ApiController) GetAgentSession() {
 		return
 	}
 
-	for _, session := range historicalSessions(agentId) {
+	for _, session := range object.HistoricalSessions(agentId) {
 		if session.SessionKey != sessionKey {
 			continue
 		}
@@ -345,39 +344,13 @@ func (c *ApiController) GetAgentUsage() {
 			since = time.Now().AddDate(0, 0, -(days - 1)).Format(time.DateOnly)
 		}
 	}
-	c.ResponseOk(object.GetAgentUsage(historicalSessions(c.Input().Get("agent")), since))
+	c.ResponseOk(object.GetAgentUsage(object.HistoricalSessions(c.Input().Get("agent")), since))
 }
 
 // sessionSeenKey identifies one session across the two sources, so a session
 // that monitoring already reported is not listed twice.
 func sessionSeenKey(agentId string, sessionKey string) string {
 	return agentId + "/" + sessionKey
-}
-
-// historicalSessions reads the transcripts of every account with an agent on
-// this machine. A home Gateway cannot open is skipped: the page lists what it
-// can read, and says nothing about the rest.
-func historicalSessions(agentId string) []agenthistory.Session {
-	installations, err := agent.Scan(false)
-	if err != nil {
-		return nil
-	}
-
-	sessions := []agenthistory.Session{}
-	scanned := map[string]bool{}
-	for _, installation := range installations {
-		home, err := agenthome.Resolve(installation.Owner)
-		if err != nil || scanned[home] {
-			continue
-		}
-		scanned[home] = true
-		for _, session := range agenthistory.Scan(home) {
-			if agentId == "" || strings.EqualFold(session.Agent, agentId) {
-				sessions = append(sessions, session)
-			}
-		}
-	}
-	return sessions
 }
 
 // AddAgentRecord accepts reports from a hook or MCP process launched locally by

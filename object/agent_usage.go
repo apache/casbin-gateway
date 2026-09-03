@@ -18,8 +18,36 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/apache/casbin-gateway/agent"
 	"github.com/apache/casbin-gateway/agenthistory"
+	"github.com/apache/casbin-gateway/agenthome"
 )
+
+// HistoricalSessions reads the transcripts of every account with an agent on
+// this machine. A home Gateway cannot open is skipped: the caller lists what it
+// can read, and says nothing about the rest.
+func HistoricalSessions(agentId string) []agenthistory.Session {
+	installations, err := agent.Scan(false)
+	if err != nil {
+		return nil
+	}
+
+	sessions := []agenthistory.Session{}
+	scanned := map[string]bool{}
+	for _, installation := range installations {
+		home, err := agenthome.Resolve(installation.Owner)
+		if err != nil || scanned[home] {
+			continue
+		}
+		scanned[home] = true
+		for _, session := range agenthistory.Scan(home) {
+			if agentId == "" || strings.EqualFold(session.Agent, agentId) {
+				sessions = append(sessions, session)
+			}
+		}
+	}
+	return sessions
+}
 
 // AgentUsageStat is what one agent, one model or one day spent. Which of the
 // three a stat counts is decided by the list it is in; Name is that key.

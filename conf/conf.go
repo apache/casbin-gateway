@@ -303,6 +303,17 @@ func GetAgentMonitorPollSeconds() int {
 	return res
 }
 
+// GetModelsDevSyncIntervalHours is how often an automatic models.dev sync runs.
+// The catalogue only changes when a vendor publishes a price, so once a day is
+// already more often than it has anything new to say.
+func GetModelsDevSyncIntervalHours() int {
+	res, err := strconv.Atoi(GetConfigString("modelsDevSyncIntervalHours"))
+	if err != nil || res <= 0 {
+		res = 24
+	}
+	return res
+}
+
 // How much of an LLM request Gateway retains.
 const (
 	LlmRecordOff      = "off"

@@ -13,22 +13,23 @@
 // limitations under the License.
 
 import * as React from "react";
-import {CircleDollarSign, CloudDownload, Pencil, Plus, RotateCcw, Trash2} from "lucide-react";
+import {CircleDollarSign, Pencil, Plus, RotateCcw, Trash2} from "lucide-react";
 import i18next from "i18next";
 
 import * as LlmPriceBackend from "@/backend/LlmPriceBackend";
 import * as Setting from "@/Setting";
+import {ModelsDevSyncPanel} from "@/components/usage/models-dev-sync-panel";
 import {PriceEditDialog} from "@/components/usage/price-edit-dialog";
 import {ConfirmDialog} from "@/components/shared/confirm-dialog";
 import {DataTable, type Column} from "@/components/shared/data-table";
 import {PageContainer, PageHeader} from "@/components/shared/page-header";
-import {CodeText, UnauthorizedResult} from "@/components/shared/misc";
+import {UnauthorizedResult} from "@/components/shared/misc";
 import {MessageAlert} from "@/components/ui/alert";
 import {Badge, type BadgeVariant} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {SimpleTooltip} from "@/components/ui/tooltip";
 import {formatRate} from "@/lib/usage";
-import type {Account, LlmPriceEntry, LlmPriceSource, LlmPriceView, ModelsDevSync} from "@/types";
+import type {Account, LlmPriceEntry, LlmPriceSource, LlmPriceView} from "@/types";
 
 const SOURCE_TONE: Record<LlmPriceSource, BadgeVariant> = {
   "built-in": "muted",
@@ -44,54 +45,11 @@ const SOURCE_LABEL: Record<LlmPriceSource, string> = {
   manual: "usage:Edited by hand",
 };
 
-/** What one sync did, in the order it is worth reading: what is still unpriced
- *  first, because those are the models the Usage page cannot cost. */
-function SyncReport({result, onDismiss}: {result: ModelsDevSync; onDismiss: () => void}) {
-  const line = (label: string, models: string[]) =>
-    models.length === 0 ? null : (
-      <div className="flex min-w-0 flex-wrap items-baseline gap-1.5">
-        <span className="shrink-0 text-xs font-medium">{i18next.t(label)}</span>
-        {models.map(model => (
-          <CodeText key={model}>{model}</CodeText>
-        ))}
-      </div>
-    );
-
-  return (
-    <MessageAlert
-      variant={result.missing.length > 0 ? "warning" : "success"}
-      title={i18next
-        .t("usage:Priced {updated} of {considered} models")
-        .replace("{updated}", String(result.updated.length))
-        .replace("{considered}", String(result.considered.length))}
-      description={
-        <div className="flex flex-col gap-2">
-          {line("usage:Still unpriced", result.missing)}
-          {line("usage:Left as edited", result.skipped)}
-          {line("usage:Updated", result.updated)}
-          <span className="text-xs">
-            {i18next
-              .t("usage:Read from a catalogue of {count} models")
-              .replace("{count}", result.catalogue.toLocaleString())}
-          </span>
-        </div>
-      }
-      action={
-        <Button size="sm" variant="ghost" onClick={onDismiss}>
-          {i18next.t("general:Close")}
-        </Button>
-      }
-    />
-  );
-}
-
 export default function PricingPage({account}: {account: Account}) {
   const isAdmin = Setting.isAdminUser(account);
   const [prices, setPrices] = React.useState<LlmPriceView[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
-  const [syncing, setSyncing] = React.useState(false);
-  const [sync, setSync] = React.useState<ModelsDevSync | null>(null);
   const [editing, setEditing] = React.useState<LlmPriceView | null>(null);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
@@ -148,22 +106,6 @@ export default function PricingPage({account}: {account: Account}) {
         }
       })
       .catch(failure => Setting.showMessage("error", `${i18next.t("general:Failed to delete")}: ${failure}`));
-
-  const runSync = () => {
-    setSyncing(true);
-    setSync(null);
-    LlmPriceBackend.syncModelsDevPrices()
-      .then(res => {
-        if (res.status === "ok" && res.data) {
-          setSync(res.data);
-          load();
-        } else {
-          Setting.showMessage("error", res.msg || i18next.t("general:Failed to get data"));
-        }
-      })
-      .catch(failure => Setting.showMessage("error", failure.message || String(failure)))
-      .then(() => setSyncing(false));
-  };
 
   const open = (price: LlmPriceView | null) => {
     setEditing(price);
@@ -260,21 +202,16 @@ export default function PricingPage({account}: {account: Account}) {
         title={i18next.t("usage:Model pricing")}
         description={i18next.t("usage:Model pricing description")}
         actions={
-          <>
-            <Button variant="outline" onClick={runSync} loading={syncing}>
-              <CloudDownload />
-              {i18next.t("usage:Sync from models.dev")}
-            </Button>
-            <Button onClick={() => open(null)}>
-              <Plus />
-              {i18next.t("usage:Add a price")}
-            </Button>
-          </>
+          <Button onClick={() => open(null)}>
+            <Plus />
+            {i18next.t("usage:Add a price")}
+          </Button>
         }
       />
 
       {error ? <MessageAlert title={error} /> : null}
-      {sync ? <SyncReport result={sync} onDismiss={() => setSync(null)} /> : null}
+
+      <ModelsDevSyncPanel onSynced={load} />
 
       <DataTable
         searchable

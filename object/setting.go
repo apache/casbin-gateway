@@ -44,6 +44,12 @@ type Setting struct {
 	// a few cents of the account's own credit, so it is one setting away.
 	ProviderProbeMode string `xorm:"varchar(20)" json:"providerProbeMode"`
 
+	// ModelsDevSyncMode is "auto" or "off", and the interval is how often an
+	// automatic sync runs. A sync only ever reprices models this machine has
+	// run, and never one that was priced by hand.
+	ModelsDevSyncMode          string `xorm:"varchar(20)" json:"modelsDevSyncMode"`
+	ModelsDevSyncIntervalHours int    `xorm:"int" json:"modelsDevSyncIntervalHours"`
+
 	AgentPatchStateDir      string `xorm:"varchar(500)" json:"agentPatchStateDir"`
 	AgentRecordCapacity     int    `xorm:"int" json:"agentRecordCapacity"`
 	AgentMonitorPollSeconds int    `xorm:"int" json:"agentMonitorPollSeconds"`
@@ -78,6 +84,9 @@ func SyncSettingToConf(setting *Setting) {
 		"llmPricingFile":           setting.LlmPricingFile,
 
 		"providerProbeMode": setting.ProviderProbeMode,
+
+		"modelsDevSyncMode":          setting.ModelsDevSyncMode,
+		"modelsDevSyncIntervalHours": strconv.Itoa(setting.ModelsDevSyncIntervalHours),
 
 		"agentPatchStateDir":      setting.AgentPatchStateDir,
 		"agentRecordCapacity":     strconv.Itoa(setting.AgentRecordCapacity),
@@ -185,6 +194,14 @@ func InitBuiltInSetting() {
 		}
 	}
 
+	if setting.ModelsDevSyncMode == "" {
+		setting.ModelsDevSyncMode = GetModelsDevSyncMode()
+		setting.ModelsDevSyncIntervalHours = conf.GetModelsDevSyncIntervalHours()
+		if _, err = ormer.Engine.ID(core.PK{setting.Owner, setting.Name}).Cols("models_dev_sync_mode", "models_dev_sync_interval_hours").Update(setting); err != nil {
+			panic(err)
+		}
+	}
+
 	SyncSettingToConf(setting)
 }
 
@@ -206,6 +223,9 @@ func newSettingFromConf() *Setting {
 		LlmPricingFile:           conf.GetLlmPricingFile(),
 
 		ProviderProbeMode: GetProviderProbeMode(),
+
+		ModelsDevSyncMode:          GetModelsDevSyncMode(),
+		ModelsDevSyncIntervalHours: conf.GetModelsDevSyncIntervalHours(),
 
 		AgentPatchStateDir:      conf.GetAgentPatchStateDir(),
 		AgentRecordCapacity:     conf.GetAgentRecordCapacity(),

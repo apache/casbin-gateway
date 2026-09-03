@@ -16,7 +16,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"sort"
 	"strings"
 
 	"github.com/apache/casbin-gateway/object"
@@ -105,7 +104,7 @@ func (c *ApiController) SyncModelsDevPrices() {
 		return
 	}
 
-	result, err := object.SyncModelsDevPrices(seenModels(), c.Input().Get("refresh") == "true")
+	result, err := object.RunModelsDevSync(c.Input().Get("refresh") == "true")
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -114,41 +113,58 @@ func (c *ApiController) SyncModelsDevPrices() {
 	c.ResponseOk(result)
 }
 
-// seenModels is every model name this machine has a record of running: the
-// relayed requests, the agents' own transcripts, and the models the configured
-// providers say they serve. A source that cannot be read contributes nothing
-// rather than failing the sync, which the other two can still be useful without.
-func seenModels() []string {
-	found := map[string]bool{}
-	add := func(name string) {
-		name = strings.ToLower(strings.TrimSpace(name))
-		if name != "" {
-			found[name] = true
-		}
+// GetModelsDevSync reports the schedule an automatic sync is on and what the
+// last run did, so the Pricing page can say when prices were last read and
+// which models the catalogue still cannot price.
+func (c *ApiController) GetModelsDevSync() {
+	if c.RequireAdmin() {
+		return
 	}
 
-	if models, err := object.GetSeenLlmModels(); err == nil {
-		for _, model := range models {
-			add(model)
-		}
+	c.ResponseOk(object.GetModelsDevSyncState())
+}
+
+// UpdateModelsDevSync turns the automatic sync on or off and sets how often it
+// runs. It writes the same two settings the Settings page would, so the choice
+// survives a restart.
+func (c *ApiController) UpdateModelsDevSync() {
+	if c.RequireAdmin() {
+		return
 	}
 
-	for _, stat := range object.GetAgentUsage(historicalSessions(""), "").Models {
-		add(stat.Name)
+	var request struct {
+		Mode          string `json:"mode"`
+		IntervalHours int    `json:"intervalHours"`
+	}
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &request); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if request.Mode != object.ModelsDevSyncAuto && request.Mode != object.ModelsDevSyncOff {
+		c.ResponseError("modelsDevSyncMode must be \"auto\" or \"off\"")
+		return
+	}
+	if request.IntervalHours <= 0 {
+		c.ResponseError("the sync interval must be at least one hour")
+		return
 	}
 
-	if providers, err := object.GetProviders(""); err == nil {
-		for _, provider := range providers {
-			for _, model := range provider.Models {
-				add(model)
-			}
-		}
+	setting, err := object.GetBuiltInSetting()
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if setting == nil {
+		c.ResponseError("the built-in setting does not exist")
+		return
 	}
 
-	models := make([]string, 0, len(found))
-	for model := range found {
-		models = append(models, model)
+	setting.ModelsDevSyncMode = request.Mode
+	setting.ModelsDevSyncIntervalHours = request.IntervalHours
+	if _, err := object.UpdateSetting(object.BuiltInSettingId, setting); err != nil {
+		c.ResponseError(err.Error())
+		return
 	}
-	sort.Strings(models)
-	return models
+
+	c.ResponseOk(object.GetModelsDevSyncState())
 }

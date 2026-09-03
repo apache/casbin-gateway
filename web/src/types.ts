@@ -392,6 +392,22 @@ export interface ModelsDevModel {
   cacheWrite: number;
 }
 
+/** Whether the catalogue is read on a schedule. */
+export type ModelsDevSyncMode = "auto" | "off";
+
+/** The schedule an automatic sync is on, and what the last run did. Held in
+ *  memory by the process, so it is empty again after a restart. */
+export interface ModelsDevSyncState {
+  mode: ModelsDevSyncMode;
+  intervalHours: number;
+  running: boolean;
+  syncedTime: string;
+  /** When the schedule runs again, empty when nothing is scheduled. */
+  nextTime: string;
+  error: string;
+  result: ModelsDevSync | null;
+}
+
 /** What one models.dev sync did. `missing` is the half that matters: those are
  *  the models still costing nothing. */
 export interface ModelsDevSync {
@@ -614,6 +630,9 @@ export interface Setting {
   llmPricingFile: string;
 
   providerProbeMode: ProviderProbeMode;
+
+  modelsDevSyncMode: ModelsDevSyncMode;
+  modelsDevSyncIntervalHours: number;
 
   agentPatchStateDir: string;
   agentRecordCapacity: number;

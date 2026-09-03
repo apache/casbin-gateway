@@ -13,7 +13,14 @@
 // limitations under the License.
 
 import {query, request} from "@/backend/request";
-import type {LlmPriceEntry, LlmPriceView, ModelsDevModel, ModelsDevSync} from "@/types";
+import type {
+  LlmPriceEntry,
+  LlmPriceView,
+  ModelsDevModel,
+  ModelsDevSync,
+  ModelsDevSyncMode,
+  ModelsDevSyncState,
+} from "@/types";
 
 /** Every price in effect, built-in ones included, each with the layer it came from. */
 export function getLlmPrices() {
@@ -46,4 +53,17 @@ export function syncModelsDevPrices(refresh = true) {
     `/api/sync-models-dev-prices${query({refresh: refresh ? "true" : ""})}`,
     "POST",
   );
+}
+
+/** The schedule an automatic sync is on, and what the last run did. */
+export function getModelsDevSync() {
+  return request<ModelsDevSyncState>("/api/get-models-dev-sync");
+}
+
+/** Turns the automatic sync on or off and sets how often it runs. */
+export function updateModelsDevSync(mode: ModelsDevSyncMode, intervalHours: number) {
+  return request<ModelsDevSyncState>("/api/update-models-dev-sync", "POST", {
+    mode: mode,
+    intervalHours: intervalHours,
+  });
 }
