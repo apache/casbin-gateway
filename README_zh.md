@@ -20,6 +20,54 @@
   <a href="https://cdn.casbin.org/img/casbin-gateway.gif"><img alt="Casbin Gateway" src="https://cdn.casbin.org/img/casbin-gateway.gif" width="900"></a>
 </p>
 
+<p align="center"><b>机器上的每一个编程 Agent</b></p>
+<p align="center">
+  <a href="https://claude.com" title="Claude Code"><img src="https://www.google.com/s2/favicons?domain=claude.com&sz=64" width="30" height="30" alt="Claude Code"></a>
+  <a href="https://claude.ai" title="Claude Desktop"><img src="https://www.google.com/s2/favicons?domain=claude.ai&sz=64" width="30" height="30" alt="Claude Desktop"></a>
+  <a href="https://openai.com" title="Codex / Codex CLI"><img src="https://www.google.com/s2/favicons?domain=openai.com&sz=64" width="30" height="30" alt="Codex"></a>
+  <a href="https://gemini.google.com" title="Gemini CLI"><img src="https://www.google.com/s2/favicons?domain=gemini.google.com&sz=64" width="30" height="30" alt="Gemini CLI"></a>
+  <a href="https://cursor.com" title="Cursor / Cursor Agent"><img src="https://www.google.com/s2/favicons?domain=cursor.com&sz=64" width="30" height="30" alt="Cursor"></a>
+  <a href="https://windsurf.com" title="Windsurf"><img src="https://www.google.com/s2/favicons?domain=windsurf.com&sz=64" width="30" height="30" alt="Windsurf"></a>
+  <a href="https://opencode.ai" title="opencode / opencode Desktop"><img src="https://www.google.com/s2/favicons?domain=opencode.ai&sz=64" width="30" height="30" alt="opencode"></a>
+  <a href="https://openagentai.org" title="OpenAgent"><img src="https://www.google.com/s2/favicons?domain=openagentai.org&sz=64" width="30" height="30" alt="OpenAgent"></a>
+  <a href="https://openclaw.ai" title="OpenClaw"><img src="https://www.google.com/s2/favicons?domain=openclaw.ai&sz=64" width="30" height="30" alt="OpenClaw"></a>
+  <a href="https://nousresearch.com" title="Hermes Agent"><img src="https://www.google.com/s2/favicons?domain=nousresearch.com&sz=64" width="30" height="30" alt="Hermes Agent"></a>
+  <a href="https://deepseek.com" title="DeepSeek Harness"><img src="https://www.google.com/s2/favicons?domain=deepseek.com&sz=64" width="30" height="30" alt="DeepSeek Harness"></a>
+</p>
+
+<p align="center"><b>一个入口对接任意模型厂商</b></p>
+<p align="center">
+  <a href="https://openai.com" title="OpenAI"><img src="https://www.google.com/s2/favicons?domain=openai.com&sz=64" width="28" height="28" alt="OpenAI"></a>
+  <a href="https://anthropic.com" title="Anthropic"><img src="https://www.google.com/s2/favicons?domain=anthropic.com&sz=64" width="28" height="28" alt="Anthropic"></a>
+  <a href="https://gemini.google.com" title="Google Gemini"><img src="https://www.google.com/s2/favicons?domain=gemini.google.com&sz=64" width="28" height="28" alt="Google Gemini"></a>
+  <a href="https://x.ai" title="xAI"><img src="https://www.google.com/s2/favicons?domain=x.ai&sz=64" width="28" height="28" alt="xAI"></a>
+  <a href="https://mistral.ai" title="Mistral"><img src="https://www.google.com/s2/favicons?domain=mistral.ai&sz=64" width="28" height="28" alt="Mistral"></a>
+  <a href="https://cohere.com" title="Cohere"><img src="https://www.google.com/s2/favicons?domain=cohere.com&sz=64" width="28" height="28" alt="Cohere"></a>
+  <a href="https://perplexity.ai" title="Perplexity"><img src="https://www.google.com/s2/favicons?domain=perplexity.ai&sz=64" width="28" height="28" alt="Perplexity"></a>
+  <a href="https://deepseek.com" title="DeepSeek"><img src="https://www.google.com/s2/favicons?domain=deepseek.com&sz=64" width="28" height="28" alt="DeepSeek"></a>
+  <a href="https://moonshot.cn" title="Moonshot"><img src="https://www.google.com/s2/favicons?domain=moonshot.cn&sz=64" width="28" height="28" alt="Moonshot"></a>
+  <a href="https://open.bigmodel.cn" title="Zhipu GLM"><img src="https://www.google.com/s2/favicons?domain=bigmodel.cn&sz=64" width="28" height="28" alt="Zhipu GLM"></a>
+  <a href="https://dashscope.aliyuncs.com" title="Qwen"><img src="https://www.google.com/s2/favicons?domain=aliyun.com&sz=64" width="28" height="28" alt="Qwen"></a>
+  <a href="https://minimaxi.com" title="MiniMax"><img src="https://www.google.com/s2/favicons?domain=minimaxi.com&sz=64" width="28" height="28" alt="MiniMax"></a>
+  <a href="https://baichuan-ai.com" title="Baichuan"><img src="https://www.google.com/s2/favicons?domain=baichuan-ai.com&sz=64" width="28" height="28" alt="Baichuan"></a>
+  <a href="https://stepfun.com" title="StepFun"><img src="https://www.google.com/s2/favicons?domain=stepfun.com&sz=64" width="28" height="28" alt="StepFun"></a>
+  <a href="https://volcengine.com" title="Volcengine Ark"><img src="https://www.google.com/s2/favicons?domain=volcengine.com&sz=64" width="28" height="28" alt="Volcengine Ark"></a>
+  <a href="https://cloud.tencent.com" title="Tencent Hunyuan"><img src="https://www.google.com/s2/favicons?domain=cloud.tencent.com&sz=64" width="28" height="28" alt="Tencent Hunyuan"></a>
+  <a href="https://baidu.com" title="Baidu ERNIE"><img src="https://www.google.com/s2/favicons?domain=baidu.com&sz=64" width="28" height="28" alt="Baidu ERNIE"></a>
+  <a href="https://lingyiwanwu.com" title="01.AI"><img src="https://www.google.com/s2/favicons?domain=lingyiwanwu.com&sz=64" width="28" height="28" alt="01.AI"></a>
+  <a href="https://siliconflow.cn" title="SiliconFlow"><img src="https://www.google.com/s2/favicons?domain=siliconflow.cn&sz=64" width="28" height="28" alt="SiliconFlow"></a>
+  <a href="https://groq.com" title="Groq"><img src="https://www.google.com/s2/favicons?domain=groq.com&sz=64" width="28" height="28" alt="Groq"></a>
+  <a href="https://together.ai" title="Together AI"><img src="https://www.google.com/s2/favicons?domain=together.ai&sz=64" width="28" height="28" alt="Together AI"></a>
+  <a href="https://fireworks.ai" title="Fireworks AI"><img src="https://www.google.com/s2/favicons?domain=fireworks.ai&sz=64" width="28" height="28" alt="Fireworks AI"></a>
+  <a href="https://novita.ai" title="Novita AI"><img src="https://www.google.com/s2/favicons?domain=novita.ai&sz=64" width="28" height="28" alt="Novita AI"></a>
+  <a href="https://deepinfra.com" title="DeepInfra"><img src="https://www.google.com/s2/favicons?domain=deepinfra.com&sz=64" width="28" height="28" alt="DeepInfra"></a>
+  <a href="https://modelscope.cn" title="ModelScope"><img src="https://www.google.com/s2/favicons?domain=modelscope.cn&sz=64" width="28" height="28" alt="ModelScope"></a>
+  <a href="https://ppinfra.com" title="PPIO"><img src="https://www.google.com/s2/favicons?domain=ppinfra.com&sz=64" width="28" height="28" alt="PPIO"></a>
+  <a href="https://openrouter.ai" title="OpenRouter"><img src="https://www.google.com/s2/favicons?domain=openrouter.ai&sz=64" width="28" height="28" alt="OpenRouter"></a>
+  <a href="https://aihubmix.com" title="AiHubMix"><img src="https://www.google.com/s2/favicons?domain=aihubmix.com&sz=64" width="28" height="28" alt="AiHubMix"></a>
+  <a href="https://302.ai" title="302.AI"><img src="https://www.google.com/s2/favicons?domain=302.ai&sz=64" width="28" height="28" alt="302.AI"></a>
+</p>
+
 ## 功能特性
 
 - **[查一查那个 Key 背后的 API 是不是真的](#杀手锏那个-key-背后的-api真是卖给你的那个吗)** —— 中转商可以偷偷换成便宜模型、伪造缓存命中，流量里根本看不出来。Authenticity 直接问上游，测出 A 到 F 的等级。
@@ -39,7 +87,7 @@
 | 每个 Agent 花了多少 | 每个模型厂商一个入口 |
 | :---: | :---: |
 | [![用量](https://cdn.casbin.org/img/casbin-gateway-usage.png)](https://cdn.casbin.org/img/casbin-gateway-usage.png) | [![新建 Provider](https://cdn.casbin.org/img/casbin-gateway-new-provider.png)](https://cdn.casbin.org/img/casbin-gateway-new-provider.png) |
-| 从 Agent 自己写的会话记录里读出来，所以没走 Gateway 的请求也一样算得上 | 27 个厂商预设，或任何 OpenAI / Anthropic 兼容的 base URL |
+| 从 Agent 自己写的会话记录里读出来，所以没走 Gateway 的请求也一样算得上 | 44 个厂商预设，或任何 OpenAI / Anthropic 兼容的 base URL |
 
 | Agent 转发过的每一个请求 | 完整的请求，而不只是一个计数 |
 | :---: | :---: |
