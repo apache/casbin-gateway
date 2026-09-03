@@ -216,6 +216,9 @@ export function DataTable<T>({
     getPaginationRowModel: browserPaginates ? getPaginationRowModel() : undefined,
     manualSorting: serverSorted,
     getRowId: (record, index) => resolveRowKey(rowKey, record, index),
+    // Pages that poll hand over a fresh array every few seconds, which would
+    // otherwise throw the reader back to page 1 mid-read.
+    autoResetPageIndex: false,
     // The default filter only sees accessor values, which would silently skip
     // display columns. Matching the whole record keeps a search for a nested
     // field working the way a reader expects.
@@ -237,6 +240,21 @@ export function DataTable<T>({
     ? Math.max(1, Math.ceil(serverPagination.total / Math.max(1, serverPagination.pageSize)))
     : table.getPageCount();
   const showPagination = serverPagination ? total > currentPageSize || currentPage > 1 : browserPaginates && total > pageSize;
+
+  const pageIndex = table.getState().pagination.pageIndex;
+
+  React.useEffect(() => {
+    if (browserPaginates) {
+      table.setPageIndex(0);
+    }
+  }, [browserPaginates, globalFilter, table]);
+
+  // The rows behind the current page can go away while it is open.
+  React.useEffect(() => {
+    if (browserPaginates && pageIndex > 0 && pageIndex >= pageCount) {
+      table.setPageIndex(Math.max(0, pageCount - 1));
+    }
+  }, [browserPaginates, pageCount, pageIndex, table]);
 
   const goTo = (nextPage: number) => {
     if (serverPagination) {

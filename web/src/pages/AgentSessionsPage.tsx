@@ -27,20 +27,27 @@ import {SimpleTooltip} from "@/components/ui/tooltip";
 import {MessageAlert} from "@/components/ui/alert";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
+import {Label} from "@/components/ui/label";
+import {Switch} from "@/components/ui/switch";
 import type {Account, AgentSession} from "@/types";
 
 export default function AgentSessionsPage({account}: {account: Account}) {
   const [sessions, setSessions] = React.useState<AgentSession[]>([]);
   const [error, setError] = React.useState("");
   const [loading, setLoading] = React.useState(false);
+  const [autoRefresh, setAutoRefresh] = React.useState(true);
   const isAdmin = Setting.isAdminUser(account);
 
-  const load = React.useCallback(() => {
+  // The poll below runs every few seconds and must not spin the refresh button
+  // or blank the rows the operator is reading.
+  const load = React.useCallback((foreground = true) => {
     if (!isAdmin) {
       return;
     }
 
-    setLoading(true);
+    if (foreground) {
+      setLoading(true);
+    }
     AgentBackend.getAgentSessions()
       .then(res => {
         if (res.status === "ok") {
@@ -51,7 +58,11 @@ export default function AgentSessionsPage({account}: {account: Account}) {
         }
       })
       .catch(err => setError(err.message || String(err)))
-      .then(() => setLoading(false));
+      .then(() => {
+        if (foreground) {
+          setLoading(false);
+        }
+      });
   }, [isAdmin]);
 
   React.useEffect(() => {
@@ -59,10 +70,13 @@ export default function AgentSessionsPage({account}: {account: Account}) {
       return undefined;
     }
 
-    load();
-    const interval = setInterval(load, 3000);
+    load(true);
+    if (!autoRefresh) {
+      return undefined;
+    }
+    const interval = setInterval(() => load(false), 3000);
     return () => clearInterval(interval);
-  }, [isAdmin, load]);
+  }, [autoRefresh, isAdmin, load]);
 
   if (!isAdmin) {
     return <UnauthorizedResult />;
@@ -160,10 +174,16 @@ export default function AgentSessionsPage({account}: {account: Account}) {
         emptyIcon={MessageSquare}
         emptyText={i18next.t("agent:No agent sessions yet")}
         toolbar={
-          <Button variant="outline" size="sm" onClick={load} loading={loading}>
-            <RefreshCw />
-            {i18next.t("general:Refresh")}
-          </Button>
+          <>
+            <Label className="text-sm font-normal">
+              <Switch checked={autoRefresh} onCheckedChange={setAutoRefresh} />
+              {i18next.t("agent:Auto refresh")}
+            </Label>
+            <Button variant="outline" size="sm" onClick={() => load(true)} loading={loading}>
+              <RefreshCw />
+              {i18next.t("general:Refresh")}
+            </Button>
+          </>
         }
       />
     </PageContainer>
