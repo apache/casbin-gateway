@@ -649,18 +649,24 @@ func (probe *providerProbe) ok() bool {
 	return probe.statusCode >= 200 && probe.statusCode < 300
 }
 
+// checkProviderTarget rejects what cannot be asked anything at all, so an
+// unsupported type or an unusable base URL is reported as itself rather than as
+// whatever the request layer makes of it.
+func checkProviderTarget(provider *Provider) error {
+	if !IsProviderTypeSupported(provider) {
+		return fmt.Errorf("the %s provider type is not supported", provider.Type)
+	}
+	if provider.BaseUrl == "" {
+		return errors.New("the base URL is empty")
+	}
+	return validateBaseUrl(provider.BaseUrl)
+}
+
 // probeProvider performs the read-only GET against the provider's models
 // endpoint. The provider is used as given rather than read back from the
 // database, so a provider that is not saved yet can be probed too.
 func probeProvider(provider *Provider) (*providerProbe, error) {
-	if !IsProviderTypeSupported(provider) {
-		return nil, fmt.Errorf("the %s provider type is not supported", provider.Type)
-	}
-
-	if provider.BaseUrl == "" {
-		return nil, errors.New("the base URL is empty")
-	}
-	if err := validateBaseUrl(provider.BaseUrl); err != nil {
+	if err := checkProviderTarget(provider); err != nil {
 		return nil, err
 	}
 
@@ -713,18 +719,48 @@ func probeProvider(provider *Provider) (*providerProbe, error) {
 	return &providerProbe{statusCode: resp.StatusCode, status: resp.Status, body: body}, nil
 }
 
-// TestProviderConnectivity performs a read-only probe against the provider's
-// upstream. It returns whether the probe succeeded, the upstream HTTP status
-// code (0 when no response was received) and a human-readable message. The
-// provider is probed as given, so a form can be checked before it is saved.
+// testCompletionMaxTokens is the shortest answer worth asking for: what is
+// being checked is that the model answers, not what it says.
+const testCompletionMaxTokens = 16
+
+// TestProviderConnectivity checks that the provider can actually serve a
+// completion. It returns whether it did, the upstream HTTP status code (0 when
+// no response was received) and a human-readable message. The provider is used
+// as given, so a form can be checked before it is saved.
+//
+// A models list is not enough to answer this: a vendor that lists a model it
+// will not serve - or serves only under another name, as the endpoint-id
+// vendors do - answers that list exactly like one that works, and the person
+// filling in the form finds out at the first real request instead.
 func TestProviderConnectivity(provider *Provider) (bool, int, string) {
+	if err := checkProviderTarget(provider); err != nil {
+		return false, 0, err.Error()
+	}
+
+	// A client-auth provider carries no credential of its own, so a completion
+	// would only ever measure the missing key. All that can be checked is that
+	// the endpoint is there.
+	if UsesClientAuth(provider) || provider.ApiKey == "" {
+		return testProviderReachable(provider)
+	}
+
+	model, err := probeModelOf(provider)
+	if err != nil {
+		return false, 0, err.Error()
+	}
+	return testProviderCompletion(provider, model)
+}
+
+// testProviderReachable is the read-only GET against the models endpoint, which
+// is all there is to ask when there is no key to ask with.
+func testProviderReachable(provider *Provider) (bool, int, string) {
 	probe, err := probeProvider(provider)
 	if err != nil {
 		return false, 0, err.Error()
 	}
 
-	// A client-auth provider has no key to probe with, so an upstream that
-	// rejects the unauthenticated probe has still proven it is reachable.
+	// An upstream that rejects the unauthenticated probe has still proven it is
+	// reachable, which is the whole of what a client-auth provider can show.
 	if UsesClientAuth(provider) && (probe.statusCode == http.StatusUnauthorized || probe.statusCode == http.StatusForbidden) {
 		return true, probe.statusCode, "reachable, and authenticated with the caller's own credentials"
 	}
@@ -733,6 +769,40 @@ func TestProviderConnectivity(provider *Provider) (bool, int, string) {
 		return false, probe.statusCode, probe.status + probeDetail(probe.body)
 	}
 	return true, probe.statusCode, probe.status
+}
+
+// testProviderCompletion asks the model the shortest question its API defines.
+func testProviderCompletion(provider *Provider, model string) (bool, int, string) {
+	body := map[string]any{
+		"model":      model,
+		"max_tokens": testCompletionMaxTokens,
+		"messages":   []any{map[string]any{"role": "user", "content": probeStreamPrompt}},
+	}
+
+	answer, err := sendProbe(provider, body, false)
+	if err != nil {
+		var urlErr *url.Error
+		if errors.As(err, &urlErr) {
+			err = urlErr.Err
+		}
+		return false, 0, err.Error()
+	}
+
+	// An error envelope is read before the status code: several vendors answer
+	// a refused model with 200 and the reason in the body.
+	if _, message := readProbeError(answer.body); message != "" {
+		return false, answer.status, model + " was refused" + probeDetail([]byte(message))
+	}
+	if !answer.ok() {
+		return false, answer.status, model + " was refused" + probeDetail(answer.body)
+	}
+
+	parsed := probeBody{}
+	if err := json.Unmarshal(answer.body, &parsed); err != nil ||
+		(parsed.Model == "" && len(parsed.Choices) == 0 && len(parsed.Content) == 0) {
+		return false, answer.status, model + " did not answer with a completion" + probeDetail(answer.body)
+	}
+	return true, answer.status, model + " answered"
 }
 
 // FetchProviderModels lists what the provider's upstream reports at its models

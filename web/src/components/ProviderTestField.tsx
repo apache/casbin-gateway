@@ -40,19 +40,20 @@ export function testMessage(result: ProviderTestResult) {
 }
 
 /**
- * The connectivity probe behind both provider forms. The probe is a read-only
- * GET against the upstream's models endpoint, so it costs nothing and answers
- * the one question a new provider raises: does this key work.
+ * The connectivity probe behind both provider forms. It asks the first model
+ * for one short answer, because that is the question a new provider raises:
+ * not whether the endpoint is there, but whether it will serve the model that
+ * requests are going to be routed to.
  */
 export function useProviderTest(provider: Provider | null | undefined): ProviderTest {
   const [testing, setTesting] = React.useState(false);
   const [result, setResult] = React.useState<ProviderTestResult | null>(null);
   const [overridden, setOverridden] = React.useState(false);
 
-  // The answer belongs to one upstream and one key, so it stops being an answer
-  // as soon as either changes.
+  // The answer belongs to one upstream, one key and the model that was asked,
+  // so it stops being an answer as soon as any of them changes.
   const identity = provider
-    ? `${provider.type}|${provider.baseUrl}|${provider.apiKey}|${provider.authMode}`
+    ? `${provider.type}|${provider.baseUrl}|${provider.apiKey}|${provider.authMode}|${(provider.models ?? []).join(",")}`
     : "";
   React.useEffect(() => {
     setResult(null);
