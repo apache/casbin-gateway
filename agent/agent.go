@@ -23,6 +23,9 @@ type Installation struct {
 	Path          string `json:"path"`
 	InstallMethod string `json:"installMethod"`
 	Owner         string `json:"owner"`
+	// Account is the cloud account signed in to this agent, when one can be read
+	// from its own state. Nil for an agent that stores no account, or none yet.
+	Account *Account `json:"account,omitempty"`
 }
 
 // Known is one agent Gateway can detect, whether or not it is installed here.

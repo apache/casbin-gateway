@@ -18,6 +18,7 @@
     "Username": "Username"
   },
   "agent": {
+    "Account": "Account",
     "Advanced view": "Advanced view",
     "Advanced view hint": "Every installation found, with its processes, path, owner and install method.",
     "Agent": "Agent",

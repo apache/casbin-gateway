@@ -23,6 +23,7 @@ import * as ProviderBackend from "@/backend/ProviderBackend";
 import * as LlmRecordBackend from "@/backend/LlmRecordBackend";
 import * as Setting from "@/Setting";
 import {AgentIcon} from "@/components/AgentIcon";
+import {accountLabel} from "@/components/AgentGridCard";
 import {RunBadge, RunButton} from "@/components/AgentRunControl";
 import {InstallOutput, ToolUpgradeConfirmDialog} from "@/components/ToolUpgradeConfirmDialog";
 import {DataTable, type Column} from "@/components/shared/data-table";
@@ -496,6 +497,21 @@ export default function AgentDetailPage({account}: {account: Account}) {
               </span>
             </InfoRow>
             <InfoRow label={i18next.t("general:Owner")}>{agent.owner}</InfoRow>
+            {agent.account && accountLabel(agent.account) ? (
+              <InfoRow label={i18next.t("agent:Account")}>
+                <span className="flex flex-wrap items-center gap-2">
+                  <span>{accountLabel(agent.account)}</span>
+                  {agent.account.email && agent.account.email !== accountLabel(agent.account) ? (
+                    <code className="text-muted-foreground text-xs">{agent.account.email}</code>
+                  ) : null}
+                  {agent.account.plan ? (
+                    <Badge variant="muted" className="capitalize">
+                      {agent.account.plan}
+                    </Badge>
+                  ) : null}
+                </span>
+              </InfoRow>
+            ) : null}
             <InfoRow label={i18next.t("general:Path")}>
               <span className="flex items-start gap-1">
                 <code className="min-w-0 flex-1 text-xs">{agent.path}</code>

@@ -71,7 +71,9 @@ func scan(ctx context.Context) []Installation {
 	// Last, so that an agent found both on disk and by its port keeps the
 	// richer install-layout row when the two resolve to the same executable.
 	installations = append(installations, scanLocalServers(ctx)...)
-	return expandSharedCodexInstallations(dedupeInstallations(installations), homes)
+	result := expandSharedCodexInstallations(dedupeInstallations(installations), homes)
+	fillAccounts(result, homes)
+	return result
 }
 
 func readHomes(passwdPath string) []homeDir {

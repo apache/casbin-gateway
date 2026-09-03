@@ -128,6 +128,13 @@ export interface AgentProviderConfig {
   current: string;
 }
 
+/** The cloud account an agent is signed in to, read from its own state. */
+export interface AgentAccount {
+  email?: string;
+  name?: string;
+  plan?: string;
+}
+
 export interface Agent {
   agentId: string;
   name: string;
@@ -135,6 +142,8 @@ export interface Agent {
   installMethod: string;
   owner: string;
   path: string;
+  /** The account signed in to this agent, absent when none can be read. */
+  account?: AgentAccount;
   supported: boolean;
   patched: boolean;
   detail?: string;

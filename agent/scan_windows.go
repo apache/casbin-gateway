@@ -85,6 +85,7 @@ func scan(ctx context.Context) []Installation {
 			installations[i].Version = executableVersion(installations[i].Path)
 		}
 	}
+	fillAccounts(installations, homes)
 	return installations
 }
 

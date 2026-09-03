@@ -14,7 +14,7 @@
 
 import * as React from "react";
 import {Link} from "react-router-dom";
-import {Bot, ChevronRight} from "lucide-react";
+import {Bot, ChevronRight, UserRound} from "lucide-react";
 import i18next from "i18next";
 
 import {AgentIcon} from "@/components/AgentIcon";
@@ -47,6 +47,7 @@ import {providerIdOf, providerProtocol} from "@/lib/providers";
 import {formatCost, formatTokens} from "@/lib/usage";
 import type {
   Agent,
+  AgentAccount,
   AgentRuntime,
   AgentUsageStat,
   LlmAgentStat,
@@ -86,6 +87,29 @@ function Metric({
         shown
       )}
     </div>
+  );
+}
+
+/** The label for a signed-in account: its name, or its email when unnamed. */
+export function accountLabel(account: AgentAccount) {
+  return account.name || account.email || "";
+}
+
+/** The signed-in account of an agent, shown under its path. */
+function AccountLine({account}: {account?: AgentAccount}) {
+  const label = account ? accountLabel(account) : "";
+  if (!label) {
+    return null;
+  }
+  const title = account?.email && account.email !== label ? `${label} · ${account.email}` : label;
+
+  return (
+    <SimpleTooltip title={title}>
+      <p className="text-muted-foreground mt-0.5 flex items-center gap-1 truncate text-xs">
+        <UserRound className="size-3 shrink-0" />
+        <span className="truncate">{label}</span>
+      </p>
+    </SimpleTooltip>
   );
 }
 
@@ -208,6 +232,7 @@ export function AgentGridCard({
             <SimpleTooltip title={agent.path}>
               <p className="text-muted-foreground truncate font-mono text-xs">{agent.path}</p>
             </SimpleTooltip>
+            <AccountLine account={agent.account} />
           </div>
           <RunBadge status={status} />
         </div>

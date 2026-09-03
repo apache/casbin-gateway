@@ -18,6 +18,7 @@
     "Username": "用户名"
   },
   "agent": {
+    "Account": "账户",
     "Advanced view": "高级视图",
     "Advanced view hint": "扫描到的每个安装，含进程、路径、所有者和安装方式。",
     "Agent": "智能体",
