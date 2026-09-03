@@ -19,6 +19,7 @@ import {ConfirmDialog} from "@/components/shared/confirm-dialog";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {SimpleTooltip} from "@/components/ui/tooltip";
+import {cn} from "@/lib/utils";
 import type {Agent, AgentRuntime} from "@/types";
 
 /** Whether the installation has live processes, with its pids on hover. */
@@ -45,6 +46,32 @@ export function RunBadge({status}: {status?: AgentRuntime}) {
 }
 
 /**
+ * The same state as a dot, for the cards, where a filled badge shouts and there
+ * is no width for a word. The button below it says which of the two it is in
+ * full, so the dot is the glance rather than the only telling.
+ */
+export function RunDot({status}: {status?: AgentRuntime}) {
+  if (!status) {
+    return null;
+  }
+  const state = i18next.t(status.running ? "agent:Running" : "agent:Stopped");
+  const detail = status.running
+    ? `${i18next.t("agent:Processes")}: ${status.pids.join(", ")}`
+    : status.detail;
+
+  return (
+    <SimpleTooltip title={detail ? `${state} · ${detail}` : state}>
+      <span
+        className={cn(
+          "mt-1.5 size-1.5 shrink-0 rounded-full",
+          status.running ? "bg-success ring-success/20 ring-2" : "bg-muted-foreground/40",
+        )}
+      />
+    </SimpleTooltip>
+  );
+}
+
+/**
  * The start/stop control. Starting is harmless enough to happen on the click,
  * while stopping ends work in progress and is confirmed first.
  */
@@ -52,11 +79,14 @@ export function RunButton({
   agent,
   status,
   busy,
+  className,
   onToggle,
 }: {
   agent: Agent;
   status?: AgentRuntime;
   busy: boolean;
+  /** The cards run it smaller than a table row does. */
+  className?: string;
   onToggle: (agent: Agent, running: boolean) => void;
 }) {
   if (status?.running) {
@@ -67,7 +97,7 @@ export function RunButton({
         confirmText={i18next.t("agent:Stop")}
         onConfirm={() => onToggle(agent, true)}
       >
-        <Button size="sm" variant="outline" loading={busy}>
+        <Button size="sm" variant="outline" className={className} loading={busy}>
           <Square />
           {i18next.t("agent:Stop")}
         </Button>
@@ -82,6 +112,7 @@ export function RunButton({
         <Button
           size="sm"
           variant="outline"
+          className={className}
           disabled={!startable}
           loading={busy}
           onClick={() => onToggle(agent, false)}

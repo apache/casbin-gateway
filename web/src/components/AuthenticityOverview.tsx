@@ -45,10 +45,10 @@ function ProviderScore({provider, probe}: {provider: Provider; probe?: ProviderP
   const name = provider.displayName || provider.name;
 
   return (
-    <div className="flex min-w-0 items-center gap-2 rounded-lg border px-3 py-2">
-      <ProviderIcon icon={provider.icon} baseUrl={provider.baseUrl} alt={name} size={18} />
-      <span className="truncate text-sm">{name}</span>
-      <div className="ml-auto flex shrink-0 items-center gap-2">
+    <div className="hover:border-foreground/20 flex min-w-0 items-center gap-2 rounded-lg border px-2.5 py-1.5 transition-colors">
+      <ProviderIcon icon={provider.icon} baseUrl={provider.baseUrl} alt={name} size={16} />
+      <span className="truncate text-xs">{name}</span>
+      <div className="ml-auto flex shrink-0 items-center gap-1.5">
         {alerts.length > 0 ? (
           <Badge variant="danger">{fill("audit:Failed cases", {count: alerts.length})}</Badge>
         ) : warnings.length > 0 ? (
@@ -123,21 +123,21 @@ export function AuthenticityOverview({
   }
 
   return (
-    <Card className={className}>
-      <CardContent className="flex flex-col gap-4 p-4">
-        <div className="flex flex-wrap items-center gap-4">
-          <ScoreDial probe={worst} size={88} />
-          <div className="flex min-w-0 flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className={cn("size-4", style.text)} />
-              <span className="text-sm font-semibold">{i18next.t("audit:Authenticity")}</span>
+    <Card className={cn("gap-0 py-0 shadow-xs", className)}>
+      <CardContent className="flex flex-col gap-3 p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <ScoreDial probe={worst} size={56} />
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck className={cn("size-3.5", style.text)} />
+              <span className="text-sm font-medium">{i18next.t("audit:Authenticity")}</span>
             </div>
-            <span className={cn("text-sm", style.text)}>
+            <span className={cn("text-xs", style.text)}>
               {summary.graded === 0
                 ? i18next.t(mode === "off" ? "audit:Probing is off" : "audit:Measuring now")
                 : i18next.t(style.verdict)}
             </span>
-            <span className="text-muted-foreground text-xs">
+            <span className="text-muted-foreground text-[11px]">
               {fill("audit:Graded providers", {
                 graded: summary.graded,
                 total: configured.length,
@@ -148,7 +148,7 @@ export function AuthenticityOverview({
           </div>
 
           {showLink ? (
-            <Button asChild variant="outline" className="ml-auto">
+            <Button asChild variant="outline" size="sm" className="ml-auto">
               <Link to="/authenticity">
                 <ShieldCheck />
                 {i18next.t("audit:See the evidence")}
@@ -158,7 +158,7 @@ export function AuthenticityOverview({
         </div>
 
         {loaded ? (
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {scored.map(entry => (
               <ProviderScore
                 key={providerIdOf(entry.provider)}

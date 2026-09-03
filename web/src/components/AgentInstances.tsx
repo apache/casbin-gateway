@@ -280,14 +280,13 @@ export function AgentCardInstances({
 
   const instances = instancesOf(controls.instances, agent);
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1">
       <div className="flex items-center justify-between gap-2">
-        <SimpleTooltip title={i18next.t("agent:Instances")}>
-          <span className="text-muted-foreground flex items-center gap-1 text-xs">
-            <Users className="size-3.5" />
-            {instances.length > 0 ? instances.length : null}
-          </span>
-        </SimpleTooltip>
+        <span className="text-muted-foreground flex items-center gap-1 text-[11px]">
+          <Users className="size-3" />
+          {i18next.t("agent:Instances")}
+          {instances.length > 0 ? ` · ${instances.length}` : null}
+        </span>
         <AddInstanceButton agent={agent} controls={controls} compact />
       </div>
 
@@ -300,7 +299,7 @@ export function AgentCardInstances({
             )}
           />
           <SimpleTooltip title={instance.account ? instance.account.email : instance.dataDir}>
-            <span className="min-w-0 flex-1 truncate text-xs">{instanceLabel(instance)}</span>
+            <span className="min-w-0 flex-1 truncate text-[11px]">{instanceLabel(instance)}</span>
           </SimpleTooltip>
           <InstanceRunButton
             instance={instance}

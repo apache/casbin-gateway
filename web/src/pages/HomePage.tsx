@@ -32,13 +32,11 @@ import {MessageAlert} from "@/components/ui/alert";
 import {Button} from "@/components/ui/button";
 import {Card} from "@/components/ui/card";
 import {
-  activityOf,
   agentKey,
   runtimeOf,
   useAgentInstall,
   useAgentInstances,
   useAgents,
-  useAgentSessions,
   usageOf,
 } from "@/lib/agents";
 import type {
@@ -103,10 +101,6 @@ export default function HomePage({account}: {account: Account}) {
   // the accounts holding your API keys are gone when the request simply
   // dropped.
   const [providerError, setProviderError] = React.useState("");
-  // The sessions feed is only worth polling once something is being watched.
-  const watching = agents.some(agent => agent.patched);
-  const {activity} = useAgentSessions(isAdmin && watching, "", refreshMs);
-
   const loadProviders = React.useCallback(() => {
     if (!isAdmin) {
       return;
@@ -281,7 +275,7 @@ export default function HomePage({account}: {account: Account}) {
           />
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {agents.map(agent => (
             <AgentGridCard
               key={agentKey(agent)}
@@ -292,7 +286,6 @@ export default function HomePage({account}: {account: Account}) {
               quota={quotas.find(item => item.provider === agent.provider)}
               stats={stats.find(item => item.agent === agent.agentId)}
               usage={usageOf(usage, agent)}
-              activity={activityOf(activity, agent)}
               status={runtimeOf(runtime, agent)}
               instances={instances}
               recording={recording}

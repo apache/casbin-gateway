@@ -47,11 +47,11 @@ export function AgentCatalog({
   return (
     <section className="space-y-3">
       <div>
-        <h2 className="font-medium">{i18next.t("agent:Not installed")}</h2>
-        <p className="text-muted-foreground text-sm">{i18next.t("agent:Not installed hint")}</p>
+        <h2 className="text-sm font-medium">{i18next.t("agent:Not installed")}</h2>
+        <p className="text-muted-foreground text-xs">{i18next.t("agent:Not installed hint")}</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {missing.map(item => (
           <ToolInstallRow
             key={item.agentId}

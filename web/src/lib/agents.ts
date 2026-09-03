@@ -566,18 +566,11 @@ export function runtimeOf(runtime: Record<string, AgentRuntime>, agent: Agent) {
   return runtime[agentKey(agent)];
 }
 
-/** What one agent has been up to, derived from its monitoring sessions. */
-export interface AgentActivity {
-  sessionCount: number;
-  recordCount: number;
-  lastTime: string;
-}
-
 /**
  * useAgentSessions loads the live session summaries. Each summary already
- * carries its agent, record count and last activity, so the per-agent totals
- * the dashboard shows are folded out of this one request rather than out of the
- * far larger raw record list.
+ * carries its agent, record count and last activity, so the totals a page shows
+ * are folded out of this one request rather than out of the far larger raw
+ * record list.
  */
 export function useAgentSessions(enabled = true, agent = "", refreshMs = 0) {
   const [sessions, setSessions] = React.useState<AgentSession[]>([]);
@@ -609,33 +602,12 @@ export function useAgentSessions(enabled = true, agent = "", refreshMs = 0) {
     return () => clearInterval(interval);
   }, [enabled, load, refreshMs]);
 
-  const activity = React.useMemo(() => {
-    const totals: Record<string, AgentActivity> = {};
-    sessions.forEach(session => {
-      const current = totals[session.agent] ?? {sessionCount: 0, recordCount: 0, lastTime: ""};
-      totals[session.agent] = {
-        sessionCount: current.sessionCount + 1,
-        recordCount: current.recordCount + session.recordCount,
-        lastTime:
-          current.lastTime === "" || session.lastTime > current.lastTime
-            ? session.lastTime
-            : current.lastTime,
-      };
-    });
-    return totals;
-  }, [sessions]);
-
   const recordCount = React.useMemo(
     () => sessions.reduce((total, session) => total + session.recordCount, 0),
     [sessions],
   );
 
-  return {sessions, activity, recordCount, error, reload: load};
-}
-
-/** The activity of the installation, looked up under the id the monitor uses. */
-export function activityOf(activity: Record<string, AgentActivity>, agent: Agent) {
-  return activity[monitorAgentId(agent.agentId)];
+  return {sessions, recordCount, error, reload: load};
 }
 
 /**

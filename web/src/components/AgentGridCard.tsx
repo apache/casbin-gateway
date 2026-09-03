@@ -19,12 +19,11 @@ import i18next from "i18next";
 
 import {AgentIcon} from "@/components/AgentIcon";
 import {AgentCardInstances} from "@/components/AgentInstances";
-import {RunBadge, RunButton} from "@/components/AgentRunControl";
+import {RunButton, RunDot} from "@/components/AgentRunControl";
 import {ProviderIcon} from "@/components/ProviderIcon";
 import {QuotaBadge} from "@/components/ProviderQuota";
 import {ConfirmDialog} from "@/components/shared/confirm-dialog";
-import {Badge} from "@/components/ui/badge";
-import {Card, CardContent} from "@/components/ui/card";
+import {Card} from "@/components/ui/card";
 import {Progress} from "@/components/ui/progress";
 import {
   Select,
@@ -41,8 +40,6 @@ import {
   agentDetailPath,
   builtinProvider,
   directMode,
-  monitorAgentId,
-  type AgentActivity,
   type AgentInstanceControls,
 } from "@/lib/agents";
 import {providerIdOf, providerProtocol} from "@/lib/providers";
@@ -58,33 +55,40 @@ import type {
   ProviderQuota,
 } from "@/types";
 
+/** A hairline across the whole card, drawn out of a section that is padded. */
+function Divider() {
+  return <div className="border-border -mx-4 border-t" />;
+}
+
+/** One labelled line of the card, with the value pinned right. */
+function Row({label, children}: {label: React.ReactNode; children: React.ReactNode}) {
+  return (
+    <div className="flex min-w-0 items-center justify-between gap-2">
+      <span className="text-muted-foreground shrink-0 text-[11px]">{label}</span>
+      {children}
+    </div>
+  );
+}
+
 /** One number of the card, and what it is. */
 function Metric({
   label,
   value,
   hint,
-  to,
 }: {
   label: React.ReactNode;
   value: React.ReactNode;
   hint?: React.ReactNode;
-  to?: string;
 }) {
-  const shown = (
-    <span className="block truncate text-sm font-semibold tabular-nums">{value}</span>
-  );
+  const shown = <span className="block truncate text-[13px] font-medium tabular-nums">{value}</span>;
 
   return (
     <div className="min-w-0">
-      <span className="text-muted-foreground block truncate text-xs">{label}</span>
+      <span className="text-muted-foreground block truncate text-[11px]">{label}</span>
       {hint ? (
         <SimpleTooltip title={hint}>
           <span className="block min-w-0">{shown}</span>
         </SimpleTooltip>
-      ) : to ? (
-        <Link to={to} className="hover:text-primary block min-w-0">
-          {shown}
-        </Link>
       ) : (
         shown
       )}
@@ -107,7 +111,7 @@ function AccountLine({account}: {account?: AgentAccount}) {
 
   return (
     <SimpleTooltip title={title}>
-      <p className="text-muted-foreground mt-0.5 flex items-center gap-1 truncate text-xs">
+      <p className="text-muted-foreground flex items-center gap-1 truncate text-[11px]">
         <UserRound className="size-3 shrink-0" />
         <span className="truncate">{label}</span>
       </p>
@@ -129,15 +133,14 @@ function PlanUsage({quota}: {quota?: ProviderQuota}) {
 
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-muted-foreground text-xs">{i18next.t("provider:Plan usage")}</span>
+      <Row label={i18next.t("provider:Plan usage")}>
         <QuotaBadge quota={quota} />
-      </div>
+      </Row>
       {percent === null ? null : (
         <Progress
           value={percent}
           tone={percent >= 90 ? "danger" : percent >= 75 ? "warning" : "success"}
-          className="h-1.5"
+          className="h-1"
         />
       )}
     </div>
@@ -157,7 +160,6 @@ export function AgentGridCard({
   quota,
   stats,
   usage,
-  activity,
   status,
   instances,
   recording,
@@ -179,7 +181,6 @@ export function AgentGridCard({
    * it made straight to its vendor as well as the ones Gateway relayed.
    */
   usage?: AgentUsageStat;
-  activity?: AgentActivity;
   status?: AgentRuntime;
   /** The extra copies of this agent, for the agents that can run more than one. */
   instances?: AgentInstanceControls;
@@ -200,7 +201,6 @@ export function AgentGridCard({
     provider => agentCanUse(agent, provider) || providerIdOf(provider) === agent.provider,
   );
   const patchAction = i18next.t(`agent:${agent.patched ? "Unpatch" : "Patch"}`);
-  const monitorId = monitorAgentId(agent.agentId);
   const dash = <span className="text-muted-foreground">-</span>;
   const offHint = recording ? undefined : i18next.t("llm:Recording is off");
   // An agent's own transcript accounts for every request it made, the ones that
@@ -216,57 +216,59 @@ export function AgentGridCard({
   const lastTime = spent?.lastTime || stats?.lastTime;
 
   return (
-    <Card className="gap-0 py-0">
-      <CardContent className="flex h-full flex-col gap-3 p-4">
+    <Card className="hover:border-foreground/25 gap-0 overflow-hidden py-0 shadow-xs transition-colors">
+      <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="flex items-start gap-2.5">
           <AgentIcon
             agent={agent.agentId || agent.name}
-            size={26}
-            fallback={<Bot className="text-muted-foreground size-6" />}
+            size={22}
+            fallback={<Bot className="text-muted-foreground size-5" />}
           />
           <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-center gap-2">
-              <Link
-                to={agentDetailPath(agent, agents)}
-                className="min-w-0 truncate font-medium hover:underline"
-              >
-                {agent.name}
-              </Link>
-              <Badge variant="muted">{agent.version || i18next.t("agent:Unknown")}</Badge>
-            </div>
+            <Link
+              to={agentDetailPath(agent, agents)}
+              className="block truncate text-sm font-medium hover:underline"
+            >
+              {agent.name}
+            </Link>
             <SimpleTooltip title={agent.path}>
-              <p className="text-muted-foreground truncate font-mono text-xs">{agent.path}</p>
+              <p className="text-muted-foreground/80 truncate font-mono text-[11px]">
+                <span className="tabular-nums">{agent.version || i18next.t("agent:Unknown")}</span>
+                <span className="mx-1">·</span>
+                {agent.path}
+              </p>
             </SimpleTooltip>
             <AccountLine account={agent.account} />
           </div>
-          <RunBadge status={status} />
+          <RunDot status={status} />
         </div>
 
+        <Divider />
+
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-muted-foreground text-xs">{i18next.t("agent:Provider")}</span>
-            <span className="flex flex-wrap items-center gap-1.5">
-              {bound === undefined ? null : (
-                <Badge variant="muted">
-                  {i18next.t(agent.mode === directMode ? "agent:Direct" : "agent:Gateway")}
-                </Badge>
-              )}
+          <Row label={i18next.t("agent:Provider")}>
+            <span className="flex min-w-0 items-center gap-2">
               {boundHealth && !boundHealth.healthy ? (
                 <SimpleTooltip title={boundHealth.lastError}>
-                  <span>
-                    <Badge variant="warning">{i18next.t("agent:Cooling down")}</Badge>
+                  <span className="text-warning truncate text-[11px]">
+                    {i18next.t("agent:Cooling down")}
                   </span>
                 </SimpleTooltip>
               ) : null}
+              {bound === undefined ? null : (
+                <span className="text-muted-foreground truncate text-[11px]">
+                  {i18next.t(agent.mode === directMode ? "agent:Direct" : "agent:Gateway")}
+                </span>
+              )}
             </span>
-          </div>
+          </Row>
 
           <Select
             value={agent.provider === "" ? builtinProvider : agent.provider}
             disabled={busy}
             onValueChange={value => onEnable(value === builtinProvider ? "" : value)}
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger size="sm" className="w-full text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -287,110 +289,103 @@ export function AgentGridCard({
               ))}
             </SelectContent>
           </Select>
-        </div>
 
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-muted-foreground text-xs">{i18next.t("agent:Model")}</span>
-          {lastModel ? (
-            <SimpleTooltip
-              title={`${i18next.t("agent:Last activity")}: ${new Date(lastTime ?? "").toLocaleString()}`}
-            >
-              <span className="min-w-0 truncate font-mono text-xs">{lastModel}</span>
-            </SimpleTooltip>
-          ) : (
-            <span className="text-muted-foreground text-xs">-</span>
-          )}
-        </div>
-
-        <div className="grid grid-cols-4 gap-2 rounded-md border p-2.5">
-          <Metric
-            label={i18next.t("llm:Requests")}
-            value={counted ? ((spent ?? stats)?.requests ?? 0).toLocaleString() : dash}
-            hint={
-              sourceHint ??
-              (stats && stats.failed > 0
-                ? `${stats.failed.toLocaleString()} ${i18next.t("llm:failed")}`
-                : undefined)
-            }
-          />
-          <Metric
-            label={i18next.t("llm:Tokens")}
-            value={counted ? formatTokens(spent?.totalTokens ?? stats?.tokens ?? 0) : dash}
-            hint={sourceHint}
-          />
-          <Metric
-            label={i18next.t("llm:Cost")}
-            value={counted ? formatCost(spent?.cost ?? stats?.cost ?? 0) : dash}
-            hint={
-              spent && spent.unpriced > 0
-                ? i18next
-                  .t("llm:{count} of these requests have no list price")
-                  .replace("{count}", spent.unpriced.toLocaleString())
-                : sourceHint
-            }
-          />
-          <Metric
-            label={i18next.t("agent:Records")}
-            value={agent.patched ? (activity?.recordCount ?? 0).toLocaleString() : dash}
-            hint={
-              agent.patched
-                ? activity
-                  ? `${activity.sessionCount.toLocaleString()} ${i18next.t("agent:Agent Sessions")}`
-                  : undefined
-                : i18next.t("agent:Turn on monitoring to collect activity")
-            }
-            to={
-              agent.patched
-                ? `/agent-records?agent=${encodeURIComponent(monitorId)}`
-                : undefined
-            }
-          />
-        </div>
-
-        <PlanUsage quota={quota} />
-
-        {instances ? <AgentCardInstances agent={agent} controls={instances} /> : null}
-
-        <div className="mt-auto flex flex-wrap items-center gap-3 border-t pt-3">
-          <RunButton agent={agent} status={status} busy={runBusy} onToggle={onToggleRunning} />
-
-          <label className="text-muted-foreground flex items-center gap-1.5 text-xs">
-            {i18next.t("agent:Monitored")}
-            {agent.supported ? (
-              <ConfirmDialog
-                title={`${patchAction} ${agent.name}?`}
-                description={[agent.notice, agent.followup].filter(Boolean).join(" ") || undefined}
-                confirmText={patchAction}
-                variant={agent.patched ? "destructive" : "default"}
-                onConfirm={onTogglePatch}
+          <Row label={i18next.t("agent:Model")}>
+            {lastModel ? (
+              <SimpleTooltip
+                title={`${i18next.t("agent:Last activity")}: ${new Date(lastTime ?? "").toLocaleString()}`}
               >
-                {/* The dialog owns the click, so the switch only ever mirrors
-                    what the last scan reported. */}
-                <Switch
-                  checked={agent.patched}
-                  disabled={busy}
-                  aria-label={patchAction}
-                  onCheckedChange={() => undefined}
-                />
-              </ConfirmDialog>
-            ) : (
-              <SimpleTooltip title={agent.detail || i18next.t("agent:Not supported")}>
-                <span>
-                  <Switch checked={false} disabled aria-label={i18next.t("agent:Patch")} />
-                </span>
+                <span className="min-w-0 truncate font-mono text-[11px]">{lastModel}</span>
               </SimpleTooltip>
+            ) : (
+              <span className="text-muted-foreground text-[11px]">-</span>
             )}
-          </label>
-
-          <Link
-            to={agentDetailPath(agent, agents)}
-            className="text-primary ml-auto inline-flex items-center text-sm hover:underline"
-          >
-            {i18next.t("agent:Details")}
-            <ChevronRight className="size-4" />
-          </Link>
+          </Row>
         </div>
-      </CardContent>
+
+        <Divider />
+
+        <div className="space-y-3">
+          <div className="grid grid-cols-3 gap-1.5">
+            <Metric
+              label={i18next.t("llm:Requests")}
+              value={counted ? ((spent ?? stats)?.requests ?? 0).toLocaleString() : dash}
+              hint={
+                sourceHint ??
+                (stats && stats.failed > 0
+                  ? `${stats.failed.toLocaleString()} ${i18next.t("llm:failed")}`
+                  : undefined)
+              }
+            />
+            <Metric
+              label={i18next.t("llm:Tokens")}
+              value={counted ? formatTokens(spent?.totalTokens ?? stats?.tokens ?? 0) : dash}
+              hint={sourceHint}
+            />
+            <Metric
+              label={i18next.t("llm:Cost")}
+              value={counted ? formatCost(spent?.cost ?? stats?.cost ?? 0) : dash}
+              hint={
+                spent && spent.unpriced > 0
+                  ? i18next
+                    .t("llm:{count} of these requests have no list price")
+                    .replace("{count}", spent.unpriced.toLocaleString())
+                  : sourceHint
+              }
+            />
+          </div>
+
+          <PlanUsage quota={quota} />
+
+          {instances ? <AgentCardInstances agent={agent} controls={instances} /> : null}
+        </div>
+      </div>
+
+      <div className="bg-muted/40 mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 border-t px-3 py-2">
+        <RunButton
+          agent={agent}
+          status={status}
+          busy={runBusy}
+          className="h-7 px-2 text-xs"
+          onToggle={onToggleRunning}
+        />
+
+        <label className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
+          {i18next.t("agent:Monitored")}
+          {agent.supported ? (
+            <ConfirmDialog
+              title={`${patchAction} ${agent.name}?`}
+              description={[agent.notice, agent.followup].filter(Boolean).join(" ") || undefined}
+              confirmText={patchAction}
+              variant={agent.patched ? "destructive" : "default"}
+              onConfirm={onTogglePatch}
+            >
+              {/* The dialog owns the click, so the switch only ever mirrors
+                  what the last scan reported. */}
+              <Switch
+                checked={agent.patched}
+                disabled={busy}
+                aria-label={patchAction}
+                onCheckedChange={() => undefined}
+              />
+            </ConfirmDialog>
+          ) : (
+            <SimpleTooltip title={agent.detail || i18next.t("agent:Not supported")}>
+              <span>
+                <Switch checked={false} disabled aria-label={i18next.t("agent:Patch")} />
+              </span>
+            </SimpleTooltip>
+          )}
+        </label>
+
+        <Link
+          to={agentDetailPath(agent, agents)}
+          className="text-muted-foreground hover:text-foreground ml-auto inline-flex items-center text-xs"
+        >
+          {i18next.t("agent:Details")}
+          <ChevronRight className="size-3.5" />
+        </Link>
+      </div>
     </Card>
   );
 }

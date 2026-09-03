@@ -46,12 +46,12 @@ export function ToolInstallRow({
   const failed = job !== undefined && !job.running && !job.ok;
 
   return (
-    <div className="space-y-2 rounded-lg border p-3">
+    <div className="bg-card hover:border-foreground/25 space-y-2 rounded-xl border p-3 shadow-xs transition-colors">
       <div className="flex items-center gap-2.5">
         {/* The icons are keyed by vendor name, which every entry has. */}
         <AgentIcon
           agent={entry.name}
-          size={22}
+          size={20}
           fallback={<Bot className="text-muted-foreground size-5" />}
         />
         <span className="min-w-0 flex-1 truncate text-sm font-medium">{entry.name}</span>
@@ -92,12 +92,12 @@ export function ToolInstallRow({
 
       <div className="flex flex-wrap items-center gap-2">
         {plan.available ? (
-          <Badge variant="muted">{plan.manager}</Badge>
+          <Badge variant="muted" className="text-[11px]">{plan.manager}</Badge>
         ) : (
-          <span className="text-muted-foreground text-xs">{plan.detail}</span>
+          <span className="text-muted-foreground text-[11px]">{plan.detail}</span>
         )}
         {plan.available ? (
-          <code className="text-muted-foreground min-w-0 truncate text-xs">{plan.command}</code>
+          <code className="text-muted-foreground/80 min-w-0 truncate text-[11px]">{plan.command}</code>
         ) : null}
       </div>
 

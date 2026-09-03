@@ -43,6 +43,15 @@ export function ScoreDial({
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
 
+  // Everything written here has to fit the square that fits inside the ring,
+  // which is what a small dial has no room for: it carries the letter alone
+  // rather than pushing "Grade A" out under the stroke.
+  const inner = (size - 2 * stroke) / Math.SQRT2;
+  const letter = gradeLetter(grade);
+  const label = `${i18next.t("audit:Grade")} ${letter}`;
+  const labelSize = Math.max(9, size / 8);
+  const spelled = label.length * labelSize * 0.62 <= inner;
+
   return (
     <div className={cn("relative shrink-0", className)} style={{width: size, height: size}}>
       <svg width={size} height={size} className="-rotate-90">
@@ -66,13 +75,21 @@ export function ScoreDial({
           stroke="currentColor"
         />
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className={cn("font-semibold tabular-nums", style.text)} style={{fontSize: size / 3.4}}>
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+        <span
+          className={cn("font-semibold tabular-nums leading-none", style.text)}
+          style={{fontSize: size / 3.8}}
+        >
           {formatScore(probe)}
         </span>
-        <span className={cn("text-[10px] font-medium tracking-wide uppercase", style.text)}>
-          {i18next.t("audit:Grade")} {gradeLetter(grade)}
-        </span>
+        {spelled || measured ? (
+          <span
+            className={cn("font-medium tracking-wide uppercase leading-none", style.text)}
+            style={{fontSize: labelSize}}
+          >
+            {spelled ? label : letter}
+          </span>
+        ) : null}
       </div>
     </div>
   );
