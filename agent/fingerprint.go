@@ -33,6 +33,11 @@ type Fingerprint struct {
 	// Sandboxed marks an agent that runs its sessions in a sandbox of its own,
 	// where 127.0.0.1 is the sandbox rather than this host.
 	Sandboxed bool `json:"sandboxed,omitempty"`
+	// CustomScan marks an agent the scan locates in code rather than from the
+	// layout fields below: one installed by cloning its own repository, which
+	// no package layout describes. The fingerprint still carries the identity
+	// every lookup by agent id goes through.
+	CustomScan bool `json:"customScan,omitempty"`
 
 	// InstanceArg is the flag a private state directory is passed on the command
 	// line with, for an app that takes one - Chromium's --user-data-dir.

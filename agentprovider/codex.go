@@ -75,10 +75,6 @@ type codexWriter struct {
 func init() {
 	register(codexWriter{id: "codex"})
 	register(codexWriter{id: "codex-cli"})
-	// The VS Code integration drives the same CLI, and with it the same
-	// ~/.codex directory.
-	register(codexWriter{id: "codex_vscode"})
-	register(codexWriter{id: "codex-vscode"})
 }
 
 func (w codexWriter) AgentId() string { return w.id }

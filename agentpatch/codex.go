@@ -25,10 +25,6 @@ type codexPatcher struct {
 func init() {
 	register(codexPatcher{id: "codex"})
 	register(codexPatcher{id: "codex-cli"})
-	// VS Code rollout files are emitted by the Codex CLI integration and share
-	// its monitor claim and parser.
-	register(codexPatcher{id: "codex_vscode"})
-	register(codexPatcher{id: "codex-vscode"})
 }
 
 func (p codexPatcher) AgentId() string { return p.id }

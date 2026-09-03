@@ -167,8 +167,6 @@ var layouts = map[string]layout{
 	},
 	"codex":        codexLayout,
 	"codex-cli":    codexLayout,
-	"codex-vscode": codexLayout,
-	"codex_vscode": codexLayout,
 	"cursor":       cursorLayout,
 	"cursor-agent": cursorLayout,
 	// The Gemini CLI reads the shared ~/.agents skills too, and prefers them

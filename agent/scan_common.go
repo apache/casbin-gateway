@@ -306,7 +306,7 @@ func hermesInstallation(launcher, owner string, officialRoots ...string) []Insta
 		}
 	}
 	return []Installation{{
-		AgentId: hermes.AgentID, Name: hermes.DisplayName, Version: project.Version,
+		AgentId: hermes.AgentID, Name: DisplayNameOf(hermes.AgentID), Version: project.Version,
 		Path: launcher, InstallMethod: method, Owner: owner,
 	}}
 }

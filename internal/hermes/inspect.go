@@ -25,7 +25,6 @@ import (
 
 const (
 	AgentID     = "hermes-agent"
-	DisplayName = "Hermes Agent"
 	ExecName    = "hermes"
 	ProjectDir  = "hermes-agent"
 	ProjectName = "hermes-agent"

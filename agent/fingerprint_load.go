@@ -122,7 +122,7 @@ func validateFingerprint(f Fingerprint, name string) error {
 }
 
 func hasScanSource(f Fingerprint) bool {
-	if f.LocalServer != nil {
+	if f.LocalServer != nil || f.CustomScan {
 		return true
 	}
 	if f.ExecName == "" {
