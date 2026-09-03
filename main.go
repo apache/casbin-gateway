@@ -17,6 +17,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 
@@ -33,7 +34,6 @@ import (
 	"github.com/apache/casbin-gateway/util"
 	"github.com/apache/casbin-gateway/version"
 	"github.com/beego/beego"
-	"github.com/beego/beego/plugins/cors"
 	_ "github.com/beego/beego/session/redis"
 )
 
@@ -105,13 +105,10 @@ func main() {
 		object.StopLlmRecordWriter()
 	}
 
-	beego.InsertFilter("*", beego.BeforeRouter, cors.Allow(&cors.Options{
-		AllowOrigins:     []string{"*"},
-		AllowMethods:     []string{"GET", "POST", "DELETE", "PUT", "PATCH", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "X-Requested-With", "Content-Type", "Accept"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-	}))
+	// Before anything else: a request from a browser has to be one this Gateway
+	// serves the pages of, not one a page on another site made with the
+	// operator's session.
+	beego.InsertFilter("*", beego.BeforeRouter, routers.OriginFilter)
 
 	// https://studygolang.com/articles/2303
 	beego.InsertFilter("/", beego.BeforeRouter, routers.TransparentStatic) // must has this for default page
@@ -126,6 +123,9 @@ func main() {
 		beego.BConfig.WebConfig.Session.SessionProviderConfig = beego.AppConfig.String("redisEndpoint")
 	}
 	beego.BConfig.WebConfig.Session.SessionGCMaxLifetime = 3600 * 24 * 365
+	// The session is only ever presented by Gateway's own pages, so the browser
+	// is told to keep it off requests another site makes.
+	beego.BConfig.WebConfig.Session.SessionCookieSameSite = http.SameSiteStrictMode
 
 	port := conf.GetHttpPort()
 	addr := conf.GetHttpAddr()

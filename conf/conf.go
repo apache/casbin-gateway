@@ -157,6 +157,37 @@ func IsHttpAddrLoopback() bool {
 	return ip != nil && ip.IsLoopback()
 }
 
+// GetAllowedHosts is the extra Host header values the management UI and the
+// REST API answer to. This host's own addresses and names are always answered
+// to; a name is only listed here when Gateway is reached through one that is
+// not this machine's, such as a reverse proxy in front of it.
+func GetAllowedHosts() []string {
+	return getConfigList("allowedHosts")
+}
+
+// GetAllowedOrigins is the browser origins allowed to call the API from another
+// site. The web UI is served by Gateway itself, so it needs none of them: this
+// is for a page of your own that talks to the relay.
+func GetAllowedOrigins() []string {
+	return getConfigList("allowedOrigins")
+}
+
+// getConfigList reads a comma-separated setting.
+func getConfigList(key string) []string {
+	raw := strings.Trim(GetConfigString(key), `"' `)
+	if raw == "" {
+		return nil
+	}
+
+	items := []string{}
+	for _, item := range strings.Split(raw, ",") {
+		if trimmed := strings.Trim(item, `"' `); trimmed != "" {
+			items = append(items, trimmed)
+		}
+	}
+	return items
+}
+
 // GetRelayToken is the token an agent sends to the local relay. It is generated
 // on first start and stored with the settings, so it survives restarts and can
 // be rotated from the Settings page.
