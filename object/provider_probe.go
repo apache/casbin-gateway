@@ -41,6 +41,9 @@ const (
 	ProbeTriggerEdited = "edited"
 	ProbeTriggerUnused = "unused"
 	ProbeTriggerManual = "manual"
+	// ProbeTriggerScheduled is a re-ask of a provider whose last report has
+	// gone stale, which is what notices a backend that was swapped since.
+	ProbeTriggerScheduled = "scheduled"
 )
 
 // The checks a probe runs.
@@ -64,8 +67,15 @@ const probeMaxParallel = 3
 // ProbeCheck is one measurement, in the same shape the passive audit uses: a
 // level and the fact it was drawn from, with the wording left to the page.
 type ProbeCheck struct {
-	Key   string `json:"key"`
-	Level string `json:"level"`
+	Key string `json:"key"`
+	// Case is the test case that produced this, and Title what it was called
+	// when it ran. Both are kept on the row so an old report still says what it
+	// asked after the case has been edited or deleted.
+	Case  string `json:"case"`
+	Title string `json:"title"`
+	// Weight is what this check was worth in the score of this run.
+	Weight int    `json:"weight"`
+	Level  string `json:"level"`
 	// Facts are what actually came back, as data rather than as a sentence: the
 	// model name that answered, the headers that were present, the events that
 	// were missing, the two counts that did not agree. The page words them, so
@@ -92,6 +102,13 @@ type ProviderProbe struct {
 	// reason it did not, which is a finding of its own.
 	Ok    bool   `xorm:"bool" json:"ok"`
 	Error string `xorm:"varchar(500)" json:"error"`
+
+	// Score is the weighted share of the cases that could be measured which
+	// answered the way the vendor's own API documents, out of 100, and Grade is
+	// the letter it falls in. Both are a summary of the checks below and of
+	// nothing else — the tiles are still what a finding has to be argued from.
+	Score float64 `xorm:"double" json:"score"`
+	Grade string  `xorm:"varchar(20)" json:"grade"`
 
 	// TtftMs is the wait before the first streamed byte, which is what a chain
 	// of resellers adds to and a total duration hides.
@@ -131,6 +148,23 @@ func GetProviderProbeMode() string {
 
 func isProbeAutomatic() bool {
 	return GetProviderProbeMode() == "auto"
+}
+
+// probeDefaultIntervalHours is how often an automatic sweep asks a provider the
+// suite again. Re-asking is the whole point of a stored score: a backend that
+// was swapped last week answers differently today, and nobody presses a button
+// to find that out.
+const probeDefaultIntervalHours = 24
+
+// GetProviderProbeIntervalHours is how many hours a report stays current for.
+// A missing or nonsensical value is the built-in interval rather than none:
+// turning automatic probing off is what the mode is for.
+func GetProviderProbeIntervalHours() int {
+	hours := conf.GetConfigIntDefault("providerProbeIntervalHours", probeDefaultIntervalHours)
+	if hours <= 0 {
+		return probeDefaultIntervalHours
+	}
+	return hours
 }
 
 var probesRunning sync.Map
@@ -196,15 +230,19 @@ func ProbeEditedProvider(stored *Provider, updated *Provider, keyChanged bool) {
 }
 
 // probeSweepDelay lets the process finish starting before it spends anything,
-// and probeSweepInterval catches a provider added while probing was off.
+// and probeSweepInterval is how often the sweep looks for something to do. The
+// interval is short because what it looks for is a probe that has gone stale,
+// which is a per-provider clock rather than a schedule of its own.
 const (
 	probeSweepDelay    = 45 * time.Second
-	probeSweepInterval = 6 * time.Hour
+	probeSweepInterval = 30 * time.Minute
 )
 
-// StartProviderProbeSweep probes the providers that were configured before
-// probing existed, or before it was turned on. A provider is swept once: the
-// sweep looks for the ones with no probe at all, so it goes quiet by itself.
+// StartProviderProbeSweep keeps every provider's report current without anyone
+// asking for it: a provider that has never been probed is probed, and one whose
+// last probe is older than the interval is asked again. That re-asking is what
+// makes a swapped backend visible — it changes nothing about a provider's
+// configuration, so nothing but another probe would ever show it.
 func StartProviderProbeSweep() {
 	go func() {
 		time.Sleep(probeSweepDelay)
@@ -227,7 +265,7 @@ func sweepUnprobedProviders() {
 		beego.Error("provider probe sweep could not list providers:", err)
 		return
 	}
-	probed, err := probedProviderIds()
+	probed, err := lastProbeTimes()
 	if err != nil {
 		beego.Error("provider probe sweep could not read past probes:", err)
 		return
@@ -235,7 +273,10 @@ func sweepUnprobedProviders() {
 
 	pending := []*Provider{}
 	for _, provider := range providers {
-		if provider.Status == "disabled" || probed[provider.GetId()] || !isProbable(provider) {
+		if provider.Status == "disabled" || !isProbable(provider) {
+			continue
+		}
+		if !isProbeDue(probed[provider.GetId()]) {
 			continue
 		}
 		pending = append(pending, provider)
@@ -249,13 +290,17 @@ func sweepUnprobedProviders() {
 	for _, provider := range pending {
 		group.Add(1)
 		gate <- struct{}{}
-		go func(target *Provider) {
+		trigger := ProbeTriggerUnused
+		if !probed[provider.GetId()].IsZero() {
+			trigger = ProbeTriggerScheduled
+		}
+		go func(target *Provider, trigger string) {
 			defer group.Done()
 			defer func() { <-gate }()
-			if _, err := ProbeProviderNow(target, ProbeTriggerUnused); err != nil {
+			if _, err := ProbeProviderNow(target, trigger); err != nil {
 				beego.Error("provider probe failed for", target.GetId()+":", err)
 			}
-		}(provider)
+		}(provider, trigger)
 	}
 	group.Wait()
 }
@@ -270,15 +315,34 @@ func isProbable(provider *Provider) bool {
 	return !UsesClientAuth(provider) && provider.ApiKey != ""
 }
 
-func probedProviderIds() (map[string]bool, error) {
+// isProbeDue reports whether the sweep should ask this provider now. A zero
+// time is a provider that has never been probed, which is always due.
+func isProbeDue(last time.Time) bool {
+	if last.IsZero() {
+		return true
+	}
+	return time.Since(last) >= time.Duration(GetProviderProbeIntervalHours())*time.Hour
+}
+
+// lastProbeTimes is when each provider was last probed. A row whose time cannot
+// be read counts as probed just now rather than never, so an unparsable
+// timestamp cannot turn into a probe on every sweep.
+func lastProbeTimes() (map[string]time.Time, error) {
 	rows := []ProviderProbe{}
-	err := ormer.Engine.Table("provider_probe").Distinct("provider").Find(&rows)
+	err := ormer.Engine.Table("provider_probe").Cols("provider", "created_time").Find(&rows)
 	if err != nil {
 		return nil, err
 	}
-	probed := map[string]bool{}
+
+	probed := map[string]time.Time{}
 	for _, row := range rows {
-		probed[row.Provider] = true
+		at, err := time.Parse(time.RFC3339, row.CreatedTime)
+		if err != nil {
+			at = time.Now()
+		}
+		if at.After(probed[row.Provider]) {
+			probed[row.Provider] = at
+		}
 	}
 	return probed, nil
 }
@@ -331,7 +395,7 @@ func GetProviderProbes() ([]*ProviderProbe, error) {
 			continue
 		}
 		seen[probe.Provider] = true
-		latest = append(latest, probe)
+		latest = append(latest, ensureProbeScore(probe))
 	}
 	return latest, nil
 }
@@ -344,6 +408,9 @@ func GetProviderProbeHistory(providerId string) ([]*ProviderProbe, error) {
 		return probes, nil
 	}
 	err := ormer.Engine.Where("provider = ?", providerId).Desc("id").Find(&probes)
+	for _, probe := range probes {
+		ensureProbeScore(probe)
+	}
 	return probes, err
 }
 

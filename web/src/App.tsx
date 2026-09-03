@@ -34,6 +34,7 @@ import AgentSessionPage from "@/pages/AgentSessionPage";
 import AgentSessionsPage from "@/pages/AgentSessionsPage";
 import AgentsPage from "@/pages/AgentsPage";
 import AuthCallback from "@/pages/AuthCallback";
+import AuthenticityPage from "@/pages/AuthenticityPage";
 import HomePage from "@/pages/HomePage";
 import ProviderEditPage from "@/pages/ProviderEditPage";
 import ProviderListPage from "@/pages/ProviderListPage";
@@ -278,6 +279,10 @@ export default function App() {
                 />
                 <Route path="/settings" element={requireSignin(user => <SettingPage account={user} />)} />
                 <Route path="/providers" element={requireSignin(user => <ProviderListPage account={user} />)} />
+                <Route
+                  path="/authenticity"
+                  element={requireSignin(user => <AuthenticityPage account={user} />)}
+                />
                 <Route
                   path="/providers/:owner/:providerName"
                   element={requireSignin(() => <ProviderEditPage />)}

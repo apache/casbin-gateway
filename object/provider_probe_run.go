@@ -48,13 +48,17 @@ const (
 	probeCacheMaxTokens  = 16
 )
 
-// runProviderProbe is the suite, in the order that stops early where a later
-// question would be meaningless. The first request decides whether the upstream
-// is usable at all.
+// runProviderProbe is the suite: the enabled test cases that apply to this
+// upstream, in the order they are listed. It stops early where a later question
+// would be meaningless — the first request decides whether the upstream is
+// usable at all — and grades whatever it did measure.
 func runProviderProbe(provider *Provider, trigger string) *ProviderProbe {
 	probe := newProviderProbe(provider, trigger)
 	start := time.Now()
-	defer func() { probe.DurationMs = time.Since(start).Milliseconds() }()
+	defer func() {
+		probe.DurationMs = time.Since(start).Milliseconds()
+		scoreProviderProbe(probe)
+	}()
 
 	if !isProbable(provider) {
 		probe.Error = "this provider has no credential of its own to probe with"
@@ -68,14 +72,13 @@ func runProviderProbe(provider *Provider, trigger string) *ProviderProbe {
 	}
 	probe.Model = model
 
-	answer := probeToolCall(provider, model, probe)
-	if answer == nil {
+	cases := probeCasesFor(ProviderProtocol(provider))
+	if len(cases) == 0 {
+		probe.Error = "no test case is enabled for this upstream API"
 		return probe
 	}
-	probe.Ok = true
 
-	probeStreamShape(provider, model, probe)
-	probeCachePair(provider, model, probe)
+	runProbeCases(provider, model, probe, cases)
 	priceProviderProbe(probe)
 	return probe
 }

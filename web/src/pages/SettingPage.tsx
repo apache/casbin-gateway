@@ -162,6 +162,13 @@ export default function SettingPage({account}: {account: Account}) {
             ]}
           />
         </Field>
+        {numberField(
+          "providerProbeIntervalHours",
+          i18next.t("setting:Probe interval hours"),
+          i18next.t("setting:Probe interval hours hint"),
+          1,
+          8760,
+        )}
       </Section>
 
       <Section columns={2} title={i18next.t("setting:Agents")}>

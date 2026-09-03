@@ -563,9 +563,64 @@ export type ProbeKey = "identity" | "vendor" | "stream" | "cache" | "tools" | "b
  */
 export interface ProbeCheck {
   key: ProbeKey;
+  /** The test case that produced this, and what it was called when it ran. */
+  case: string;
+  title: string;
+  /** What this check was worth in the score of that run. */
+  weight: number;
   level: LlmAuditLevel;
   facts: string[];
   value: number;
+}
+
+/** How far an upstream got through the suite, as a letter. */
+export type ProbeGrade = "A" | "B" | "C" | "D" | "F" | "unknown";
+
+/** The knobs of the check engine a case runs on. Fields another engine owns are
+ * ignored, so one shape edits all six. */
+export interface ProbeCaseParams {
+  system: string;
+  prompt: string;
+  maxTokens: number;
+  toolName: string;
+  /** A JSON schema the forced tool call has to fill. */
+  schema: string;
+  events: string[];
+  fillerChars: number;
+  gapMs: number;
+  headers: string[];
+  minHeaders: number;
+  driftTolerance: number;
+  warnHigh: number;
+  alertHigh: number;
+  warnLow: number;
+  alertLow: number;
+}
+
+/**
+ * One test in the suite. `question` is what it asks the upstream and `method`
+ * how the answer is judged: the two are published so a score can be argued
+ * with, and both are editable, as is the weight the score is built from.
+ */
+export interface ProbeCase {
+  name: string;
+  createdTime: string;
+  updatedTime: string;
+  displayName: string;
+  check: ProbeKey;
+  /** Empty runs the case against both upstream APIs. */
+  protocol: "" | "anthropic" | "openai";
+  enabled: boolean;
+  weight: number;
+  sort: number;
+  /** Shipped with Gateway, so restoring the defaults brings it back. */
+  builtIn: boolean;
+  question: string;
+  method: string;
+  params: ProbeCaseParams;
+  /** A built-in case whose words were rewritten here, which is what stops a
+   * shipped translation from standing in front of what someone typed. */
+  edited: boolean;
 }
 
 /** One run of the probe suite against one provider. */
@@ -573,7 +628,7 @@ export interface ProviderProbe {
   id: number;
   provider: string;
   createdTime: string;
-  /** Why it ran: "added", "edited", "unused" or "manual". */
+  /** Why it ran: "added", "edited", "unused", "scheduled" or "manual". */
   trigger: string;
   protocol: string;
   model: string;
@@ -581,6 +636,10 @@ export interface ProviderProbe {
   upstreamModel: string;
   ok: boolean;
   error: string;
+  /** The weighted share of the measurable cases that answered the way the
+   * vendor's own API documents, out of 100, and the letter it falls in. */
+  score: number;
+  grade: ProbeGrade;
   ttftMs: number;
   durationMs: number;
   /** What the probe itself spent. */
@@ -666,6 +725,7 @@ export interface Setting {
   llmPricingFile: string;
 
   providerProbeMode: ProviderProbeMode;
+  providerProbeIntervalHours: number;
 
   modelsDevSyncMode: ModelsDevSyncMode;
   modelsDevSyncIntervalHours: number;

@@ -17,17 +17,20 @@ import {CircleAlert, CircleCheck, CircleHelp, Stethoscope, TriangleAlert} from "
 import i18next from "i18next";
 
 import * as Setting from "@/Setting";
+import {ScoreDial} from "@/components/AuthenticityScore";
 import {ProviderIcon} from "@/components/ProviderIcon";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
 import {SimpleTooltip} from "@/components/ui/tooltip";
 import {cn} from "@/lib/utils";
+import {checkTitle, gradeStyleOf, probeFindings} from "@/lib/authenticity";
 import {formatCost, formatTokens} from "@/lib/usage";
 import type {
   LlmAuditCheck,
   LlmAuditLevel,
   LlmProviderAudit,
+  ProbeCase,
   ProbeCheck,
   Provider,
   ProviderProbe,
@@ -76,11 +79,14 @@ function CheckTile({
   value,
   detail,
   level,
+  weight,
 }: {
   title: React.ReactNode;
   value: React.ReactNode;
   detail: React.ReactNode;
   level: LlmAuditLevel;
+  /** What this case was worth in the score, where it counted towards one. */
+  weight?: number;
 }) {
   const style = levelStyles[level] ?? levelStyles.unknown;
   const Icon = style.icon;
@@ -90,6 +96,11 @@ function CheckTile({
       <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
         <Icon className={cn("size-3.5 shrink-0", style.text)} />
         <span className="truncate">{title}</span>
+        {weight && level !== "unknown" ? (
+          <SimpleTooltip title={i18next.t("audit:Weight hint")}>
+            <span className="ml-auto shrink-0 tabular-nums opacity-70">{`×${weight}`}</span>
+          </SimpleTooltip>
+        ) : null}
       </div>
       <span className={cn("text-lg font-semibold tabular-nums", style.text)}>{value}</span>
       <span className="text-muted-foreground text-xs leading-snug">{detail}</span>
@@ -121,7 +132,7 @@ function probeTitle(key: ProbeCheck["key"]) {
   }
 }
 
-function probeValue(check: ProbeCheck, probe: ProviderProbe) {
+function probeValue(check: ProbeCheck) {
   if (check.level === "unknown") {
     return "—";
   }
@@ -137,7 +148,7 @@ function probeValue(check: ProbeCheck, probe: ProviderProbe) {
   case "tools":
     return check.level === "ok" ? i18next.t("audit:Held") : i18next.t("audit:Lost");
   default:
-    return String(probe.vendorHeaders.length);
+    return String(check.facts.length);
   }
 }
 
@@ -184,19 +195,54 @@ function probeDetail(check: ProbeCheck, probe: ProviderProbe) {
     }
     return check.level === "warn" ? i18next.t("audit:Tools partial") : i18next.t("audit:Tools none");
   default:
-    return probe.vendorHeaders.length === 0
+    return check.facts.length === 0
       ? i18next.t("audit:No vendor header")
-      : fill("audit:Vendor detail", {names: probe.vendorHeaders.join(", ")});
+      : fill("audit:Vendor detail", {names: check.facts.join(", ")});
   }
+}
+
+/**
+ * The score, the letter and what they were drawn from. It is a summary of the
+ * tiles below it and of nothing else: a case that could not be asked lowers no
+ * score, and the sentence beside the dial says which cases decided it.
+ */
+function ScoreHeadline({probe}: {probe: ProviderProbe}) {
+  const style = gradeStyleOf(probe.grade);
+  const {alerts, warnings, measured} = probeFindings(probe);
+
+  return (
+    <div className="flex items-center gap-4 rounded-lg border p-3">
+      <ScoreDial probe={probe} size={84} />
+      <div className="flex min-w-0 flex-col gap-1">
+        <span className={cn("text-sm font-semibold", style.text)}>{i18next.t(style.label)}</span>
+        <span className="text-muted-foreground text-xs leading-snug">{i18next.t(style.verdict)}</span>
+        <span className="text-muted-foreground text-xs">
+          {fill("audit:Score from cases", {
+            measured: measured.length,
+            total: probe.checks.length,
+          })}
+          {alerts.length > 0
+            ? ` · ${fill("audit:Failed cases", {count: alerts.length})}`
+            : ""}
+          {warnings.length > 0
+            ? ` · ${fill("audit:Flagged cases", {count: warnings.length})}`
+            : ""}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 function ProbeSection({
   probe,
+  cases,
   probeMode,
   probing,
   onProbe,
 }: {
   probe?: ProviderProbe;
+  /** The suite as it stands now, so a tile is named by the case it came from. */
+  cases: ProbeCase[];
   probeMode: ProviderProbeMode;
   probing: boolean;
   onProbe?: () => void;
@@ -229,9 +275,12 @@ function ProbeSection({
     );
   }
 
-  const checks = [...probe.checks].sort(
-    (left, right) => probeOrder.indexOf(left.key) - probeOrder.indexOf(right.key),
-  );
+  // A run stores the checks in the suite order it ran. A report from before
+  // the suite was stored has none, so those fall back to strongest first.
+  const ordered = probe.checks.some(check => check.case !== "");
+  const checks = ordered
+    ? probe.checks
+    : [...probe.checks].sort((left, right) => probeOrder.indexOf(left.key) - probeOrder.indexOf(right.key));
 
   return (
     <div className="flex flex-col gap-2">
@@ -254,14 +303,16 @@ function ProbeSection({
 
       {probe.ok ? (
         <>
+          <ScoreHeadline probe={probe} />
           <div className="grid grid-cols-2 gap-2 md:grid-cols-3 2xl:grid-cols-6">
-            {checks.map(check => (
+            {checks.map((check, index) => (
               <CheckTile
-                key={check.key}
-                title={probeTitle(check.key)}
-                value={probeValue(check, probe)}
+                key={`${check.case}-${check.key}-${index}`}
+                title={check.case ? checkTitle(check, cases) : probeTitle(check.key)}
+                value={probeValue(check)}
                 detail={probeDetail(check, probe)}
                 level={check.level}
+                weight={check.weight}
               />
             ))}
           </div>
@@ -433,6 +484,7 @@ function TrafficSection({audit}: {audit?: LlmProviderAudit}) {
 export function ProviderAuditCard({
   audit,
   probe,
+  cases,
   provider,
   providersKnown,
   probeMode,
@@ -441,6 +493,8 @@ export function ProviderAuditCard({
 }: {
   audit?: LlmProviderAudit;
   probe?: ProviderProbe;
+  /** The suite as it stands now, which names the tiles. */
+  cases: ProbeCase[];
   /** Missing when the records outlive the provider they name. */
   provider?: Provider;
   /** False while the provider listing has not landed, when a missing provider
@@ -479,7 +533,13 @@ export function ProviderAuditCard({
           </div>
         </div>
 
-        <ProbeSection probe={probe} probeMode={probeMode} probing={probing} onProbe={onProbe} />
+        <ProbeSection
+          probe={probe}
+          cases={cases}
+          probeMode={probeMode}
+          probing={probing}
+          onProbe={onProbe}
+        />
         <TrafficSection audit={audit} />
       </CardContent>
     </Card>

@@ -75,6 +75,9 @@ func main() {
 	casdoor.InitCasdoorConfig()
 	object.InitUsers()
 	proxy.InitHttpClient()
+	// The probe suite is stored, so the shipped cases have to exist before
+	// anything can run one.
+	object.InitProbeCases()
 	// Probes go out over the same transport, so they can only start once it is
 	// configured. The sweep waits a while longer before spending anything.
 	object.StartProviderProbeSweep()

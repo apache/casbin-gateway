@@ -13,13 +13,14 @@
 // limitations under the License.
 
 import * as React from "react";
-import {useNavigate} from "react-router-dom";
+import {Link, useNavigate} from "react-router-dom";
 import {
   ChevronDown,
   ExternalLink,
   Plug,
   Plus,
   RefreshCw,
+  ShieldCheck,
   Wallet,
 } from "lucide-react";
 import i18next from "i18next";
@@ -27,7 +28,6 @@ import i18next from "i18next";
 import * as AgentBackend from "@/backend/AgentBackend";
 import * as ProviderBackend from "@/backend/ProviderBackend";
 import * as Setting from "@/Setting";
-import {ProviderAuditPanel} from "@/components/ProviderAuditPanel";
 import {ProviderIconField} from "@/components/ProviderIcon";
 import {ProviderGridCard} from "@/components/ProviderGridCard";
 import {ProviderModelsField} from "@/components/ProviderModelsField";
@@ -44,7 +44,6 @@ import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {Input} from "@/components/ui/input";
-import {Tabs, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import {Textarea} from "@/components/ui/textarea";
 import {
   authProvider,
@@ -108,13 +107,9 @@ function Advanced({defaultOpen, children}: {defaultOpen: boolean; children: Reac
   );
 }
 
-/** The grid of providers, or what the relayed records say about them. */
-type ProviderTab = "providers" | "audit";
-
 export default function ProviderListPage({account}: {account: Account}) {
   const navigate = useNavigate();
   const isAdmin = Setting.isAdminUser(account);
-  const [tab, setTab] = React.useState<ProviderTab>("providers");
   const [data, setData] = React.useState<Provider[]>([]);
   const [total, setTotal] = React.useState(0);
   const [loading, setLoading] = React.useState(false);
@@ -336,25 +331,27 @@ export default function ProviderListPage({account}: {account: Account}) {
         title={i18next.t("provider:Providers")}
         description={i18next.t("provider:Page description")}
         actions={
-          <Button onClick={() => openAddDialog()}>
-            <Plus />
-            {i18next.t("provider:New Provider")}
-          </Button>
+          <>
+            {/* The audit of these same providers, which used to be a tab here
+                and is now a page: it grades every one of them, and a grade is
+                not something to go looking for behind a tab. */}
+            {isAdmin ? (
+              <Button asChild variant="ghost">
+                <Link to="/authenticity">
+                  <ShieldCheck />
+                  {i18next.t("audit:Authenticity")}
+                </Link>
+              </Button>
+            ) : null}
+            <Button onClick={() => openAddDialog()}>
+              <Plus />
+              {i18next.t("provider:New Provider")}
+            </Button>
+          </>
         }
       />
 
-      {isAdmin ? (
-        <Tabs value={tab} onValueChange={value => setTab(value as ProviderTab)}>
-          <TabsList>
-            <TabsTrigger value="providers">{i18next.t("provider:Providers")}</TabsTrigger>
-            <TabsTrigger value="audit">{i18next.t("audit:Channel audit")}</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      ) : null}
-
-      {tab === "audit" ? (
-        <ProviderAuditPanel owner={account.name} />
-      ) : error !== "" && data.length === 0 ? (
+      {error !== "" && data.length === 0 ? (
         <Card>
           <ErrorState error={error} onRetry={() => fetchProviders()} />
         </Card>

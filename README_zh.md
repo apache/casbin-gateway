@@ -86,6 +86,7 @@ Gateway 会在自己的窗口里打开 —— 不用登录：它只服务本机�
 | **Agents** | 本机安装的每一个 AI 编程 Agent —— Claude Code、Codex CLI、Cursor 等等。点其中一个的 **Patch**，它的活动就会实时流进页面。 | 无 |
 | **Skills, MCP & Prompts** | 所有 Agent 的所有技能、MCP 服务器和提示词文件汇总在一张表里。可以给一个或多个 Agent 添加 MCP 服务器，编辑某个 Agent 每次会话前读到的提示词，也可以打开、删除，或复制到另一个 Agent。 | 无 |
 | **Providers** | 挡在模型厂商前面的统一入口。API Key 由 Gateway 持有，Agent 拿不到；也可以转发 Agent 自己的登录，什么都不持有。 | 一个厂商的 API Key，或者什么都不用 |
+| **Authenticity** | 每个 Provider 一个 100 分制的分数和一个等级，不用点按钮就会自动测出来：作答的模型是不是点名的那个、提示词缓存是不是真的、两个完全相同的请求计费是否一致。分数背后的每一条测试用例都是公开的，而且都可以改权重、停用、重写，也可以自己加。 | 一个带 API Key 的 Provider |
 | **LLM Records** | Agent 转发的每一次请求：完整的 system prompt、每一条消息和工具调用、模型可用的每个工具的 schema，以及 token 数和费用。 | 一个 Provider，以及 `llmRecordMode` —— 见[记录提示词](#记录提示词) |
 
 Agent 是通过读取 **Gateway 所在机器**的用户账户、home 目录和安装路径发现的，所以要在你想观察的那台机器上运行它。
@@ -114,6 +115,20 @@ export ANTHROPIC_AUTH_TOKEN="cg-..."
 这种 Provider 的环境变量片段只设 base URL，不设别的 —— 在这里再设一个 token 会覆盖 Agent 已有的登录。记录和路由和有 Key 的 Provider 完全一样，只是 Gateway 从头到尾没见过任何 Key。
 
 Codex 是例外：它的 ChatGPT 登录走的是没有任何 Provider 能替代的端点，所以 Codex CLI 仍然需要一个带 API Key 的 Provider。
+
+### Key 背后的 API 真是它声称的那个吗？
+
+中转商可以卖着前沿模型、跑着便宜模型，可以把缓存过的前缀当新输入计费，也可以假装自己会说某套 API。这些在流量里
+都看不出来，所以 **Authenticity** 直接去问上游。每个 Provider 在加入时、端点或密钥变更时、以及报告过期后都会被
+自动探测一次——不用点按钮，间隔由 `providerProbeIntervalHours` 决定——测出来的是一个 100 分制的分数和一个
+A 到 F 的等级。
+
+分数只是背后那些测试用例的汇总，而用例全都摆在页面上：每条问什么、答案怎么判、实际发出去的请求长什么样、占多少
+权重。可以改权重、停用、重写问题，也可以自己加一条——该问中转商什么，各家情况并不一样，而评分方法不公开就算不上
+证据。**恢复默认**会把内置用例恢复原样，你自己写的不受影响。
+
+一次探测会花掉该 Provider 一点点额度，具体花了多少就写在报告上。`providerProbeMode = "manual"` 表示只在手动
+触发时探测，`"off"` 表示从不探测。
 
 ### 停止、升级、卸载
 

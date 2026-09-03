@@ -22,6 +22,7 @@ import * as LlmRecordBackend from "@/backend/LlmRecordBackend";
 import * as ProviderBackend from "@/backend/ProviderBackend";
 import * as Setting from "@/Setting";
 import {AgentCatalog} from "@/components/AgentCatalog";
+import {AuthenticityOverview} from "@/components/AuthenticityOverview";
 import {AgentGridCard} from "@/components/AgentGridCard";
 import {EmptyState, ErrorState} from "@/components/shared/empty-state";
 import {Loading} from "@/components/shared/loading";
@@ -252,6 +253,11 @@ export default function HomePage({account}: {account: Account}) {
           }
         />
       ) : null}
+
+      {/* Whether the keys behind these agents reach what they are sold as. It
+          is measured without being asked for, so it belongs above the fold
+          rather than behind a button on another page. */}
+      {providers.length > 0 ? <AuthenticityOverview providers={providers} /> : null}
 
       {!scanned ? (
         <Loading tip={i18next.t("agent:Scan")} />

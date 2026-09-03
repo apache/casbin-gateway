@@ -22,6 +22,7 @@ import {
   MessageSquare,
   Plug,
   Settings,
+  ShieldCheck,
   Table2,
   type LucideIcon,
 } from "lucide-react";
@@ -75,6 +76,7 @@ export const navGroups: NavGroup[] = [
   },
   {key: "/agent-records", label: "agent:Agent Records", icon: FileSearch, path: "/agent-records", adminOnly: true},
   {key: "/providers", label: "provider:Providers", icon: Plug, path: "/providers"},
+  {key: "/authenticity", label: "audit:Authenticity", icon: ShieldCheck, path: "/authenticity", adminOnly: true},
   {key: "/llm-records", label: "llm:LLM Records", icon: Logs, path: "/llm-records", adminOnly: true},
   {key: "/usage", label: "usage:Usage", icon: ChartColumn, path: "/usage", adminOnly: true},
   {key: "/pricing", label: "usage:Model pricing", icon: CircleDollarSign, path: "/pricing", adminOnly: true},

@@ -102,6 +102,11 @@ func initAPI() {
 	beego.Router("/api/get-provider-probes", &controllers.ApiController{}, "GET:GetProviderProbes")
 	beego.Router("/api/get-provider-probe-history", &controllers.ApiController{}, "GET:GetProviderProbeHistory")
 	beego.Router("/api/probe-provider", &controllers.ApiController{}, "POST:ProbeProvider")
+	beego.Router("/api/get-probe-cases", &controllers.ApiController{}, "GET:GetProbeCases")
+	beego.Router("/api/add-probe-case", &controllers.ApiController{}, "POST:AddProbeCase")
+	beego.Router("/api/update-probe-case", &controllers.ApiController{}, "POST:UpdateProbeCase")
+	beego.Router("/api/delete-probe-case", &controllers.ApiController{}, "POST:DeleteProbeCase")
+	beego.Router("/api/reset-probe-cases", &controllers.ApiController{}, "POST:ResetProbeCases")
 
 	beego.Router("/api/get-llm-records", &controllers.ApiController{}, "GET:GetLlmRecords")
 	beego.Router("/api/get-llm-record", &controllers.ApiController{}, "GET:GetLlmRecord")

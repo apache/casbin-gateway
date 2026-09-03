@@ -43,6 +43,10 @@ type Setting struct {
 	// ProviderProbeMode is "auto", "manual" or "off". An automatic probe spends
 	// a few cents of the account's own credit, so it is one setting away.
 	ProviderProbeMode string `xorm:"varchar(20)" json:"providerProbeMode"`
+	// ProviderProbeIntervalHours is how long an authenticity report stays
+	// current before an automatic probe asks the same questions again. To stop
+	// probing altogether, set the mode rather than this.
+	ProviderProbeIntervalHours int `xorm:"int" json:"providerProbeIntervalHours"`
 
 	// ModelsDevSyncMode is "auto" or "off", and the interval is how often an
 	// automatic sync runs. A sync only ever reprices models this machine has
@@ -83,7 +87,8 @@ func SyncSettingToConf(setting *Setting) {
 		"llmRecordMaxPayloadBytes": strconv.Itoa(setting.LlmRecordMaxPayloadBytes),
 		"llmPricingFile":           setting.LlmPricingFile,
 
-		"providerProbeMode": setting.ProviderProbeMode,
+		"providerProbeMode":          setting.ProviderProbeMode,
+		"providerProbeIntervalHours": strconv.Itoa(setting.ProviderProbeIntervalHours),
 
 		"modelsDevSyncMode":          setting.ModelsDevSyncMode,
 		"modelsDevSyncIntervalHours": strconv.Itoa(setting.ModelsDevSyncIntervalHours),
@@ -194,6 +199,13 @@ func InitBuiltInSetting() {
 		}
 	}
 
+	if setting.ProviderProbeIntervalHours == 0 {
+		setting.ProviderProbeIntervalHours = GetProviderProbeIntervalHours()
+		if _, err = ormer.Engine.ID(core.PK{setting.Owner, setting.Name}).Cols("provider_probe_interval_hours").Update(setting); err != nil {
+			panic(err)
+		}
+	}
+
 	if setting.ModelsDevSyncMode == "" {
 		setting.ModelsDevSyncMode = GetModelsDevSyncMode()
 		setting.ModelsDevSyncIntervalHours = conf.GetModelsDevSyncIntervalHours()
@@ -222,7 +234,8 @@ func newSettingFromConf() *Setting {
 		LlmRecordMaxPayloadBytes: conf.GetLlmRecordMaxPayloadBytes(),
 		LlmPricingFile:           conf.GetLlmPricingFile(),
 
-		ProviderProbeMode: GetProviderProbeMode(),
+		ProviderProbeMode:          GetProviderProbeMode(),
+		ProviderProbeIntervalHours: GetProviderProbeIntervalHours(),
 
 		ModelsDevSyncMode:          GetModelsDevSyncMode(),
 		ModelsDevSyncIntervalHours: conf.GetModelsDevSyncIntervalHours(),

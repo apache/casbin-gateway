@@ -88,6 +88,7 @@ Gateway installed some other way, or in a directory it cannot write to, says so 
 | **Agents** | Every AI coding agent installed on this machine — Claude Code, Codex CLI, Cursor and more. Click **Patch** on one and its activity streams into the page live. | Nothing |
 | **Skills, MCP & Prompts** | Every skill, MCP server and instruction file of every agent in one table. Add an MCP server to one agent or to several at once, edit the instructions an agent reads before every session, open one, delete it, or copy it into another agent. | Nothing |
 | **Providers** | One endpoint in front of your model vendors. Gateway holds the API key, so the agents never have it — or forwards the agent's own sign-in and holds nothing. | A vendor API key, or nothing at all |
+| **Authenticity** | A score out of 100 and a grade for every provider, measured without being asked: whether the model that answers is the one that was asked for, whether the prompt cache is real, whether two identical requests are billed the same. Every test case behind the score is published, and every one of them can be reweighted, turned off, rewritten or added to. | A provider with an API key |
 | **LLM Records** | Every request an agent relayed: the full system prompt, every message and tool call, the schema of every tool the model was offered, plus tokens and cost. | A provider, and `llmRecordMode` — see [Recording prompts](#recording-prompts) |
 
 Agents are found by reading the user accounts, home directories and install paths of **the machine Gateway runs on**, so run it on the machine whose agents you want to watch.
@@ -116,6 +117,23 @@ An agent signed in with a ChatGPT or Claude subscription has no API key to paste
 The environment snippet for such a provider sets the base URL and nothing else — a token there would replace the sign-in the agent already has. Gateway records and routes the traffic exactly as it does for a provider with a key; it just never sees one.
 
 Codex is the exception: its ChatGPT sign-in talks to an endpoint no provider stands in for, so a Codex CLI still needs a provider with an API key.
+
+### Is the API behind the key what it was sold as?
+
+A reseller can sell a frontier model and serve a cheaper one, count a cached prefix as fresh input, or answer
+in an API it only pretends to speak. None of that shows up in the traffic, so **Authenticity** asks the
+upstream directly. Each provider is probed when it is added, when its endpoint or key changes, and again once
+its report goes stale — no button, and `providerProbeIntervalHours` sets how often — and comes back with a
+score out of 100 and a grade from A to F.
+
+The score is only a summary of the test cases behind it, and all of them are on the page: what each one asks,
+how the answer is judged, the exact request it sends, and what it is worth. Reweight one, turn it off, rewrite
+its question, or add a case of your own — the questions worth asking of a reseller are not the same everywhere,
+and a score whose method is not published is not evidence. **Restore defaults** puts the shipped suite back and
+leaves your own cases alone.
+
+A probe spends a few cents of that provider's own credit, which is on the report next to the finding.
+`providerProbeMode = "manual"` probes only when asked, and `"off"` never probes.
 
 ### Stopping, upgrading, removing
 

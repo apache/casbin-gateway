@@ -18,6 +18,7 @@ import {Logs, RefreshCw, Stethoscope} from "lucide-react";
 import i18next from "i18next";
 
 import * as LlmRecordBackend from "@/backend/LlmRecordBackend";
+import * as ProbeCaseBackend from "@/backend/ProbeCaseBackend";
 import * as ProviderBackend from "@/backend/ProviderBackend";
 import * as Setting from "@/Setting";
 import {ProviderAuditCard} from "@/components/ProviderAuditCard";
@@ -31,6 +32,7 @@ import {providerIdOf} from "@/lib/providers";
 import type {
   LlmAuditReport,
   LlmProviderAudit,
+  ProbeCase,
   Provider,
   ProviderProbe,
   ProviderProbeMode,
@@ -89,11 +91,18 @@ function buildRows(
     rowOf(probe.provider).probe = probe;
   });
 
-  // Configured providers first, then by how much traffic they carried: a
-  // provider that is gone is history, not something to act on.
+  // Configured providers first, then the lowest score: what a page about which
+  // upstreams are what they claim to be has to put at the top is the one that
+  // answered least like the API it is sold as. Providers nobody could measure
+  // sort below the ones that were, and traffic breaks the remaining ties.
   return [...rows.values()].sort((left, right) => {
     if (Boolean(left.provider) !== Boolean(right.provider)) {
       return left.provider ? -1 : 1;
+    }
+    const scored = (row: AuditRow) =>
+      row.probe?.ok && row.probe.grade !== "unknown" ? row.probe.score : Number.POSITIVE_INFINITY;
+    if (scored(left) !== scored(right)) {
+      return scored(left) - scored(right);
     }
     const traffic = (right.audit?.requests ?? 0) - (left.audit?.requests ?? 0);
     return traffic !== 0 ? traffic : left.id.localeCompare(right.id);
@@ -115,6 +124,7 @@ export function ProviderAuditPanel({owner}: {owner: string}) {
   // configured, which is the one thing this page must never get wrong.
   const [providers, setProviders] = React.useState<Provider[] | null>(null);
   const [probes, setProbes] = React.useState<ProviderProbe[]>([]);
+  const [cases, setCases] = React.useState<ProbeCase[]>([]);
   const [probeMode, setProbeMode] = React.useState<ProviderProbeMode>("auto");
   const [probing, setProbing] = React.useState<string[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -136,6 +146,12 @@ export function ProviderAuditPanel({owner}: {owner: string}) {
         setProbes(res.data ?? []);
         setProbeMode(res.data2 ?? "auto");
       })
+      .catch(() => undefined);
+  }, []);
+
+  React.useEffect(() => {
+    ProbeCaseBackend.getProbeCases()
+      .then(res => setCases(res.status === "ok" ? (res.data ?? []) : []))
       .catch(() => undefined);
   }, []);
 
@@ -260,6 +276,7 @@ export function ProviderAuditPanel({owner}: {owner: string}) {
                 key={row.id}
                 audit={row.audit}
                 probe={row.probe}
+                cases={cases}
                 provider={row.provider}
                 providersKnown={providers !== null}
                 probeMode={probeMode}
