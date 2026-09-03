@@ -113,7 +113,7 @@ func (claudeCodePatcher) Status(target Target) (Status, error) {
 		return Status{Detail: "Claude Code hooks are not installed"}, nil
 	}
 	for _, event := range claudeCodeHookEvents {
-		if !hasClaudeCodeHook(hooks[event]) {
+		if !hasHook(hooks[event], isClaudeCodeHook) {
 			return Status{Detail: "Claude Code hooks need refresh"}, nil
 		}
 	}
@@ -165,7 +165,7 @@ func normalizeClaudeCodeHooks(config map[string]any, command string, args []stri
 		return fmt.Errorf("hooks must be a JSON object")
 	}
 	for _, event := range claudeCodeHookEvents {
-		groups, err := withoutClaudeCodeHooks(object[event])
+		groups, err := withoutHooks(object[event], isClaudeCodeHook)
 		if err != nil {
 			return fmt.Errorf("hooks.%s: %w", event, err)
 		}
@@ -195,10 +195,10 @@ func removeClaudeCodeHooks(config map[string]any) bool {
 	}
 	changed := false
 	for _, event := range claudeCodeHookEvents {
-		if !hasClaudeCodeHook(hooks[event]) {
+		if !hasHook(hooks[event], isClaudeCodeHook) {
 			continue
 		}
-		groups, err := withoutClaudeCodeHooks(hooks[event])
+		groups, err := withoutHooks(hooks[event], isClaudeCodeHook)
 		if err != nil {
 			continue
 		}
@@ -213,68 +213,6 @@ func removeClaudeCodeHooks(config map[string]any) bool {
 		delete(config, "hooks")
 	}
 	return changed
-}
-
-func withoutClaudeCodeHooks(value any) ([]any, error) {
-	if value == nil {
-		return nil, nil
-	}
-	groups, ok := value.([]any)
-	if !ok {
-		return nil, fmt.Errorf("must be a JSON array")
-	}
-	result := make([]any, 0, len(groups))
-	for _, rawGroup := range groups {
-		group, ok := objectAt(rawGroup)
-		if !ok {
-			result = append(result, rawGroup)
-			continue
-		}
-		handlers, ok := group["hooks"].([]any)
-		if !ok {
-			result = append(result, rawGroup)
-			continue
-		}
-		kept := make([]any, 0, len(handlers))
-		for _, rawHandler := range handlers {
-			handler, ok := objectAt(rawHandler)
-			if !ok || !isClaudeCodeHook(handler) {
-				kept = append(kept, rawHandler)
-			}
-		}
-		if len(kept) == 0 {
-			continue
-		}
-		if len(kept) != len(handlers) {
-			group["hooks"] = kept
-		}
-		result = append(result, group)
-	}
-	return result, nil
-}
-
-func hasClaudeCodeHook(value any) bool {
-	groups, ok := value.([]any)
-	if !ok {
-		return false
-	}
-	for _, rawGroup := range groups {
-		group, ok := objectAt(rawGroup)
-		if !ok {
-			continue
-		}
-		handlers, ok := group["hooks"].([]any)
-		if !ok {
-			continue
-		}
-		for _, rawHandler := range handlers {
-			handler, ok := objectAt(rawHandler)
-			if ok && isClaudeCodeHook(handler) {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 func isClaudeCodeHook(handler map[string]any) bool {

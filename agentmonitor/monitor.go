@@ -88,10 +88,22 @@ func Stop() {
 	openAgentMonitor.stopMonitor()
 }
 
+// MonitorAgentId is the agent one installation's records are reported under.
+// Front ends that share a configuration share the monitoring it feeds: the
+// Codex VS Code integration reports as the CLI, and the opencode desktop app
+// as opencode.
+func MonitorAgentId(agentID string) string {
+	return canonicalAgentID(agentID)
+}
+
 func canonicalAgentID(agentID string) string {
 	switch strings.ToLower(strings.TrimSpace(agentID)) {
 	case "codex_vscode", "codex-vscode":
 		return "codex-cli"
+	case "opencode-desktop":
+		return "opencode"
+	case "cursor-agent":
+		return "cursor"
 	default:
 		return strings.ToLower(strings.TrimSpace(agentID))
 	}

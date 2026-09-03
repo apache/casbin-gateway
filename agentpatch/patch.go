@@ -19,6 +19,8 @@ package agentpatch
 import (
 	"errors"
 	"fmt"
+
+	"github.com/apache/casbin-gateway/agentmonitor"
 )
 
 // ErrNotSupported reports an agent Gateway can discover but cannot monitor yet.
@@ -29,6 +31,14 @@ type Target struct {
 	AgentId string `json:"agentId"`
 	Path    string `json:"path"`
 	Owner   string `json:"owner"`
+}
+
+// monitorTarget is the installation an ingest credential is issued for. Front
+// ends that share one configuration report under one id, so the credential is
+// issued under that id rather than the one the operator patched from.
+func monitorTarget(target Target) Target {
+	target.AgentId = agentmonitor.MonitorAgentId(target.AgentId)
+	return target
 }
 
 // Status is the monitoring state shown beside an agent installation.
@@ -54,7 +64,13 @@ type noticer interface {
 
 var patchers = map[string]patcher{}
 
+// register panics on a duplicate id: two patchers for one agent means one of
+// them silently never runs, and which one depends on the order the files
+// initialize in.
 func register(value patcher) {
+	if _, exists := patchers[value.AgentId()]; exists {
+		panic("agentpatch: duplicate patcher for agent " + value.AgentId())
+	}
 	patchers[value.AgentId()] = value
 }
 

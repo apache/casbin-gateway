@@ -63,7 +63,8 @@ func Run(args []string, input io.Reader) error {
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
-	if !*managed || *agentID != "claude-code" {
+	normalize, known := normalizers[*agentID]
+	if !*managed || !known {
 		return fmt.Errorf("unsupported hook agent %q", *agentID)
 	}
 
@@ -73,7 +74,7 @@ func Run(args []string, input io.Reader) error {
 	if err := decoder.Decode(&event); err != nil {
 		return err
 	}
-	record := Normalize(event, *agentPath, time.Now())
+	record := normalize(event, *agentPath, time.Now())
 	if record == nil || *recordsURL == "" {
 		return nil
 	}
@@ -97,6 +98,16 @@ func Run(args []string, input io.Reader) error {
 		return err
 	}
 	return response.Body.Close()
+}
+
+// normalizers maps each agent that reports through a command hook to the
+// reader of its own event schema. An agent absent from here has no hook Gateway
+// installs, so a process claiming to be one is rejected.
+var normalizers = map[string]func(map[string]any, string, time.Time) *agentmonitor.Record{
+	"claude-code": Normalize,
+	"cursor":      NormalizeCursor,
+	"gemini-cli":  NormalizeGemini,
+	"windsurf":    NormalizeWindsurf,
 }
 
 // Normalize maps Claude Code's command-hook event schema to Gateway's agent

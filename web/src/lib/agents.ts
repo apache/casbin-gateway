@@ -49,9 +49,19 @@ export function agentBuiltin(agent: Agent) {
   return agent.providerConfig?.builtin || i18next.t("agent:Built-in model");
 }
 
-/** The monitor keys the two Codex front ends under one agent id. */
+/** The monitor keys front ends that share a configuration under one agent id. */
 export function monitorAgentId(agentId: string) {
-  return agentId === "codex_vscode" || agentId === "codex-vscode" ? "codex-cli" : agentId;
+  switch (agentId) {
+  case "codex_vscode":
+  case "codex-vscode":
+    return "codex-cli";
+  case "opencode-desktop":
+    return "opencode";
+  case "cursor-agent":
+    return "cursor";
+  default:
+    return agentId;
+  }
 }
 
 /**
