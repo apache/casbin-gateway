@@ -36,6 +36,10 @@ var ownsServer struct {
 }
 
 func runTray() {
+	// An archive that was unpacked by hand has no way in but the executable
+	// itself, so the first start is what gives it one.
+	go ensureShortcuts()
+
 	// The tray menu is drawn by this process too, so it blurs on a scaled
 	// display for the same reason the window did.
 	enableDpiAwareness()

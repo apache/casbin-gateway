@@ -227,8 +227,11 @@ jobs:
           `./logs` and `./tmp` in the working directory.
 
           The launcher is the desktop application: it starts the server, shows the UI in a
-          native window, and stays in the tray after the window is closed. Running the
-          server on its own with `casbin-gateway start` still works and needs nothing else.
+          native window, and stays in the tray after the window is closed. Its first start
+          puts a **Casbin Gateway** entry on the desktop, in the Start menu or in
+          `~/Applications`, pointing back at the directory the archive was unpacked into.
+          Running the server on its own with `casbin-gateway start` still works and needs
+          nothing else.
 
           | Platform | Archive |
           | --- | --- |

@@ -67,7 +67,7 @@ irm https://raw.githubusercontent.com/apache/casbin-gateway/master/scripts/insta
 
 Either one downloads the build for this machine, unpacks it into `~/.local/share/casbin-gateway` (`%LOCALAPPDATA%\casbin-gateway` on Windows), puts a `casbin-gateway` command on your PATH, starts it, and arranges for it to start again when you log in. The terminal you installed from is yours again straight away.
 
-Gateway then opens in its own window — no sign-in: it serves this machine only and signs the local admin in on sight. Closing that window leaves Gateway running behind its tray icon, which is also where you reopen the window and quit for real. There is a **Casbin Gateway** entry on your desktop and in the Start menu, in `~/Applications`, or in the application menu, depending on the platform.
+Gateway then opens in its own window — no sign-in: it serves this machine only and signs the local admin in on sight. Closing that window leaves Gateway running behind its tray icon, which is also where you reopen the window and quit for real. There is a **Casbin Gateway** entry on your desktop and in the Start menu, in `~/Applications`, or in the application menu, depending on the platform. An archive unpacked by hand gets the same entry the first time the launcher runs.
 
 If you would rather use a browser, or you are on a machine with no desktop at all, everything is still at **http://localhost:17000**, and `casbin-gateway start` runs the server on its own with no window and no tray.
 

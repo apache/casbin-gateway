@@ -61,7 +61,6 @@ try {
     Write-Info "Installing to $InstallDir"
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
 
-    $ExePath        = Join-Path $InstallDir 'casbin-gateway.exe'
     $DesktopExePath = Join-Path $InstallDir 'casbin-gateway-desktop.exe'
     foreach ($executable in @('casbin-gateway.exe', 'casbin-gateway-desktop.exe')) {
         try {
@@ -106,35 +105,22 @@ if ($UserPath -notlike "*$BinDir*") {
 }
 
 # ── desktop and Start menu shortcuts ──────────────────────────────────────────
-# Both point at the desktop launcher, not at the server: it is what shows the
-# window, and it starts the server itself if nothing is serving yet.
-# The launcher is a GUI binary, whose output PowerShell cannot capture, so the
-# icon path is spelled out rather than read back.
-Start-Process -FilePath $DesktopExePath -ArgumentList 'icon' -WorkingDirectory $InstallDir -Wait
-$IconPath = Join-Path $InstallDir 'casbin-gateway.ico'
+# The launcher creates them, so that an install and an archive unpacked by hand
+# end up with the same pair. They point at the launcher rather than at the
+# server: it is what shows the window, and it starts the server itself if
+# nothing is serving yet. Telling it "off" is what keeps a reinstall with
+# NO_SHORTCUT from getting them back on the next start.
 $ShortcutName = 'Casbin Gateway.lnk'
+$ShortcutState = if ($env:NO_SHORTCUT) { 'off' } else { 'on' }
 
-function New-GatewayShortcut {
-    param([string]$Path)
-
-    $shell = New-Object -ComObject WScript.Shell
-    $shortcut = $shell.CreateShortcut($Path)
-    $shortcut.TargetPath = $DesktopExePath
-    $shortcut.WorkingDirectory = $InstallDir
-    $shortcut.IconLocation = $IconPath
-    $shortcut.Description = 'Casbin Gateway'
-    $shortcut.Save()
-}
-
-if (-not $env:NO_SHORTCUT) {
-    foreach ($dir in @([System.Environment]::GetFolderPath('Desktop'), [System.Environment]::GetFolderPath('Programs'))) {
-        try {
-            New-GatewayShortcut -Path (Join-Path $dir $ShortcutName)
-        }
-        catch {
-            Write-Info "Could not create the shortcut in ${dir}: $_"
-        }
+try {
+    $shortcut = Start-Process -FilePath $DesktopExePath -ArgumentList 'shortcut', $ShortcutState -WorkingDirectory $InstallDir -Wait -PassThru
+    if ($shortcut.ExitCode -ne 0) {
+        throw "the launcher exited with $($shortcut.ExitCode)"
     }
+}
+catch {
+    Write-Info "Could not create the shortcuts: $_"
 }
 
 # ── start with Windows ────────────────────────────────────────────────────────

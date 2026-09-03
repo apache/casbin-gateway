@@ -29,16 +29,19 @@ import (
 )
 
 func main() {
-	// "icon" writes the application icon next to the Gateway and exits. The
-	// installers call it, because a shortcut needs the icon file to exist
-	// before it can point at one.
-	if len(os.Args) > 1 && os.Args[1] == "icon" {
-		path, err := writeAppIcon()
+	// "shortcut on|off" is what the installers call, so that the entries the
+	// first start would have created are the ones they create — or, with off,
+	// the ones they leave the machine without. It prints what to open the
+	// Gateway from.
+	if len(os.Args) > 2 && os.Args[1] == "shortcut" {
+		path, err := setShortcuts(os.Args[2] == "on")
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "casbin-gateway-desktop:", err)
 			os.Exit(1)
 		}
-		fmt.Println(path)
+		if path != "" {
+			fmt.Println(path)
+		}
 		return
 	}
 
