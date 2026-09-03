@@ -74,7 +74,7 @@ function SourceCard({source, onPick}: {source: ProviderSource; onPick: (source: 
     >
       <span className="flex items-center gap-2 text-sm font-medium">
         <ProviderIcon
-          baseUrl={source.provider.baseUrl}
+          baseUrl={source.website ?? source.provider.baseUrl}
           size={16}
           fallback={<Icon className="size-4 shrink-0" />}
         />
