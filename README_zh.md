@@ -16,10 +16,6 @@
   <a href="./README.md">English</a> | <b>中文</b>
 </p>
 
-<p align="center">
-  <a href="https://cdn.casbin.org/img/casbin-gateway.gif"><img alt="Casbin Gateway" src="https://cdn.casbin.org/img/casbin-gateway.gif" width="900"></a>
-</p>
-
 <p align="center"><b>机器上的每一个编程 Agent</b></p>
 <p align="center">
   <a href="https://claude.com" title="Claude Code"><img src="https://www.google.com/s2/favicons?domain=claude.com&sz=64" width="30" height="30" alt="Claude Code"></a>
@@ -46,7 +42,7 @@
   <a href="https://perplexity.ai" title="Perplexity"><img src="https://www.google.com/s2/favicons?domain=perplexity.ai&sz=64" width="28" height="28" alt="Perplexity"></a>
   <a href="https://deepseek.com" title="DeepSeek"><img src="https://www.google.com/s2/favicons?domain=deepseek.com&sz=64" width="28" height="28" alt="DeepSeek"></a>
   <a href="https://moonshot.cn" title="Moonshot"><img src="https://www.google.com/s2/favicons?domain=moonshot.cn&sz=64" width="28" height="28" alt="Moonshot"></a>
-  <a href="https://open.bigmodel.cn" title="Zhipu GLM"><img src="https://www.google.com/s2/favicons?domain=bigmodel.cn&sz=64" width="28" height="28" alt="Zhipu GLM"></a>
+  <a href="https://z.ai" title="Zhipu GLM"><img src="https://www.google.com/s2/favicons?domain=z.ai&sz=64" width="28" height="28" alt="Zhipu GLM"></a>
   <a href="https://dashscope.aliyuncs.com" title="Qwen"><img src="https://www.google.com/s2/favicons?domain=aliyun.com&sz=64" width="28" height="28" alt="Qwen"></a>
   <a href="https://minimaxi.com" title="MiniMax"><img src="https://www.google.com/s2/favicons?domain=minimaxi.com&sz=64" width="28" height="28" alt="MiniMax"></a>
   <a href="https://baichuan-ai.com" title="Baichuan"><img src="https://www.google.com/s2/favicons?domain=baichuan-ai.com&sz=64" width="28" height="28" alt="Baichuan"></a>
@@ -55,6 +51,8 @@
   <a href="https://cloud.tencent.com" title="Tencent Hunyuan"><img src="https://www.google.com/s2/favicons?domain=cloud.tencent.com&sz=64" width="28" height="28" alt="Tencent Hunyuan"></a>
   <a href="https://baidu.com" title="Baidu ERNIE"><img src="https://www.google.com/s2/favicons?domain=baidu.com&sz=64" width="28" height="28" alt="Baidu ERNIE"></a>
   <a href="https://lingyiwanwu.com" title="01.AI"><img src="https://www.google.com/s2/favicons?domain=lingyiwanwu.com&sz=64" width="28" height="28" alt="01.AI"></a>
+  <a href="https://ai21.com" title="AI21 Labs"><img src="https://www.google.com/s2/favicons?domain=ai21.com&sz=64" width="28" height="28" alt="AI21 Labs"></a>
+  <a href="https://reka.ai" title="Reka"><img src="https://www.google.com/s2/favicons?domain=reka.ai&sz=64" width="28" height="28" alt="Reka"></a>
   <a href="https://siliconflow.cn" title="SiliconFlow"><img src="https://www.google.com/s2/favicons?domain=siliconflow.cn&sz=64" width="28" height="28" alt="SiliconFlow"></a>
   <a href="https://groq.com" title="Groq"><img src="https://www.google.com/s2/favicons?domain=groq.com&sz=64" width="28" height="28" alt="Groq"></a>
   <a href="https://together.ai" title="Together AI"><img src="https://www.google.com/s2/favicons?domain=together.ai&sz=64" width="28" height="28" alt="Together AI"></a>
@@ -63,9 +61,26 @@
   <a href="https://deepinfra.com" title="DeepInfra"><img src="https://www.google.com/s2/favicons?domain=deepinfra.com&sz=64" width="28" height="28" alt="DeepInfra"></a>
   <a href="https://modelscope.cn" title="ModelScope"><img src="https://www.google.com/s2/favicons?domain=modelscope.cn&sz=64" width="28" height="28" alt="ModelScope"></a>
   <a href="https://ppinfra.com" title="PPIO"><img src="https://www.google.com/s2/favicons?domain=ppinfra.com&sz=64" width="28" height="28" alt="PPIO"></a>
+  <a href="https://cerebras.ai" title="Cerebras"><img src="https://www.google.com/s2/favicons?domain=cerebras.ai&sz=64" width="28" height="28" alt="Cerebras"></a>
+  <a href="https://sambanova.ai" title="SambaNova"><img src="https://www.google.com/s2/favicons?domain=sambanova.ai&sz=64" width="28" height="28" alt="SambaNova"></a>
+  <a href="https://hyperbolic.xyz" title="Hyperbolic"><img src="https://www.google.com/s2/favicons?domain=hyperbolic.xyz&sz=64" width="28" height="28" alt="Hyperbolic"></a>
+  <a href="https://nebius.ai" title="Nebius AI Studio"><img src="https://www.google.com/s2/favicons?domain=nebius.ai&sz=64" width="28" height="28" alt="Nebius AI Studio"></a>
+  <a href="https://lambda.ai" title="Lambda"><img src="https://www.google.com/s2/favicons?domain=lambda.ai&sz=64" width="28" height="28" alt="Lambda"></a>
+  <a href="https://baseten.co" title="Baseten"><img src="https://www.google.com/s2/favicons?domain=baseten.co&sz=64" width="28" height="28" alt="Baseten"></a>
+  <a href="https://build.nvidia.com" title="NVIDIA NIM"><img src="https://www.google.com/s2/favicons?domain=nvidia.com&sz=64" width="28" height="28" alt="NVIDIA NIM"></a>
+  <a href="https://ollama.com" title="Ollama"><img src="https://www.google.com/s2/favicons?domain=ollama.com&sz=64" width="28" height="28" alt="Ollama"></a>
+  <a href="https://lmstudio.ai" title="LM Studio"><img src="https://www.google.com/s2/favicons?domain=lmstudio.ai&sz=64" width="28" height="28" alt="LM Studio"></a>
+  <a href="https://docs.vllm.ai" title="vLLM"><img src="https://www.google.com/s2/favicons?domain=vllm.ai&sz=64" width="28" height="28" alt="vLLM"></a>
+  <a href="https://github.com/ggml-org/llama.cpp" title="llama.cpp"><img src="https://www.google.com/s2/favicons?domain=github.com&sz=64" width="28" height="28" alt="llama.cpp"></a>
   <a href="https://openrouter.ai" title="OpenRouter"><img src="https://www.google.com/s2/favicons?domain=openrouter.ai&sz=64" width="28" height="28" alt="OpenRouter"></a>
   <a href="https://aihubmix.com" title="AiHubMix"><img src="https://www.google.com/s2/favicons?domain=aihubmix.com&sz=64" width="28" height="28" alt="AiHubMix"></a>
   <a href="https://302.ai" title="302.AI"><img src="https://www.google.com/s2/favicons?domain=302.ai&sz=64" width="28" height="28" alt="302.AI"></a>
+  <a href="https://vercel.com/docs/ai-gateway" title="Vercel AI Gateway"><img src="https://www.google.com/s2/favicons?domain=vercel.com&sz=64" width="28" height="28" alt="Vercel AI Gateway"></a>
+  <a href="https://litellm.ai" title="LiteLLM"><img src="https://www.google.com/s2/favicons?domain=litellm.ai&sz=64" width="28" height="28" alt="LiteLLM"></a>
+</p>
+
+<p align="center">
+  <a href="https://cdn.casbin.org/img/casbin-gateway.gif"><img alt="Casbin Gateway" src="https://cdn.casbin.org/img/casbin-gateway.gif" width="900"></a>
 </p>
 
 ## 功能特性
