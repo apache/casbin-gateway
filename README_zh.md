@@ -98,6 +98,52 @@
   <a href="https://cdn.casbin.org/img/casbin-gateway.gif"><img alt="Casbin Gateway" src="https://cdn.casbin.org/img/casbin-gateway.gif" width="900"></a>
 </p>
 
+## 运行
+
+一条命令。不需要数据库，不需要 Go，不需要 Node，不需要配置。
+
+Linux 和 macOS：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/apache/casbin-gateway/master/scripts/install.sh | bash
+```
+
+Windows，在 PowerShell 中：
+
+```powershell
+irm https://raw.githubusercontent.com/apache/casbin-gateway/master/scripts/install.ps1 | iex
+```
+
+两者都会下载适配本机的构建产物，解压到 `~/.local/share/casbin-gateway`（Windows 上是 `%LOCALAPPDATA%\casbin-gateway`），把 `casbin-gateway` 命令加入 PATH，启动它，并设置成开机（登录）自启。安装用的那个终端窗口立刻就还给你。
+
+Gateway 会在自己的窗口里打开 —— 不用登录：它只服务本机，本机访问会直接以管理员身份进入。关掉窗口不会退出，它缩到托盘图标后台继续跑，重新打开窗口、开关**开机自启**（**设置 → 启动**是同一个开关）和真正退出都在托盘菜单里。桌面和开始菜单里会有一个 **Casbin Gateway** 快捷方式；macOS 上在 `~/Applications`，Linux 上在应用菜单里。手动解压的压缩包也一样，启动器第一次运行时会自己建好。
+
+想用浏览器，或者机器上根本没有桌面环境，**http://localhost:17000** 一样能访问；`casbin-gateway start` 则只跑服务端，没有窗口也没有托盘。
+
+安装到此为止。Gateway 把数据存在自己目录下的一个 SQLite 文件里，登录也走它自己的用户表。
+
+## 界面预览
+
+| 本机上的每一个 Agent | 这些 Agent 身上装的每一样东西 |
+| :---: | :---: |
+| [![Agents](https://cdn.casbin.org/img/casbin-gateway-home.png)](https://cdn.casbin.org/img/casbin-gateway-home.png) | [![Skills, MCP & Prompts](https://cdn.casbin.org/img/casbin-gateway-skills.png)](https://cdn.casbin.org/img/casbin-gateway-skills.png) |
+| 每个 Agent 接在哪、登录的是哪个账号、在那里花了多少、此刻是不是在跑 | 所有 Agent 的技能、MCP 服务器和提示词文件并排对比，还能从一个 Agent 复制到另一个 |
+
+| 每个 Agent 能做什么 | 每个 Agent 装的是哪个版本 |
+| :---: | :---: |
+| [![权限](https://cdn.casbin.org/img/casbin-gateway-permissions.png)](https://cdn.casbin.org/img/casbin-gateway-permissions.png) | [![Agent 版本](https://cdn.casbin.org/img/casbin-gateway-versions.png)](https://cdn.casbin.org/img/casbin-gateway-versions.png) |
+| 四十来个开关，覆盖该 Agent 的工具、模型和供应商，编译成 Casbin 策略，转发的每个请求都按它判定 | 本机装的版本对上包管理器发布的版本；不管当初怎么装的，安装、升级、回退和卸载都在这一行上完成 |
+
+| 每个 Agent 花了多少 | 每个模型厂商一个入口 |
+| :---: | :---: |
+| [![用量](https://cdn.casbin.org/img/casbin-gateway-usage.png)](https://cdn.casbin.org/img/casbin-gateway-usage.png) | [![新建 Provider](https://cdn.casbin.org/img/casbin-gateway-new-provider.png)](https://cdn.casbin.org/img/casbin-gateway-new-provider.png) |
+| 从 Agent 自己写的会话记录里读出来，所以没走 Gateway 的请求也一样算得上 | 44 个厂商预设，或任何 OpenAI / Anthropic 兼容的 base URL |
+
+| Agent 转发过的每一个请求 | 完整的请求，而不只是一个计数 |
+| :---: | :---: |
+| [![LLM 记录](https://cdn.casbin.org/img/casbin-gateway-llm-records.png)](https://cdn.casbin.org/img/casbin-gateway-llm-records.png) | [![单条记录](https://cdn.casbin.org/img/casbin-gateway-llm-record.png)](https://cdn.casbin.org/img/casbin-gateway-llm-record.png) |
+| 按模型统计请求数、Token、缓存命中率和成本 | 系统提示词、每一条消息，以及模型拿到的每个工具的 schema |
+
 ## 每个 Agent 支持到什么程度
 
 | Agent | 行为监控 | 换供应商 | MCP | 技能 | 提示词 | 会话 | 安装 |
@@ -150,51 +196,7 @@
 - **[统计每个 Agent 花了多少，包括没走 Gateway 的部分](#每个-agent-花了多少包括没走-gateway-的那部分)** —— 直接读 Agent 自己写的会话记录。
 - **[跨 Agent 对比、复制技能 / MCP / 提示词](#接下来做什么)** —— 一张表看到所有 Agent 装了什么。
 
-## 界面预览
-
-| 本机上的每一个 Agent | 这些 Agent 身上装的每一样东西 |
-| :---: | :---: |
-| [![Agents](https://cdn.casbin.org/img/casbin-gateway-home.png)](https://cdn.casbin.org/img/casbin-gateway-home.png) | [![Skills, MCP & Prompts](https://cdn.casbin.org/img/casbin-gateway-skills.png)](https://cdn.casbin.org/img/casbin-gateway-skills.png) |
-| 每个 Agent 接在哪、登录的是哪个账号、在那里花了多少、此刻是不是在跑 | 所有 Agent 的技能、MCP 服务器和提示词文件并排对比，还能从一个 Agent 复制到另一个 |
-
-| 每个 Agent 能做什么 | 每个 Agent 装的是哪个版本 |
-| :---: | :---: |
-| [![权限](https://cdn.casbin.org/img/casbin-gateway-permissions.png)](https://cdn.casbin.org/img/casbin-gateway-permissions.png) | [![Agent 版本](https://cdn.casbin.org/img/casbin-gateway-versions.png)](https://cdn.casbin.org/img/casbin-gateway-versions.png) |
-| 四十来个开关，覆盖该 Agent 的工具、模型和供应商，编译成 Casbin 策略，转发的每个请求都按它判定 | 本机装的版本对上包管理器发布的版本；不管当初怎么装的，安装、升级、回退和卸载都在这一行上完成 |
-
-| 每个 Agent 花了多少 | 每个模型厂商一个入口 |
-| :---: | :---: |
-| [![用量](https://cdn.casbin.org/img/casbin-gateway-usage.png)](https://cdn.casbin.org/img/casbin-gateway-usage.png) | [![新建 Provider](https://cdn.casbin.org/img/casbin-gateway-new-provider.png)](https://cdn.casbin.org/img/casbin-gateway-new-provider.png) |
-| 从 Agent 自己写的会话记录里读出来，所以没走 Gateway 的请求也一样算得上 | 44 个厂商预设，或任何 OpenAI / Anthropic 兼容的 base URL |
-
-| Agent 转发过的每一个请求 | 完整的请求，而不只是一个计数 |
-| :---: | :---: |
-| [![LLM 记录](https://cdn.casbin.org/img/casbin-gateway-llm-records.png)](https://cdn.casbin.org/img/casbin-gateway-llm-records.png) | [![单条记录](https://cdn.casbin.org/img/casbin-gateway-llm-record.png)](https://cdn.casbin.org/img/casbin-gateway-llm-record.png) |
-| 按模型统计请求数、Token、缓存命中率和成本 | 系统提示词、每一条消息，以及模型拿到的每个工具的 schema |
-
-## 运行
-
-一条命令。不需要数据库，不需要 Go，不需要 Node，不需要配置。
-
-Linux 和 macOS：
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/apache/casbin-gateway/master/scripts/install.sh | bash
-```
-
-Windows，在 PowerShell 中：
-
-```powershell
-irm https://raw.githubusercontent.com/apache/casbin-gateway/master/scripts/install.ps1 | iex
-```
-
-两者都会下载适配本机的构建产物，解压到 `~/.local/share/casbin-gateway`（Windows 上是 `%LOCALAPPDATA%\casbin-gateway`），把 `casbin-gateway` 命令加入 PATH，启动它，并设置成开机（登录）自启。安装用的那个终端窗口立刻就还给你。
-
-Gateway 会在自己的窗口里打开 —— 不用登录：它只服务本机，本机访问会直接以管理员身份进入。关掉窗口不会退出，它缩到托盘图标后台继续跑，重新打开窗口、开关**开机自启**（**设置 → 启动**是同一个开关）和真正退出都在托盘菜单里。桌面和开始菜单里会有一个 **Casbin Gateway** 快捷方式；macOS 上在 `~/Applications`，Linux 上在应用菜单里。手动解压的压缩包也一样，启动器第一次运行时会自己建好。
-
-想用浏览器，或者机器上根本没有桌面环境，**http://localhost:17000** 一样能访问；`casbin-gateway start` 则只跑服务端，没有窗口也没有托盘。
-
-安装到此为止。Gateway 把数据存在自己目录下的一个 SQLite 文件里，登录也走它自己的用户表。
+## 使用
 
 ### 保持最新
 

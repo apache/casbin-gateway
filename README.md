@@ -98,6 +98,54 @@
   <a href="https://cdn.casbin.org/img/casbin-gateway.gif"><img alt="Casbin Gateway" src="https://cdn.casbin.org/img/casbin-gateway.gif" width="900"></a>
 </p>
 
+## Run it
+
+One command. No database, no Go, no Node, no configuration.
+
+On Linux and macOS:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/apache/casbin-gateway/master/scripts/install.sh | bash
+```
+
+On Windows, in PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/apache/casbin-gateway/master/scripts/install.ps1 | iex
+```
+
+Either one downloads the build for this machine, unpacks it into `~/.local/share/casbin-gateway` (`%LOCALAPPDATA%\casbin-gateway` on Windows), puts a `casbin-gateway` command on your PATH, starts it, and arranges for it to start again when you log in. The terminal you installed from is yours again straight away.
+
+Gateway then opens in its own window — no sign-in: it serves this machine only and signs the local admin in on sight. Closing that window leaves Gateway running behind its tray icon, which is also where you reopen the window, turn **Start at Login** off and on — **Settings → Startup** is the same switch — and quit for real. There is a **Casbin Gateway** entry on your desktop and in the Start menu, in `~/Applications`, or in the application menu, depending on the platform. An archive unpacked by hand gets the same entry the first time the launcher runs.
+
+If you would rather use a browser, or you are on a machine with no desktop at all, everything is still at **http://localhost:17000**, and `casbin-gateway start` runs the server on its own with no window and no tray.
+
+That is the whole installation. Gateway keeps its data in a SQLite file inside its own directory.
+
+The password behind that account is `admin` / `123`, and it only matters if you open Gateway to the network — see [Serving other machines](#serving-other-machines).
+
+## Screenshots
+
+| Every agent on this machine | Everything those agents carry |
+| :---: | :---: |
+| [![Agents](https://cdn.casbin.org/img/casbin-gateway-home.png)](https://cdn.casbin.org/img/casbin-gateway-home.png) | [![Skills, MCP & Prompts](https://cdn.casbin.org/img/casbin-gateway-skills.png)](https://cdn.casbin.org/img/casbin-gateway-skills.png) |
+| What each one runs on, which account it is signed in to, what it has spent there, and whether it is running | Every skill, MCP server and instruction file of every agent, side by side, copied from one agent to another |
+
+| What each agent is allowed to do | Which build each agent is on |
+| :---: | :---: |
+| [![Permissions](https://cdn.casbin.org/img/casbin-gateway-permissions.png)](https://cdn.casbin.org/img/casbin-gateway-permissions.png) | [![Agent versions](https://cdn.casbin.org/img/casbin-gateway-versions.png)](https://cdn.casbin.org/img/casbin-gateway-versions.png) |
+| Around forty switches over the agent's tools, models and providers, compiled to a Casbin policy and enforced on every request it relays | The build on this machine against the one its package manager publishes, installed, upgraded, rolled back or removed from the row it is on, whichever way it was installed |
+
+| What the agents spent | One endpoint per model vendor |
+| :---: | :---: |
+| [![Usage](https://cdn.casbin.org/img/casbin-gateway-usage.png)](https://cdn.casbin.org/img/casbin-gateway-usage.png) | [![New Provider](https://cdn.casbin.org/img/casbin-gateway-new-provider.png)](https://cdn.casbin.org/img/casbin-gateway-new-provider.png) |
+| Read from the transcripts the agents write themselves, so it counts what never went through Gateway too | 44 vendor presets, or any OpenAI- or Anthropic-compatible base URL |
+
+| Everything the agents relayed | The whole request, not just a count |
+| :---: | :---: |
+| [![LLM Records](https://cdn.casbin.org/img/casbin-gateway-llm-records.png)](https://cdn.casbin.org/img/casbin-gateway-llm-records.png) | [![One record](https://cdn.casbin.org/img/casbin-gateway-llm-record.png)](https://cdn.casbin.org/img/casbin-gateway-llm-record.png) |
+| Requests, tokens, cache hit rate and cost, broken down by model | The system prompt, every message, and the schema of every tool the model was offered |
+
 ## What Gateway does for each agent
 
 | Agent | Monitoring | Provider | MCP | Skills | Prompt | Sessions | Install |
@@ -150,53 +198,7 @@
 - **[Know what every agent spent, even off Gateway](#what-the-agents-spend-including-what-never-went-through-gateway)** — read straight from the agents' own transcripts.
 - **[Compare and copy skills, MCP servers and prompts across agents](#what-to-do-next)** — every agent's install list in one table.
 
-## Screenshots
-
-| Every agent on this machine | Everything those agents carry |
-| :---: | :---: |
-| [![Agents](https://cdn.casbin.org/img/casbin-gateway-home.png)](https://cdn.casbin.org/img/casbin-gateway-home.png) | [![Skills, MCP & Prompts](https://cdn.casbin.org/img/casbin-gateway-skills.png)](https://cdn.casbin.org/img/casbin-gateway-skills.png) |
-| What each one runs on, which account it is signed in to, what it has spent there, and whether it is running | Every skill, MCP server and instruction file of every agent, side by side, copied from one agent to another |
-
-| What each agent is allowed to do | Which build each agent is on |
-| :---: | :---: |
-| [![Permissions](https://cdn.casbin.org/img/casbin-gateway-permissions.png)](https://cdn.casbin.org/img/casbin-gateway-permissions.png) | [![Agent versions](https://cdn.casbin.org/img/casbin-gateway-versions.png)](https://cdn.casbin.org/img/casbin-gateway-versions.png) |
-| Around forty switches over the agent's tools, models and providers, compiled to a Casbin policy and enforced on every request it relays | The build on this machine against the one its package manager publishes, installed, upgraded, rolled back or removed from the row it is on, whichever way it was installed |
-
-| What the agents spent | One endpoint per model vendor |
-| :---: | :---: |
-| [![Usage](https://cdn.casbin.org/img/casbin-gateway-usage.png)](https://cdn.casbin.org/img/casbin-gateway-usage.png) | [![New Provider](https://cdn.casbin.org/img/casbin-gateway-new-provider.png)](https://cdn.casbin.org/img/casbin-gateway-new-provider.png) |
-| Read from the transcripts the agents write themselves, so it counts what never went through Gateway too | 44 vendor presets, or any OpenAI- or Anthropic-compatible base URL |
-
-| Everything the agents relayed | The whole request, not just a count |
-| :---: | :---: |
-| [![LLM Records](https://cdn.casbin.org/img/casbin-gateway-llm-records.png)](https://cdn.casbin.org/img/casbin-gateway-llm-records.png) | [![One record](https://cdn.casbin.org/img/casbin-gateway-llm-record.png)](https://cdn.casbin.org/img/casbin-gateway-llm-record.png) |
-| Requests, tokens, cache hit rate and cost, broken down by model | The system prompt, every message, and the schema of every tool the model was offered |
-
-## Run it
-
-One command. No database, no Go, no Node, no configuration.
-
-On Linux and macOS:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/apache/casbin-gateway/master/scripts/install.sh | bash
-```
-
-On Windows, in PowerShell:
-
-```powershell
-irm https://raw.githubusercontent.com/apache/casbin-gateway/master/scripts/install.ps1 | iex
-```
-
-Either one downloads the build for this machine, unpacks it into `~/.local/share/casbin-gateway` (`%LOCALAPPDATA%\casbin-gateway` on Windows), puts a `casbin-gateway` command on your PATH, starts it, and arranges for it to start again when you log in. The terminal you installed from is yours again straight away.
-
-Gateway then opens in its own window — no sign-in: it serves this machine only and signs the local admin in on sight. Closing that window leaves Gateway running behind its tray icon, which is also where you reopen the window, turn **Start at Login** off and on — **Settings → Startup** is the same switch — and quit for real. There is a **Casbin Gateway** entry on your desktop and in the Start menu, in `~/Applications`, or in the application menu, depending on the platform. An archive unpacked by hand gets the same entry the first time the launcher runs.
-
-If you would rather use a browser, or you are on a machine with no desktop at all, everything is still at **http://localhost:17000**, and `casbin-gateway start` runs the server on its own with no window and no tray.
-
-That is the whole installation. Gateway keeps its data in a SQLite file inside its own directory.
-
-The password behind that account is `admin` / `123`, and it only matters if you open Gateway to the network — see [Serving other machines](#serving-other-machines).
+## Using it
 
 ### Keeping it up to date
 
