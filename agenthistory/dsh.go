@@ -151,16 +151,22 @@ func openDshTranscript(path string) (io.Reader, func(), error) {
 	}, nil
 }
 
-// dshContent is the model-facing blocks of one message, which is what the event
-// data is for a user turn.
+// dshContent is the model-facing blocks of one message. A turn spells them on
+// the event itself, or under the message the event carries.
 func dshContent(data json.RawMessage) json.RawMessage {
-	var message struct {
+	var event struct {
 		Content json.RawMessage `json:"content"`
+		Message struct {
+			Content json.RawMessage `json:"content"`
+		} `json:"message"`
 	}
-	if err := json.Unmarshal(data, &message); err != nil {
+	if err := json.Unmarshal(data, &event); err != nil {
 		return nil
 	}
-	return message.Content
+	if len(event.Content) > 0 {
+		return event.Content
+	}
+	return event.Message.Content
 }
 
 // addDshUsage reads what one model call spent. The counts ride the assistant
@@ -228,4 +234,46 @@ func dshHeaderTime(value json.RawMessage) string {
 		return strings.TrimSpace(text)
 	}
 	return ""
+}
+
+// readDshTranscript reads the conversation out of a session log. The scan reads
+// the same lines to count them, and only the two message events carry a turn.
+func readDshTranscript(session Session) (Transcript, error) {
+	transcript := Transcript{Session: session, Messages: []Message{}}
+
+	source, closer, err := openDshTranscript(session.Path)
+	if err != nil {
+		return Transcript{}, err
+	}
+	defer closer()
+
+	skipped, _ := eachLineIn(source, func(data []byte) {
+		var entry dshLine
+		if err := json.Unmarshal(data, &entry); err != nil {
+			return
+		}
+		role := ""
+		switch entry.Type {
+		case "user/message":
+			role = "user"
+		case "assistant/message":
+			role = "assistant"
+		default:
+			return
+		}
+		if len(transcript.Messages) >= maxMessages {
+			transcript.Truncated = true
+			return
+		}
+
+		transcript.Messages = append(transcript.Messages, Message{
+			Role:   role,
+			Time:   dshEventTime(entry.Time),
+			Blocks: blocks(dshContent(entry.Data)),
+		})
+	})
+	if skipped > 0 {
+		transcript.Truncated = true
+	}
+	return transcript, nil
 }

@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite" // read another agent's session database
@@ -78,6 +79,7 @@ type cursorComposer struct {
 	LastUpdatedAt int64  `json:"lastUpdatedAt"`
 	Headers       []struct {
 		BubbleId string `json:"bubbleId"`
+		Type     int    `json:"type"`
 	} `json:"fullConversationHeadersOnly"`
 }
 
@@ -141,4 +143,161 @@ func cursorTime(value int64) string {
 		return ""
 	}
 	return time.UnixMilli(value).Local().Format(time.RFC3339)
+}
+
+// readCursorTranscript reads one chat out of the state database. The chat row
+// holds only the order of the messages; each one is a row of its own.
+func readCursorTranscript(session Session) (Transcript, error) {
+	transcript := Transcript{Session: session, Messages: []Message{}}
+
+	db, err := sql.Open("sqlite", "file:"+filepath.ToSlash(session.Path)+"?mode=ro")
+	if err != nil {
+		return Transcript{}, err
+	}
+	defer db.Close()
+
+	// A row the editor emptied rather than deleted holds a NULL, which is not a
+	// string and would end the read.
+	var value sql.NullString
+	if err := db.QueryRow(`SELECT value FROM cursorDiskKV WHERE key = ?`,
+		"composerData:"+session.SessionKey).Scan(&value); err != nil {
+		return Transcript{}, err
+	}
+	var composer cursorComposer
+	if err := json.Unmarshal([]byte(value.String), &composer); err != nil {
+		return Transcript{}, err
+	}
+
+	bubbles, err := readCursorBubbles(db, session.SessionKey)
+	if err != nil {
+		return Transcript{}, err
+	}
+
+	for _, header := range composer.Headers {
+		bubble, found := bubbles[header.BubbleId]
+		if !found {
+			continue
+		}
+		if len(transcript.Messages) >= maxMessages {
+			transcript.Truncated = true
+			break
+		}
+
+		kind := header.Type
+		if kind == 0 {
+			kind = bubble.Type
+		}
+		role := "assistant"
+		if kind == cursorUserBubble {
+			role = "user"
+		}
+		transcript.Messages = append(transcript.Messages, Message{Role: role, Blocks: cursorBlocks(bubble)})
+	}
+	return transcript, nil
+}
+
+// cursorUserBubble is the message kind the editor gives what a person typed.
+const cursorUserBubble = 1
+
+// cursorBubble is one message: the prose, what the model thought before it, and
+// the tool call it made, all optional.
+type cursorBubble struct {
+	Type     int    `json:"type"`
+	Text     string `json:"text"`
+	RichText string `json:"richText"`
+	Thinking struct {
+		Text string `json:"text"`
+	} `json:"thinking"`
+	Tool *struct {
+		Name    string `json:"name"`
+		Params  string `json:"params"`
+		RawArgs string `json:"rawArgs"`
+		Result  string `json:"result"`
+		Error   string `json:"error"`
+		Status  string `json:"status"`
+	} `json:"toolFormerData"`
+}
+
+// readCursorBubbles reads every message of one chat at once: they are keyed by
+// the chat they belong to, and there is no other way to find them.
+func readCursorBubbles(db *sql.DB, composerId string) (map[string]cursorBubble, error) {
+	rows, err := db.Query(`SELECT key, value FROM cursorDiskKV WHERE key LIKE ?`, "bubbleId:"+composerId+":%")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	bubbles := map[string]cursorBubble{}
+	for rows.Next() {
+		var key string
+		var value sql.NullString
+		if err := rows.Scan(&key, &value); err != nil {
+			return nil, err
+		}
+		var bubble cursorBubble
+		if err := json.Unmarshal([]byte(value.String), &bubble); err != nil {
+			continue
+		}
+		bubbles[key[strings.LastIndex(key, ":")+1:]] = bubble
+	}
+	return bubbles, nil
+}
+
+func cursorBlocks(bubble cursorBubble) []Block {
+	blocks := []Block{}
+	if thinking := strings.TrimSpace(bubble.Thinking.Text); thinking != "" {
+		blocks = append(blocks, Block{Kind: blockThinking, Text: clip(thinking, maxTextRunes)})
+	}
+	// What a person typed is kept as an editor document, and only the older
+	// messages carry the same words as plain text.
+	if text := firstNonEmpty(bubble.Text, cursorRichText(bubble.RichText)); strings.TrimSpace(text) != "" {
+		blocks = append(blocks, Block{Kind: blockText, Text: clip(text, maxTextRunes)})
+	}
+	if call := bubble.Tool; call != nil {
+		blocks = append(blocks, Block{
+			Kind: blockToolUse,
+			Tool: call.Name,
+			Text: clip(firstNonEmpty(call.Params, call.RawArgs), maxToolRunes),
+		})
+		if output := firstNonEmpty(call.Error, call.Result); output != "" {
+			blocks = append(blocks, Block{
+				Kind:    blockToolResult,
+				Text:    clip(output, maxToolRunes),
+				IsError: call.Status == "error",
+			})
+		}
+	}
+	return blocks
+}
+
+// cursorRichText reads the words out of the editor document a prompt is stored
+// as: a tree of nodes, of which only the text ones are the message.
+func cursorRichText(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return ""
+	}
+	var document any
+	if err := json.Unmarshal([]byte(value), &document); err != nil {
+		return ""
+	}
+
+	pieces := []string{}
+	var walk func(node any)
+	walk = func(node any) {
+		switch value := node.(type) {
+		case map[string]any:
+			if text, ok := value["text"].(string); ok && text != "" {
+				pieces = append(pieces, text)
+			}
+			if children, ok := value["content"]; ok {
+				walk(children)
+			}
+		case []any:
+			for _, child := range value {
+				walk(child)
+			}
+		}
+	}
+	walk(document)
+	return strings.Join(pieces, "\n")
 }

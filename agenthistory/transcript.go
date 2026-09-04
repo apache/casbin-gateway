@@ -67,8 +67,22 @@ const (
 // pointed at an arbitrary file.
 //
 // The messages are the same ones Scan counts, so the number the Sessions page
-// shows is the number of messages this returns.
+// shows is the number of messages this returns. An agent that keeps its
+// sessions in something other than a plain JSONL file is read by the same
+// reader the scan used, rather than by the one below.
 func ReadTranscript(session Session) (Transcript, error) {
+	switch session.Agent {
+	case opencodeAgent:
+		return readOpencodeTranscript(session)
+	case cursorAgent:
+		return readCursorTranscript(session)
+	case dshAgent:
+		return readDshTranscript(session)
+	}
+	return readJsonlTranscript(session)
+}
+
+func readJsonlTranscript(session Session) (Transcript, error) {
 	transcript := Transcript{Session: session, Messages: []Message{}}
 
 	// A line eachLine passed over is a message this cannot show, so it counts

@@ -193,3 +193,121 @@ func opencodeTime(value int64) string {
 	}
 	return time.UnixMilli(value).Local().Format(time.RFC3339)
 }
+
+// readOpencodeTranscript reads one session out of the database. A message is a
+// row of its own, and what it holds is the parts filed under it.
+func readOpencodeTranscript(session Session) (Transcript, error) {
+	transcript := Transcript{Session: session, Messages: []Message{}}
+
+	db, err := sql.Open("sqlite", "file:"+filepath.ToSlash(session.Path)+"?mode=ro")
+	if err != nil {
+		return Transcript{}, err
+	}
+	defer db.Close()
+
+	parts, err := readOpencodeParts(db, session.SessionKey)
+	if err != nil {
+		return Transcript{}, err
+	}
+
+	rows, err := db.Query(`SELECT id, time_created, data FROM message
+		WHERE session_id = ? ORDER BY time_created, id LIMIT ?`, session.SessionKey, maxMessages+1)
+	if err != nil {
+		return Transcript{}, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id, data string
+		var created int64
+		if err := rows.Scan(&id, &created, &data); err != nil {
+			return Transcript{}, err
+		}
+		if len(transcript.Messages) >= maxMessages {
+			transcript.Truncated = true
+			break
+		}
+
+		var message struct {
+			Role string `json:"role"`
+		}
+		json.Unmarshal([]byte(data), &message)
+		transcript.Messages = append(transcript.Messages, Message{
+			Role:   message.Role,
+			Time:   opencodeTime(created),
+			Blocks: parts[id],
+		})
+	}
+	return transcript, nil
+}
+
+// opencodePart is one part of a message: the prose, the model thinking aloud,
+// or a tool call with what it returned.
+type opencodePart struct {
+	Type  string `json:"type"`
+	Text  string `json:"text"`
+	Tool  string `json:"tool"`
+	State struct {
+		Status string          `json:"status"`
+		Input  json.RawMessage `json:"input"`
+		Output string          `json:"output"`
+		Error  string          `json:"error"`
+	} `json:"state"`
+	Filename string `json:"filename"`
+	Mime     string `json:"mime"`
+}
+
+// readOpencodeParts reads every part of a session at once, keyed by the message
+// it belongs to: one query rather than one per message.
+func readOpencodeParts(db *sql.DB, sessionKey string) (map[string][]Block, error) {
+	rows, err := db.Query(`SELECT message_id, data FROM part
+		WHERE session_id = ? ORDER BY time_created, id`, sessionKey)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	blocks := map[string][]Block{}
+	for rows.Next() {
+		var messageId, data string
+		if err := rows.Scan(&messageId, &data); err != nil {
+			return nil, err
+		}
+		var part opencodePart
+		if err := json.Unmarshal([]byte(data), &part); err != nil {
+			continue
+		}
+		blocks[messageId] = append(blocks[messageId], opencodeBlocks(part)...)
+	}
+	return blocks, nil
+}
+
+func opencodeBlocks(part opencodePart) []Block {
+	switch part.Type {
+	case "text":
+		if strings.TrimSpace(part.Text) == "" {
+			return nil
+		}
+		return []Block{{Kind: blockText, Text: clip(part.Text, maxTextRunes)}}
+	case "reasoning":
+		return []Block{{Kind: blockThinking, Text: clip(part.Text, maxTextRunes)}}
+	case "file":
+		if strings.HasPrefix(part.Mime, "image/") {
+			return []Block{{Kind: blockImage}}
+		}
+		return []Block{{Kind: blockText, Text: part.Filename}}
+	case "tool":
+		blocks := []Block{{Kind: blockToolUse, Tool: part.Tool, Text: clip(string(part.State.Input), maxToolRunes)}}
+		// A call still running has neither, and stands as the call alone.
+		if output := firstNonEmpty(part.State.Error, part.State.Output); output != "" {
+			blocks = append(blocks, Block{
+				Kind:    blockToolResult,
+				Text:    clip(output, maxToolRunes),
+				IsError: part.State.Status == "error",
+			})
+		}
+		return blocks
+	}
+	// step-start, step-finish and the snapshots around them are bookkeeping.
+	return nil
+}

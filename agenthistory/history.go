@@ -64,6 +64,15 @@ const (
 	maxTitleRunes = 120
 )
 
+// claudeSubagentDir holds the transcripts of the subagents one session ran.
+const claudeSubagentDir = "subagents"
+
+// The two Codex front ends, which write their sessions into the same directory.
+const (
+	codexCliAgent     = "codex-cli"
+	codexDesktopAgent = "codex"
+)
+
 // transcriptDirs are where each agent keeps its own transcripts, relative to a
 // home directory. Both write one JSONL file per session.
 var transcriptDirs = []struct {
@@ -74,7 +83,7 @@ var transcriptDirs = []struct {
 	keyOf func(path string) string
 }{
 	{agent: "claude-code", parts: []string{".claude", "projects"}},
-	{agent: "codex-cli", parts: []string{".codex", "sessions"}},
+	{agent: codexCliAgent, parts: []string{".codex", "sessions"}},
 	// The Gemini CLI and its Qwen Code fork keep one directory per project hash,
 	// and OpenClaw one per agent id; all hold the sessions a level or two
 	// further down, which is where the walk finds them.
@@ -250,6 +259,10 @@ type line struct {
 		// counts of the turn that just ended.
 		Model string          `json:"model"`
 		Info  json.RawMessage `json:"info"`
+		// Originator is the Codex front end that opened the session. They all
+		// write into one sessions directory, so it is the only thing that says
+		// which one a transcript belongs to.
+		Originator string `json:"originator"`
 	} `json:"payload"`
 }
 
@@ -314,6 +327,12 @@ func parse(agent string, file transcript, keyOf func(string) string) (Session, b
 		LastTime:   file.info.ModTime().Local().Format(time.RFC3339),
 		Historical: true,
 	}
+	// A Claude Code subagent writes a transcript of its own under the session
+	// that spawned it, and stamps every line with that session's id. Taken from
+	// the lines they would all be that one session, and opening it would open
+	// whichever of the files was read first.
+	subagent := filepath.Base(filepath.Dir(file.path)) == claudeSubagentDir
+
 	// The file name is the session id for Claude Code, and carries it for Codex;
 	// the transcript itself overrides this when it names one.
 	session.SessionKey = sessionKeyFromName(file.info.Name())
@@ -331,11 +350,26 @@ func parse(agent string, file transcript, keyOf func(string) string) (Session, b
 			return
 		}
 
-		if entry.SessionId != "" {
+		if entry.SessionId != "" && !subagent {
 			session.SessionKey = entry.SessionId
 		}
-		if entry.Type == "session_meta" && entry.Payload.Id != "" {
-			session.SessionKey = entry.Payload.Id
+		if entry.Type == "session_meta" {
+			if entry.Payload.Id != "" {
+				// Resuming a thread writes a new file, named after the thread and
+				// then after the continuation, while the header still names the
+				// thread alone. Keying on the header would list every file of a
+				// resumed thread as the same session, and open the first of them
+				// for all of them.
+				session.SessionKey = firstNonEmpty(trailingUuid(strings.TrimSuffix(file.info.Name(), ".jsonl")), entry.Payload.Id)
+			}
+			// Codex Desktop and the CLI share ~/.codex/sessions, and monitoring
+			// reports them apart. A session listed under the front end that did
+			// not write it is a second row for one conversation.
+			if agent == codexCliAgent {
+				if front := codexAgentForOriginator(entry.Payload.Originator); front != "" {
+					session.Agent = front
+				}
+			}
 		}
 		if session.Cwd == "" {
 			session.Cwd = firstNonEmpty(entry.Cwd, entry.Payload.Cwd)
@@ -370,6 +404,18 @@ func parse(agent string, file transcript, keyOf func(string) string) (Session, b
 	}
 	session.Usage = usage.buckets(dayOf(session.LastTime))
 	return session, true
+}
+
+// codexAgentForOriginator is the agent id one Codex front end reports under,
+// spelled the way agentmonitor spells it for the same rollout files.
+func codexAgentForOriginator(originator string) string {
+	switch strings.NewReplacer("_", "-", " ", "-").Replace(strings.ToLower(strings.TrimSpace(originator))) {
+	case "codex-desktop":
+		return codexDesktopAgent
+	case "codex-tui", "codex-exec", "codex-vscode":
+		return codexCliAgent
+	}
+	return ""
 }
 
 // roleAndContent picks the messages out of a transcript, in either format. Only
@@ -489,13 +535,23 @@ func trimTitle(text string) string {
 // "<uuid>.jsonl" for Claude Code, "rollout-<date>-<uuid>.jsonl" for Codex.
 func sessionKeyFromName(name string) string {
 	base := strings.TrimSuffix(name, ".jsonl")
-	const uuidLength = 36
-	if len(base) >= uuidLength {
-		if candidate := base[len(base)-uuidLength:]; strings.Count(candidate, "-") == 4 {
-			return candidate
-		}
+	if id := trailingUuid(base); id != "" {
+		return id
 	}
 	return base
+}
+
+// trailingUuid is the id a transcript's name ends in, or "" when it ends in
+// something else.
+func trailingUuid(base string) string {
+	const uuidLength = 36
+	if len(base) < uuidLength {
+		return ""
+	}
+	if candidate := base[len(base)-uuidLength:]; strings.Count(candidate, "-") == 4 {
+		return candidate
+	}
+	return ""
 }
 
 // parentDirName is the name of the directory a transcript sits in, which is the
