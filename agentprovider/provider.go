@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+
+	"github.com/apache/casbin-gateway/agentenv"
 )
 
 // ErrNotSupported reports an agent whose configuration format Gateway cannot
@@ -94,6 +96,10 @@ type Status struct {
 	// Current is the endpoint the agent's files name right now, whichever tool
 	// wrote them.
 	Current string `json:"current"`
+	// EnvConflicts are the variables set in the environment that the agent reads
+	// before its configuration file, and so silently override what a switch
+	// writes into that file.
+	EnvConflicts []agentenv.Conflict `json:"envConflicts"`
 }
 
 type writer interface {
@@ -217,6 +223,17 @@ func Restore(target Target) error {
 // that cannot be read is reported as detail rather than as an error, so the
 // agent list stays usable.
 func StatusOf(target Target) Status {
+	status := statusOf(target)
+	status.EnvConflicts = []agentenv.Conflict{}
+	// An agent Gateway cannot write is pointed at the gateway with these very
+	// variables by hand, so only an agent with a writer is checked.
+	if status.Supported {
+		status.EnvConflicts = agentenv.Check(target.AgentId, target.Owner, status.BaseUrl)
+	}
+	return status
+}
+
+func statusOf(target Target) Status {
 	value, ok := writers[target.AgentId]
 	if !ok {
 		return Status{

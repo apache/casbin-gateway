@@ -129,6 +129,15 @@ export default function AgentsPage({account}: {account: Account}) {
                   </Badge>
                 </SimpleTooltip>
               ) : null}
+              {record.providerConfig?.envConflicts?.length ? (
+                <SimpleTooltip
+                  title={`${i18next.t("agent:Environment overrides this configuration")}: ${record.providerConfig.envConflicts
+                    .map(conflict => conflict.key)
+                    .join(", ")}`}
+                >
+                  <Badge variant="warning">{i18next.t("agent:Env override")}</Badge>
+                </SimpleTooltip>
+              ) : null}
             </span>
           </div>
         ) : (

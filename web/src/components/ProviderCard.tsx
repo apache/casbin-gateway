@@ -18,6 +18,7 @@ import i18next from "i18next";
 
 import * as AgentBackend from "@/backend/AgentBackend";
 import {EnvSnippet} from "@/components/EnvSnippet";
+import {EnvWarningBanner} from "@/components/EnvWarningBanner";
 import {ProviderIcon} from "@/components/ProviderIcon";
 import {ConfirmDialog} from "@/components/shared/confirm-dialog";
 import {Loading} from "@/components/shared/loading";
@@ -196,6 +197,7 @@ export function ProviderCard({
     detail: "",
     builtin: "",
     current: "",
+    envConflicts: [],
   };
   const noteKey = agentSetupNoteKey(agent.agentId);
   const healthOf = (id: string) => health.find(item => item.provider === id);
@@ -273,6 +275,11 @@ export function ProviderCard({
             ))}
           </SelectContent>
         </Select>
+
+        <EnvWarningBanner
+          conflicts={providerConfig.envConflicts}
+          applied={providerConfig.applied}
+        />
 
         {mismatched ? (
           <p className="text-sm text-warning">

@@ -117,6 +117,21 @@ export interface AgentProviderFile {
   preview: string;
 }
 
+/**
+ * One environment variable that an agent reads before its own configuration
+ * file, so that what Gateway wrote into that file never takes effect.
+ */
+export interface EnvConflict {
+  key: string;
+  /** Masked when the variable carries a credential. */
+  value: string;
+  /** Where it is set, with the file in path when it is set in one. */
+  source: string;
+  path: string;
+  /** The command that clears it, empty when the file has to be edited. */
+  fix: string;
+}
+
 /** The state of the agent's own configuration file, written by the orchestrator. */
 export interface AgentProviderConfig {
   supported: boolean;
@@ -133,6 +148,8 @@ export interface AgentProviderConfig {
   builtin: string;
   /** The endpoint the agent's files name now, whichever tool wrote them. */
   current: string;
+  /** The environment variables that override what Gateway writes here. */
+  envConflicts: EnvConflict[];
 }
 
 /** The cloud account an agent is signed in to, read from its own state. */
