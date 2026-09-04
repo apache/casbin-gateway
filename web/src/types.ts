@@ -787,6 +787,9 @@ export interface AgentUsageStat {
   /** Filled for agents only, which is what the card beside the totals shows. */
   lastTime: string;
   lastModel: string;
+  /** The recent per-day breakdown, oldest first. Filled for agents only, and
+   *  is what their cards draw the trend from. */
+  days?: AgentUsageStat[];
 }
 
 /**

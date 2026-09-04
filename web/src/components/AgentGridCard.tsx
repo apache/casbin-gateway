@@ -19,6 +19,7 @@ import i18next from "i18next";
 
 import {AgentIcon} from "@/components/AgentIcon";
 import {AgentCardInstances} from "@/components/AgentInstances";
+import {AgentUsageTrend, hasUsageTrend} from "@/components/AgentUsageTrend";
 import {RunButton, RunDot} from "@/components/AgentRunControl";
 import {ProviderIcon} from "@/components/ProviderIcon";
 import {QuotaBadge} from "@/components/ProviderQuota";
@@ -212,6 +213,12 @@ export function AgentGridCard({
   // Off is only the truth about the relayed totals; a transcript is written
   // whether or not Gateway is recording anything.
   const counted = spent !== undefined || recording;
+  const costHint =
+    spent && spent.unpriced > 0
+      ? i18next
+        .t("llm:{count} of these requests have no list price")
+        .replace("{count}", spent.unpriced.toLocaleString())
+      : sourceHint;
   const lastModel = spent?.lastModel || stats?.lastModel;
   const lastTime = spent?.lastTime || stats?.lastTime;
 
@@ -306,34 +313,38 @@ export function AgentGridCard({
         <Divider />
 
         <div className="space-y-3">
-          <div className="grid grid-cols-3 gap-1.5">
-            <Metric
-              label={i18next.t("llm:Requests")}
-              value={counted ? ((spent ?? stats)?.requests ?? 0).toLocaleString() : dash}
-              hint={
-                sourceHint ??
-                (stats && stats.failed > 0
-                  ? `${stats.failed.toLocaleString()} ${i18next.t("llm:failed")}`
-                  : undefined)
-              }
+          {/* The shape of the spend wherever the transcripts carry a history,
+              and the bare totals for the agents whose only account is what
+              Gateway relayed - that source keeps no per-day breakdown. */}
+          {spent && hasUsageTrend(spent) ? (
+            <AgentUsageTrend
+              stat={spent}
+              hints={{tokens: sourceHint, requests: sourceHint, cost: costHint}}
             />
-            <Metric
-              label={i18next.t("llm:Tokens")}
-              value={counted ? formatTokens(spent?.totalTokens ?? stats?.tokens ?? 0) : dash}
-              hint={sourceHint}
-            />
-            <Metric
-              label={i18next.t("llm:Cost")}
-              value={counted ? formatCost(spent?.cost ?? stats?.cost ?? 0) : dash}
-              hint={
-                spent && spent.unpriced > 0
-                  ? i18next
-                    .t("llm:{count} of these requests have no list price")
-                    .replace("{count}", spent.unpriced.toLocaleString())
-                  : sourceHint
-              }
-            />
-          </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-1.5">
+              <Metric
+                label={i18next.t("llm:Requests")}
+                value={counted ? ((spent ?? stats)?.requests ?? 0).toLocaleString() : dash}
+                hint={
+                  sourceHint ??
+                  (stats && stats.failed > 0
+                    ? `${stats.failed.toLocaleString()} ${i18next.t("llm:failed")}`
+                    : undefined)
+                }
+              />
+              <Metric
+                label={i18next.t("llm:Tokens")}
+                value={counted ? formatTokens(spent?.totalTokens ?? stats?.tokens ?? 0) : dash}
+                hint={sourceHint}
+              />
+              <Metric
+                label={i18next.t("llm:Cost")}
+                value={counted ? formatCost(spent?.cost ?? stats?.cost ?? 0) : dash}
+                hint={costHint}
+              />
+            </div>
+          )}
 
           <PlanUsage quota={quota} />
 

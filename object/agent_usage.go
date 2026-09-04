@@ -17,6 +17,7 @@ package object
 import (
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/apache/casbin-gateway/agent"
 	"github.com/apache/casbin-gateway/agenthistory"
@@ -68,6 +69,10 @@ type AgentUsageStat struct {
 	// listing every agent shows next to its totals.
 	LastTime  string `json:"lastTime"`
 	LastModel string `json:"lastModel"`
+	// Days is the recent per-day breakdown of this stat, oldest first. It is
+	// filled for agents only, so a card can draw the shape of the spend rather
+	// than only its total.
+	Days []AgentUsageStat `json:"days,omitempty"`
 }
 
 // AgentUsage is what the transcripts on this machine add up to.
@@ -83,6 +88,11 @@ type AgentUsage struct {
 	// with a range they were not asked for.
 	Since string `json:"since"`
 }
+
+// agentTrendDays is how far back an agent's own per-day breakdown reaches. The
+// cards draw a month; carrying every day a transcript covers would grow the
+// listing without anything reading it.
+const agentTrendDays = 30
 
 // unknownModel stands in for a turn whose transcript never named a model. It is
 // priced like any other unknown one, which is to say not at all.
@@ -105,6 +115,8 @@ func GetAgentUsage(sessions []agenthistory.Session, since string) *AgentUsage {
 	agents := map[string]*AgentUsageStat{}
 	models := map[string]*AgentUsageStat{}
 	days := map[string]*AgentUsageStat{}
+	agentDays := map[string]map[string]*AgentUsageStat{}
+	trendSince := time.Now().AddDate(0, 0, -(agentTrendDays - 1)).Format(time.DateOnly)
 
 	for _, session := range sessions {
 		counted := false
@@ -121,12 +133,21 @@ func GetAgentUsage(sessions []agenthistory.Session, since string) *AgentUsage {
 			cost, priced := GetLlmLongCacheCost(model, bucket.PromptTokens, bucket.CompletionTokens,
 				bucket.CacheWriteTokens, bucket.LongCacheTokens, bucket.CacheReadTokens)
 
-			for _, stat := range []*AgentUsageStat{
+			counters := []*AgentUsageStat{
 				&usage.Totals,
 				statOf(agents, session.Agent),
 				statOf(models, model),
 				statOf(days, bucket.Day),
-			} {
+			}
+			if bucket.Day >= trendSince {
+				byDay, found := agentDays[session.Agent]
+				if !found {
+					byDay = map[string]*AgentUsageStat{}
+					agentDays[session.Agent] = byDay
+				}
+				counters = append(counters, statOf(byDay, bucket.Day))
+			}
+			for _, stat := range counters {
 				stat.add(bucket, cost, priced)
 			}
 
@@ -141,6 +162,10 @@ func GetAgentUsage(sessions []agenthistory.Session, since string) *AgentUsage {
 		if counted {
 			usage.Sessions++
 		}
+	}
+
+	for name, stat := range agents {
+		stat.Days = sorted(agentDays[name], byName)
 	}
 
 	usage.Agents = sorted(agents, byCost)
