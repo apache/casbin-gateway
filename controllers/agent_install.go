@@ -66,7 +66,7 @@ func (c *ApiController) UpgradeAgent() {
 		return
 	}
 
-	job, err := agentinstall.Start(agentinstall.UpgradePlan(installation.AgentId, installation.InstallMethod))
+	job, err := agentinstall.Start(agentinstall.UpgradePlan(installation))
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -107,8 +107,7 @@ func (c *ApiController) SetAgentVersion() {
 		return
 	}
 
-	plan := agentinstall.VersionPlan(
-		installation.AgentId, installation.InstallMethod, form.Version, installation.Version)
+	plan := agentinstall.VersionPlan(installation, form.Version)
 	job, err := agentinstall.Start(plan)
 	if err != nil {
 		c.ResponseError(err.Error())
@@ -130,8 +129,7 @@ func (c *ApiController) UninstallAgent() {
 		return
 	}
 
-	job, err := agentinstall.Start(
-		agentinstall.UninstallPlan(installation.AgentId, installation.InstallMethod))
+	job, err := agentinstall.Start(agentinstall.UninstallPlan(installation))
 	if err != nil {
 		c.ResponseError(err.Error())
 		return

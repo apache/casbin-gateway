@@ -5,6 +5,11 @@
   "execName": "Trae",
   "desktop": true,
   "instanceArg": "--user-data-dir",
-  "windowsProgramDirs": ["Trae"],
-  "homebrewCasks": ["trae"]
+  "wingetPackage": "ByteDance.Trae",
+  "windowsProgramDirs": [
+    "Trae"
+  ],
+  "homebrewCasks": [
+    "trae"
+  ]
 }

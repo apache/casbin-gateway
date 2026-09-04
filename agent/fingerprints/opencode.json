@@ -4,5 +4,11 @@
   "installUrl": "https://opencode.ai/docs/",
   "execName": "opencode",
   "npmPackage": "opencode-ai",
-  "homeDirs": [".opencode/bin"]
+  "wingetPackage": "SST.opencode",
+  "homeDirs": [
+    ".opencode/bin"
+  ],
+  "updateArgs": [
+    "upgrade"
+  ]
 }

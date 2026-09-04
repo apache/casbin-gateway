@@ -5,6 +5,11 @@
   "execName": "Windsurf",
   "desktop": true,
   "instanceArg": "--user-data-dir",
-  "windowsProgramDirs": ["Windsurf"],
-  "homebrewCasks": ["windsurf"]
+  "wingetPackage": "Codeium.Windsurf",
+  "windowsProgramDirs": [
+    "Windsurf"
+  ],
+  "homebrewCasks": [
+    "windsurf"
+  ]
 }

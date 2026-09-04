@@ -48,7 +48,10 @@ type Job struct {
 	Command string `json:"command"`
 	// Version is the release the job pinned, empty for the current one.
 	Version string `json:"version,omitempty"`
-	Running bool   `json:"running"`
+	// Interactive marks a job that put a window on screen and is waiting for
+	// whoever is at the machine, rather than one working on its own.
+	Interactive bool `json:"interactive,omitempty"`
+	Running     bool `json:"running"`
 	// Ok is the outcome of a finished job, false while one runs.
 	Ok bool `json:"ok"`
 	// Output is the tail of what the package manager printed, on both streams.
@@ -83,14 +86,15 @@ func Start(plan Plan) (Job, error) {
 		return Job{}, errors.New("this agent is already being installed or upgraded")
 	}
 	started := &job{Job: Job{
-		AgentId:   plan.AgentId,
-		Name:      agent.DisplayNameOf(plan.AgentId),
-		Action:    plan.Action,
-		Manager:   plan.Manager,
-		Command:   plan.Command,
-		Version:   plan.Version,
-		Running:   true,
-		StartTime: now(),
+		AgentId:     plan.AgentId,
+		Name:        agent.DisplayNameOf(plan.AgentId),
+		Action:      plan.Action,
+		Manager:     plan.Manager,
+		Command:     plan.Command,
+		Version:     plan.Version,
+		Interactive: plan.Interactive,
+		Running:     true,
+		StartTime:   now(),
 	}}
 	jobs.byAgent[plan.AgentId] = started
 	jobs.Unlock()
@@ -140,7 +144,12 @@ func run(started *job, plan Plan) {
 	// Nothing is attached to the input, so a manager that asks a question would
 	// hang until the timeout. These say to answer none.
 	cmd.Env = append(os.Environ(), "CI=1", "NO_COLOR=1", "npm_config_yes=true", "HOMEBREW_NO_AUTO_UPDATE=1")
-	hideWindow(cmd)
+	// An uninstaller with no silent switch, and the consent prompt Windows
+	// raises for a machine-wide change, both need to be on screen: hiding them
+	// would leave the job waiting on a dialog nobody can answer.
+	if !plan.Interactive {
+		hideWindow(cmd)
+	}
 
 	err := cmd.Run()
 	if ctx.Err() != nil {

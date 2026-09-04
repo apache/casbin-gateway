@@ -4,5 +4,8 @@
   "installUrl": "https://github.com/charmbracelet/crush",
   "execName": "crush",
   "npmPackage": "@charmland/crush",
-  "homeDirs": [".local/bin"]
+  "wingetPackage": "charmbracelet.crush",
+  "homeDirs": [
+    ".local/bin"
+  ]
 }

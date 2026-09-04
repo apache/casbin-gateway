@@ -278,7 +278,9 @@ export interface AgentInstallPlan {
   agentId: string;
   /** "install", "upgrade", "downgrade" or "uninstall". */
   action: string;
-  /** The package manager that would do it: npm, winget or homebrew. */
+  /** What would do it: a package manager (npm, winget, homebrew, msstore), the
+   *  app's registered uninstaller, a Store package, the agent's own updater,
+   *  the vendor's install command, or the files on disk. */
   manager?: string;
   command?: string;
   /** The release a pinned install asks for, absent for the current one. */
@@ -286,6 +288,11 @@ export interface AgentInstallPlan {
   available: boolean;
   /** Why there is no command, when there is none. */
   detail?: string;
+  /** The command opens a window of its own and waits for whoever is at the
+   *  machine: an uninstaller with no silent mode, or a consent prompt. */
+  interactive?: boolean;
+  /** What this command does that a package manager would not. */
+  warning?: string;
   installUrl?: string;
 }
 
@@ -331,6 +338,9 @@ export interface AgentInstallJob {
   ok: boolean;
   /** The release a pinned install asked for, absent for the current one. */
   version?: string;
+  /** The job put a window on screen and is waiting for whoever is at the
+   *  machine, rather than working on its own. */
+  interactive?: boolean;
   /** The tail of what the package manager printed, on both streams. */
   output: string;
   error?: string;

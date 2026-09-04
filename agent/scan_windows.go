@@ -76,17 +76,27 @@ func scan(ctx context.Context) []Installation {
 
 	installations = expandSharedCodexWindowsInstallations(dedupeInstallations(installations), homes)
 	// Whatever layout an installation came from, its launcher may carry a
-	// version resource, so fall back to that rather than reporting no version.
+	// version resource, so fall back to that rather than reporting no version -
+	// except where the fingerprint says that resource is the packager's.
 	for i := range installations {
 		if ctx.Err() != nil {
 			return installations
 		}
-		if installations[i].Version == "" {
+		if installations[i].Version == "" && !ignoresExecutableVersion(installations[i].AgentId) {
 			installations[i].Version = executableVersion(installations[i].Path)
 		}
 	}
 	fillAccounts(installations, homes)
 	return installations
+}
+
+func ignoresExecutableVersion(agentId string) bool {
+	for i := range fingerprints {
+		if fingerprints[i].ID == agentId {
+			return fingerprints[i].IgnoreExecutableVersion
+		}
+	}
+	return false
 }
 
 func windowsHomes(ctx context.Context) []homeDir {

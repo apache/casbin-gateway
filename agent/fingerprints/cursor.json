@@ -5,6 +5,11 @@
   "execName": "Cursor",
   "desktop": true,
   "instanceArg": "--user-data-dir",
-  "windowsProgramDirs": ["cursor"],
-  "homebrewCasks": ["cursor"]
+  "wingetPackage": "Anysphere.Cursor",
+  "windowsProgramDirs": [
+    "cursor"
+  ],
+  "homebrewCasks": [
+    "cursor"
+  ]
 }

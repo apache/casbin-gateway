@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {Bot, Download, ExternalLink} from "lucide-react";
+import {Bot, ExternalLink} from "lucide-react";
 import i18next from "i18next";
 
 import {AgentIcon} from "@/components/AgentIcon";
-import {InstallOutput} from "@/components/ToolUpgradeConfirmDialog";
+import {InstallJobProgress} from "@/components/AgentInstallJob";
+import {AgentInstallButton} from "@/components/ToolUpgradeConfirmDialog";
 import {Badge} from "@/components/ui/badge";
-import {Button} from "@/components/ui/button";
 import {SimpleTooltip} from "@/components/ui/tooltip";
 import type {AgentCatalogEntry, AgentInstallJob} from "@/types";
 
@@ -42,7 +42,6 @@ export function ToolInstallRow({
   onInstall: (agentId: string) => void;
 }) {
   const plan = entry.install;
-  const running = job?.running === true;
   const failed = job !== undefined && !job.running && !job.ok;
   const fallbackUrl = !plan.available ? entry.installUrl : undefined;
 
@@ -71,30 +70,17 @@ export function ToolInstallRow({
           </SimpleTooltip>
         ) : null}
 
-        <SimpleTooltip
-          title={plan.available ? plan.command : fallbackUrl ? i18next.t("agent:Install page") : plan.detail}
-        >
-          <span className="shrink-0">
-            <Button
-              size="sm"
-              variant={failed ? "outline" : "default"}
-              disabled={(!plan.available && !fallbackUrl) || running}
-              loading={busy || running}
-              onClick={() => {
-                if (plan.available) {
-                  onInstall(entry.agentId);
-                } else if (fallbackUrl) {
-                  window.open(fallbackUrl, "_blank", "noreferrer");
-                }
-              }}
-            >
-              {fallbackUrl ? <ExternalLink /> : <Download />}
-              {i18next.t(
-                running ? "agent:Installing" : failed ? "agent:Retry" : "agent:Install",
-              )}
-            </Button>
-          </span>
-        </SimpleTooltip>
+        <span className="shrink-0">
+          <AgentInstallButton
+            name={entry.name}
+            plan={plan}
+            installUrl={entry.installUrl}
+            job={job}
+            busy={busy}
+            label={failed ? i18next.t("agent:Retry") : undefined}
+            onInstall={() => onInstall(entry.agentId)}
+          />
+        </span>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -108,7 +94,7 @@ export function ToolInstallRow({
         ) : null}
       </div>
 
-      <InstallOutput job={job} />
+      <InstallJobProgress job={job} />
     </div>
   );
 }

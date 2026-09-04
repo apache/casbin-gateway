@@ -505,3 +505,10 @@ html[data-palette="neutral"].dark {
   0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
   40% { transform: scale(1); opacity: 1; }
 }
+
+/* The bar under a running install, for the package managers that report no
+   percentage of their own: it says work is happening, not how much is left. */
+@keyframes install-sweep {
+  0% { left: -40%; }
+  100% { left: 100%; }
+}

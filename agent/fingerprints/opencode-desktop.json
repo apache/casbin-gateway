@@ -4,5 +4,8 @@
   "installUrl": "https://opencode.ai/download",
   "execName": "OpenCode",
   "desktop": true,
-  "windowsProgramDirs": ["@opencode-aidesktop"]
+  "wingetPackage": "SST.OpenCodeDesktop",
+  "windowsProgramDirs": [
+    "@opencode-aidesktop"
+  ]
 }

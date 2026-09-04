@@ -6,5 +6,9 @@
   "instanceEnv": "KIMI_CODE_HOME",
   "stateDir": "kimi-code",
   "npmPackage": "@moonshot-ai/kimi-code",
-  "homeDirs": [".kimi-code/bin"]
+  "wingetPackage": "MoonshotAI.KimiCodeCLI",
+  "homeDirs": [
+    ".kimi-code/bin"
+  ],
+  "ignoreExecutableVersion": true
 }

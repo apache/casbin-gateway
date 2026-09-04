@@ -238,12 +238,14 @@ func withAgent(catalog Catalog, agentId string, installMethod string) Catalog {
 	}
 	// The template is built here rather than cached: it names the program the
 	// PATH search resolved, which the cache outlives.
-	plan := managerPlan(agentId, installMethod, ActionDowngrade, versionPlaceholder)
+	action := ActionDowngrade
 	if installMethod == "" {
 		// Nothing installed, so there is no manager that owns a tree: the one
 		// an install would reach for answers instead.
-		plan = installPlan(agentId, versionPlaceholder)
+		action = ActionInstall
 	}
+	plan := resolve(agent.Installation{AgentId: agentId, InstallMethod: installMethod},
+		action, versionPlaceholder)
 	if plan.Available {
 		catalog.CommandTemplate = plan.Command
 	}
@@ -255,16 +257,6 @@ func withAgent(catalog Catalog, agentId string, installMethod string) Catalog {
 // does one whose manager does not publish this agent.
 func managerPackage(agentId string, installMethod string) (string, string) {
 	packages := agent.PackagesOf(agentId)
-	if installMethod == "" {
-		// Not installed: the manager an install would reach for is the one
-		// whose releases are worth listing.
-		for _, candidate := range installOrder() {
-			if manager, packageId := managerPackage(agentId, candidate); manager != "" {
-				return manager, packageId
-			}
-		}
-		return "", ""
-	}
 
 	switch installMethod {
 	case ManagerNpm:
@@ -277,6 +269,16 @@ func managerPackage(agentId string, installMethod string) (string, string) {
 		}
 		return withPackage(ManagerWinget, packages.Winget)
 	}
+
+	// Either nothing is installed, or it was installed by something that
+	// publishes no releases of its own - a vendor's script, a setup program.
+	// The manager that publishes the agent here still names what the current
+	// release is, which is what an update check is asking for.
+	for _, candidate := range installOrder() {
+		if manager, packageId := managerPackage(agentId, candidate); manager != "" {
+			return manager, packageId
+		}
+	}
 	return "", ""
 }
 
@@ -288,10 +290,6 @@ func withPackage(manager string, packageId string) (string, string) {
 }
 
 func catalogUnavailableDetail(agentId string, installMethod string) string {
-	if installMethod != "" && installMethod != ManagerNpm &&
-		installMethod != ManagerHomebrew && installMethod != ManagerWinget {
-		return "this agent was installed as \"" + installMethod + "\", which publishes no version list Gateway can read"
-	}
 	if agent.PackagesOf(agentId).Desktop {
 		return "this is a desktop app; its versions come from the vendor's own downloads"
 	}

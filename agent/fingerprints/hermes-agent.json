@@ -3,5 +3,11 @@
   "displayName": "Hermes Agent",
   "installUrl": "https://hermes-agent.nousresearch.com/docs/getting-started/installation",
   "execName": "hermes",
-  "customScan": true
+  "customScan": true,
+  "updateArgs": [
+    "update"
+  ],
+  "removeArgs": [
+    "uninstall"
+  ]
 }

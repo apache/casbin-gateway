@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import {Link} from "react-router-dom";
-import {Bot, Download, ExternalLink, RefreshCw} from "lucide-react";
+import {Bot, RefreshCw} from "lucide-react";
 import i18next from "i18next";
 
 import * as Setting from "@/Setting";
@@ -23,7 +23,8 @@ import {
   AgentVersionDialog,
   ToolUninstallConfirmDialog,
 } from "@/components/AgentVersionDialog";
-import {InstallOutput, ToolUpgradeConfirmDialog} from "@/components/ToolUpgradeConfirmDialog";
+import {InstallJobProgress} from "@/components/AgentInstallJob";
+import {AgentInstallButton, ToolUpgradeConfirmDialog} from "@/components/ToolUpgradeConfirmDialog";
 import {DataTable, type Column} from "@/components/shared/data-table";
 import {UnauthorizedResult} from "@/components/shared/misc";
 import {PageContainer, PageHeader} from "@/components/shared/page-header";
@@ -159,41 +160,57 @@ export default function AgentVersionsPage({account}: {account: Account}) {
     {
       title: i18next.t("general:Action"),
       key: "action",
-      render: (_value, row) => (
-        <div className="flex flex-wrap items-center gap-2">
-          {row.installed ? (
-            <>
-              <ToolUpgradeConfirmDialog
-                agent={row.installed}
-                job={installer.jobs[row.agentId]}
+      render: (_value, row) => {
+        const job = installer.jobs[row.agentId];
+        // While one runs, the row shows what it is doing instead of the
+        // buttons that would start a second.
+        if (job?.running) {
+          return <InstallJobProgress job={job} className="w-56" />;
+        }
+        return (
+          <div className="flex items-center gap-2 whitespace-nowrap">
+            {row.installed ? (
+              <>
+                <ToolUpgradeConfirmDialog
+                  agent={row.installed}
+                  job={job}
+                  busy={installer.busyId === row.agentId}
+                  onConfirm={() => installer.upgrade(row.installed as Agent)}
+                />
+                <ToolUninstallConfirmDialog
+                  agent={row.installed}
+                  job={job}
+                  busy={installer.busyId === row.agentId}
+                  onConfirm={() => installer.uninstall(row.installed as Agent)}
+                />
+              </>
+            ) : (
+              <AgentInstallButton
+                name={row.name}
+                plan={row.missing?.install}
+                installUrl={row.missing?.installUrl}
+                job={job}
                 busy={installer.busyId === row.agentId}
-                onConfirm={() => installer.upgrade(row.installed as Agent)}
+                onInstall={() => installer.install(row.agentId)}
               />
-              <ToolUninstallConfirmDialog
-                agent={row.installed}
-                busy={installer.busyId === row.agentId}
-                onConfirm={() => installer.uninstall(row.installed as Agent)}
-              />
-            </>
-          ) : (
-            <InstallButton row={row} installer={installer} />
-          )}
-          <AgentVersionDialog
-            agentId={row.agentId}
-            name={row.name}
-            installMethod={row.installed?.installMethod ?? ""}
-            installedVersion={row.installed?.version ?? ""}
-            update={row.update}
-            busy={installer.busyId === row.agentId}
-            fallbackDetail={row.installed?.upgrade?.detail ?? row.missing?.install.detail}
-            onSelect={version =>
-              row.installed
-                ? installer.setVersion(row.installed, version)
-                : installer.install(row.agentId, version)
-            }
-          />
-        </div>
-      ),
+            )}
+            <AgentVersionDialog
+              agentId={row.agentId}
+              name={row.name}
+              installMethod={row.installed?.installMethod ?? ""}
+              installedVersion={row.installed?.version ?? ""}
+              update={row.update}
+              busy={installer.busyId === row.agentId}
+              fallbackDetail={row.installed?.upgrade?.detail ?? row.missing?.install.detail}
+              onSelect={version =>
+                row.installed
+                  ? installer.setVersion(row.installed, version)
+                  : installer.install(row.agentId, version)
+              }
+            />
+          </div>
+        );
+      },
     },
   ];
 
@@ -245,7 +262,7 @@ export default function AgentVersionsPage({account}: {account: Account}) {
         }
         expandable={{
           rowExpandable: row => installer.jobs[row.agentId] !== undefined,
-          expandedRowRender: row => <InstallOutput job={installer.jobs[row.agentId]} />,
+          expandedRowRender: row => <InstallJobProgress job={installer.jobs[row.agentId]} />,
         }}
       />
     </PageContainer>
@@ -290,40 +307,4 @@ function StatusBadge({row}: {row: VersionRow}) {
     );
   }
   return <Badge variant="success">{i18next.t("agent:Up to date")}</Badge>;
-}
-
-/** The install of an agent this machine does not have, or its vendor's page. */
-function InstallButton({
-  row,
-  installer,
-}: {
-  row: VersionRow;
-  installer: ReturnType<typeof useAgentInstall>;
-}) {
-  const plan = row.missing?.install;
-  const job = installer.jobs[row.agentId];
-  const running = job?.running === true;
-  const fallbackUrl = plan?.available ? undefined : row.missing?.installUrl;
-
-  return (
-    <SimpleTooltip title={plan?.available ? plan.command : fallbackUrl ? i18next.t("agent:Install page") : plan?.detail}>
-      <span>
-        <Button
-          size="sm"
-          disabled={(!plan?.available && !fallbackUrl) || running}
-          loading={installer.busyId === row.agentId || running}
-          onClick={() => {
-            if (plan?.available) {
-              installer.install(row.agentId);
-            } else if (fallbackUrl) {
-              window.open(fallbackUrl, "_blank", "noreferrer");
-            }
-          }}
-        >
-          {fallbackUrl ? <ExternalLink /> : <Download />}
-          {i18next.t(running ? "agent:Installing" : "agent:Install")}
-        </Button>
-      </span>
-    </SimpleTooltip>
-  );
 }

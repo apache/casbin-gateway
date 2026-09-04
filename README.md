@@ -102,33 +102,33 @@
 
 | Agent | Monitoring | Provider | MCP | Skills | Prompt | Sessions | Install |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| <img src="https://www.google.com/s2/favicons?domain=claude.com&sz=64" width="16" height="16" alt=""> **Claude Code** | ✅ | ✅ Anthropic | ✅ | ✅ | ✅ | ✅ | npm · brew · winget |
-| <img src="https://www.google.com/s2/favicons?domain=claude.ai&sz=64" width="16" height="16" alt=""> **Claude Desktop** | ✅ | — | ✅ | — | — | ✅ | — |
-| <img src="https://www.google.com/s2/favicons?domain=openai.com&sz=64" width="16" height="16" alt=""> **Codex CLI** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm · brew |
-| <img src="https://www.google.com/s2/favicons?domain=openai.com&sz=64" width="16" height="16" alt=""> **ChatGPT Desktop (Codex)** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | — |
+| <img src="https://www.google.com/s2/favicons?domain=claude.com&sz=64" width="16" height="16" alt=""> **Claude Code** | ✅ | ✅ Anthropic | ✅ | ✅ | ✅ | ✅ | npm · brew · winget · script |
+| <img src="https://www.google.com/s2/favicons?domain=claude.ai&sz=64" width="16" height="16" alt=""> **Claude Desktop** | ✅ | — | ✅ | — | — | ✅ | winget |
+| <img src="https://www.google.com/s2/favicons?domain=openai.com&sz=64" width="16" height="16" alt=""> **Codex CLI** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm · brew · winget · self |
+| <img src="https://www.google.com/s2/favicons?domain=openai.com&sz=64" width="16" height="16" alt=""> **ChatGPT Desktop (Codex)** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | store |
 | <img src="https://www.google.com/s2/favicons?domain=gemini.google.com&sz=64" width="16" height="16" alt=""> **Gemini CLI** | ✅ | ✅ Gemini | ✅ | ✅ | ✅ | ✅ | npm |
-| <img src="https://www.google.com/s2/favicons?domain=cursor.com&sz=64" width="16" height="16" alt=""> **Cursor** | ✅ | — | ✅ | ✅ | — | ✅ | brew |
-| <img src="https://www.google.com/s2/favicons?domain=cursor.com&sz=64" width="16" height="16" alt=""> **Cursor Agent** | ✅ | — | ✅ | ✅ | — | — | — |
-| <img src="https://www.google.com/s2/favicons?domain=windsurf.com&sz=64" width="16" height="16" alt=""> **Windsurf** | ✅ | — | ✅ | — | ✅ | — | brew |
+| <img src="https://www.google.com/s2/favicons?domain=cursor.com&sz=64" width="16" height="16" alt=""> **Cursor** | ✅ | — | ✅ | ✅ | — | ✅ | brew · winget |
+| <img src="https://www.google.com/s2/favicons?domain=cursor.com&sz=64" width="16" height="16" alt=""> **Cursor Agent** | ✅ | — | ✅ | ✅ | — | — | script · self |
+| <img src="https://www.google.com/s2/favicons?domain=windsurf.com&sz=64" width="16" height="16" alt=""> **Windsurf** | ✅ | — | ✅ | — | ✅ | — | brew · winget |
 | <img src="https://www.google.com/s2/favicons?domain=cline.bot&sz=64" width="16" height="16" alt=""> **Cline** | — | ✅ OpenAI | ✅ | ✅ | — | — | npm |
 | <img src="https://www.google.com/s2/favicons?domain=qwen.ai&sz=64" width="16" height="16" alt=""> **Qwen Code** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm |
 | <img src="https://www.google.com/s2/favicons?domain=iflow.cn&sz=64" width="16" height="16" alt=""> **iFlow CLI** | — | ✅ OpenAI | ✅ | — | ✅ | — | npm |
-| <img src="https://www.google.com/s2/favicons?domain=kimi.com&sz=64" width="16" height="16" alt=""> **Kimi Code CLI** | — | ✅ OpenAI | ✅ | ✅ | ✅ | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=kimi.com&sz=64" width="16" height="16" alt=""> **Kimi Code CLI** | — | ✅ OpenAI | ✅ | ✅ | ✅ | — | npm · winget |
 | <img src="https://www.google.com/s2/favicons?domain=codebuddy.ai&sz=64" width="16" height="16" alt=""> **CodeBuddy Code** | — | ✅ OpenAI | ✅ | ✅ | ✅ | — | npm |
 | <img src="https://www.google.com/s2/favicons?domain=roocode.com&sz=64" width="16" height="16" alt=""> **Roo Code** | — | — | — | — | — | — | — |
 | <img src="https://www.google.com/s2/favicons?domain=github.com&sz=64" width="16" height="16" alt=""> **Copilot CLI** | — | — | — | — | — | — | npm |
 | <img src="https://www.google.com/s2/favicons?domain=continue.dev&sz=64" width="16" height="16" alt=""> **Continue** | — | ✅ OpenAI | — | — | — | — | npm |
-| <img src="https://www.google.com/s2/favicons?domain=zed.dev&sz=64" width="16" height="16" alt=""> **Zed** | — | ✅ OpenAI | — | — | — | — | brew |
+| <img src="https://www.google.com/s2/favicons?domain=zed.dev&sz=64" width="16" height="16" alt=""> **Zed** | — | ✅ OpenAI | — | — | — | — | brew · winget |
 | <img src="https://www.google.com/s2/favicons?domain=aider.chat&sz=64" width="16" height="16" alt=""> **Aider** | — | ✅ OpenAI | — | — | — | — | — |
 | <img src="https://www.google.com/s2/favicons?domain=block.github.io/goose&sz=64" width="16" height="16" alt=""> **goose** | — | ✅ OpenAI | — | — | — | — | brew |
-| <img src="https://www.google.com/s2/favicons?domain=charm.sh&sz=64" width="16" height="16" alt=""> **Crush** | — | — | — | — | — | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=charm.sh&sz=64" width="16" height="16" alt=""> **Crush** | — | — | — | — | — | — | npm · winget |
 | <img src="https://www.google.com/s2/favicons?domain=factory.ai&sz=64" width="16" height="16" alt=""> **Droid** | — | ✅ OpenAI | — | — | — | — | — |
-| <img src="https://www.google.com/s2/favicons?domain=trae.ai&sz=64" width="16" height="16" alt=""> **Trae** | — | — | — | — | — | — | brew |
-| <img src="https://www.google.com/s2/favicons?domain=opencode.ai&sz=64" width="16" height="16" alt=""> **opencode** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm |
-| <img src="https://www.google.com/s2/favicons?domain=opencode.ai&sz=64" width="16" height="16" alt=""> **opencode Desktop** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | — |
+| <img src="https://www.google.com/s2/favicons?domain=trae.ai&sz=64" width="16" height="16" alt=""> **Trae** | — | — | — | — | — | — | brew · winget |
+| <img src="https://www.google.com/s2/favicons?domain=opencode.ai&sz=64" width="16" height="16" alt=""> **opencode** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm · winget · self |
+| <img src="https://www.google.com/s2/favicons?domain=opencode.ai&sz=64" width="16" height="16" alt=""> **opencode Desktop** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | winget |
 | <img src="https://www.google.com/s2/favicons?domain=openagentai.org&sz=64" width="16" height="16" alt=""> **OpenAgent** | ✅ | — | — | — | — | — | — |
 | <img src="https://www.google.com/s2/favicons?domain=openclaw.ai&sz=64" width="16" height="16" alt=""> **OpenClaw** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm |
-| <img src="https://www.google.com/s2/favicons?domain=nousresearch.com&sz=64" width="16" height="16" alt=""> **Hermes Agent** | ✅ | ✅ OpenAI | — | — | — | — | — |
+| <img src="https://www.google.com/s2/favicons?domain=nousresearch.com&sz=64" width="16" height="16" alt=""> **Hermes Agent** | ✅ | ✅ OpenAI | — | — | — | — | self |
 | <img src="https://www.google.com/s2/favicons?domain=deepseek.com&sz=64" width="16" height="16" alt=""> **DeepSeek Harness** | ✅ | ✅ OpenAI | ✅ | ✅ | — | ✅ | npm |
 | <img src="https://www.google.com/s2/favicons?domain=pi.dev&sz=64" width="16" height="16" alt=""> **Pi** | — | ✅ OpenAI | — | ✅ | ✅ | — | npm |
 
@@ -136,7 +136,7 @@
 - **Provider** — Gateway writes the agent's own configuration to point it at a bound provider, in the wire format that agent's client speaks. An agent without it still reaches Gateway through the environment variables the UI shows.
 - **MCP · Skills · Prompt** — read, compare and copy MCP servers, skills and the instruction file between agents.
 - **Sessions** — prompts and token usage read straight from the agent's own transcripts, including what never went through Gateway.
-- **Install** — the package managers Gateway installs and upgrades it with. Everything else is a download from its vendor's page.
+- **Install** — what Gateway installs, upgrades and removes it with: a package manager (npm, brew, winget, the Microsoft **store**), the agent's own updater (**self**), or the vendor's own install command (**script**). An app that arrived as a setup program is still removed with the uninstaller it registered. Everything else is a download from its vendor's page.
 
 ## Features
 
@@ -144,7 +144,7 @@
 - **[Switch every agent's provider from one place](#send-an-agents-traffic-through-gateway)** — change an API key or base URL once, and every agent pointed at Gateway picks it up.
 - **[Add a provider, an MCP server, a prompt or a skill from a link](#import-from-a-link)** — click a vendor's "add this" button on the web and Gateway opens with what the link carries, before any of it is written.
 - **[Run several instances of one agent side by side](#what-to-do-next)** — e.g. multiple Claude Desktop instances, each signed in to a different account.
-- **[Install, upgrade and roll back the agents themselves](#what-to-do-next)** — which build each agent is on against what its package manager publishes, and back to an older release when an update broke something.
+- **[Install, upgrade and roll back the agents themselves](#what-to-do-next)** — which build each agent is on against what its package manager publishes, and back to an older release when an update broke something. One click whichever way it was installed, with the command shown first, its progress on the row and its console output a click away.
 - **[See the whole request, not just a count](#recording-prompts)** — every prompt, message and tool schema an agent sent, kept on this machine.
 - **[Say what each agent may do](#what-each-agent-is-allowed-to-do)** — around forty switches per agent, in groups, over its tools, models and providers, enforced by Casbin on every request it relays.
 - **[Know what every agent spent, even off Gateway](#what-the-agents-spend-including-what-never-went-through-gateway)** — read straight from the agents' own transcripts.
@@ -160,7 +160,7 @@
 | What each agent is allowed to do | Which build each agent is on |
 | :---: | :---: |
 | [![Permissions](https://cdn.casbin.org/img/casbin-gateway-permissions.png)](https://cdn.casbin.org/img/casbin-gateway-permissions.png) | [![Agent versions](https://cdn.casbin.org/img/casbin-gateway-versions.png)](https://cdn.casbin.org/img/casbin-gateway-versions.png) |
-| Around forty switches over the agent's tools, models and providers, compiled to a Casbin policy and enforced on every request it relays | The build on this machine against the one its package manager publishes, installed, upgraded, rolled back or removed from the row it is on |
+| Around forty switches over the agent's tools, models and providers, compiled to a Casbin policy and enforced on every request it relays | The build on this machine against the one its package manager publishes, installed, upgraded, rolled back or removed from the row it is on, whichever way it was installed |
 
 | What the agents spent | One endpoint per model vendor |
 | :---: | :---: |
@@ -208,8 +208,8 @@ Gateway installed some other way, or in a directory it cannot write to, says so 
 
 | Page | What you get | What it needs |
 | --- | --- | --- |
-| **Agents** | Every AI coding agent installed on this machine — Claude Code, Codex CLI, Cursor, the Gemini CLI, opencode and more — four cards to a row, each naming the account it is signed in to, the provider it answers to, what it has spent — day by day over the last month, wherever its own transcripts carry that much — and whether it is running right now. Start or stop one from its card, or run several **instances** of the same agent at once, each with a state directory and an account of its own. An agent this machine does not have is listed too, and installed or upgraded from the page through the package manager the host already has. That same manager reports which installations have a newer release waiting, moves one onto any version it still publishes - back to an older one when an update broke something - and uninstalls it, leaving the agent's own sign-in and history where they are. | Nothing |
-| **Agent versions** | Every agent Gateway knows in one table: the build on this machine, the release its package manager publishes, and whether the two differ. Install one, upgrade it, put it back on an older release, or remove it, from the row it is on. | Nothing |
+| **Agents** | Every AI coding agent installed on this machine — Claude Code, Codex CLI, Cursor, the Gemini CLI, opencode and more — four cards to a row, each naming the account it is signed in to, the provider it answers to, what it has spent — day by day over the last month, wherever its own transcripts carry that much — and whether it is running right now. Start or stop one from its card, or run several **instances** of the same agent at once, each with a state directory and an account of its own. An agent this machine does not have is listed too, and installed or upgraded from the page through the package manager the host already has. Gateway reports which installations have a newer release waiting, moves one onto any version its manager still publishes - back to an older one when an update broke something - and uninstalls it, leaving the agent's own sign-in and history where they are. | Nothing |
+| **Agent versions** | Every agent Gateway knows in one table: the build on this machine, the release its package manager publishes, and whether the two differ. Install one, upgrade it, put it back on an older release, or remove it, from the row it is on - in one click, whichever way it was installed: a package manager, the Microsoft Store, the uninstaller the app registered with Windows, the agent's own updater, or the vendor's own install command. The command is shown before it runs, the row carries its progress while it does, and everything it printed is a click away. | Nothing |
 | **Skills, MCP & Prompts** | Every skill, MCP server and instruction file of every agent in one table. Install skills from a GitHub repository, a `.zip` or `.tar.gz`, or a folder on this machine, into one agent or several at once. Add an MCP server the same way, edit the instructions an agent reads before every session, open one, delete it, or copy it into another agent. | Nothing |
 | **Sessions** | Every session those agents have had, read from the transcripts they leave on disk: the whole conversation, message by message. How many there are, how many ran today and how many came from a transcript rather than from monitoring, then filtered down to one agent or one of those two sources. | Nothing |
 | **Activity** | What a monitored agent is doing as it does it — each tool call, its target and how long it took. | Monitoring on for an agent |

@@ -102,33 +102,33 @@
 
 | Agent | 行为监控 | 换供应商 | MCP | 技能 | 提示词 | 会话 | 安装 |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| <img src="https://www.google.com/s2/favicons?domain=claude.com&sz=64" width="16" height="16" alt=""> **Claude Code** | ✅ | ✅ Anthropic | ✅ | ✅ | ✅ | ✅ | npm · brew · winget |
-| <img src="https://www.google.com/s2/favicons?domain=claude.ai&sz=64" width="16" height="16" alt=""> **Claude Desktop** | ✅ | — | ✅ | — | — | ✅ | — |
-| <img src="https://www.google.com/s2/favicons?domain=openai.com&sz=64" width="16" height="16" alt=""> **Codex CLI** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm · brew |
-| <img src="https://www.google.com/s2/favicons?domain=openai.com&sz=64" width="16" height="16" alt=""> **ChatGPT 桌面版（Codex）** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | — |
+| <img src="https://www.google.com/s2/favicons?domain=claude.com&sz=64" width="16" height="16" alt=""> **Claude Code** | ✅ | ✅ Anthropic | ✅ | ✅ | ✅ | ✅ | npm · brew · winget · script |
+| <img src="https://www.google.com/s2/favicons?domain=claude.ai&sz=64" width="16" height="16" alt=""> **Claude Desktop** | ✅ | — | ✅ | — | — | ✅ | winget |
+| <img src="https://www.google.com/s2/favicons?domain=openai.com&sz=64" width="16" height="16" alt=""> **Codex CLI** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm · brew · winget · self |
+| <img src="https://www.google.com/s2/favicons?domain=openai.com&sz=64" width="16" height="16" alt=""> **ChatGPT 桌面版（Codex）** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | store |
 | <img src="https://www.google.com/s2/favicons?domain=gemini.google.com&sz=64" width="16" height="16" alt=""> **Gemini CLI** | ✅ | ✅ Gemini | ✅ | ✅ | ✅ | ✅ | npm |
-| <img src="https://www.google.com/s2/favicons?domain=cursor.com&sz=64" width="16" height="16" alt=""> **Cursor** | ✅ | — | ✅ | ✅ | — | ✅ | brew |
-| <img src="https://www.google.com/s2/favicons?domain=cursor.com&sz=64" width="16" height="16" alt=""> **Cursor Agent** | ✅ | — | ✅ | ✅ | — | — | — |
-| <img src="https://www.google.com/s2/favicons?domain=windsurf.com&sz=64" width="16" height="16" alt=""> **Windsurf** | ✅ | — | ✅ | — | ✅ | — | brew |
+| <img src="https://www.google.com/s2/favicons?domain=cursor.com&sz=64" width="16" height="16" alt=""> **Cursor** | ✅ | — | ✅ | ✅ | — | ✅ | brew · winget |
+| <img src="https://www.google.com/s2/favicons?domain=cursor.com&sz=64" width="16" height="16" alt=""> **Cursor Agent** | ✅ | — | ✅ | ✅ | — | — | script · self |
+| <img src="https://www.google.com/s2/favicons?domain=windsurf.com&sz=64" width="16" height="16" alt=""> **Windsurf** | ✅ | — | ✅ | — | ✅ | — | brew · winget |
 | <img src="https://www.google.com/s2/favicons?domain=cline.bot&sz=64" width="16" height="16" alt=""> **Cline** | — | ✅ OpenAI | ✅ | ✅ | — | — | npm |
 | <img src="https://www.google.com/s2/favicons?domain=qwen.ai&sz=64" width="16" height="16" alt=""> **Qwen Code** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm |
 | <img src="https://www.google.com/s2/favicons?domain=iflow.cn&sz=64" width="16" height="16" alt=""> **iFlow CLI** | — | ✅ OpenAI | ✅ | — | ✅ | — | npm |
-| <img src="https://www.google.com/s2/favicons?domain=kimi.com&sz=64" width="16" height="16" alt=""> **Kimi Code CLI** | — | ✅ OpenAI | ✅ | ✅ | ✅ | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=kimi.com&sz=64" width="16" height="16" alt=""> **Kimi Code CLI** | — | ✅ OpenAI | ✅ | ✅ | ✅ | — | npm · winget |
 | <img src="https://www.google.com/s2/favicons?domain=codebuddy.ai&sz=64" width="16" height="16" alt=""> **CodeBuddy Code** | — | ✅ OpenAI | ✅ | ✅ | ✅ | — | npm |
 | <img src="https://www.google.com/s2/favicons?domain=roocode.com&sz=64" width="16" height="16" alt=""> **Roo Code** | — | — | — | — | — | — | — |
 | <img src="https://www.google.com/s2/favicons?domain=github.com&sz=64" width="16" height="16" alt=""> **Copilot CLI** | — | — | — | — | — | — | npm |
 | <img src="https://www.google.com/s2/favicons?domain=continue.dev&sz=64" width="16" height="16" alt=""> **Continue** | — | ✅ OpenAI | — | — | — | — | npm |
-| <img src="https://www.google.com/s2/favicons?domain=zed.dev&sz=64" width="16" height="16" alt=""> **Zed** | — | ✅ OpenAI | — | — | — | — | brew |
+| <img src="https://www.google.com/s2/favicons?domain=zed.dev&sz=64" width="16" height="16" alt=""> **Zed** | — | ✅ OpenAI | — | — | — | — | brew · winget |
 | <img src="https://www.google.com/s2/favicons?domain=aider.chat&sz=64" width="16" height="16" alt=""> **Aider** | — | ✅ OpenAI | — | — | — | — | — |
 | <img src="https://www.google.com/s2/favicons?domain=block.github.io/goose&sz=64" width="16" height="16" alt=""> **goose** | — | ✅ OpenAI | — | — | — | — | brew |
-| <img src="https://www.google.com/s2/favicons?domain=charm.sh&sz=64" width="16" height="16" alt=""> **Crush** | — | — | — | — | — | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=charm.sh&sz=64" width="16" height="16" alt=""> **Crush** | — | — | — | — | — | — | npm · winget |
 | <img src="https://www.google.com/s2/favicons?domain=factory.ai&sz=64" width="16" height="16" alt=""> **Droid** | — | ✅ OpenAI | — | — | — | — | — |
-| <img src="https://www.google.com/s2/favicons?domain=trae.ai&sz=64" width="16" height="16" alt=""> **Trae** | — | — | — | — | — | — | brew |
-| <img src="https://www.google.com/s2/favicons?domain=opencode.ai&sz=64" width="16" height="16" alt=""> **opencode** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm |
-| <img src="https://www.google.com/s2/favicons?domain=opencode.ai&sz=64" width="16" height="16" alt=""> **opencode 桌面版** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | — |
+| <img src="https://www.google.com/s2/favicons?domain=trae.ai&sz=64" width="16" height="16" alt=""> **Trae** | — | — | — | — | — | — | brew · winget |
+| <img src="https://www.google.com/s2/favicons?domain=opencode.ai&sz=64" width="16" height="16" alt=""> **opencode** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm · winget · self |
+| <img src="https://www.google.com/s2/favicons?domain=opencode.ai&sz=64" width="16" height="16" alt=""> **opencode 桌面版** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | winget |
 | <img src="https://www.google.com/s2/favicons?domain=openagentai.org&sz=64" width="16" height="16" alt=""> **OpenAgent** | ✅ | — | — | — | — | — | — |
 | <img src="https://www.google.com/s2/favicons?domain=openclaw.ai&sz=64" width="16" height="16" alt=""> **OpenClaw** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm |
-| <img src="https://www.google.com/s2/favicons?domain=nousresearch.com&sz=64" width="16" height="16" alt=""> **Hermes Agent** | ✅ | ✅ OpenAI | — | — | — | — | — |
+| <img src="https://www.google.com/s2/favicons?domain=nousresearch.com&sz=64" width="16" height="16" alt=""> **Hermes Agent** | ✅ | ✅ OpenAI | — | — | — | — | self |
 | <img src="https://www.google.com/s2/favicons?domain=deepseek.com&sz=64" width="16" height="16" alt=""> **DeepSeek Harness** | ✅ | ✅ OpenAI | ✅ | ✅ | — | ✅ | npm |
 | <img src="https://www.google.com/s2/favicons?domain=pi.dev&sz=64" width="16" height="16" alt=""> **Pi** | — | ✅ OpenAI | — | ✅ | ✅ | — | npm |
 
@@ -136,7 +136,7 @@
 - **换供应商** —— Gateway 按该 Agent 客户端自己说的协议格式，改写它的配置文件，把它指向绑定的供应商。不支持的 Agent 仍可以用界面上给出的环境变量接进来。
 - **MCP · 技能 · 提示词** —— 在 Agent 之间读取、对比和复制 MCP 服务器、技能和指令文件。
 - **会话** —— 直接从 Agent 自己的会话记录里读提示词和 token 用量，包括没走 Gateway 的那部分。
-- **安装** —— Gateway 能用来安装和升级它的包管理器。其余的都只能去厂商页面下载。
+- **安装** —— Gateway 用什么方式安装、升级和卸载它：包管理器（npm、brew、winget、微软商店 **store**）、Agent 自带的更新命令（**self**），或厂商自己的安装命令（**script**）。用安装包装的应用，则用它向 Windows 注册的卸载程序删除。其余的才只能去厂商页面下载。
 
 ## 功能特性
 
@@ -144,7 +144,7 @@
 - **[一个地方切换所有 Agent 的 API 供应商](#让-agent-的流量走-gateway)** —— 改一次 Key 或 base URL，接进 Gateway 的每个 Agent 都跟着换。
 - **[一条链接就能导入 Provider、MCP、提示词或技能](#从一条链接导入)** —— 在网页上点厂商的「添加到」按钮，Gateway 就带着链接里的东西打开，写进去之前先给你看。
 - **[同一个 Agent 开多个实例](#接下来做什么)** —— 比如同时跑好几个 Claude Desktop，各自登录不同账号。
-- **[安装、升级和回退 Agent 本身](#接下来做什么)** —— 本机装的是哪个版本，包管理器又发布到了哪个版本；升级坏了还能退回旧版。
+- **[安装、升级和回退 Agent 本身](#接下来做什么)** —— 本机装的是哪个版本，包管理器又发布到了哪个版本；升级坏了还能退回旧版。不管当初是怎么装的，都是一键完成：命令先摆出来，进度就在那一行上，控制台输出点一下就能看。
 - **[看到完整的请求，而不只是一个数字](#记录提示词)** —— 每一条 prompt、消息和工具 schema，都留在这台机器上。
 - **[规定每个 Agent 能做什么](#每个-agent-能做什么)** —— 每个 Agent 四十来个开关，分组管理，覆盖工具、模型和供应商，每个转发的请求都由 Casbin 判定。
 - **[统计每个 Agent 花了多少，包括没走 Gateway 的部分](#每个-agent-花了多少包括没走-gateway-的那部分)** —— 直接读 Agent 自己写的会话记录。
@@ -160,7 +160,7 @@
 | 每个 Agent 能做什么 | 每个 Agent 装的是哪个版本 |
 | :---: | :---: |
 | [![权限](https://cdn.casbin.org/img/casbin-gateway-permissions.png)](https://cdn.casbin.org/img/casbin-gateway-permissions.png) | [![Agent 版本](https://cdn.casbin.org/img/casbin-gateway-versions.png)](https://cdn.casbin.org/img/casbin-gateway-versions.png) |
-| 四十来个开关，覆盖该 Agent 的工具、模型和供应商，编译成 Casbin 策略，转发的每个请求都按它判定 | 本机装的版本对上包管理器发布的版本，安装、升级、回退和卸载都在这一行上完成 |
+| 四十来个开关，覆盖该 Agent 的工具、模型和供应商，编译成 Casbin 策略，转发的每个请求都按它判定 | 本机装的版本对上包管理器发布的版本；不管当初怎么装的，安装、升级、回退和卸载都在这一行上完成 |
 
 | 每个 Agent 花了多少 | 每个模型厂商一个入口 |
 | :---: | :---: |
@@ -207,7 +207,7 @@ Gateway 会在自己的窗口里打开 —— 不用登录：它只服务本机�
 | 页面 | 你能得到什么 | 需要什么 |
 | --- | --- | --- |
 | **Agents** | 本机安装的每一个 AI 编程 Agent —— Claude Code、Codex CLI、Cursor、Gemini CLI、opencode 等等 —— 一行四张卡片，每张写明它登录的是哪个账号、接的是哪个 Provider、花了多少（会话记录够长的话，还会按天画出最近一个月的曲线）、此刻是不是在跑。可以在卡片上直接启动或停止，也可以给同一个 Agent 开多个**实例**，每个实例有自己的状态目录和自己的登录账号，同时运行。本机没装的 Agent 也会列出来，可以直接用宿主机已有的包管理器安装或升级。同一个包管理器还会告诉你哪些安装有新版本可用，可以切换到它仍在发布的任意版本 —— 新版本出了问题就退回旧版 —— 也可以卸载，Agent 自己的登录状态和历史记录会原样保留。 | 无 |
-| **Agent versions** | Gateway 认识的每一个 Agent 都在这张表里：本机装的是哪个版本、包管理器发布到了哪个版本、两者差在哪里。安装、升级、退回旧版本、卸载，都在这一行上完成。 | 无 |
+| **Agent versions** | Gateway 认识的每一个 Agent 都在这张表里：本机装的是哪个版本、包管理器发布到了哪个版本、两者差在哪里。安装、升级、退回旧版本、卸载，都在这一行上一键完成 —— 不管当初是怎么装的：包管理器、微软商店、应用向 Windows 注册的卸载程序、Agent 自带的更新命令，或厂商自己的安装命令。命令运行前先摆出来，运行时进度就在那一行上，它打印的所有内容点一下就能看。 | 无 |
 | **Skills, MCP & Prompts** | 所有 Agent 的所有技能、MCP 服务器和提示词文件汇总在一张表里。可以从 GitHub 仓库、`.zip` / `.tar.gz` 压缩包，或本机的一个目录安装技能，一次装进一个或多个 Agent。MCP 服务器也一样，还能编辑某个 Agent 每次会话前读到的提示词，或者打开、删除、复制到另一个 Agent。 | 无 |
 | **Sessions** | 这些 Agent 的每一次会话，从它们留在磁盘上的会话记录里读出来：完整的对话，一条一条。一共多少次、今天跑了多少次、其中多少条是从会话记录里读来而不是监控到的，都在页头；再按 Agent 或按这两种来源筛。 | 无 |
 | **Activity** | 被监控的 Agent 正在做什么：每一次工具调用、调用的目标，以及耗时。 | 给某个 Agent 打开监控 |

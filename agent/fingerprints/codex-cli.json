@@ -6,6 +6,15 @@
   "instanceEnv": "CODEX_HOME",
   "stateDir": "codex",
   "npmPackage": "@openai/codex",
-  "homebrewCasks": ["codex", "codex@latest"],
-  "windowsUserDirs": ["OpenAI/Codex/bin"]
+  "wingetPackage": "OpenAI.Codex",
+  "windowsUserDirs": [
+    "OpenAI/Codex/bin"
+  ],
+  "homebrewCasks": [
+    "codex",
+    "codex@latest"
+  ],
+  "updateArgs": [
+    "update"
+  ]
 }

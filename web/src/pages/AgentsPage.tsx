@@ -223,6 +223,7 @@ export default function AgentsPage({account}: {account: Account}) {
           />
           <ToolUninstallConfirmDialog
             agent={record}
+            job={installer.jobs[record.agentId]}
             busy={installer.busyId === record.agentId}
             onConfirm={() => installer.uninstall(record)}
           />

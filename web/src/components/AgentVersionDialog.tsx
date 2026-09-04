@@ -17,7 +17,7 @@ import {ArrowUpCircle, History, RefreshCw, Trash2} from "lucide-react";
 import i18next from "i18next";
 
 import * as AgentBackend from "@/backend/AgentBackend";
-import {ConfirmDialog} from "@/components/shared/confirm-dialog";
+import {AgentActionButton} from "@/components/ToolUpgradeConfirmDialog";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {
@@ -37,7 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {SimpleTooltip} from "@/components/ui/tooltip";
-import type {Agent, AgentUpdate, AgentVersionCatalog} from "@/types";
+import type {Agent, AgentInstallJob, AgentUpdate, AgentVersionCatalog} from "@/types";
 
 /**
  * The mark on an installation a newer release is waiting for. Nothing is shown
@@ -221,48 +221,32 @@ export function AgentVersionDialog({
 
 /**
  * The guard in front of an uninstall. The program goes; the agent's own state
- * directory, with its sign-in and its history, stays where it is, so the
- * dialog says so rather than leaving that to be discovered.
+ * directory, with its sign-in and its history, stays where it is, so the dialog
+ * says so rather than leaving that to be discovered.
  */
 export function ToolUninstallConfirmDialog({
   agent,
+  job,
   busy,
   onConfirm,
 }: {
   agent: Agent;
+  job?: AgentInstallJob;
   busy: boolean;
   onConfirm: () => void;
 }) {
-  const plan = agent.uninstall;
-
-  const button = (
-    <Button size="sm" variant="outline" disabled={!plan?.available} loading={busy}>
-      <Trash2 />
-      {i18next.t("agent:Uninstall")}
-    </Button>
-  );
-
-  if (!plan?.available) {
-    return (
-      <SimpleTooltip title={plan?.detail}>
-        <span>{button}</span>
-      </SimpleTooltip>
-    );
-  }
-
   return (
-    <ConfirmDialog
+    <AgentActionButton
       title={i18next.t("agent:Uninstall {agent}?").replace("{agent}", agent.name)}
-      description={
-        <span className="space-y-2">
-          <span className="block">{i18next.t("agent:Uninstall hint")}</span>
-          <code className="bg-muted block rounded p-2 text-xs break-all">{plan.command}</code>
-        </span>
-      }
-      confirmText={i18next.t("agent:Uninstall")}
+      label={i18next.t("agent:Uninstall")}
+      runningLabel={i18next.t("agent:Uninstalling")}
+      icon={<Trash2 />}
+      plan={agent.uninstall}
+      job={job}
+      busy={busy}
+      confirmVariant="destructive"
+      hint={i18next.t("agent:Uninstall hint")}
       onConfirm={onConfirm}
-    >
-      {button}
-    </ConfirmDialog>
+    />
   );
 }

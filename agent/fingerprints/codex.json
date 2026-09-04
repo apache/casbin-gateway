@@ -4,5 +4,6 @@
   "installUrl": "https://openai.com/chatgpt/download/",
   "execName": "ChatGPT",
   "desktop": true,
+  "msStorePackage": "9PLM9XGG6VKS",
   "msixFamily": "OpenAI.Codex_2p2nqsd0c76g0"
 }

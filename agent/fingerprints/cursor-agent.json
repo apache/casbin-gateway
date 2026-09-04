@@ -4,5 +4,14 @@
   "installUrl": "https://cursor.com/docs/cli/installation",
   "execName": "cursor-agent",
   "stateDir": "cursor-agent",
-  "windowsProgramDirs": ["cursor-agent"]
+  "windowsProgramDirs": [
+    "cursor-agent"
+  ],
+  "updateArgs": [
+    "update"
+  ],
+  "installScript": {
+    "darwin": "curl https://cursor.com/install -fsS | bash",
+    "linux": "curl https://cursor.com/install -fsS | bash"
+  }
 }

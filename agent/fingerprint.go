@@ -57,6 +57,9 @@ type Fingerprint struct {
 	ExtraUnixNpmDirs    []string `json:"extraUnixNpmDirs,omitempty"`
 	ExtraWindowsNpmDirs []string `json:"extraWindowsNpmDirs,omitempty"`
 	WingetPackage       string   `json:"wingetPackage,omitempty"`
+	// MsStorePackage is the Microsoft Store product id, which is how winget
+	// installs an agent published nowhere else.
+	MsStorePackage      string   `json:"msStorePackage,omitempty"`
 	MSIXFamily          string   `json:"msixFamily,omitempty"`
 	DesktopInstallerDir string   `json:"desktopInstallerDir,omitempty"`
 	WindowsProgramDirs  []string `json:"windowsProgramDirs,omitempty"`
@@ -67,6 +70,11 @@ type Fingerprint struct {
 	BuildInfoModule     string   `json:"buildInfoModule,omitempty"`
 	BuildInfoVersionVar string   `json:"buildInfoVersionVar,omitempty"`
 	VersionFile         string   `json:"versionFile,omitempty"`
+	// IgnoreExecutableVersion marks a launcher whose Windows version resource
+	// belongs to whatever packaged it rather than to the agent, which is every
+	// single-file Node build: it carries the packager's number, and reading it
+	// would report a release the vendor never published.
+	IgnoreExecutableVersion bool `json:"ignoreExecutableVersion,omitempty"`
 	// StateVersionGlob matches JSONL files under the state directory whose
 	// records carry the version of the agent that wrote them. It is the only
 	// version an installation found by its configuration alone can report.
@@ -79,4 +87,23 @@ type Fingerprint struct {
 	// directory holding nothing else is not evidence of an installation.
 	StateIgnore []string            `json:"stateIgnore,omitempty"`
 	LocalServer *localserver.Server `json:"localServer,omitempty"`
+
+	// UpdateArgs are what the agent's own launcher takes to update itself, for
+	// one that ships an updater. It is the only way to move an installation no
+	// package manager owns, which is what a vendor's install script leaves.
+	UpdateArgs []string `json:"updateArgs,omitempty"`
+	// RemoveArgs are the same for removing it.
+	RemoveArgs []string `json:"removeArgs,omitempty"`
+	// InstallScript is the vendor's own documented one-line installer, which
+	// both installs and upgrades. It runs through the platform shell, so it is
+	// shown in full before anyone clicks it.
+	InstallScript *InstallScript `json:"installScript,omitempty"`
+}
+
+// InstallScript is the vendor's installer command per platform. An empty
+// platform means the vendor publishes no script for it.
+type InstallScript struct {
+	Windows string `json:"windows,omitempty"`
+	Darwin  string `json:"darwin,omitempty"`
+	Linux   string `json:"linux,omitempty"`
 }

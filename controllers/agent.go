@@ -94,8 +94,8 @@ func (c *ApiController) GetAgents() {
 			Fallbacks:      []string{},
 			Mode:           object.ModeGateway,
 			ProviderConfig: agentprovider.StatusOf(providerTarget(target)),
-			Upgrade:        agentinstall.UpgradePlan(installation.AgentId, installation.InstallMethod),
-			Uninstall:      agentinstall.UninstallPlan(installation.AgentId, installation.InstallMethod),
+			Upgrade:        agentinstall.UpgradePlan(installation),
+			Uninstall:      agentinstall.UninstallPlan(installation),
 
 			SupportsInstances: agent.SupportsInstances(installation.AgentId),
 		}

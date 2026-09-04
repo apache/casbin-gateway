@@ -15,6 +15,8 @@
 // Package agent detects AI agents in known installation locations.
 package agent
 
+import "runtime"
+
 // Installation describes an AI agent installation found on the host.
 type Installation struct {
 	AgentId       string `json:"agentId"`
@@ -94,10 +96,19 @@ func IsKnownAgentId(id string) bool {
 type Packages struct {
 	Npm          string
 	Winget       string
+	MsStore      string
+	MsixFamily   string
 	HomebrewCask string
 	System       string
 	InstallUrl   string
 	Desktop      bool
+	// UpdateArgs and RemoveArgs are what the agent's own launcher takes to
+	// update and to remove itself, for one that ships its own updater.
+	UpdateArgs []string
+	RemoveArgs []string
+	// Script is the vendor's own installer command on this platform, empty
+	// where the vendor publishes none.
+	Script string
 }
 
 // PackagesOf reads the fingerprints rather than a host scan, so the packages of
@@ -111,9 +122,14 @@ func PackagesOf(id string) Packages {
 		packages := Packages{
 			Npm:        fingerprints[i].NpmPackage,
 			Winget:     fingerprints[i].WingetPackage,
+			MsStore:    fingerprints[i].MsStorePackage,
+			MsixFamily: fingerprints[i].MSIXFamily,
 			System:     fingerprints[i].SystemPackage,
 			InstallUrl: fingerprints[i].InstallUrl,
 			Desktop:    fingerprints[i].Desktop,
+			UpdateArgs: fingerprints[i].UpdateArgs,
+			RemoveArgs: fingerprints[i].RemoveArgs,
+			Script:     installScriptOf(fingerprints[i].InstallScript),
 		}
 		// The rest of the list are version-pinned aliases of the first, which
 		// is the cask an install should ask for.
@@ -123,4 +139,20 @@ func PackagesOf(id string) Packages {
 		return packages
 	}
 	return Packages{}
+}
+
+// installScriptOf is the vendor's installer command for the platform Gateway
+// runs on, empty where the vendor publishes none for it.
+func installScriptOf(script *InstallScript) string {
+	if script == nil {
+		return ""
+	}
+	switch runtime.GOOS {
+	case "windows":
+		return script.Windows
+	case "darwin":
+		return script.Darwin
+	default:
+		return script.Linux
+	}
 }

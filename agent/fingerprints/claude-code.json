@@ -12,5 +12,13 @@
     "claude-code@latest"
   ],
   "systemPackage": "claude-code",
-  "stateVersionGlob": "projects/*/*.jsonl"
+  "stateVersionGlob": "projects/*/*.jsonl",
+  "updateArgs": [
+    "update"
+  ],
+  "installScript": {
+    "windows": "irm https://claude.ai/install.ps1 | iex",
+    "darwin": "curl -fsSL https://claude.ai/install.sh | bash",
+    "linux": "curl -fsSL https://claude.ai/install.sh | bash"
+  }
 }
