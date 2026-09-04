@@ -28,8 +28,10 @@ const (
 	// EnvDaemonChildKey marks the copy started by "start", so it serves instead
 	// of spawning another one.
 	EnvDaemonChildKey = "CASBIN_GATEWAY_DAEMON"
-	// daemonStartTimeout bounds the wait for the detached copy to answer.
-	daemonStartTimeout = 30 * time.Second
+	// daemonStartTimeout bounds the wait for the detached copy to answer. A
+	// first start creates the database and scans the disk for agents, so it is
+	// generous; running out of it is not reported as a failure.
+	daemonStartTimeout = 90 * time.Second
 	daemonPollInterval = 200 * time.Millisecond
 )
 
@@ -89,6 +91,14 @@ func startDetached(port int, logPath string) {
 		os.Exit(1)
 	}
 
+	// A start that has not finished is not a start that failed, so the two are
+	// told apart by whether the copy is still there.
+	exited := make(chan struct{})
+	go func() {
+		_, _ = process.Wait()
+		close(exited)
+	}()
+
 	deadline := time.Now().Add(daemonStartTimeout)
 	for time.Now().Before(deadline) {
 		if isServing(port) {
@@ -96,11 +106,17 @@ func startDetached(port int, logPath string) {
 			fmt.Printf("  Log: %s   Stop it with: casbin-gateway stop\n", logPath)
 			return
 		}
+		select {
+		case <-exited:
+			fmt.Printf("Casbin Gateway stopped while starting up. See %s\n", logPath)
+			os.Exit(1)
+		default:
+		}
 		time.Sleep(daemonPollInterval)
 	}
 
-	fmt.Printf("Casbin Gateway did not answer on port %d within %v. See %s\n", port, daemonStartTimeout, logPath)
-	os.Exit(1)
+	fmt.Printf("Casbin Gateway is still starting on port %d after %v (pid %d).\n", port, daemonStartTimeout, process.Pid)
+	fmt.Printf("  Log: %s   Check it with: casbin-gateway status\n", logPath)
 }
 
 // StartDetached launches the executable at path with no terminal attached,

@@ -285,7 +285,7 @@ export default function AgentsPage({account}: {account: Account}) {
 
       <DataTable
         title={i18next.t("agent:Agents")}
-        description={`${agents.length} ${i18next.t("agent:Agents")}`}
+        description={agents.length === 1 ? `${agents.length} ${i18next.t("agent:Agent")}` : `${agents.length} ${i18next.t("agent:Agents")}`}
         columns={columns}
         dataSource={agents}
         rowKey={agentKey}

@@ -453,7 +453,7 @@ export default function ProviderListPage({account}: {account: Account}) {
           {error !== "" ? <MessageAlert title={i18next.t("provider:Failed to get providers")} description={error} /> : null}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-muted-foreground text-sm">
-              {`${total} ${i18next.t("provider:Providers")}`}
+              {total === 1 ? `${total} ${i18next.t("provider:Provider")}` : `${total} ${i18next.t("provider:Providers")}`}
             </p>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={() => loadQuotas(true)} loading={refreshingQuotas}>

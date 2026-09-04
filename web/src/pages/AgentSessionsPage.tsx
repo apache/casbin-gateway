@@ -361,7 +361,7 @@ export default function AgentSessionsPage({account}: {account: Account}) {
       <DataTable
         description={
           rows.length === ordered.length
-            ? `${ordered.length.toLocaleString()} ${i18next.t("agent:Agent Sessions")}`
+            ? (ordered.length === 1 ? `${ordered.length} ${i18next.t("agent:Agent Session")}` : `${ordered.length.toLocaleString()} ${i18next.t("agent:Agent Sessions")}`)
             : `${rows.length.toLocaleString()} / ${ordered.length.toLocaleString()} ${i18next.t("agent:Agent Sessions")}`
         }
         columns={columns}

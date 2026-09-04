@@ -237,7 +237,7 @@ export default function AgentVersionsPage({account}: {account: Account}) {
 
       <DataTable
         title={i18next.t("agent:Agents")}
-        description={`${rows.length} ${i18next.t("agent:Agents")}`}
+        description={rows.length === 1 ? `${rows.length} ${i18next.t("agent:Agent")}` : `${rows.length} ${i18next.t("agent:Agents")}`}
         columns={columns}
         dataSource={rows}
         rowKey="key"

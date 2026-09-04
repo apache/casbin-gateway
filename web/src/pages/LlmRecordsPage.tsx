@@ -737,7 +737,7 @@ export default function LlmRecordsPage({account}: {account: Account}) {
 
       <DataTable
         title={i18next.t("llm:LLM Records")}
-        description={`${total.toLocaleString()} ${i18next.t("general:Records")}`}
+        description={total === 1 ? `${total} ${i18next.t("general:Record")}` : `${total.toLocaleString()} ${i18next.t("general:Records")}`}
         columns={columns}
         dataSource={records}
         rowKey={record => String(record.id)}
