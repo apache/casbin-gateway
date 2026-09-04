@@ -111,6 +111,9 @@ func validateFingerprint(f Fingerprint, name string) error {
 	if f.StateVersionGlob != "" && f.StateDir == "" {
 		return errors.New("stateVersionGlob has no stateDir to resolve against")
 	}
+	if len(f.StateIgnore) > 0 && f.StateDir == "" {
+		return errors.New("stateIgnore has no stateDir to resolve against")
+	}
 
 	if err := validateLocalServer(f.LocalServer); err != nil {
 		return err

@@ -189,7 +189,7 @@ func scanStateDirs(fingerprint *Fingerprint, homes []homeDir, found []Installati
 	installations := []Installation{}
 	for _, home := range homes {
 		path := filepath.Join(home.path, "."+fingerprint.StateDir)
-		if !hasEntries(path) {
+		if !hasSetupEntries(path, fingerprint.StateIgnore) {
 			continue
 		}
 		installations = append(installations, Installation{
@@ -203,17 +203,36 @@ func scanStateDirs(fingerprint *Fingerprint, homes []homeDir, found []Installati
 	return installations
 }
 
-// hasEntries reports a directory that holds something. An empty one is what an
-// uninstall leaves behind, and is not evidence that the agent was ever set up.
-func hasEntries(path string) bool {
+// hasSetupEntries reports a directory that holds something the agent only
+// writes once it is set up here. An empty one is what an uninstall leaves
+// behind, and one holding nothing but ignored entries is what an app that
+// embeds the agent leaves behind; neither is evidence of an installation.
+func hasSetupEntries(path string, ignore []string) bool {
 	dir, err := os.Open(path)
 	if err != nil {
 		return false
 	}
 	defer dir.Close()
 
-	names, err := dir.Readdirnames(1)
-	return err == nil && len(names) > 0
+	names, err := dir.Readdirnames(-1)
+	if err != nil {
+		return false
+	}
+	for _, name := range names {
+		if !matchesAny(name, ignore) {
+			return true
+		}
+	}
+	return false
+}
+
+func matchesAny(name string, candidates []string) bool {
+	for _, candidate := range candidates {
+		if strings.EqualFold(name, candidate) {
+			return true
+		}
+	}
+	return false
 }
 
 // dedupeInstallations returns unique installations ordered by owner and path.
