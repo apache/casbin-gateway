@@ -205,7 +205,7 @@ export default function SettingPage({account}: {account: Account}) {
         {numberField("agentMonitorPollSeconds", i18next.t("setting:Agent poll seconds"), undefined, 1)}
       </Section>
 
-      <Section id="signin" columns={2} collapsible title={i18next.t("setting:Sign-in")} description={i18next.t("setting:Sign-in description")}>
+      <Section id="signin" columns={2} title={i18next.t("setting:Sign-in")} description={i18next.t("setting:Sign-in description")}>
         {textField("casdoorEndpoint", i18next.t("setting:Casdoor endpoint"))}
         {textField("clientId", i18next.t("setting:Client ID"))}
         {secretField("clientSecret", i18next.t("setting:Client secret"))}
@@ -218,7 +218,7 @@ export default function SettingPage({account}: {account: Account}) {
         {textField("relayToken", i18next.t("setting:Relay token"), i18next.t("setting:Relay token hint"))}
       </Section>
 
-      <Section id="network" columns={2} collapsible title={i18next.t("setting:Network")}>
+      <Section id="network" columns={2} title={i18next.t("setting:Network")}>
         {textField("httpProxy", i18next.t("setting:Outbound SOCKS5 proxy"), i18next.t("setting:Outbound SOCKS5 proxy hint"))}
         {textField("allowedHosts", i18next.t("setting:Allowed hosts"), i18next.t("setting:Allowed hosts hint"))}
         {textField("allowedOrigins", i18next.t("setting:Allowed origins"), i18next.t("setting:Allowed origins hint"))}
