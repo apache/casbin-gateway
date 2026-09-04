@@ -21,6 +21,8 @@ import (
 	"net/url"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/apache/casbin-gateway/agent"
 )
 
 // The resources an "add this to Gateway" link can carry. The names are CC
@@ -33,22 +35,25 @@ const (
 	ImportResourceSkill    = "skill"
 )
 
-// importLinkAgents maps an app a link names to the agents on this host that
-// read that app's own configuration. Gateway manages agents CC Switch does not
-// and the other way round, so an app with nothing here is reported back rather
-// than silently dropped: the page says which part of the link it cannot land.
+// importLinkAgents translates the app names CC Switch links use into Gateway's
+// own agent ids. Only the ones that differ are here: an app a link names by an
+// id Gateway already knows resolves on its own, so every agent in the catalogue
+// can be the target of a link without an entry of its own.
 //
 // Two ids appear where the same files are read under both — the Codex CLI and
-// ChatGPT Desktop share ~/.codex, opencode and its desktop app share
-// ~/.config/opencode — because the listing keeps one entry per location, under
-// whichever of the two was found first.
+// ChatGPT Desktop share ~/.codex, Cursor and its CLI share ~/.cursor, opencode
+// and its desktop app share ~/.config/opencode — because the listing keeps one
+// entry per location, under whichever of the two was found first.
 var importLinkAgents = map[string][]string{
 	"claude":   {"claude-code"},
 	"codex":    {"codex-cli", "codex"},
+	"cursor":   {"cursor", "cursor-agent"},
 	"gemini":   {"gemini-cli"},
-	"opencode": {"opencode", "opencode-desktop"},
-	"openclaw": {"openclaw"},
 	"hermes":   {"hermes-agent"},
+	"iflow":    {"iflow-cli"},
+	"kimi":     {"kimi-code"},
+	"opencode": {"opencode", "opencode-desktop"},
+	"qwen":     {"qwen-code"},
 }
 
 // ImportLink is what one link carries, read and handed to the page. Nothing in
@@ -242,6 +247,9 @@ func linkTargets(apps []string) (targets []string, unknown []string) {
 			continue
 		}
 		agentIds, known := importLinkAgents[app]
+		if !known && agent.IsKnownAgentId(app) {
+			agentIds, known = []string{app}, true
+		}
 		if !known {
 			unknown = append(unknown, app)
 			continue

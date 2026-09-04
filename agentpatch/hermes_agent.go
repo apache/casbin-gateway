@@ -89,16 +89,16 @@ func (p hermesPatcher) Patch(target Target) error {
 	if err != nil {
 		return err
 	}
-	applied := IsApplied(target)
 	if info, statErr := os.Stat(layout.pluginDir); statErr == nil {
 		if !info.IsDir() {
 			return fmt.Errorf("%s exists and is not a directory", layout.pluginDir)
 		}
-		if !applied {
-			return fmt.Errorf("%s already exists and is not owned by this Gateway patch state", layout.pluginDir)
-		}
+		// What the directory holds decides this, not whether this Gateway's own
+		// state remembers writing it. A reinstall or a move to another data
+		// directory leaves a previous Gateway's observer behind, and refusing
+		// that one left Hermes unmonitorable with nothing to do about it.
 		if hermesPluginForeign(layout.pluginDir) {
-			return fmt.Errorf("%s no longer contains a Gateway-owned observer; refusing to refresh it", layout.pluginDir)
+			return fmt.Errorf("%s holds an observer that is not Gateway's; remove that directory to let Gateway install its own", layout.pluginDir)
 		}
 	} else if !os.IsNotExist(statErr) {
 		return statErr

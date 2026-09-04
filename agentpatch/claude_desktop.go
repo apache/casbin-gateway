@@ -146,6 +146,9 @@ func (p claudeDesktopPatcher) Status(target Target) (Status, error) {
 	if !exists || !hasClaudeDesktopServer(config) {
 		return Status{Detail: "MCP recorder is not registered"}, nil
 	}
+	if !isCurrentClaudeDesktopServer(config) {
+		return Status{Detail: "MCP recorder needs refresh"}, nil
+	}
 	if runtime.GOOS != "windows" {
 		return Status{Patched: true, Detail: "MCP recorder registered; restart Claude Desktop to apply it"}, nil
 	}
@@ -209,6 +212,21 @@ func hasClaudeDesktopServer(config map[string]any) bool {
 	}
 	args := stringArray(entry["args"])
 	return stringIndex(args, mcpserver.Subcommand) >= 0 && strings.Contains(strings.Join(args, " "), "--records-url")
+}
+
+// isCurrentClaudeDesktopServer narrows hasClaudeDesktopServer to an entry this
+// Gateway would write now. The broad test stays what Unpatch removes by.
+func isCurrentClaudeDesktopServer(config map[string]any) bool {
+	servers, ok := objectAt(config["mcpServers"])
+	if !ok {
+		return false
+	}
+	entry, ok := objectAt(servers[claudeDesktopServerName])
+	if !ok {
+		return false
+	}
+	command, _ := entry["command"].(string)
+	return argsAreCurrent(command, stringArray(entry["args"]))
 }
 
 func readJSONObject(changes *ChangeSet, path string) (map[string]any, error) {
