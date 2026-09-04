@@ -22,6 +22,7 @@ package agenthook
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -49,32 +50,59 @@ var preToolEvents = map[string][]string{
 	// Cursor asks separately for a shell command and an MCP call, and neither
 	// carries a tool name the general event would have given.
 	"cursor": {"preToolUse", "beforeShellExecution", "beforeMCPExecution"},
+	// Cascade names an action rather than a tool, and asks about each kind of
+	// action separately.
+	"windsurf": {"pre_run_command", "pre_write_code", "pre_mcp_tool_use"},
+}
+
+// eventName is what the agent calls the event, read from the field it puts it
+// in. Cascade is the one that names it something else.
+func eventName(agentID string, event map[string]any) string {
+	if agentID == "windsurf" {
+		return stringValue(event["agent_action_name"])
+	}
+	return stringValue(event["hook_event_name"])
 }
 
 // preToolEvent reports whether this event is one the agent is waiting on, and
 // the tool it is about, named the way the permissions catalogue names tools.
 func preToolEvent(agentID string, event map[string]any) (string, bool) {
-	name := stringValue(event["hook_event_name"])
+	name := eventName(agentID, event)
 	if name == "" || !listed(preToolEvents[agentID], name) {
 		return "", false
 	}
 
 	switch name {
-	case "beforeShellExecution":
+	case "beforeShellExecution", "pre_run_command":
 		// Only the command is carried, and running one is the whole of what
 		// this event is.
 		return "shell", true
+	case "pre_write_code":
+		// Cascade edits a file in place, so this is the edit switch rather than
+		// the one for creating a file.
+		return "edit_file", true
 	case "beforeMCPExecution":
-		server := stringValue(event["mcp_server_name"])
-		tool := stringValue(event["tool_name"])
-		if server == "" {
-			return tool, tool != ""
+		return mcpToolName(stringValue(event["mcp_server_name"]), stringValue(event["tool_name"]))
+	case "pre_mcp_tool_use":
+		info, _ := event["tool_info"].(map[string]any)
+		if info == nil {
+			info = map[string]any{}
 		}
-		return "mcp__" + server + "__" + tool, true
+		return mcpToolName(stringValue(info["mcp_server_name"]), stringValue(info["mcp_tool_name"]))
 	}
 
 	tool := stringValue(event["tool_name"])
 	return tool, tool != ""
+}
+
+// mcpToolName is how an MCP call is named where the agent reports the server
+// and the tool apart: the permissions catalogue reads the server out of the
+// combined name.
+func mcpToolName(server string, tool string) (string, bool) {
+	if server == "" {
+		return tool, tool != ""
+	}
+	return "mcp__" + server + "__" + tool, true
 }
 
 func listed(values []string, name string) bool {
@@ -125,10 +153,14 @@ func allowed(url string, token string, request map[string]any) (bool, string) {
 	return false, answer.Data.Reason
 }
 
-// writeDenial tells the agent to refuse the call, in the shape it reads. The
-// three schemas below are the agents' own, and an agent Gateway has no schema
+// blockedExitCode is what Cascade reads a refusal as: it takes no answer on
+// stdout, and blocks the action on this code alone.
+const blockedExitCode = 2
+
+// writeDenial tells the agent to refuse the call, in the shape it reads, and
+// answers with the exit code that goes with it. An agent Gateway has no shape
 // for is left alone: a hook that only observes must print nothing at all.
-func writeDenial(out io.Writer, agentID string, reason string) {
+func writeDenial(out io.Writer, errOut io.Writer, agentID string, reason string) int {
 	var answer map[string]any
 	switch agentID {
 	case "claude-code", "qwen-code":
@@ -143,8 +175,13 @@ func writeDenial(out io.Writer, agentID string, reason string) {
 		answer = map[string]any{"decision": "deny", "reason": reason}
 	case "cursor":
 		answer = map[string]any{"permission": "deny", "user_message": reason, "agent_message": reason}
+	case "windsurf":
+		// Cascade shows what the hook wrote on stderr and blocks on the code.
+		_, _ = fmt.Fprintln(errOut, reason)
+		return blockedExitCode
 	default:
-		return
+		return 0
 	}
 	_ = json.NewEncoder(out).Encode(answer)
+	return 0
 }

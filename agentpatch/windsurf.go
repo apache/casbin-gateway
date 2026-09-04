@@ -110,11 +110,15 @@ func (p windsurfPatcher) Status(target Target) (Status, error) {
 	return Status{Patched: true, Detail: "Cascade hooks active"}, nil
 }
 
+// Decides: Cascade waits on its pre_ hooks and blocks the action when one exits
+// with code 2, which is how a refusal is written there.
+func (windsurfPatcher) Decides() bool { return true }
+
 func (windsurfPatcher) PatchNotice(patched bool) (string, string) {
 	if patched {
-		return "Removes Gateway's audit-only Cascade hooks.", "Restart Windsurf to stop running them."
+		return "Removes Gateway's Cascade hooks, and with them the check before a command, an edit or an MCP call.", "Restart Windsurf to stop running them."
 	}
-	return "Installs audit-only Cascade hooks. They observe events and never block an action.",
+	return "Installs Gateway's Cascade hooks. They observe events, and refuse a command, an edit or an MCP call this agent's permissions do not allow; an agent nobody has restricted is never held up.",
 		"Restart Windsurf to load them."
 }
 

@@ -52,13 +52,14 @@ func ServeIfInvoked() {
 	}
 	timer := time.AfterFunc(hookLifetime, terminateSelf)
 	defer timer.Stop()
-	_ = Run(os.Args[2:], os.Stdin, os.Stdout)
-	os.Exit(0)
+	code, _ := Run(os.Args[2:], os.Stdin, os.Stdout, os.Stderr)
+	os.Exit(code)
 }
 
 // Run reads one hook event, decides it where the agent is waiting on a verdict,
-// and reports its normalized record.
-func Run(args []string, input io.Reader, output io.Writer) error {
+// and reports its normalized record. The exit code it answers with is the one
+// the agent reads: some take a refusal on stdout, Cascade takes it as a code.
+func Run(args []string, input io.Reader, output io.Writer, errOutput io.Writer) (int, error) {
 	flags := flag.NewFlagSet(Subcommand, flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	managed := flags.Bool("casbin-gateway-agent-monitor", false, "Gateway-managed monitor hook")
@@ -69,47 +70,49 @@ func Run(args []string, input io.Reader, output io.Writer) error {
 	ingestToken := flags.String("ingest-token", "", "credential presented to the Gateway record endpoint")
 	decisionURL := flags.String("decision-url", "", "Gateway endpoint that decides a tool call")
 	if err := flags.Parse(args); err != nil {
-		return err
+		return 0, err
 	}
 	normalize, known := normalizers[*agentID]
 	if !*managed || !known {
-		return fmt.Errorf("unsupported hook agent %q", *agentID)
+		return 0, fmt.Errorf("unsupported hook agent %q", *agentID)
 	}
 
 	decoder := json.NewDecoder(io.LimitReader(input, maxHookInput))
 	decoder.UseNumber()
 	var event map[string]any
 	if err := decoder.Decode(&event); err != nil {
-		return err
+		return 0, err
 	}
 	// The verdict comes before the record: the agent is held up until this hook
-	// answers, and the report is best effort either way.
+	// answers, and the report is best effort either way, so nothing below may
+	// lose the code the verdict decided.
+	code := 0
 	if tool, ok := preToolEvent(*agentID, event); ok {
 		request := map[string]any{
 			"agent":      *agentID,
 			"tool":       tool,
-			"sessionKey": firstString(event, "session_id", "conversation_id"),
+			"sessionKey": firstString(event, "session_id", "conversation_id", "trajectory_id"),
 			"toolUseId":  stringValue(event["tool_use_id"]),
 		}
 		if allow, reason := allowed(*decisionURL, *ingestToken, request); !allow {
-			writeDenial(output, *agentID, reason)
+			code = writeDenial(output, errOutput, *agentID, reason)
 		}
 	}
 
 	record := normalize(event, *agentPath, time.Now())
 	if record == nil || *recordsURL == "" {
-		return nil
+		return code, nil
 	}
 	if *owner != "" {
 		record.User = *owner
 	}
 	body, err := json.Marshal(record)
 	if err != nil {
-		return err
+		return code, err
 	}
 	request, err := http.NewRequest(http.MethodPost, *recordsURL, bytes.NewReader(body))
 	if err != nil {
-		return err
+		return code, err
 	}
 	request.Header.Set("Content-Type", "application/json")
 	if *ingestToken != "" {
@@ -117,9 +120,9 @@ func Run(args []string, input io.Reader, output io.Writer) error {
 	}
 	response, err := (&http.Client{Timeout: reportTimeout}).Do(request)
 	if err != nil {
-		return err
+		return code, err
 	}
-	return response.Body.Close()
+	return code, response.Body.Close()
 }
 
 // normalizers maps each agent that reports through a command hook to the

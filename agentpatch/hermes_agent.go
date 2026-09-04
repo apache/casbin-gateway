@@ -70,6 +70,7 @@ type hermesObserverConfig struct {
 	Owner             string `json:"owner"`
 	PluginVersion     string `json:"pluginVersion"`
 	RecordsURL        string `json:"recordsUrl"`
+	DecisionURL       string `json:"decisionUrl"`
 	AgentPath         string `json:"agentPath"`
 	User              string `json:"user"`
 	IngestToken       string `json:"ingestToken"`
@@ -157,12 +158,16 @@ func (p hermesPatcher) Unpatch(target Target) error {
 
 // PatchNotice is the copy the agents table shows before and after the button,
 // so the Web UI does not need a branch of its own for how Hermes loads plugins.
+// Decides: the plugin's pre_tool_call callback returns a block directive, which
+// Hermes honours by refusing the call and handing the message to the model.
+func (hermesPatcher) Decides() bool { return true }
+
 func (hermesPatcher) PatchNotice(patched bool) (string, string) {
 	if patched {
-		return "Removes the behaviour observer from the default Hermes profile and drops its entry from plugins.enabled. Nothing else in config.yaml changes.",
+		return "Removes the behaviour observer from the default Hermes profile and drops its entry from plugins.enabled, and with it the check before each tool call. Nothing else in config.yaml changes.",
 			"Restart running Hermes processes to unload it."
 	}
-	return "Installs a behaviour observer with redacted tool inputs in the default Hermes profile and adds it to plugins.enabled. Named profiles are left alone.",
+	return "Installs a behaviour observer with redacted tool inputs in the default Hermes profile and adds it to plugins.enabled. It also refuses a tool call this agent's permissions do not allow; an agent nobody has restricted is never held up. Named profiles are left alone.",
 		"Restart running Hermes processes to load it."
 }
 
@@ -264,11 +269,16 @@ func renderHermesObserverConfig(target Target, token string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	decision, err := decisionURL()
+	if err != nil {
+		return nil, err
+	}
 	data, err := json.MarshalIndent(hermesObserverConfig{
 		SchemaVersion:     hermesConfigSchema,
 		Owner:             "casbin-gateway",
 		PluginVersion:     hermesPluginVersion,
 		RecordsURL:        url,
+		DecisionURL:       decision,
 		AgentPath:         target.Path,
 		User:              target.Owner,
 		IngestToken:       token,

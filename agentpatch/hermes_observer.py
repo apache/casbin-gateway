@@ -3,6 +3,11 @@
 This module intentionally never serializes prompts, responses, reasoning,
 tool results, or subagent text. Tool arguments are redacted and bounded before
 hook callbacks enqueue records without waiting for the Gateway HTTP endpoint.
+
+One callback is not an observer: pre_tool_call asks Gateway whether the call is
+allowed and returns a block directive when it is not. That question is the only
+thing in here a session waits on, and anything that goes wrong with it allows
+the call.
 """
 
 from __future__ import annotations
@@ -104,6 +109,10 @@ _AGENT_PATH = str(_CONFIG.get("agentPath") or "")
 _USER = str(_CONFIG.get("user") or "")
 _INGEST_TOKEN = str(_CONFIG.get("ingestToken") or "")
 _INGEST_TOKEN_HEADER = str(_CONFIG.get("ingestTokenHeader") or "")
+_DECISION_URL = str(_CONFIG.get("decisionUrl") or "")
+# The tool call waits on this, so a Gateway that is slow to answer is treated as
+# one that is not running.
+_DECIDE_TIMEOUT = 2.0
 
 
 def _text(value: Any, limit: int = 512) -> str:
@@ -433,8 +442,50 @@ def _tool_record(action: str, outcome: str, values: dict[str, Any]) -> dict[str,
     return {key: value for key, value in record.items() if value not in ("", None)}
 
 
-def _on_pre_tool_call(**values: Any) -> None:
+def _decide(tool_name: str, session_id: str, tool_call_id: str) -> str:
+    """Ask Gateway whether a tool call may go ahead, answering with the reason
+    it may not. Every failure answers "" - a plugin that cannot get a verdict
+    must not stop Hermes working."""
+    if not _DECISION_URL or not tool_name:
+        return ""
+    try:
+        body = json.dumps(
+            {
+                "agent": "hermes-agent",
+                "tool": tool_name,
+                "sessionKey": session_id,
+                "toolUseId": tool_call_id,
+            }
+        ).encode("utf-8")
+        request = urllib.request.Request(
+            _DECISION_URL, data=body, headers={"Content-Type": "application/json"}
+        )
+        if _INGEST_TOKEN and _INGEST_TOKEN_HEADER:
+            request.add_header(_INGEST_TOKEN_HEADER, _INGEST_TOKEN)
+        with urllib.request.urlopen(request, timeout=_DECIDE_TIMEOUT) as response:
+            answer = json.loads(response.read().decode("utf-8"))
+    except Exception:
+        return ""
+
+    if not isinstance(answer, dict) or answer.get("status") != "ok":
+        return ""
+    data = answer.get("data")
+    if not isinstance(data, dict) or data.get("allow") is not False:
+        return ""
+    return str(data.get("reason") or f"the permissions of this agent do not allow {tool_name}")
+
+
+def _on_pre_tool_call(**values: Any) -> dict[str, Any] | None:
     _enqueue(_tool_record("call", "attempted", values))
+    refusal = _decide(
+        _text(values.get("tool_name")),
+        _text(values.get("session_id")),
+        _text(values.get("tool_call_id")),
+    )
+    # Hermes vetoes the call on this directive and hands the message to the
+    # model; any other return value is ignored, which is what leaves every
+    # other callback here an observer.
+    return {"action": "block", "message": refusal} if refusal else None
 
 
 def _on_post_tool_call(**values: Any) -> None:
@@ -528,7 +579,8 @@ _HOOKS = {
 
 
 def register(ctx: Any) -> None:
-    """Register observational hooks. Return values are deliberately ignored."""
+    """Register the hooks. Every return value is ignored but pre_tool_call's,
+    which is the one Hermes reads a block directive from."""
     _start_sender()
     for name, callback in _HOOKS.items():
         ctx.register_hook(name, callback)
