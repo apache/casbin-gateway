@@ -29,8 +29,11 @@ import (
 
 const (
 	// portLookupTimeout bounds the external "who owns this port" commands so a
-	// slow lsof or netstat can never hold up startup.
-	portLookupTimeout = 2 * time.Second
+	// slow lsof or netstat can never hold up startup. It is generous because a
+	// timeout here is not a slow answer but a wrong one: an unnamed holder is
+	// taken for a foreign program, and a previous Gateway that cannot be named
+	// is never stopped.
+	portLookupTimeout = 10 * time.Second
 	// procNameMaxLen is how much of another process's name Linux reports, from
 	// TASK_COMM_LEN. Anything longer comes back cut to this.
 	procNameMaxLen = 15
@@ -217,19 +220,6 @@ func parseNetstatPid(output string, port int) int {
 	}
 
 	return 0
-}
-
-// findProcessName resolves a pid to an executable name, returning "" when the
-// platform command is missing or says nothing useful.
-func findProcessName(pid int) string {
-	if runtime.GOOS == "windows" {
-		output := runLookup("tasklist", "/FI", fmt.Sprintf("PID eq %d", pid), "/NH", "/FO", "CSV")
-		// A CSV row looks like: "nginx.exe","1234","Console","1","5,000 K"
-		name := strings.TrimSpace(strings.SplitN(output, ",", 2)[0])
-		return strings.Trim(name, `"`)
-	}
-
-	return strings.TrimSpace(runLookup("ps", "-p", strconv.Itoa(pid), "-o", "comm="))
 }
 
 // runLookup runs a short diagnostic command and returns its stdout, or "" on

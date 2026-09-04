@@ -37,6 +37,13 @@ const (
 
 	maxHookInput  = 8 * 1024 * 1024
 	reportTimeout = 5 * time.Second
+	// hookLifetime is how long the whole hook process may live. The report has
+	// its own timeout, but reading the event does not: an agent that starts a
+	// hook and then never writes the event, or never closes the pipe, leaves
+	// this process blocked in Decode forever. One copy of Gateway's executable
+	// per such event adds up - they are tens of megabytes each and only the
+	// machine's owner ever notices - so the process puts a deadline on itself.
+	hookLifetime = 30 * time.Second
 )
 
 // ServeIfInvoked handles an agent-launched hook process before Gateway starts
@@ -46,6 +53,10 @@ func ServeIfInvoked() {
 	if len(os.Args) < 2 || os.Args[1] != Subcommand {
 		return
 	}
+	// Exit 0 either way: a hook that fails is a record not kept, never an agent
+	// action held up or refused.
+	timer := time.AfterFunc(hookLifetime, func() { os.Exit(0) })
+	defer timer.Stop()
 	_ = Run(os.Args[2:], os.Stdin)
 	os.Exit(0)
 }
