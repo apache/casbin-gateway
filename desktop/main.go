@@ -97,6 +97,14 @@ func main() {
 		return
 	}
 
+	// Clicking the shortcut of a Gateway that is already running means "show me
+	// the window": the launch goes to the tray that is there, rather than
+	// leaving another tray icon and another window behind every time.
+	if raiseRunningInstance() {
+		return
+	}
+
 	dropOwnConsole()
+	holdInstance()
 	runTray()
 }

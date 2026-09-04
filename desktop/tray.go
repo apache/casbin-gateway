@@ -176,6 +176,7 @@ func toggleAutostart(item *systray.MenuItem) {
 
 func quit() {
 	closeWindow()
+	releaseInstance()
 
 	ownsServer.Lock()
 	owned := ownsServer.value

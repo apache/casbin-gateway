@@ -21,6 +21,9 @@
 casbin-gateway
 casbin-gateway-desktop
 
+# Written next to the binaries at run time, so a second launch finds the tray
+.desktop-instance
+
 # Written next to the binaries at run time, for the window and the shortcuts
 casbin-gateway.ico
 casbin-gateway.icns
