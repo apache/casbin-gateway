@@ -83,6 +83,31 @@
   <a href="https://cdn.casbin.org/img/casbin-gateway.gif"><img alt="Casbin Gateway" src="https://cdn.casbin.org/img/casbin-gateway.gif" width="900"></a>
 </p>
 
+## 每个 Agent 支持到什么程度
+
+| Agent | 行为监控 | 换供应商 | MCP | 技能 | 提示词 | 会话 | 安装 |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| <img src="https://www.google.com/s2/favicons?domain=claude.com&sz=64" width="16" height="16" alt=""> **Claude Code** | ✅ | ✅ Anthropic | ✅ | ✅ | ✅ | ✅ | npm · brew · winget |
+| <img src="https://www.google.com/s2/favicons?domain=claude.ai&sz=64" width="16" height="16" alt=""> **Claude Desktop** | ✅ | — | ✅ | — | — | — | — |
+| <img src="https://www.google.com/s2/favicons?domain=openai.com&sz=64" width="16" height="16" alt=""> **Codex CLI** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm · brew |
+| <img src="https://www.google.com/s2/favicons?domain=openai.com&sz=64" width="16" height="16" alt=""> **ChatGPT 桌面版（Codex）** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | — | — |
+| <img src="https://www.google.com/s2/favicons?domain=gemini.google.com&sz=64" width="16" height="16" alt=""> **Gemini CLI** | ✅ | ✅ Gemini | ✅ | ✅ | ✅ | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=cursor.com&sz=64" width="16" height="16" alt=""> **Cursor** | ✅ | — | ✅ | ✅ | — | — | brew |
+| <img src="https://www.google.com/s2/favicons?domain=cursor.com&sz=64" width="16" height="16" alt=""> **Cursor Agent** | ✅ | — | ✅ | ✅ | — | — | — |
+| <img src="https://www.google.com/s2/favicons?domain=windsurf.com&sz=64" width="16" height="16" alt=""> **Windsurf** | ✅ | — | ✅ | — | ✅ | — | brew |
+| <img src="https://www.google.com/s2/favicons?domain=opencode.ai&sz=64" width="16" height="16" alt=""> **opencode** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=opencode.ai&sz=64" width="16" height="16" alt=""> **opencode 桌面版** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | — | — |
+| <img src="https://www.google.com/s2/favicons?domain=openagentai.org&sz=64" width="16" height="16" alt=""> **OpenAgent** | ✅ | — | — | — | — | — | — |
+| <img src="https://www.google.com/s2/favicons?domain=openclaw.ai&sz=64" width="16" height="16" alt=""> **OpenClaw** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=nousresearch.com&sz=64" width="16" height="16" alt=""> **Hermes Agent** | ✅ | ✅ OpenAI | — | — | — | — | — |
+| <img src="https://www.google.com/s2/favicons?domain=deepseek.com&sz=64" width="16" height="16" alt=""> **DeepSeek Harness** | ✅ | ✅ OpenAI | ✅ | ✅ | — | — | npm |
+
+- **行为监控** —— 只读地记录 Agent 做了什么：提示词、工具调用、权限询问。Agent 的任何动作都不会等待 Gateway，开着监控也不会改变任何一次回答。
+- **换供应商** —— Gateway 按该 Agent 客户端自己说的协议格式，改写它的配置文件，把它指向绑定的供应商。不支持的 Agent 仍可以用界面上给出的环境变量接进来。
+- **MCP · 技能 · 提示词** —— 在 Agent 之间读取、对比和复制 MCP 服务器、技能和指令文件。
+- **会话** —— 直接从 Agent 自己的会话记录里读提示词和 token 用量，包括没走 Gateway 的那部分。
+- **安装** —— Gateway 能用来安装和升级它的包管理器。其余的都只能去厂商页面下载。
+
 ## 功能特性
 
 - **[查一查那个 Key 背后的 API 是不是真的](#杀手锏那个-key-背后的-api真是卖给你的那个吗)** —— 中转商可以偷偷换成便宜模型、伪造缓存命中，流量里根本看不出来。Authenticity 直接问上游，测出 A 到 F 的等级。

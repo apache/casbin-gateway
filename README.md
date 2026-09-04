@@ -83,6 +83,31 @@
   <a href="https://cdn.casbin.org/img/casbin-gateway.gif"><img alt="Casbin Gateway" src="https://cdn.casbin.org/img/casbin-gateway.gif" width="900"></a>
 </p>
 
+## What Gateway does for each agent
+
+| Agent | Monitoring | Provider | MCP | Skills | Prompt | Sessions | Install |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| <img src="https://www.google.com/s2/favicons?domain=claude.com&sz=64" width="16" height="16" alt=""> **Claude Code** | ✅ | ✅ Anthropic | ✅ | ✅ | ✅ | ✅ | npm · brew · winget |
+| <img src="https://www.google.com/s2/favicons?domain=claude.ai&sz=64" width="16" height="16" alt=""> **Claude Desktop** | ✅ | — | ✅ | — | — | — | — |
+| <img src="https://www.google.com/s2/favicons?domain=openai.com&sz=64" width="16" height="16" alt=""> **Codex CLI** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm · brew |
+| <img src="https://www.google.com/s2/favicons?domain=openai.com&sz=64" width="16" height="16" alt=""> **ChatGPT Desktop (Codex)** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | — | — |
+| <img src="https://www.google.com/s2/favicons?domain=gemini.google.com&sz=64" width="16" height="16" alt=""> **Gemini CLI** | ✅ | ✅ Gemini | ✅ | ✅ | ✅ | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=cursor.com&sz=64" width="16" height="16" alt=""> **Cursor** | ✅ | — | ✅ | ✅ | — | — | brew |
+| <img src="https://www.google.com/s2/favicons?domain=cursor.com&sz=64" width="16" height="16" alt=""> **Cursor Agent** | ✅ | — | ✅ | ✅ | — | — | — |
+| <img src="https://www.google.com/s2/favicons?domain=windsurf.com&sz=64" width="16" height="16" alt=""> **Windsurf** | ✅ | — | ✅ | — | ✅ | — | brew |
+| <img src="https://www.google.com/s2/favicons?domain=opencode.ai&sz=64" width="16" height="16" alt=""> **opencode** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=opencode.ai&sz=64" width="16" height="16" alt=""> **opencode Desktop** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | — | — |
+| <img src="https://www.google.com/s2/favicons?domain=openagentai.org&sz=64" width="16" height="16" alt=""> **OpenAgent** | ✅ | — | — | — | — | — | — |
+| <img src="https://www.google.com/s2/favicons?domain=openclaw.ai&sz=64" width="16" height="16" alt=""> **OpenClaw** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=nousresearch.com&sz=64" width="16" height="16" alt=""> **Hermes Agent** | ✅ | ✅ OpenAI | — | — | — | — | — |
+| <img src="https://www.google.com/s2/favicons?domain=deepseek.com&sz=64" width="16" height="16" alt=""> **DeepSeek Harness** | ✅ | ✅ OpenAI | ✅ | ✅ | — | — | npm |
+
+- **Monitoring** — audit-only records of what the agent did: prompts, tool calls, permission prompts. Nothing an agent does waits on Gateway, and no answer changes because monitoring is on.
+- **Provider** — Gateway writes the agent's own configuration to point it at a bound provider, in the wire format that agent's client speaks. An agent without it still reaches Gateway through the environment variables the UI shows.
+- **MCP · Skills · Prompt** — read, compare and copy MCP servers, skills and the instruction file between agents.
+- **Sessions** — prompts and token usage read straight from the agent's own transcripts, including what never went through Gateway.
+- **Install** — the package managers Gateway installs and upgrades it with. Everything else is a download from its vendor's page.
+
 ## Features
 
 - **[Is the API behind that key what it was sold as?](#the-killer-feature-is-the-api-behind-that-key-what-it-was-sold-as)** — a reseller can quietly swap in a cheaper model or fake a cache hit, and none of it shows up in the traffic. Authenticity asks the upstream directly and grades it A–F.
