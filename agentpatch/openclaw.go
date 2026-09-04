@@ -32,11 +32,20 @@ const (
 	openclawConfigFile = "openclaw.json"
 )
 
+// openclawPluginId is the plugin that decides a tool call. It is a second
+// artifact rather than a change to the hook beside it: the event stream a hook
+// listens on is not something a session waits for, and before_tool_call, the
+// one seam that is, is only reachable from a plugin.
+const openclawPluginId = "casbin-gateway-agent-permissions"
+
 //go:embed openclaw_hook.js
 var openclawHookHandler string
 
 //go:embed openclaw_hook.md
 var openclawHookManifest string
+
+//go:embed openclaw_plugin.js
+var openclawPluginEntry string
 
 type openclawPatcher struct{}
 
@@ -61,6 +70,10 @@ func (p openclawPatcher) Patch(target Target) error {
 	if err != nil {
 		return err
 	}
+	plugin, err := renderOpenclawPlugin(token)
+	if err != nil {
+		return err
+	}
 	return Apply(target, func(changes *ChangeSet) error {
 		if err := changes.MkdirAll(layout.hookDir); err != nil {
 			return err
@@ -71,7 +84,10 @@ func (p openclawPatcher) Patch(target Target) error {
 		if err := changes.WriteFile(filepath.Join(layout.hookDir, "handler.js"), []byte(handler), 0o644); err != nil {
 			return err
 		}
-		return enableOpenclawHook(changes, layout.configPath)
+		if err := writeOpenclawPlugin(changes, layout.pluginDir, plugin); err != nil {
+			return err
+		}
+		return enableOpenclawEntries(changes, layout.configPath)
 	})
 }
 
@@ -103,12 +119,30 @@ func (p openclawPatcher) Status(target Target) (Status, error) {
 	if !strings.Contains(string(handler), jsonString(current)) {
 		return Status{Detail: "OpenClaw hook needs refresh"}, nil
 	}
-	enabled, err := openclawHookEnabled(layout.configPath)
+
+	// The plugin beside it is what refuses a tool call, and a patch missing it
+	// is the one an earlier Gateway wrote, before there was one.
+	decision, err := decisionURL()
+	if err != nil {
+		return Status{}, err
+	}
+	entry, err := os.ReadFile(filepath.Join(layout.pluginDir, "index.js"))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return Status{Detail: "OpenClaw permission plugin needs refresh"}, nil
+		}
+		return Status{}, err
+	}
+	if !strings.Contains(string(entry), jsonString(decision)) {
+		return Status{Detail: "OpenClaw permission plugin needs refresh"}, nil
+	}
+
+	enabled, err := openclawEntriesEnabled(layout.configPath)
 	if err != nil {
 		return Status{}, err
 	}
 	if !enabled {
-		return Status{Detail: "OpenClaw hook is installed but disabled"}, nil
+		return Status{Detail: "OpenClaw hook and plugin are installed but not both enabled"}, nil
 	}
 	if !IsApplied(target) {
 		return Status{Patched: true, Detail: "OpenClaw hook was installed outside Gateway"}, nil
@@ -116,15 +150,21 @@ func (p openclawPatcher) Status(target Target) (Status, error) {
 	return Status{Patched: true, Detail: "OpenClaw hook active after gateway restart"}, nil
 }
 
+// Decides: the plugin's before_tool_call handler returns block, which OpenClaw
+// treats as terminal and refuses the call on.
+func (openclawPatcher) Decides() bool { return true }
+
 func (openclawPatcher) PatchNotice(patched bool) (string, string) {
 	if patched {
-		return "Removes Gateway's audit-only OpenClaw hook.", "Restart the OpenClaw gateway after removing the hook."
+		return "Removes Gateway's OpenClaw hook and the plugin that checks each tool call.", "Restart the OpenClaw gateway after removing them."
 	}
-	return "Installs an audit-only OpenClaw hook.", "Restart the OpenClaw gateway to load the hook."
+	return "Installs an OpenClaw hook that observes events, and a plugin that refuses a tool call this agent's permissions do not allow; an agent nobody has restricted is never held up.",
+		"Restart the OpenClaw gateway to load them."
 }
 
 type openclawLayout struct {
 	hookDir    string
+	pluginDir  string
 	configPath string
 }
 
@@ -135,7 +175,10 @@ func (p openclawPatcher) layoutOf(target Target) (openclawLayout, error) {
 	}
 	stateDir := filepath.Join(home, openclawStateDir)
 	return openclawLayout{
-		hookDir:    filepath.Join(stateDir, "hooks", openclawHookName),
+		hookDir: filepath.Join(stateDir, "hooks", openclawHookName),
+		// "extensions" under the state directory is one of the roots OpenClaw
+		// discovers plugins from, so nothing has to be added to load.paths.
+		pluginDir:  filepath.Join(stateDir, "extensions", openclawPluginId),
 		configPath: filepath.Join(stateDir, openclawConfigFile),
 	}, nil
 }
@@ -159,7 +202,68 @@ func renderOpenclawHandler(target Target, ingestToken string) (string, error) {
 	return handler, nil
 }
 
-func enableOpenclawHook(changes *ChangeSet, configPath string) error {
+// renderOpenclawPlugin fills in the plugin entry. It carries no records URL:
+// the hook beside it does the reporting, and this one only asks.
+func renderOpenclawPlugin(ingestToken string) (string, error) {
+	url, err := decisionURL()
+	if err != nil {
+		return "", err
+	}
+	replacements := map[string]string{
+		"__CASBIN_GATEWAY_PLUGIN_ID__":           jsonString(openclawPluginId),
+		"__CASBIN_GATEWAY_AGENT__":               jsonString("openclaw"),
+		"__CASBIN_GATEWAY_DECISION_URL__":        jsonString(url),
+		"__CASBIN_GATEWAY_INGEST_TOKEN__":        jsonString(ingestToken),
+		"__CASBIN_GATEWAY_INGEST_TOKEN_HEADER__": jsonString(agentmonitor.IngestTokenHeader),
+	}
+	entry := openclawPluginEntry
+	for placeholder, value := range replacements {
+		entry = strings.ReplaceAll(entry, placeholder, value)
+	}
+	return entry, nil
+}
+
+// writeOpenclawPlugin lays out the three files OpenClaw reads a plugin from:
+// the manifest it identifies it by, the package.json naming the entry module,
+// and the module itself.
+func writeOpenclawPlugin(changes *ChangeSet, pluginDir string, entry string) error {
+	if err := changes.MkdirAll(pluginDir); err != nil {
+		return err
+	}
+	manifest, err := json.MarshalIndent(map[string]any{
+		"id":          openclawPluginId,
+		"name":        "Casbin Gateway Agent Permissions",
+		"description": "Refuses a tool call the agent's Casbin Gateway permissions do not allow",
+	}, "", "  ")
+	if err != nil {
+		return err
+	}
+	pkg, err := json.MarshalIndent(map[string]any{
+		"name":    openclawPluginId,
+		"version": "1.0.0",
+		"private": true,
+		"type":    "module",
+		// Discovery refuses a package that does not name its entry here.
+		"openclaw": map[string]any{"extensions": []string{"./index.js"}},
+	}, "", "  ")
+	if err != nil {
+		return err
+	}
+	for name, data := range map[string][]byte{
+		"openclaw.plugin.json": append(manifest, '\n'),
+		"package.json":         append(pkg, '\n'),
+		"index.js":             []byte(entry),
+	} {
+		if err := changes.WriteFile(filepath.Join(pluginDir, name), data, 0o644); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// enableOpenclawEntries turns on both of Gateway's artifacts in one write: the
+// audit hook and the plugin that decides a tool call.
+func enableOpenclawEntries(changes *ChangeSet, configPath string) error {
 	if err := changes.MkdirAll(filepath.Dir(configPath)); err != nil {
 		return err
 	}
@@ -167,6 +271,7 @@ func enableOpenclawHook(changes *ChangeSet, configPath string) error {
 	if err != nil {
 		return err
 	}
+
 	hooks, err := ensureObject(config, "hooks")
 	if err != nil {
 		return err
@@ -175,16 +280,31 @@ func enableOpenclawHook(changes *ChangeSet, configPath string) error {
 	if err != nil {
 		return err
 	}
-	entries, err := ensureObject(internal, "entries")
+	hookEntries, err := ensureObject(internal, "entries")
 	if err != nil {
 		return err
 	}
-	entry, err := ensureObject(entries, openclawHookName)
+	hookEntry, err := ensureObject(hookEntries, openclawHookName)
 	if err != nil {
 		return err
 	}
 	internal["enabled"] = true
-	entry["enabled"] = true
+	hookEntry["enabled"] = true
+
+	plugins, err := ensureObject(config, "plugins")
+	if err != nil {
+		return err
+	}
+	pluginEntries, err := ensureObject(plugins, "entries")
+	if err != nil {
+		return err
+	}
+	pluginEntry, err := ensureObject(pluginEntries, openclawPluginId)
+	if err != nil {
+		return err
+	}
+	pluginEntry["enabled"] = true
+
 	updated, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
 		return err
@@ -192,7 +312,9 @@ func enableOpenclawHook(changes *ChangeSet, configPath string) error {
 	return changes.WriteFile(configPath, append(updated, '\n'), 0o600)
 }
 
-func openclawHookEnabled(configPath string) (bool, error) {
+// openclawEntriesEnabled reports that both artifacts are switched on. Either
+// one off is a half-installed patch, and saying so is what offers the repair.
+func openclawEntriesEnabled(configPath string) (bool, error) {
 	config, _, exists, err := readJSONConfig(configPath)
 	if err != nil || !exists {
 		return false, err
@@ -210,7 +332,20 @@ func openclawHookEnabled(configPath string) (bool, error) {
 		return false, nil
 	}
 	entry, ok := objectAt(entries[openclawHookName])
-	return ok && entry["enabled"] == true, nil
+	if !ok || entry["enabled"] != true {
+		return false, nil
+	}
+
+	plugins, ok := objectAt(config["plugins"])
+	if !ok {
+		return false, nil
+	}
+	pluginEntries, ok := objectAt(plugins["entries"])
+	if !ok {
+		return false, nil
+	}
+	pluginEntry, ok := objectAt(pluginEntries[openclawPluginId])
+	return ok && pluginEntry["enabled"] == true, nil
 }
 
 func ensureObject(parent map[string]any, key string) (map[string]any, error) {
