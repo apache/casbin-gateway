@@ -72,11 +72,15 @@ function ThemeToggle({
 // palette you are not in, and both colours have to read on either background.
 const paletteSwatch: Record<Palette, string> = {
   amber: "oklch(0.64 0.16 52)",
+  terminal: "oklch(0.66 0.13 200)",
+  indigo: "oklch(0.58 0.19 275)",
   neutral: "oklch(0.62 0 0)",
 };
 
 const paletteLabel: Record<Palette, string> = {
   amber: "general:Amber & Ink",
+  terminal: "general:Terminal",
+  indigo: "general:Indigo",
   neutral: "general:Neutral",
 };
 

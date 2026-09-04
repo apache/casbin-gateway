@@ -16,7 +16,7 @@
 export type ThemeAlgorithm = ("default" | "dark")[];
 
 /** Which colour set the theme draws from, light or dark; see index.css. */
-export type Palette = "amber" | "neutral";
+export type Palette = "amber" | "terminal" | "indigo" | "neutral";
 
 /**
  * The envelope every /api handler returns (controllers.Response): "ok" or

@@ -233,7 +233,7 @@ export function saveThemeAlgorithm(themeAlgorithm: ThemeAlgorithm) {
 
 // The palette is orthogonal to light/dark: each one defines both, so switching
 // palettes never drags the reader out of the mode they chose.
-export const Palettes: Palette[] = ["amber", "neutral"];
+export const Palettes: Palette[] = ["amber", "terminal", "indigo", "neutral"];
 
 export function applyPalette(palette: Palette) {
   document.documentElement.setAttribute("data-palette", palette);

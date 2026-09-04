@@ -111,6 +111,197 @@
   --sidebar-ring: oklch(0.735 0.152 58);
 }
 
+/* "Terminal": a console, so the greys go cool, the corners go square and the
+   accent is the cyan a terminal picks for something you can act on. Phosphor
+   green would have been the obvious accent and is the reason this is not: green
+   is already --success, and a page of green links beside green health badges
+   stops telling you which is which. */
+html[data-palette="terminal"]:not(.dark) {
+  --radius: 0.25rem;
+
+  --background: oklch(0.985 0.004 230);
+  --foreground: oklch(0.195 0.018 245);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.195 0.018 245);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.195 0.018 245);
+  --primary: oklch(0.520 0.105 210);
+  --primary-foreground: oklch(0.985 0.004 230);
+  --secondary: oklch(0.955 0.008 235);
+  --secondary-foreground: oklch(0.285 0.022 245);
+  --muted: oklch(0.957 0.007 235);
+  --muted-foreground: oklch(0.505 0.018 245);
+  --accent: oklch(0.940 0.020 215);
+  --accent-foreground: oklch(0.300 0.045 215);
+  --destructive: oklch(0.545 0.205 25);
+  --destructive-foreground: oklch(0.985 0.004 230);
+  --success: oklch(0.500 0.125 150);
+  --success-foreground: oklch(0.985 0.004 230);
+  --warning: oklch(0.560 0.120 75);
+  --warning-foreground: oklch(0.985 0.004 230);
+  /* Pushed off toward indigo: at its usual 235 it would sit 25° from the cyan
+     primary and read as a slightly-off link. */
+  --info: oklch(0.510 0.130 265);
+  --info-foreground: oklch(0.985 0.004 230);
+  --border: oklch(0.900 0.010 235);
+  --input: oklch(0.885 0.012 235);
+  --ring: oklch(0.520 0.105 210);
+
+  --chart-1: oklch(0.600 0.115 210);
+  --chart-2: oklch(0.560 0.125 150);
+  --chart-3: oklch(0.660 0.130 75);
+  --chart-4: oklch(0.540 0.135 300);
+  --chart-5: oklch(0.580 0.170 25);
+
+  --sidebar: oklch(0.955 0.010 235);
+  --sidebar-foreground: oklch(0.240 0.020 245);
+  --sidebar-primary: oklch(0.520 0.105 210);
+  --sidebar-primary-foreground: oklch(0.985 0.004 230);
+  --sidebar-accent: oklch(0.920 0.026 215);
+  --sidebar-accent-foreground: oklch(0.320 0.060 212);
+  --sidebar-border: oklch(0.893 0.012 235);
+  --sidebar-ring: oklch(0.520 0.105 210);
+}
+
+/* The one this palette is really for. */
+html[data-palette="terminal"].dark {
+  --radius: 0.25rem;
+
+  --background: oklch(0.155 0.012 250);
+  --foreground: oklch(0.950 0.006 230);
+  --card: oklch(0.198 0.014 250);
+  --card-foreground: oklch(0.950 0.006 230);
+  --popover: oklch(0.208 0.014 250);
+  --popover-foreground: oklch(0.950 0.006 230);
+  --primary: oklch(0.760 0.115 200);
+  --primary-foreground: oklch(0.170 0.030 220);
+  --secondary: oklch(0.255 0.016 250);
+  --secondary-foreground: oklch(0.940 0.008 230);
+  --muted: oklch(0.255 0.016 250);
+  --muted-foreground: oklch(0.705 0.016 240);
+  --accent: oklch(0.285 0.028 220);
+  --accent-foreground: oklch(0.925 0.030 210);
+  --destructive: oklch(0.680 0.180 25);
+  --destructive-foreground: oklch(0.165 0.028 30);
+  --success: oklch(0.760 0.145 150);
+  --success-foreground: oklch(0.160 0.025 150);
+  --warning: oklch(0.790 0.125 80);
+  --warning-foreground: oklch(0.175 0.030 75);
+  --info: oklch(0.700 0.130 265);
+  --info-foreground: oklch(0.160 0.028 265);
+  --border: oklch(0.80 0.040 220 / 15%);
+  --input: oklch(0.80 0.040 220 / 20%);
+  --ring: oklch(0.760 0.115 200);
+
+  --chart-1: oklch(0.760 0.115 200);
+  --chart-2: oklch(0.740 0.145 150);
+  --chart-3: oklch(0.800 0.125 80);
+  --chart-4: oklch(0.700 0.130 300);
+  --chart-5: oklch(0.700 0.165 25);
+
+  --sidebar: oklch(0.175 0.013 250);
+  --sidebar-foreground: oklch(0.925 0.008 230);
+  --sidebar-primary: oklch(0.760 0.115 200);
+  --sidebar-primary-foreground: oklch(0.170 0.030 220);
+  --sidebar-accent: oklch(0.290 0.038 215);
+  --sidebar-accent-foreground: oklch(0.890 0.045 205);
+  --sidebar-border: oklch(0.80 0.040 220 / 15%);
+  --sidebar-ring: oklch(0.760 0.115 200);
+}
+
+/* "Indigo": the infrastructure-console reading. 274° is the one hue on the
+   wheel no semantic colour claims, so the accent never has to be told apart
+   from a status. */
+html[data-palette="indigo"]:not(.dark) {
+  --radius: 0.625rem;
+
+  --background: oklch(0.984 0.005 280);
+  --foreground: oklch(0.210 0.022 275);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.210 0.022 275);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.210 0.022 275);
+  --primary: oklch(0.480 0.180 274);
+  --primary-foreground: oklch(0.985 0.006 280);
+  --secondary: oklch(0.958 0.012 280);
+  --secondary-foreground: oklch(0.300 0.030 275);
+  --muted: oklch(0.958 0.010 280);
+  --muted-foreground: oklch(0.510 0.022 278);
+  --accent: oklch(0.945 0.026 280);
+  --accent-foreground: oklch(0.330 0.070 274);
+  --destructive: oklch(0.545 0.205 25);
+  --destructive-foreground: oklch(0.985 0.006 280);
+  --success: oklch(0.500 0.125 152);
+  --success-foreground: oklch(0.985 0.006 280);
+  --warning: oklch(0.560 0.120 78);
+  --warning-foreground: oklch(0.985 0.006 280);
+  --info: oklch(0.530 0.115 228);
+  --info-foreground: oklch(0.985 0.006 280);
+  --border: oklch(0.898 0.012 280);
+  --input: oklch(0.884 0.014 280);
+  --ring: oklch(0.480 0.180 274);
+
+  --chart-1: oklch(0.540 0.180 274);
+  --chart-2: oklch(0.600 0.140 330);
+  --chart-3: oklch(0.580 0.110 200);
+  --chart-4: oklch(0.540 0.120 152);
+  --chart-5: oklch(0.660 0.130 70);
+
+  --sidebar: oklch(0.958 0.014 280);
+  --sidebar-foreground: oklch(0.250 0.024 275);
+  --sidebar-primary: oklch(0.480 0.180 274);
+  --sidebar-primary-foreground: oklch(0.985 0.006 280);
+  --sidebar-accent: oklch(0.925 0.030 278);
+  --sidebar-accent-foreground: oklch(0.340 0.085 274);
+  --sidebar-border: oklch(0.900 0.016 280);
+  --sidebar-ring: oklch(0.480 0.180 274);
+}
+
+html[data-palette="indigo"].dark {
+  --radius: 0.625rem;
+
+  --background: oklch(0.170 0.020 275);
+  --foreground: oklch(0.950 0.010 280);
+  --card: oklch(0.215 0.024 275);
+  --card-foreground: oklch(0.950 0.010 280);
+  --popover: oklch(0.225 0.024 275);
+  --popover-foreground: oklch(0.950 0.010 280);
+  --primary: oklch(0.680 0.165 272);
+  --primary-foreground: oklch(0.180 0.050 274);
+  --secondary: oklch(0.270 0.026 275);
+  --secondary-foreground: oklch(0.940 0.012 280);
+  --muted: oklch(0.270 0.026 275);
+  --muted-foreground: oklch(0.715 0.020 278);
+  --accent: oklch(0.310 0.045 274);
+  --accent-foreground: oklch(0.925 0.030 280);
+  --destructive: oklch(0.680 0.180 25);
+  --destructive-foreground: oklch(0.165 0.028 30);
+  --success: oklch(0.750 0.135 152);
+  --success-foreground: oklch(0.165 0.025 152);
+  --warning: oklch(0.790 0.125 80);
+  --warning-foreground: oklch(0.180 0.030 78);
+  --info: oklch(0.740 0.105 228);
+  --info-foreground: oklch(0.170 0.025 228);
+  --border: oklch(0.80 0.050 280 / 15%);
+  --input: oklch(0.80 0.050 280 / 20%);
+  --ring: oklch(0.680 0.165 272);
+
+  --chart-1: oklch(0.700 0.165 274);
+  --chart-2: oklch(0.720 0.140 330);
+  --chart-3: oklch(0.740 0.110 200);
+  --chart-4: oklch(0.720 0.120 152);
+  --chart-5: oklch(0.800 0.125 70);
+
+  --sidebar: oklch(0.195 0.026 275);
+  --sidebar-foreground: oklch(0.925 0.012 280);
+  --sidebar-primary: oklch(0.680 0.165 272);
+  --sidebar-primary-foreground: oklch(0.180 0.050 274);
+  --sidebar-accent: oklch(0.315 0.055 274);
+  --sidebar-accent-foreground: oklch(0.900 0.040 280);
+  --sidebar-border: oklch(0.80 0.050 280 / 15%);
+  --sidebar-ring: oklch(0.680 0.165 272);
+}
+
 /* The palette Gateway shipped before "Amber & Ink", kept as an opt-out for
    anyone who wants the plain grey. `:not(.dark)` and `.dark` never both match,
    so neither block has to out-specify the other or come first. */
