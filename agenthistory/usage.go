@@ -76,7 +76,26 @@ func (reader *usageReader) add(entry line) {
 		reader.addClaude(entry)
 	case entry.Type == "event_msg" && entry.Payload.Type == "token_count":
 		reader.addCodex(entry)
+	case entry.Type == "gemini" && entry.Tokens != nil:
+		reader.addGemini(entry)
 	}
+}
+
+// addGemini reads what one Gemini CLI turn spent. The counts are on the model's
+// own message, and thoughts are the reasoning it was billed for.
+func (reader *usageReader) addGemini(entry line) {
+	tokens := entry.Tokens
+	if tokens.Input == 0 && tokens.Output == 0 && tokens.Cached == 0 && tokens.Thoughts == 0 {
+		return
+	}
+	reader.put(entry.RequestId, turn{
+		model:      entry.Model,
+		day:        dayOf(firstNonEmpty(entry.Timestamp, entry.StartTime)),
+		prompt:     tokens.Input,
+		completion: tokens.Output,
+		cacheRead:  tokens.Cached,
+		reasoning:  tokens.Thoughts,
+	})
 }
 
 func (reader *usageReader) addClaude(entry line) {

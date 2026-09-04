@@ -69,9 +69,22 @@ const (
 var transcriptDirs = []struct {
 	agent string
 	parts []string
+	// keyOf reads the session id out of a transcript's path, for an agent that
+	// names the directory holding the file rather than the file itself.
+	keyOf func(path string) string
 }{
-	{"claude-code", []string{".claude", "projects"}},
-	{"codex-cli", []string{".codex", "sessions"}},
+	{agent: "claude-code", parts: []string{".claude", "projects"}},
+	{agent: "codex-cli", parts: []string{".codex", "sessions"}},
+	// The Gemini CLI keeps one directory per project hash, and OpenClaw one per
+	// agent id; both hold the sessions a level or two further down, which is
+	// where the walk finds them.
+	{agent: "gemini-cli", parts: []string{".gemini", "tmp"}},
+	{agent: "openclaw", parts: []string{".openclaw", "agents"}},
+	// Claude Desktop writes one directory per Cowork session, named by the
+	// session id, with the transcript inside it under a fixed name.
+	{agent: "claude-desktop", parts: []string{"AppData", "Roaming", "Claude", "local-agent-mode-sessions"}, keyOf: parentDirName},
+	{agent: "claude-desktop", parts: []string{"AppData", "Local", "Claude-3p", "local-agent-mode-sessions"}, keyOf: parentDirName},
+	{agent: "claude-desktop", parts: []string{"AppData", "Local", "Packages", "Claude_pzs8sxrjxfjjc", "LocalCache", "Roaming", "Claude", "local-agent-mode-sessions"}, keyOf: parentDirName},
 }
 
 type cacheKey struct {
@@ -120,11 +133,14 @@ func scan(home string) []Session {
 	for _, source := range transcriptDirs {
 		root := filepath.Join(append([]string{home}, source.parts...)...)
 		for _, file := range newestTranscripts(root) {
-			if session, ok := read(source.agent, file); ok {
+			if session, ok := read(source.agent, file, source.keyOf); ok {
 				sessions = append(sessions, session)
 			}
 		}
 	}
+	// opencode keeps its sessions in a database rather than a transcript file,
+	// and already totals what each one spent.
+	sessions = append(sessions, scanOpencode(home)...)
 
 	sort.SliceStable(sessions, func(left, right int) bool {
 		return sessions[left].LastTime > sessions[right].LastTime
@@ -163,7 +179,7 @@ func newestTranscripts(root string) []transcript {
 	return found
 }
 
-func read(agent string, file transcript) (Session, bool) {
+func read(agent string, file transcript, keyOf func(string) string) (Session, bool) {
 	key := cacheKey{path: file.path, size: file.info.Size(), unix: file.info.ModTime().UnixNano()}
 	cacheMutex.Lock()
 	cached, found := cache[key]
@@ -172,7 +188,7 @@ func read(agent string, file transcript) (Session, bool) {
 		return cached, true
 	}
 
-	session, ok := parse(agent, file)
+	session, ok := parse(agent, file, keyOf)
 	if !ok {
 		return Session{}, false
 	}
@@ -192,7 +208,25 @@ type line struct {
 	RequestId string          `json:"requestId"`
 	Cwd       string          `json:"cwd"`
 	Message   json.RawMessage `json:"message"`
-	Payload   struct {
+	// Role and Content are how the Cowork audit log and the Gemini CLI spell a
+	// message: the line is the message rather than carrying one. AuditTimestamp
+	// and StartTime are the same two files' names for when it happened.
+	Role           string          `json:"role"`
+	Content        json.RawMessage `json:"content"`
+	AuditTimestamp string          `json:"_audit_timestamp"`
+	StartTime      string          `json:"startTime"`
+	Model          string          `json:"model"`
+	// Directories are the roots a Gemini CLI session was started across; the
+	// first is the one it worked in.
+	Directories []string `json:"directories"`
+	// Tokens is what a Gemini CLI turn spent, on the turn itself.
+	Tokens *struct {
+		Input    int `json:"input"`
+		Output   int `json:"output"`
+		Cached   int `json:"cached"`
+		Thoughts int `json:"thoughts"`
+	} `json:"tokens"`
+	Payload struct {
 		Id      string          `json:"id"`
 		Type    string          `json:"type"`
 		Role    string          `json:"role"`
@@ -253,7 +287,7 @@ func eachLine(path string, visit func(data []byte)) (int, error) {
 	}
 }
 
-func parse(agent string, file transcript) (Session, bool) {
+func parse(agent string, file transcript, keyOf func(string) string) (Session, bool) {
 	session := Session{
 		Agent:      agent,
 		Path:       file.path,
@@ -263,6 +297,9 @@ func parse(agent string, file transcript) (Session, bool) {
 	// The file name is the session id for Claude Code, and carries it for Codex;
 	// the transcript itself overrides this when it names one.
 	session.SessionKey = sessionKeyFromName(file.info.Name())
+	if keyOf != nil {
+		session.SessionKey = keyOf(file.path)
+	}
 
 	// Reading the file is the expensive part, so what it spent is added up on
 	// the same pass rather than by walking every transcript a second time.
@@ -282,8 +319,11 @@ func parse(agent string, file transcript) (Session, bool) {
 		}
 		if session.Cwd == "" {
 			session.Cwd = firstNonEmpty(entry.Cwd, entry.Payload.Cwd)
+			if session.Cwd == "" && len(entry.Directories) > 0 {
+				session.Cwd = entry.Directories[0]
+			}
 		}
-		if when := strings.TrimSpace(entry.Timestamp); when != "" {
+		if when := strings.TrimSpace(firstNonEmpty(entry.Timestamp, entry.AuditTimestamp, entry.StartTime)); when != "" {
 			if session.FirstTime == "" {
 				session.FirstTime = when
 			}
@@ -316,13 +356,20 @@ func parse(agent string, file transcript) (Session, bool) {
 // the conversation counts: the tool calls and events around it are what
 // monitoring is for.
 func roleAndContent(entry line) (string, json.RawMessage) {
+	// The Gemini CLI calls the model's turn by its own name.
+	if entry.Type == "gemini" {
+		return "assistant", entry.Content
+	}
+
 	if entry.Type == "user" || entry.Type == "assistant" {
 		var message struct {
 			Role    string          `json:"role"`
 			Content json.RawMessage `json:"content"`
 		}
-		if err := json.Unmarshal(entry.Message, &message); err != nil {
-			return entry.Type, nil
+		if err := json.Unmarshal(entry.Message, &message); err != nil || len(message.Content) == 0 {
+			// The Cowork audit log and the Gemini CLI put the content on the
+			// line itself rather than under a message.
+			return entry.Type, entry.Content
 		}
 		return firstNonEmpty(message.Role, entry.Type), message.Content
 	}
@@ -334,6 +381,12 @@ func roleAndContent(entry line) (string, json.RawMessage) {
 			return "", nil
 		}
 		return entry.Payload.Role, entry.Payload.Content
+	}
+
+	// A line that names a role and carries content is the message itself,
+	// which is how the transcripts that declare no type spell one.
+	if entry.Role != "" && len(entry.Content) > 0 {
+		return entry.Role, entry.Content
 	}
 	return "", nil
 }
@@ -374,12 +427,18 @@ func title(content json.RawMessage) string {
 		return trimTitle(text)
 	}
 
-	var parts []struct {
+	type part struct {
 		Type string `json:"type"`
 		Text string `json:"text"`
 	}
+	var parts []part
 	if err := json.Unmarshal(content, &parts); err != nil {
-		return ""
+		// A Gemini CLI message may be one part rather than a list of them.
+		var single part
+		if err := json.Unmarshal(content, &single); err != nil {
+			return ""
+		}
+		parts = []part{single}
 	}
 	for _, part := range parts {
 		if strings.TrimSpace(part.Text) != "" {
@@ -417,6 +476,12 @@ func sessionKeyFromName(name string) string {
 		}
 	}
 	return base
+}
+
+// parentDirName is the name of the directory a transcript sits in, which is the
+// session id for an agent that writes every session's file under a fixed name.
+func parentDirName(path string) string {
+	return filepath.Base(filepath.Dir(path))
 }
 
 func firstNonEmpty(values ...string) string {
