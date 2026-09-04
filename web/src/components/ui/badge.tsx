@@ -42,14 +42,20 @@ const badgeVariants = cva(
 
 export type BadgeVariant = NonNullable<VariantProps<typeof badgeVariants>["variant"]>;
 
-function Badge({
-  className,
-  variant,
-  asChild = false,
-  ...props
-}: React.ComponentProps<"span"> & VariantProps<typeof badgeVariants> & {asChild?: boolean}) {
-  const Comp = asChild ? Slot : "span";
-  return <Comp data-slot="badge" className={cn(badgeVariants({variant}), className)} {...props} />;
-}
+export type BadgeProps = React.ComponentProps<"span"> & VariantProps<typeof badgeVariants> & {asChild?: boolean};
+
+/** forwardRef, like Button: a badge is a common tooltip and popover trigger. */
+const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(function Badge(
+  {className, variant, asChild = false, ...props},
+  ref,
+) {
+  const classes = cn(badgeVariants({variant}), className);
+
+  if (asChild) {
+    return <Slot ref={ref} data-slot="badge" className={classes} {...props} />;
+  }
+
+  return <span ref={ref} data-slot="badge" className={classes} {...props} />;
+});
 
 export {Badge, badgeVariants};
