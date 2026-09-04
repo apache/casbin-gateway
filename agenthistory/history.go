@@ -132,15 +132,20 @@ func scan(home string) []Session {
 	sessions := []Session{}
 	for _, source := range transcriptDirs {
 		root := filepath.Join(append([]string{home}, source.parts...)...)
-		for _, file := range newestTranscripts(root) {
-			if session, ok := read(source.agent, file, source.keyOf); ok {
+		agent, keyOf := source.agent, source.keyOf
+		for _, file := range newestTranscripts(root, isJSONL) {
+			if session, ok := read(file, func(file transcript) (Session, bool) {
+				return parse(agent, file, keyOf)
+			}); ok {
 				sessions = append(sessions, session)
 			}
 		}
 	}
 	// opencode keeps its sessions in a database rather than a transcript file,
-	// and already totals what each one spent.
+	// and already totals what each one spent. dsh writes a transcript, but a
+	// compressed one its own reader has to open.
 	sessions = append(sessions, scanOpencode(home)...)
+	sessions = append(sessions, scanDsh(home)...)
 
 	sort.SliceStable(sessions, func(left, right int) bool {
 		return sessions[left].LastTime > sessions[right].LastTime
@@ -153,13 +158,18 @@ type transcript struct {
 	info os.FileInfo
 }
 
-// newestTranscripts finds the .jsonl files under root, newest first and capped.
-func newestTranscripts(root string) []transcript {
+// isJSONL is the transcript name rule of an agent that writes plain JSONL.
+func isJSONL(name string) bool {
+	return strings.HasSuffix(name, ".jsonl")
+}
+
+// newestTranscripts finds the transcripts under root, newest first and capped.
+func newestTranscripts(root string, match func(name string) bool) []transcript {
 	found := []transcript{}
 	// A missing directory means the agent was never installed here, which is not
 	// an error worth reporting from a page that lists whatever it finds.
 	filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
-		if err != nil || entry.IsDir() || !strings.HasSuffix(entry.Name(), ".jsonl") {
+		if err != nil || entry.IsDir() || !match(entry.Name()) {
 			return nil
 		}
 		info, err := entry.Info()
@@ -179,7 +189,9 @@ func newestTranscripts(root string) []transcript {
 	return found
 }
 
-func read(agent string, file transcript, keyOf func(string) string) (Session, bool) {
+// read is one transcript, from the cache when the file has not changed since it
+// was last parsed.
+func read(file transcript, parse func(transcript) (Session, bool)) (Session, bool) {
 	key := cacheKey{path: file.path, size: file.info.Size(), unix: file.info.ModTime().UnixNano()}
 	cacheMutex.Lock()
 	cached, found := cache[key]
@@ -188,7 +200,7 @@ func read(agent string, file transcript, keyOf func(string) string) (Session, bo
 		return cached, true
 	}
 
-	session, ok := parse(agent, file, keyOf)
+	session, ok := parse(file)
 	if !ok {
 		return Session{}, false
 	}
@@ -253,7 +265,13 @@ func eachLine(path string, visit func(data []byte)) (int, error) {
 	}
 	defer handle.Close()
 
-	reader := bufio.NewReaderSize(handle, readBufferBytes)
+	return eachLineIn(handle, visit)
+}
+
+// eachLineIn is eachLine over an open stream, for a transcript that is decoded
+// on the way in rather than read from the file as it lies.
+func eachLineIn(source io.Reader, visit func(data []byte)) (int, error) {
+	reader := bufio.NewReaderSize(source, readBufferBytes)
 	buffer := []byte{}
 	skipping := false
 	skipped := 0

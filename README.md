@@ -100,7 +100,7 @@
 | <img src="https://www.google.com/s2/favicons?domain=openagentai.org&sz=64" width="16" height="16" alt=""> **OpenAgent** | ✅ | — | — | — | — | — | — |
 | <img src="https://www.google.com/s2/favicons?domain=openclaw.ai&sz=64" width="16" height="16" alt=""> **OpenClaw** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm |
 | <img src="https://www.google.com/s2/favicons?domain=nousresearch.com&sz=64" width="16" height="16" alt=""> **Hermes Agent** | ✅ | ✅ OpenAI | — | — | — | — | — |
-| <img src="https://www.google.com/s2/favicons?domain=deepseek.com&sz=64" width="16" height="16" alt=""> **DeepSeek Harness** | ✅ | ✅ OpenAI | ✅ | ✅ | — | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=deepseek.com&sz=64" width="16" height="16" alt=""> **DeepSeek Harness** | ✅ | ✅ OpenAI | ✅ | ✅ | — | ✅ | npm |
 
 - **Monitoring** — audit-only records of what the agent did: prompts, tool calls, permission prompts. Nothing an agent does waits on Gateway, and no answer changes because monitoring is on.
 - **Provider** — Gateway writes the agent's own configuration to point it at a bound provider, in the wire format that agent's client speaks. An agent without it still reaches Gateway through the environment variables the UI shows.

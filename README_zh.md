@@ -100,7 +100,7 @@
 | <img src="https://www.google.com/s2/favicons?domain=openagentai.org&sz=64" width="16" height="16" alt=""> **OpenAgent** | ✅ | — | — | — | — | — | — |
 | <img src="https://www.google.com/s2/favicons?domain=openclaw.ai&sz=64" width="16" height="16" alt=""> **OpenClaw** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm |
 | <img src="https://www.google.com/s2/favicons?domain=nousresearch.com&sz=64" width="16" height="16" alt=""> **Hermes Agent** | ✅ | ✅ OpenAI | — | — | — | — | — |
-| <img src="https://www.google.com/s2/favicons?domain=deepseek.com&sz=64" width="16" height="16" alt=""> **DeepSeek Harness** | ✅ | ✅ OpenAI | ✅ | ✅ | — | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=deepseek.com&sz=64" width="16" height="16" alt=""> **DeepSeek Harness** | ✅ | ✅ OpenAI | ✅ | ✅ | — | ✅ | npm |
 
 - **行为监控** —— 只读地记录 Agent 做了什么：提示词、工具调用、权限询问。Agent 的任何动作都不会等待 Gateway，开着监控也不会改变任何一次回答。
 - **换供应商** —— Gateway 按该 Agent 客户端自己说的协议格式，改写它的配置文件，把它指向绑定的供应商。不支持的 Agent 仍可以用界面上给出的环境变量接进来。

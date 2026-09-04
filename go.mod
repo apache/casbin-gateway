@@ -12,6 +12,7 @@ require (
 	github.com/go-mysql-org/go-mysql v1.7.0
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/google/uuid v1.6.0
+	github.com/klauspost/compress v1.17.9
 	github.com/lib/pq v1.10.2
 	github.com/siddontang/go-log v0.0.0-20190221022429-1e957dd83bed
 	github.com/xorm-io/core v0.7.4
