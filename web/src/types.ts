@@ -1397,3 +1397,91 @@ export interface AutostartState {
   enabled: boolean;
   launcher: string;
 }
+
+/**
+ * A CC Switch installation on this machine, read and ready to be brought over.
+ * It is a preview: every key in it is masked, and the import reads the real
+ * values from CC Switch's own store rather than from this page.
+ */
+export interface CcSwitchImport {
+  found: boolean;
+  /** The folder it was read from, whether or not anything is there. */
+  path: string;
+  /** True for a store CC Switch still keeps in config.json. */
+  legacy: boolean;
+  providers: CcSwitchProvider[];
+  mcps: CcSwitchMcp[];
+  prompts: CcSwitchPrompt[];
+  skills: CcSwitchSkill[];
+  /** The entries there is nothing to bring over from, and why. */
+  skipped: CcSwitchSkipped[];
+}
+
+export interface CcSwitchProvider {
+  key: string;
+  /** The CC Switch app it was set up for: claude, codex, gemini and so on. */
+  app: string;
+  /** The one CC Switch has applied for its app right now. */
+  current: boolean;
+  /** A provider is already here under this name; importing adds one beside it. */
+  taken: boolean;
+  provider: Provider;
+}
+
+export interface CcSwitchMcp {
+  key: string;
+  name: string;
+  config: string;
+  /** The agents its apps resolve to here. */
+  targets: string[];
+  unknown: string[];
+}
+
+export interface CcSwitchPrompt {
+  key: string;
+  name: string;
+  app: string;
+  content: string;
+  targets: string[];
+  unknown: string[];
+}
+
+export interface CcSwitchSkill {
+  key: string;
+  repo: string;
+  ref: string;
+}
+
+export interface CcSwitchSkipped {
+  name: string;
+  app: string;
+  reason: string;
+}
+
+/** What an import was asked to bring over, by the keys the scan gave out. */
+export interface CcSwitchSelection {
+  account?: string;
+  providers: string[];
+  mcps: string[];
+  prompts: string[];
+  skills: string[];
+  /** Replace an MCP server the agent already has, rather than leaving it alone. */
+  overwrite: boolean;
+}
+
+/** What the import did with one entry. */
+export interface CcSwitchOutcome {
+  key: string;
+  name: string;
+  action: AgentConfigAction;
+  reason?: string;
+  /** The agent it was written into, for the entries that go into one. */
+  agent?: string;
+}
+
+export interface CcSwitchResult {
+  providers: CcSwitchOutcome[];
+  mcps: CcSwitchOutcome[];
+  prompts: CcSwitchOutcome[];
+  skills: CcSwitchOutcome[];
+}

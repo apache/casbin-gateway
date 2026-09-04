@@ -20,6 +20,7 @@ import i18next from "i18next";
 import * as AgentConfigBackend from "@/backend/AgentConfigBackend";
 import * as ImportLinkBackend from "@/backend/ImportLinkBackend";
 import * as Setting from "@/Setting";
+import {CcSwitchImportCard} from "@/components/CcSwitchImportCard";
 import {ActionBadge} from "@/components/agent-config/action-badge";
 import {TargetPicker} from "@/components/agent-config/target-picker";
 import {CodeBlock, CodeText, DescriptionList} from "@/components/shared/misc";
@@ -42,14 +43,16 @@ import type {
 } from "@/types";
 
 /**
- * What a vendor's "add this to Gateway" link carries, shown before any of it is
- * kept. The link arrives from a website — clicked there and routed here by the
- * URL scheme handler, or pasted in below — so nothing on this page is written
- * until the button under it is pressed.
+ * The two ways settings arrive from somewhere else: a whole CC Switch
+ * installation on this machine, brought over in one go, and a vendor's "add
+ * this to Gateway" link. Both are shown before any of them is kept — a link
+ * arrives from a website, clicked there and routed here by the URL scheme
+ * handler or pasted in below — so nothing on this page is written until the
+ * button under it is pressed.
  *
- * A provider goes on to the provider page's own form, which is where one is
- * reviewed and tested. The other three are written from here, through the same
- * endpoints that add one by hand.
+ * A provider from a link goes on to the provider page's own form, which is
+ * where one is reviewed and tested. The other three are written from here,
+ * through the same endpoints that add one by hand.
  */
 export default function ImportLinkPage() {
   const navigate = useNavigate();
@@ -117,36 +120,39 @@ export default function ImportLinkPage() {
 
   return (
     <PageContainer>
-      <PageHeader title={i18next.t("link:Import from a link")} description={i18next.t("link:Import hint")} />
+      <PageHeader title={i18next.t("link:Import settings")} description={i18next.t("link:Import hint")} />
 
       {error === "" ? null : <MessageAlert title={error} />}
 
       {loading ? (
         <Loading />
       ) : link === null ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-[15px]">
-              <Link2 className="size-4" />
-              {i18next.t("link:Paste a link")}
-            </CardTitle>
-            <CardDescription>{i18next.t("link:Paste a link hint")}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <Textarea
-              value={pasted}
-              onChange={event => setPasted(event.target.value)}
-              placeholder="ccswitch://v1/import?resource=..."
-              rows={3}
-              className="font-mono text-xs"
-            />
-            <div>
-              <Button onClick={read} disabled={reading || pasted.trim() === ""}>
-                {i18next.t("link:Read link")}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <>
+          <CcSwitchImportCard />
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-[15px]">
+                <Link2 className="size-4" />
+                {i18next.t("link:Paste a link")}
+              </CardTitle>
+              <CardDescription>{i18next.t("link:Paste a link hint")}</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              <Textarea
+                value={pasted}
+                onChange={event => setPasted(event.target.value)}
+                placeholder="ccswitch://v1/import?resource=..."
+                rows={3}
+                className="font-mono text-xs"
+              />
+              <div>
+                <Button onClick={read} disabled={reading || pasted.trim() === ""}>
+                  {i18next.t("link:Read link")}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </>
       ) : link.mcp ? (
         <McpImportCard value={link.mcp} onDone={discard} />
       ) : link.prompt ? (

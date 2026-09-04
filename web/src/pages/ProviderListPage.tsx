@@ -443,7 +443,7 @@ export default function ProviderListPage({account}: {account: Account}) {
             <CardDescription>{i18next.t("provider:No providers yet detail")}</CardDescription>
           </CardHeader>
           <CardContent>
-            <ProviderSourcePicker onPick={openAddDialog} onLink={importLink} />
+            <ProviderSourcePicker onPick={openAddDialog} onLink={importLink} onCcSwitch={() => navigate("/import")} />
           </CardContent>
         </Card>
       ) : (
@@ -562,7 +562,7 @@ export default function ProviderListPage({account}: {account: Account}) {
                 }
               />
             )}
-            <ProviderSourcePicker onPick={pickSource} onLink={importLink} />
+            <ProviderSourcePicker onPick={pickSource} onLink={importLink} onCcSwitch={() => navigate("/import")} />
           </>
         ) : (
           <>

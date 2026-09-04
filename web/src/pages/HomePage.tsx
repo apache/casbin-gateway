@@ -22,6 +22,7 @@ import * as LlmRecordBackend from "@/backend/LlmRecordBackend";
 import * as ProviderBackend from "@/backend/ProviderBackend";
 import * as Setting from "@/Setting";
 import {AgentCatalog} from "@/components/AgentCatalog";
+import {CcSwitchBanner} from "@/components/CcSwitchBanner";
 import {AuthenticityOverview} from "@/components/AuthenticityOverview";
 import {AgentGridCard} from "@/components/AgentGridCard";
 import {OnboardingButton, OnboardingChecklist, useOnboarding} from "@/components/OnboardingChecklist";
@@ -231,6 +232,10 @@ export default function HomePage({account}: {account: Account}) {
       />
 
       {loaded && onboarding.open ? <OnboardingChecklist onboarding={onboarding} /> : null}
+
+      {/* Somebody arriving from CC Switch has all of this set up already, and
+          the import page is the first thing they want rather than a form. */}
+      <CcSwitchBanner />
 
       {/* With no agents to show, the failure is the whole page and is rendered
           below instead; here it sits above the cards that are still on screen. */}

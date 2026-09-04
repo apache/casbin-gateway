@@ -127,6 +127,11 @@ func initAPI() {
 	beego.Router("/api/open-import-link", &controllers.ApiController{}, "POST:OpenImportLink")
 	beego.Router("/api/get-pending-import-link", &controllers.ApiController{}, "GET:GetPendingImportLink")
 
+	// Everything a CC Switch installation on this machine holds, brought over
+	// in one go by somebody moving to Gateway.
+	beego.Router("/api/get-ccswitch-import", &controllers.ApiController{}, "GET:GetCcSwitchImport")
+	beego.Router("/api/import-ccswitch", &controllers.ApiController{}, "POST:ImportCcSwitch")
+
 	// Provider routes for LLM gateway milestone 1.1.
 	beego.Router("/api/get-providers", &controllers.ApiController{}, "GET:GetProviders")
 	beego.Router("/api/get-provider", &controllers.ApiController{}, "GET:GetProvider")

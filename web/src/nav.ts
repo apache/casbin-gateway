@@ -13,12 +13,12 @@
 // limitations under the License.
 
 import {
+  ArrowDownToLine,
   Blocks,
   Bot,
   ChartColumn,
   CircleDollarSign,
   FileSearch,
-  Link2,
   Logs,
   MessageSquare,
   PackageCheck,
@@ -75,9 +75,10 @@ export const navGroups: NavGroup[] = [
     adminOnly: true,
   },
   {key: "/providers", label: "provider:Providers", icon: Plug, path: "/providers"},
-  // Reached by clicking a vendor's "add this to Gateway" link, which is why it
-  // is named by the breadcrumb but not offered in the rail.
-  {key: "/import", label: "link:Import from a link", icon: Link2, path: "/import", adminOnly: true, hidden: true},
+  // Under Providers, because bringing a CC Switch installation over is how
+  // somebody arriving with one gets their providers, and it is not a page they
+  // would think to look for behind the add-provider dialog.
+  {key: "/import", label: "link:Import settings", icon: ArrowDownToLine, path: "/import", adminOnly: true},
   {
     key: "/agent-configs",
     label: "agentConfig:Skills, MCP & Prompts",

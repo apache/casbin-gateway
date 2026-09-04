@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import * as React from "react";
-import {KeyRound, Link2, LogIn, Search, Settings2} from "lucide-react";
+import {ArrowDownToLine, KeyRound, Link2, LogIn, Search, Settings2} from "lucide-react";
 import i18next from "i18next";
 
 import {ProviderIcon} from "@/components/ProviderIcon";
@@ -97,10 +97,13 @@ function SourceCard({source, onPick}: {source: ProviderSource; onPick: (source: 
 export function ProviderSourcePicker({
   onPick,
   onLink,
+  onCcSwitch,
 }: {
   onPick: (source: ProviderSource) => void;
   /** A vendor's "add this provider" link, or New API connection info. */
   onLink?: (link: string) => Promise<void>;
+  /** Opens the import page, where a whole CC Switch install is brought over. */
+  onCcSwitch?: () => void;
 }) {
   const [query, setQuery] = React.useState("");
   const [link, setLink] = React.useState("");
@@ -170,6 +173,23 @@ export function ProviderSourcePicker({
           <span className="text-muted-foreground text-xs">
             {i18next.t("provider:Paste a link or connection info hint")}
           </span>
+        </div>
+      )}
+
+      {onCcSwitch === undefined ? null : (
+        <div className="grid gap-1.5 rounded-lg border border-dashed p-3">
+          <span className="flex items-center gap-2 text-sm font-medium">
+            <ArrowDownToLine className="size-4" />
+            {i18next.t("provider:Coming from CC Switch")}
+          </span>
+          <span className="text-muted-foreground text-xs">
+            {i18next.t("provider:Coming from CC Switch hint")}
+          </span>
+          <div>
+            <Button type="button" variant="outline" onClick={onCcSwitch}>
+              {i18next.t("provider:Bring it all over")}
+            </Button>
+          </div>
         </div>
       )}
 
