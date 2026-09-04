@@ -29,6 +29,13 @@
   <a href="https://platform.iflow.cn/en/cli" title="iFlow CLI"><img src="https://www.google.com/s2/favicons?domain=iflow.cn&sz=64" width="30" height="30" alt="iFlow CLI"></a>
   <a href="https://roocode.com" title="Roo Code"><img src="https://www.google.com/s2/favicons?domain=roocode.com&sz=64" width="30" height="30" alt="Roo Code"></a>
   <a href="https://github.com/github/copilot-cli" title="Copilot CLI"><img src="https://www.google.com/s2/favicons?domain=github.com&sz=64" width="30" height="30" alt="Copilot CLI"></a>
+  <a href="https://continue.dev" title="Continue"><img src="https://www.google.com/s2/favicons?domain=continue.dev&sz=64" width="30" height="30" alt="Continue"></a>
+  <a href="https://zed.dev" title="Zed"><img src="https://www.google.com/s2/favicons?domain=zed.dev&sz=64" width="30" height="30" alt="Zed"></a>
+  <a href="https://aider.chat" title="Aider"><img src="https://www.google.com/s2/favicons?domain=aider.chat&sz=64" width="30" height="30" alt="Aider"></a>
+  <a href="https://github.com/aaif-goose/goose" title="goose"><img src="https://www.google.com/s2/favicons?domain=block.github.io&sz=64" width="30" height="30" alt="goose"></a>
+  <a href="https://github.com/charmbracelet/crush" title="Crush"><img src="https://www.google.com/s2/favicons?domain=charm.sh&sz=64" width="30" height="30" alt="Crush"></a>
+  <a href="https://factory.ai" title="Droid"><img src="https://www.google.com/s2/favicons?domain=factory.ai&sz=64" width="30" height="30" alt="Droid"></a>
+  <a href="https://trae.ai" title="Trae"><img src="https://www.google.com/s2/favicons?domain=trae.ai&sz=64" width="30" height="30" alt="Trae"></a>
   <a href="https://opencode.ai" title="opencode / opencode Desktop"><img src="https://www.google.com/s2/favicons?domain=opencode.ai&sz=64" width="30" height="30" alt="opencode"></a>
   <a href="https://openagentai.org" title="OpenAgent"><img src="https://www.google.com/s2/favicons?domain=openagentai.org&sz=64" width="30" height="30" alt="OpenAgent"></a>
   <a href="https://openclaw.ai" title="OpenClaw"><img src="https://www.google.com/s2/favicons?domain=openclaw.ai&sz=64" width="30" height="30" alt="OpenClaw"></a>

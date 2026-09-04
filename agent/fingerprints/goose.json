@@ -1,0 +1,8 @@
+{
+  "id": "goose",
+  "displayName": "goose",
+  "installUrl": "https://github.com/aaif-goose/goose",
+  "execName": "goose",
+  "homeDirs": [".local/bin"],
+  "homebrewCasks": ["block-goose-cli"]
+}

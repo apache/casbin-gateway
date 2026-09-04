@@ -41,6 +41,15 @@ func readFile(path string) ([]byte, os.FileMode, bool, error) {
 	return data, info.Mode().Perm(), true, nil
 }
 
+// removeFile drops a configuration file Gateway is the only reason for. A file
+// that is already gone is what the caller wanted.
+func removeFile(path string) error {
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
 func readJSON(path string) (map[string]any, os.FileMode, error) {
 	data, mode, _, err := readFile(path)
 	if err != nil {

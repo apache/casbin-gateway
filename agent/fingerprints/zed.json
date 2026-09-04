@@ -1,0 +1,10 @@
+{
+  "id": "zed",
+  "displayName": "Zed",
+  "installUrl": "https://zed.dev/download",
+  "execName": "zed",
+  "desktop": true,
+  "windowsProgramDirs": ["Zed"],
+  "homeDirs": [".local/zed.app/libexec"],
+  "homebrewCasks": ["zed"]
+}

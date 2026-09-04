@@ -87,6 +87,21 @@ var agentVars = map[string][]variable{
 		{key: "OPENAI_API_KEY", secret: true},
 		{key: "OPENAI_MODEL"},
 	},
+	// aider resolves its settings from the command line, then the environment,
+	// then ~/.aider.conf.yml, so these beat the file a switch writes.
+	"aider": {
+		{key: "OPENAI_API_BASE", endpoint: true},
+		{key: "OPENAI_API_KEY", secret: true},
+		{key: "AIDER_MODEL"},
+	},
+	// goose reads these for the process it is started in, and they win over
+	// both config.yaml and the secret store behind it.
+	"goose": {
+		{key: "OPENAI_HOST", endpoint: true},
+		{key: "OPENAI_API_KEY", secret: true},
+		{key: "GOOSE_PROVIDER"},
+		{key: "GOOSE_MODEL"},
+	},
 	// dsh resolves the route's key by name, and the environment answers before
 	// the credentials file does.
 	"dsh": {

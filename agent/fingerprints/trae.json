@@ -1,0 +1,10 @@
+{
+  "id": "trae",
+  "displayName": "Trae",
+  "installUrl": "https://trae.ai/download",
+  "execName": "Trae",
+  "desktop": true,
+  "instanceArg": "--user-data-dir",
+  "windowsProgramDirs": ["Trae"],
+  "homebrewCasks": ["trae"]
+}

@@ -1,0 +1,8 @@
+{
+  "id": "aider",
+  "displayName": "Aider",
+  "installUrl": "https://aider.chat/docs/install.html",
+  "execName": "aider",
+  "homeDirs": [".local/bin"],
+  "systemPackage": "aider-chat"
+}

@@ -35,6 +35,13 @@ const agentSites: Record<string, string> = {
   Cline: "cline.bot",
   "Roo Code": "roocode.com",
   "Copilot CLI": "github.com",
+  Continue: "continue.dev",
+  Zed: "zed.dev",
+  Aider: "aider.chat",
+  goose: "block.github.io",
+  Crush: "charm.sh",
+  Droid: "factory.ai",
+  Trae: "trae.ai",
 };
 
 const agentKey = (agent: unknown) =>

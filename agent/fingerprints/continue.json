@@ -1,0 +1,8 @@
+{
+  "id": "continue",
+  "displayName": "Continue",
+  "installUrl": "https://docs.continue.dev/getting-started/install",
+  "execName": "cn",
+  "stateDir": "continue",
+  "npmPackage": "@continuedev/cli"
+}

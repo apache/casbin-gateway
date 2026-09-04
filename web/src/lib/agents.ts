@@ -105,6 +105,16 @@ export function agentSetupNoteKey(agentId: string) {
     return "agent:iFlow CLI config hint";
   case "cline":
     return "agent:Cline config hint";
+  case "continue":
+    return "agent:Continue config hint";
+  case "aider":
+    return "agent:Aider config hint";
+  case "goose":
+    return "agent:goose config hint";
+  case "droid":
+    return "agent:Droid config hint";
+  case "zed":
+    return "agent:Zed config hint";
   default:
     return "";
   }

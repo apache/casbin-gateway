@@ -1,0 +1,8 @@
+{
+  "id": "crush",
+  "displayName": "Crush",
+  "installUrl": "https://github.com/charmbracelet/crush",
+  "execName": "crush",
+  "npmPackage": "@charmland/crush",
+  "homeDirs": [".local/bin"]
+}

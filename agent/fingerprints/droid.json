@@ -1,0 +1,8 @@
+{
+  "id": "droid",
+  "displayName": "Droid",
+  "installUrl": "https://docs.factory.ai/cli/getting-started/quickstart",
+  "execName": "droid",
+  "stateDir": "factory",
+  "homeDirs": [".local/bin"]
+}
