@@ -30,9 +30,9 @@ export {InstallJobProgress, InstallLogDialog, InstallOutput} from "@/components/
  * updater, or the vendor's install command - the command is spelled out first
  * and confirmed before it runs.
  *
- * An agent nothing here can drive keeps a click of its own: the vendor's page,
- * which is where that install has to be done by hand. A button that only greys
- * out tells a person nothing they can act on.
+ * An agent nothing here can drive keeps a way out: the vendor's page, where
+ * that install has to be done by hand. It is a link, not a button - it leaves
+ * for a website instead of doing the thing the button offered.
  */
 export function AgentActionButton({
   title,
@@ -74,13 +74,11 @@ export function AgentActionButton({
   if (!plan?.available && fallbackUrl) {
     return (
       <SimpleTooltip title={plan?.detail}>
-        <Button
-          size="sm"
-          variant={variant}
-          onClick={() => window.open(fallbackUrl, "_blank", "noreferrer")}
-        >
-          <ExternalLink />
-          {fallbackLabel ?? i18next.t("agent:Vendor page")}
+        <Button size="sm" variant="link" asChild>
+          <a href={fallbackUrl} target="_blank" rel="noreferrer">
+            {fallbackLabel ?? i18next.t("agent:Vendor page")}
+            <ExternalLink className="size-3.5" />
+          </a>
         </Button>
       </SimpleTooltip>
     );

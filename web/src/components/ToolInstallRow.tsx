@@ -12,13 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {Bot, ExternalLink} from "lucide-react";
+import {Bot, ExternalLink, FolderSearch} from "lucide-react";
 import i18next from "i18next";
 
 import {AgentIcon} from "@/components/AgentIcon";
+import {AgentPathDialog} from "@/components/AgentPathDialog";
 import {InstallJobProgress} from "@/components/AgentInstallJob";
 import {AgentInstallButton} from "@/components/ToolUpgradeConfirmDialog";
 import {Badge} from "@/components/ui/badge";
+import {Button} from "@/components/ui/button";
 import {SimpleTooltip} from "@/components/ui/tooltip";
 import type {AgentCatalogEntry, AgentInstallJob} from "@/types";
 
@@ -28,22 +30,31 @@ import type {AgentCatalogEntry, AgentInstallJob} from "@/types";
  * the row shows which one it will use and what that manager is printing; an
  * agent no manager here publishes keeps the link to its vendor, which is then
  * all there is.
+ *
+ * That link is a link and comes last in every card: an install runs a command
+ * here, the vendor's page leaves for a website, and an orange button each told
+ * them apart by nothing but an icon.
+ *
+ * An agent put somewhere no layout describes lands here too, so the card also
+ * offers the picker that points Gateway at its program.
  */
 export function ToolInstallRow({
   entry,
   job,
   busy,
   onInstall,
+  onLocated,
 }: {
   entry: AgentCatalogEntry;
   /** The running or last install of this agent, when there was one. */
   job?: AgentInstallJob;
   busy: boolean;
   onInstall: (agentId: string) => void;
+  /** Called once a program is picked, which is when a rescan will list it. */
+  onLocated?: () => void;
 }) {
   const plan = entry.install;
   const failed = job !== undefined && !job.running && !job.ok;
-  const fallbackUrl = !plan.available ? entry.installUrl : undefined;
 
   return (
     <div className="bg-card hover:border-foreground/25 space-y-2 rounded-xl border p-3 shadow-xs transition-colors">
@@ -56,7 +67,20 @@ export function ToolInstallRow({
         />
         <span className="min-w-0 flex-1 truncate text-sm font-medium">{entry.name}</span>
 
-        {entry.installUrl && !fallbackUrl ? (
+        {plan.available ? (
+          <span className="shrink-0">
+            <AgentInstallButton
+              name={entry.name}
+              plan={plan}
+              job={job}
+              busy={busy}
+              label={failed ? i18next.t("agent:Retry") : undefined}
+              onInstall={() => onInstall(entry.agentId)}
+            />
+          </span>
+        ) : null}
+
+        {entry.installUrl ? (
           <SimpleTooltip title={i18next.t("agent:Install page")}>
             <a
               href={entry.installUrl}
@@ -69,18 +93,6 @@ export function ToolInstallRow({
             </a>
           </SimpleTooltip>
         ) : null}
-
-        <span className="shrink-0">
-          <AgentInstallButton
-            name={entry.name}
-            plan={plan}
-            installUrl={entry.installUrl}
-            job={job}
-            busy={busy}
-            label={failed ? i18next.t("agent:Retry") : undefined}
-            onInstall={() => onInstall(entry.agentId)}
-          />
-        </span>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -92,6 +104,20 @@ export function ToolInstallRow({
         {plan.available ? (
           <code className="text-muted-foreground/80 min-w-0 truncate text-[11px]">{plan.command}</code>
         ) : null}
+
+        <span className="ml-auto shrink-0">
+          <AgentPathDialog
+            agentId={entry.agentId}
+            name={entry.name}
+            onAdded={onLocated}
+            trigger={
+              <Button size="xs" variant="ghost" className="text-muted-foreground">
+                <FolderSearch />
+                {i18next.t("agent:Locate")}
+              </Button>
+            }
+          />
+        </span>
       </div>
 
       <InstallJobProgress job={job} />
