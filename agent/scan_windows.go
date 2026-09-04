@@ -38,6 +38,8 @@ type homeDir struct {
 func scan(ctx context.Context) []Installation {
 	homes := windowsHomes(ctx)
 	paths := newPathIndex()
+	nodeRoots := windowsNodeRoots()
+	nodeOwner := currentOwner()
 
 	var installations []Installation
 	for i := range fingerprints {
@@ -59,6 +61,7 @@ func scan(ctx context.Context) []Installation {
 		installations = append(installations, scanWindowsDesktop(ctx, fingerprint, homes)...)
 		installations = append(installations, scanMachineWinget(ctx, fingerprint)...)
 		installations = append(installations, scanMachinePrograms(ctx, fingerprint)...)
+		installations = append(installations, scanMachineNpm(ctx, fingerprint, nodeRoots, nodeOwner)...)
 		installations = append(installations, scanPathDirs(fingerprint, paths, installations[mark:])...)
 		stampAgentId(installations, mark, fingerprint.ID)
 		installations = append(installations, scanStateDirs(fingerprint, homes, installations[mark:])...)

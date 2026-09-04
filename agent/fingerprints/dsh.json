@@ -4,5 +4,6 @@
   "installUrl": "https://github.com/deepseek-ai/deepseek-harness",
   "execName": "dsh",
   "launchArgs": ["web"],
+  "stateDir": "dsh",
   "npmPackage": "@deepseek-ai/dsh"
 }
