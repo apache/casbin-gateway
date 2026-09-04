@@ -14,7 +14,7 @@
 
 import * as React from "react";
 import {useNavigate} from "react-router-dom";
-import {Globe, LogOut, Moon, PanelLeft, PanelLeftClose, Sun, User} from "lucide-react";
+import {ChevronDown, Languages, LogOut, Moon, PanelLeft, PanelLeftClose, Settings, Sun} from "lucide-react";
 import i18next from "i18next";
 
 import * as Setting from "@/Setting";
@@ -25,10 +25,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {SimpleTooltip} from "@/components/ui/tooltip";
+import {cn} from "@/lib/utils";
 import {BreadcrumbBar} from "@/components/shared/breadcrumb-bar";
 import {CommandPaletteTrigger} from "@/components/shared/command-palette";
 import {VersionPanel} from "@/components/shared/version-panel";
@@ -57,18 +59,20 @@ function ThemeToggle({
 
 function LanguageSelect() {
   const [, forceRender] = React.useReducer((count: number) => count + 1, 0);
+  const current = Setting.getLanguage();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label="Change language">
-          <Globe className="size-4" />
+        <Button variant="ghost" size="icon-sm" aria-label="Language">
+          <Languages />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className="max-h-80 overflow-y-auto">
         {Setting.Countries.map(country => (
           <DropdownMenuItem
             key={country.key}
-            onClick={() => {
+            className={cn(current === country.key && "font-semibold")}
+            onSelect={() => {
               Setting.setLanguage(country.key);
               // The shell reads i18next.t directly, which does not re-render on
               // a language change by itself. Forcing a render here is what makes
@@ -79,7 +83,7 @@ function LanguageSelect() {
             <img
               src={`${Setting.StaticBaseUrl}/flag-icons/${country.country}.svg`}
               alt={country.alt}
-              className="h-4 w-6 rounded-xs object-cover"
+              className="h-4 w-5 rounded-[2px] object-cover"
             />
             {country.label}
           </DropdownMenuItem>
@@ -122,26 +126,30 @@ function AccountMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className="hover:bg-accent flex items-center gap-2 rounded-md px-1.5 py-1 transition-colors"
-        >
+        <button type="button" className="hover:bg-accent ml-1 flex items-center gap-2 rounded-md p-1 transition-colors">
           <Avatar>
             {account.avatar ? <AvatarImage src={account.avatar} alt={name} /> : null}
             <AvatarFallback style={{backgroundColor: Setting.getAvatarColor(account.name), color: "#fff"}}>
               {Setting.getShortName(account.name).slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <span className="hidden max-w-[120px] truncate text-sm font-medium sm:inline">{name}</span>
+          <span className="hidden max-w-[160px] truncate text-sm md:inline">{name}</span>
+          <ChevronDown className="h-3.5 w-3.5 opacity-60" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuItem onClick={openProfile}>
-          <User />
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel className="truncate font-normal">
+          <div className="text-sm font-medium">{name}</div>
+          <div className="text-muted-foreground truncate text-xs">
+            {account.owner}/{account.name}
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={openProfile}>
+          <Settings />
           {i18next.t("account:My Account")}
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={onSignout}>
+        <DropdownMenuItem onSelect={onSignout}>
           <LogOut />
           {i18next.t("account:Sign Out")}
         </DropdownMenuItem>
