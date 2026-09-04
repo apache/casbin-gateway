@@ -37,8 +37,13 @@ var (
 	proxyUrl  *url.URL
 
 	transportOnce sync.Once
-	transport     *http.Transport
+	transport     http.RoundTripper
 )
+
+// UserAgent identifies this gateway to the upstreams it calls. Go leaves the
+// header at "Go-http-client/1.1", which the bot filters in front of several
+// relays refuse outright with a 403 and an HTML error page.
+const UserAgent = "casbin-gateway"
 
 func InitHttpClient() {
 	// Reading the setting here rather than on first use keeps the "proxy
@@ -63,12 +68,31 @@ func Proxy(req *http.Request) (*url.URL, error) {
 
 // Transport returns the shared transport for outbound requests. Sharing one
 // instance keeps the connection pool shared as well.
-func Transport() *http.Transport {
+func Transport() http.RoundTripper {
 	transportOnce.Do(func() {
-		transport = http.DefaultTransport.(*http.Transport).Clone()
-		transport.Proxy = Proxy
+		base := http.DefaultTransport.(*http.Transport).Clone()
+		base.Proxy = Proxy
+		transport = WithUserAgent(base)
 	})
 	return transport
+}
+
+// WithUserAgent names this gateway on every request that does not already
+// carry a User-Agent of its own, so a request forwarding the caller's keeps it.
+func WithUserAgent(base http.RoundTripper) http.RoundTripper {
+	return userAgentTransport{base: base}
+}
+
+type userAgentTransport struct {
+	base http.RoundTripper
+}
+
+func (t userAgentTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if _, ok := req.Header["User-Agent"]; !ok {
+		req = req.Clone(req.Context())
+		req.Header.Set("User-Agent", UserAgent)
+	}
+	return t.base.RoundTrip(req)
 }
 
 // currentProxyUrl parses the httpProxy setting, re-parsing it only when the

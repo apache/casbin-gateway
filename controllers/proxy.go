@@ -182,7 +182,7 @@ type routingFields struct {
 // It has no overall Timeout on purpose, see proxyResponseHeaderTimeout.
 var proxyClient = &http.Client{
 	CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
-	Transport: &http.Transport{
+	Transport: proxy.WithUserAgent(&http.Transport{
 		Proxy: proxy.Proxy,
 		DialContext: (&net.Dialer{
 			Timeout:   10 * time.Second,
@@ -194,7 +194,7 @@ var proxyClient = &http.Client{
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 		ResponseHeaderTimeout: proxyResponseHeaderTimeout,
-	},
+	}),
 }
 
 // ChatCompletions is the OpenAI-compatible chat completions proxy endpoint.
