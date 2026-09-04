@@ -139,7 +139,7 @@ func (cursorPatcher) PatchNotice(patched bool) (string, string) {
 		return "Removes Gateway's Cursor hooks. The editor and the CLI share them, so both stop reporting and stop being checked.",
 			"Restart any Cursor session that is already running."
 	}
-	return "Installs Gateway's Cursor hooks. They observe events, and refuse a shell command, an MCP call or a tool call this agent's permissions do not allow; the CLI reports fewer events than the editor, and an agent nobody has restricted is never held up.",
+	return "Installs Gateway's Cursor hooks. They observe events, and refuse a tool call, a shell command, an MCP call, a file read or a subagent this agent's permissions do not allow; the CLI reports fewer events than the editor, and an agent nobody has restricted is never held up.",
 		"Restart any Cursor session that is already running."
 }
 

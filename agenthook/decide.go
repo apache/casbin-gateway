@@ -47,9 +47,13 @@ var preToolEvents = map[string][]string{
 	"claude-code": {"PreToolUse"},
 	"qwen-code":   {"PreToolUse"},
 	"gemini-cli":  {"BeforeTool"},
-	// Cursor asks separately for a shell command and an MCP call, and neither
-	// carries a tool name the general event would have given.
-	"cursor": {"preToolUse", "beforeShellExecution", "beforeMCPExecution"},
+	// Cursor asks separately for a shell command, an MCP call, a file read and
+	// a subagent, and none of those carries a tool name the general event would
+	// have given.
+	"cursor": {
+		"preToolUse", "beforeShellExecution", "beforeMCPExecution",
+		"beforeReadFile", "subagentStart",
+	},
 	// Cascade names an action rather than a tool, and asks about each kind of
 	// action separately.
 	"windsurf": {"pre_run_command", "pre_write_code", "pre_mcp_tool_use"},
@@ -77,6 +81,12 @@ func preToolEvent(agentID string, event map[string]any) (string, bool) {
 		// Only the command is carried, and running one is the whole of what
 		// this event is.
 		return "shell", true
+	case "beforeReadFile":
+		// Cursor asks this for every file whose content is about to enter the
+		// context, an attachment as much as a tool call.
+		return "Read", true
+	case "subagentStart":
+		return "Task", true
 	case "pre_write_code":
 		// Cascade edits a file in place, so this is the edit switch rather than
 		// the one for creating a file.

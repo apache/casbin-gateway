@@ -21,14 +21,19 @@ import (
 	"github.com/apache/casbin-gateway/auditutil"
 )
 
-// CursorEvents are the hook events Gateway installs. Cursor also reports every
-// file read and every sentence the model produces; those say what the agent saw
-// and thought rather than what it did, and arrive far too often to record.
+// CursorEvents are the hook events Gateway installs. Every sentence the model
+// produces is reported too; that is what the agent thought rather than what it
+// did, and arrives far too often to record.
+//
+// beforeReadFile is the exception to that rule: a file read is also too often
+// to record, and it is left out of NormalizeCursor for exactly that reason, but
+// it is the only event that can refuse one, so it is installed to be decided
+// and not to be reported.
 var CursorEvents = []string{
 	"sessionStart", "sessionEnd", "beforeSubmitPrompt", "stop",
 	"preToolUse", "postToolUse", "postToolUseFailure",
 	"beforeShellExecution", "afterShellExecution",
-	"beforeMCPExecution", "afterMCPExecution",
+	"beforeMCPExecution", "afterMCPExecution", "beforeReadFile",
 	"afterFileEdit", "subagentStart", "subagentStop", "preCompact",
 }
 
