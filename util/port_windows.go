@@ -22,44 +22,33 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// imagePathMaxLen is the buffer a full executable path is read into. Windows
-// paths reach 32767 characters, but a process image path that long cannot be
-// launched in the first place, so one MAX_PATH-sized try and one large one are
-// all this ever needs.
 const imagePathMaxLen = 32768
 
 // findProcessName resolves a pid to an executable name such as "nginx.exe".
-//
-// The obvious way to do this on Windows is "tasklist", but tasklist enumerates
-// and formats every process on the machine: on a host with a thousand of them
-// it takes over two seconds, and a lookup that times out reports no name at
-// all. That is not a cosmetic loss - an unnamed holder is treated as a foreign
-// program, so "stop" refuses to stop Gateway's own server and a restart cannot
-// reclaim its own port. Asking the kernel about the one pid we care about
-// answers in microseconds and cannot be starved by an unrelated process count.
+// tasklist would enumerate every process on the machine, which takes over two
+// seconds on a busy host and leaves the holder unnamed, so the kernel is asked
+// about this one pid instead. tasklist stays as the fallback for a process this
+// one may not open.
 func findProcessName(pid int) string {
 	if name := processImageName(pid); name != "" {
 		return name
 	}
 
-	// A process owned by another account can refuse to be opened. tasklist runs
-	// with the same rights, but it is worth one slow try before giving up.
 	output := runLookup("tasklist", "/FI", fmt.Sprintf("PID eq %d", pid), "/NH", "/FO", "CSV")
 	// A CSV row looks like: "nginx.exe","1234","Console","1","5,000 K"
 	name := strings.TrimSpace(strings.SplitN(output, ",", 2)[0])
 	return strings.Trim(name, `"`)
 }
 
-// processImageName reads one process's executable path straight from the
-// kernel, and returns just its file name. It returns "" when the process is
-// gone or this one may not query it.
+// processImageName returns the file name of a pid's executable, or "" when the
+// process is gone or may not be queried.
 func processImageName(pid int) string {
 	if pid <= 0 {
 		return ""
 	}
 
-	// QUERY_LIMITED_INFORMATION is the least this can ask for and still read an
-	// image path, which is what lets it work across accounts.
+	// QUERY_LIMITED_INFORMATION is the least that still reads an image path,
+	// which is what lets this work across accounts.
 	handle, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, uint32(pid))
 	if err != nil {
 		return ""

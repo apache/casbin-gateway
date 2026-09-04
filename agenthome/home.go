@@ -31,6 +31,11 @@ import (
 // happens to run Gateway.
 func Resolve(owner string) (string, error) {
 	owner = strings.TrimSpace(owner)
+	// A machine-wide installation is stamped with the local system account
+	// rather than a person, and its configuration belongs to whoever is using it.
+	if machineWideOwner(owner) {
+		owner = ""
+	}
 	if owner == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
@@ -40,10 +45,7 @@ func Resolve(owner string) (string, error) {
 	}
 
 	if account, err := lookupAccount(owner); err == nil {
-		if account.HomeDir == "" {
-			return "", fmt.Errorf("account %q has no home directory", owner)
-		}
-		return account.HomeDir, nil
+		return usableHome(owner, account.HomeDir)
 	}
 
 	// user.Lookup is unreliable for domain-qualified names on Windows and for
@@ -57,6 +59,20 @@ func Resolve(owner string) (string, error) {
 		return home, nil
 	}
 	return "", fmt.Errorf("cannot resolve the home directory of %q; run Gateway as that user to patch this installation", owner)
+}
+
+// usableHome expands a home the operating system reported and refuses one that
+// is still relative, which would write an agent's configuration under Gateway's
+// working directory and report success.
+func usableHome(owner string, home string) (string, error) {
+	home = strings.TrimSpace(expandHome(home))
+	if home == "" {
+		return "", fmt.Errorf("account %q has no home directory", owner)
+	}
+	if !filepath.IsAbs(home) {
+		return "", fmt.Errorf("account %q reports %q as its home directory, which is not an absolute path", owner, home)
+	}
+	return filepath.Clean(home), nil
 }
 
 // lookupAccount resolves an owner name, retrying with the bare account name so

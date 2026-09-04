@@ -14,15 +14,10 @@
 
 //go:build !windows
 
-package util
+package agenthome
 
-import (
-	"strconv"
-	"strings"
-)
+// Both are Windows-only: no scan here stamps an installation with the machine
+// rather than a person, and home directories come back as literal paths.
+func machineWideOwner(string) bool { return false }
 
-// findProcessName resolves a pid to an executable name, returning "" when the
-// platform command is missing or says nothing useful.
-func findProcessName(pid int) string {
-	return strings.TrimSpace(runLookup("ps", "-p", strconv.Itoa(pid), "-o", "comm="))
-}
+func expandHome(home string) string { return home }
