@@ -27,12 +27,14 @@
   <a href="https://cline.bot" title="Cline"><img src="https://www.google.com/s2/favicons?domain=cline.bot&sz=64" width="30" height="30" alt="Cline"></a>
   <a href="https://github.com/QwenLM/qwen-code" title="Qwen Code"><img src="https://www.google.com/s2/favicons?domain=qwen.ai&sz=64" width="30" height="30" alt="Qwen Code"></a>
   <a href="https://platform.iflow.cn/en/cli" title="iFlow CLI"><img src="https://www.google.com/s2/favicons?domain=iflow.cn&sz=64" width="30" height="30" alt="iFlow CLI"></a>
+  <a href="https://moonshotai.github.io/kimi-code" title="Kimi Code CLI"><img src="https://www.google.com/s2/favicons?domain=kimi.com&sz=64" width="30" height="30" alt="Kimi Code CLI"></a>
+  <a href="https://www.codebuddy.ai" title="CodeBuddy Code"><img src="https://www.google.com/s2/favicons?domain=codebuddy.ai&sz=64" width="30" height="30" alt="CodeBuddy Code"></a>
   <a href="https://roocode.com" title="Roo Code"><img src="https://www.google.com/s2/favicons?domain=roocode.com&sz=64" width="30" height="30" alt="Roo Code"></a>
   <a href="https://github.com/github/copilot-cli" title="Copilot CLI"><img src="https://www.google.com/s2/favicons?domain=github.com&sz=64" width="30" height="30" alt="Copilot CLI"></a>
   <a href="https://continue.dev" title="Continue"><img src="https://www.google.com/s2/favicons?domain=continue.dev&sz=64" width="30" height="30" alt="Continue"></a>
   <a href="https://zed.dev" title="Zed"><img src="https://www.google.com/s2/favicons?domain=zed.dev&sz=64" width="30" height="30" alt="Zed"></a>
   <a href="https://aider.chat" title="Aider"><img src="https://www.google.com/s2/favicons?domain=aider.chat&sz=64" width="30" height="30" alt="Aider"></a>
-  <a href="https://github.com/aaif-goose/goose" title="goose"><img src="https://www.google.com/s2/favicons?domain=block.github.io&sz=64" width="30" height="30" alt="goose"></a>
+  <a href="https://github.com/aaif-goose/goose" title="goose"><img src="https://www.google.com/s2/favicons?domain=block.github.io/goose&sz=64" width="30" height="30" alt="goose"></a>
   <a href="https://github.com/charmbracelet/crush" title="Crush"><img src="https://www.google.com/s2/favicons?domain=charm.sh&sz=64" width="30" height="30" alt="Crush"></a>
   <a href="https://factory.ai" title="Droid"><img src="https://www.google.com/s2/favicons?domain=factory.ai&sz=64" width="30" height="30" alt="Droid"></a>
   <a href="https://trae.ai" title="Trae"><img src="https://www.google.com/s2/favicons?domain=trae.ai&sz=64" width="30" height="30" alt="Trae"></a>
@@ -41,6 +43,7 @@
   <a href="https://openclaw.ai" title="OpenClaw"><img src="https://www.google.com/s2/favicons?domain=openclaw.ai&sz=64" width="30" height="30" alt="OpenClaw"></a>
   <a href="https://nousresearch.com" title="Hermes Agent"><img src="https://www.google.com/s2/favicons?domain=nousresearch.com&sz=64" width="30" height="30" alt="Hermes Agent"></a>
   <a href="https://deepseek.com" title="DeepSeek Harness"><img src="https://www.google.com/s2/favicons?domain=deepseek.com&sz=64" width="30" height="30" alt="DeepSeek Harness"></a>
+  <a href="https://pi.dev" title="Pi"><img src="https://www.google.com/s2/favicons?domain=pi.dev&sz=64" width="30" height="30" alt="Pi"></a>
 </p>
 
 <p align="center"><b>一个入口对接任意模型厂商</b></p>
@@ -110,12 +113,14 @@
 | <img src="https://www.google.com/s2/favicons?domain=cline.bot&sz=64" width="16" height="16" alt=""> **Cline** | — | ✅ OpenAI | ✅ | ✅ | — | — | npm |
 | <img src="https://www.google.com/s2/favicons?domain=qwen.ai&sz=64" width="16" height="16" alt=""> **Qwen Code** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm |
 | <img src="https://www.google.com/s2/favicons?domain=iflow.cn&sz=64" width="16" height="16" alt=""> **iFlow CLI** | — | ✅ OpenAI | ✅ | — | ✅ | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=kimi.com&sz=64" width="16" height="16" alt=""> **Kimi Code CLI** | — | ✅ OpenAI | ✅ | ✅ | ✅ | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=codebuddy.ai&sz=64" width="16" height="16" alt=""> **CodeBuddy Code** | — | ✅ OpenAI | ✅ | ✅ | ✅ | — | npm |
 | <img src="https://www.google.com/s2/favicons?domain=roocode.com&sz=64" width="16" height="16" alt=""> **Roo Code** | — | — | — | — | — | — | — |
 | <img src="https://www.google.com/s2/favicons?domain=github.com&sz=64" width="16" height="16" alt=""> **Copilot CLI** | — | — | — | — | — | — | npm |
 | <img src="https://www.google.com/s2/favicons?domain=continue.dev&sz=64" width="16" height="16" alt=""> **Continue** | — | ✅ OpenAI | — | — | — | — | npm |
 | <img src="https://www.google.com/s2/favicons?domain=zed.dev&sz=64" width="16" height="16" alt=""> **Zed** | — | ✅ OpenAI | — | — | — | — | brew |
 | <img src="https://www.google.com/s2/favicons?domain=aider.chat&sz=64" width="16" height="16" alt=""> **Aider** | — | ✅ OpenAI | — | — | — | — | — |
-| <img src="https://www.google.com/s2/favicons?domain=block.github.io&sz=64" width="16" height="16" alt=""> **goose** | — | ✅ OpenAI | — | — | — | — | brew |
+| <img src="https://www.google.com/s2/favicons?domain=block.github.io/goose&sz=64" width="16" height="16" alt=""> **goose** | — | ✅ OpenAI | — | — | — | — | brew |
 | <img src="https://www.google.com/s2/favicons?domain=charm.sh&sz=64" width="16" height="16" alt=""> **Crush** | — | — | — | — | — | — | npm |
 | <img src="https://www.google.com/s2/favicons?domain=factory.ai&sz=64" width="16" height="16" alt=""> **Droid** | — | ✅ OpenAI | — | — | — | — | — |
 | <img src="https://www.google.com/s2/favicons?domain=trae.ai&sz=64" width="16" height="16" alt=""> **Trae** | — | — | — | — | — | — | brew |
@@ -125,6 +130,7 @@
 | <img src="https://www.google.com/s2/favicons?domain=openclaw.ai&sz=64" width="16" height="16" alt=""> **OpenClaw** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm |
 | <img src="https://www.google.com/s2/favicons?domain=nousresearch.com&sz=64" width="16" height="16" alt=""> **Hermes Agent** | ✅ | ✅ OpenAI | — | — | — | — | — |
 | <img src="https://www.google.com/s2/favicons?domain=deepseek.com&sz=64" width="16" height="16" alt=""> **DeepSeek Harness** | ✅ | ✅ OpenAI | ✅ | ✅ | — | ✅ | npm |
+| <img src="https://www.google.com/s2/favicons?domain=pi.dev&sz=64" width="16" height="16" alt=""> **Pi** | — | ✅ OpenAI | — | ✅ | ✅ | — | npm |
 
 - **行为监控** —— 只读地记录 Agent 做了什么：提示词、工具调用、权限询问。Agent 的任何动作都不会等待 Gateway，开着监控也不会改变任何一次回答。
 - **换供应商** —— Gateway 按该 Agent 客户端自己说的协议格式，改写它的配置文件，把它指向绑定的供应商。不支持的 Agent 仍可以用界面上给出的环境变量接进来。
@@ -132,14 +138,13 @@
 - **会话** —— 直接从 Agent 自己的会话记录里读提示词和 token 用量，包括没走 Gateway 的那部分。
 - **安装** —— Gateway 能用来安装和升级它的包管理器。其余的都只能去厂商页面下载。
 
-表里的每个 Agent，无论支持到哪一步，都能在本机被发现，列出它登录的账号和花了多少，并在卡片上直接启动或停止；上面这些列是在这之外多出来的部分。Roo Code、Copilot CLI、Crush 和 Trae 只做到这一步，是有意为之：Roo Code 和 Trae 把供应商配置放在 VS Code 自己的内部状态里，而不是某个自己的配置文件；Copilot CLI 接的是 GitHub 自己的后端，没有 base URL 可改；Crush 的配置改成了一个 shell 脚本，写进文件反而会被它悄悄盖掉。Zed 是唯一写一半的：它把 API Key 存在系统钥匙串里，所以 Gateway 只写端点和模型列表，Key 需要在 Zed 里填一次。
-
 ## 功能特性
 
 - **[查一查那个 Key 背后的 API 是不是真的](#杀手锏那个-key-背后的-api真是卖给你的那个吗)** —— 中转商可以偷偷换成便宜模型、伪造缓存命中，流量里根本看不出来。Authenticity 直接问上游，测出 A 到 F 的等级。
 - **[一个地方切换所有 Agent 的 API 供应商](#让-agent-的流量走-gateway)** —— 改一次 Key 或 base URL，接进 Gateway 的每个 Agent 都跟着换。
 - **[一条链接就能导入 Provider、MCP、提示词或技能](#从一条链接导入)** —— 在网页上点厂商的「添加到」按钮，Gateway 就带着链接里的东西打开，写进去之前先给你看。
 - **[同一个 Agent 开多个实例](#接下来做什么)** —— 比如同时跑好几个 Claude Desktop，各自登录不同账号。
+- **[安装、升级和回退 Agent 本身](#接下来做什么)** —— 本机装的是哪个版本，包管理器又发布到了哪个版本；升级坏了还能退回旧版。
 - **[看到完整的请求，而不只是一个数字](#记录提示词)** —— 每一条 prompt、消息和工具 schema，都留在这台机器上。
 - **[规定每个 Agent 能做什么](#每个-agent-能做什么)** —— 每个 Agent 四十来个开关，分组管理，覆盖工具、模型和供应商，每个转发的请求都由 Casbin 判定。
 - **[统计每个 Agent 花了多少，包括没走 Gateway 的部分](#每个-agent-花了多少包括没走-gateway-的那部分)** —— 直接读 Agent 自己写的会话记录。
@@ -151,6 +156,11 @@
 | :---: | :---: |
 | [![Agents](https://cdn.casbin.org/img/casbin-gateway-home.png)](https://cdn.casbin.org/img/casbin-gateway-home.png) | [![Skills, MCP & Prompts](https://cdn.casbin.org/img/casbin-gateway-skills.png)](https://cdn.casbin.org/img/casbin-gateway-skills.png) |
 | 每个 Agent 接在哪、登录的是哪个账号、在那里花了多少、此刻是不是在跑 | 所有 Agent 的技能、MCP 服务器和提示词文件并排对比，还能从一个 Agent 复制到另一个 |
+
+| 每个 Agent 能做什么 | 每个 Agent 装的是哪个版本 |
+| :---: | :---: |
+| [![权限](https://cdn.casbin.org/img/casbin-gateway-permissions.png)](https://cdn.casbin.org/img/casbin-gateway-permissions.png) | [![Agent 版本](https://cdn.casbin.org/img/casbin-gateway-versions.png)](https://cdn.casbin.org/img/casbin-gateway-versions.png) |
+| 四十来个开关，覆盖该 Agent 的工具、模型和供应商，编译成 Casbin 策略，转发的每个请求都按它判定 | 本机装的版本对上包管理器发布的版本，安装、升级、回退和卸载都在这一行上完成 |
 
 | 每个 Agent 花了多少 | 每个模型厂商一个入口 |
 | :---: | :---: |
@@ -180,7 +190,7 @@ irm https://raw.githubusercontent.com/apache/casbin-gateway/master/scripts/insta
 
 两者都会下载适配本机的构建产物，解压到 `~/.local/share/casbin-gateway`（Windows 上是 `%LOCALAPPDATA%\casbin-gateway`），把 `casbin-gateway` 命令加入 PATH，启动它，并设置成开机（登录）自启。安装用的那个终端窗口立刻就还给你。
 
-Gateway 会在自己的窗口里打开 —— 不用登录：它只服务本机，本机访问会直接以管理员身份进入。关掉窗口不会退出，它缩到托盘图标后台继续跑，重新打开窗口和真正退出都在托盘菜单里。桌面和开始菜单里会有一个 **Casbin Gateway** 快捷方式；macOS 上在 `~/Applications`，Linux 上在应用菜单里。手动解压的压缩包也一样，启动器第一次运行时会自己建好。
+Gateway 会在自己的窗口里打开 —— 不用登录：它只服务本机，本机访问会直接以管理员身份进入。关掉窗口不会退出，它缩到托盘图标后台继续跑，重新打开窗口、开关**开机自启**（**设置 → 启动**是同一个开关）和真正退出都在托盘菜单里。桌面和开始菜单里会有一个 **Casbin Gateway** 快捷方式；macOS 上在 `~/Applications`，Linux 上在应用菜单里。手动解压的压缩包也一样，启动器第一次运行时会自己建好。
 
 想用浏览器，或者机器上根本没有桌面环境，**http://localhost:17000** 一样能访问；`casbin-gateway start` 则只跑服务端，没有窗口也没有托盘。
 
@@ -207,7 +217,7 @@ Gateway 会在自己的窗口里打开 —— 不用登录：它只服务本机�
 | **Usage** | 本机每个 Agent 花了多少：按时间、按模型、按 Agent 分别统计，数据来自 Agent 自己写的会话记录 —— 所以没走 Gateway 的请求也算得上。另一个页签是 Gateway 转发过的部分，那是唯一知道由哪个 Provider 作答、是否失败的账。 | 无 |
 | **Model pricing** | 每百万 Token 多少钱，Usage 页面上的每一个金额都由它算出来。可以手工改某个价格，也可以让 Gateway 按计划从 [models.dev](https://models.dev) 的目录给本机跑过的模型重新定价；你手工改过的价格不会被覆盖。 | 无 |
 
-带页签或分节的页面，在侧边栏里各有自己的名字，所以从导航栏可以直接落到测试用例、MCP 服务器或安全设置那一节，而不是只能落到它们所在页面的顶部。**⌘K**（Windows 和 Linux 上是 **Ctrl+K**）在当前页面上打开一个搜索框：按名字搜每一个页面，也搜本机的每一个 Agent 和 Provider —— 三十个 Provider 里找一个，不用一页页翻。
+带页签或分节的页面，在侧边栏里各有自己的名字，所以从导航栏可以直接落到测试用例、MCP 服务器或安全设置那一节，而不是只能落到它们所在页面的顶部。**⌘K**（Windows 和 Linux 上是 **Ctrl+K**）在当前页面上打开一个搜索框：按名字搜每一个页面，也搜本机的每一个 Agent 和 Provider —— 三十个 Provider 里找一个，不用一页页翻。顶栏可以在浅色和深色之间、在 **Amber & Ink**、**Terminal**、**Indigo** 三套配色之间、在中英文之间切换。
 
 Agent 是通过读取 **Gateway 所在机器**的用户账户、home 目录和安装路径发现的，所以要在你想观察的那台机器上运行它。
 
@@ -306,7 +316,7 @@ p, claude-code, tool:*, use, allow
 - **停止**：`casbin-gateway stop`。**再次启动**：`casbin-gateway start`。**查看状态**：`casbin-gateway status`。三条命令在任意目录都能用 —— 这个命令是一个包装脚本，总是在安装目录（数据所在的地方）里启动 Gateway。
 - **前台运行**（想盯着它跑的时候）：`casbin-gateway`，用 `Ctrl-C` 停止。后台运行时控制台输出写在 `logs/casbin-gateway.out`。
 - **升级**：点右上角的版本号，再点**立即升级**，或者再跑一遍安装命令。两种方式都不影响数据库和设置。
-- **卸载**：删除 `~/.local/share/casbin-gateway` 和 `~/.local/bin/casbin-gateway`（Windows 上是 `%LOCALAPPDATA%\casbin-gateway` 及其 PATH 条目），以及安装脚本结束时告诉你的那个自启动条目。
+- **卸载**：先执行 `casbin-gateway uninstall`。删目录这件事你自己就能做，它做不到的是撤销 Gateway 写在目录之外的东西——每个 Agent 自己配置里的监控钩子、每个 Agent 被指向的 Provider、开机自启条目、桌面快捷方式，以及 `ccswitch://` 协议，否则这些都会指向一个已经不存在的程序。这条命令会把它们全部还原，然后告诉你剩下要手动删的两样：`~/.local/share/casbin-gateway` 和 `~/.local/bin/casbin-gateway`（Windows 上是 `%LOCALAPPDATA%\casbin-gateway` 及其 PATH 条目）。
 
 设置 `INSTALL_DIR` 可以装到别的位置，`NO_START=1` 只安装不启动，`NO_AUTOSTART=1` 则不设置登录自启。
 

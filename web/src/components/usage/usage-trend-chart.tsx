@@ -92,7 +92,8 @@ export function UsageTrendChart({
                 yAxisId="tokens"
                 tickLine={false}
                 axisLine={false}
-                width={52}
+                // Billions of tokens print as "4118.76M", which 52 clipped.
+                width={72}
                 tickFormatter={value => formatTokens(Number(value))}
               />
               <YAxis

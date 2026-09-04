@@ -27,12 +27,14 @@
   <a href="https://cline.bot" title="Cline"><img src="https://www.google.com/s2/favicons?domain=cline.bot&sz=64" width="30" height="30" alt="Cline"></a>
   <a href="https://github.com/QwenLM/qwen-code" title="Qwen Code"><img src="https://www.google.com/s2/favicons?domain=qwen.ai&sz=64" width="30" height="30" alt="Qwen Code"></a>
   <a href="https://platform.iflow.cn/en/cli" title="iFlow CLI"><img src="https://www.google.com/s2/favicons?domain=iflow.cn&sz=64" width="30" height="30" alt="iFlow CLI"></a>
+  <a href="https://moonshotai.github.io/kimi-code" title="Kimi Code CLI"><img src="https://www.google.com/s2/favicons?domain=kimi.com&sz=64" width="30" height="30" alt="Kimi Code CLI"></a>
+  <a href="https://www.codebuddy.ai" title="CodeBuddy Code"><img src="https://www.google.com/s2/favicons?domain=codebuddy.ai&sz=64" width="30" height="30" alt="CodeBuddy Code"></a>
   <a href="https://roocode.com" title="Roo Code"><img src="https://www.google.com/s2/favicons?domain=roocode.com&sz=64" width="30" height="30" alt="Roo Code"></a>
   <a href="https://github.com/github/copilot-cli" title="Copilot CLI"><img src="https://www.google.com/s2/favicons?domain=github.com&sz=64" width="30" height="30" alt="Copilot CLI"></a>
   <a href="https://continue.dev" title="Continue"><img src="https://www.google.com/s2/favicons?domain=continue.dev&sz=64" width="30" height="30" alt="Continue"></a>
   <a href="https://zed.dev" title="Zed"><img src="https://www.google.com/s2/favicons?domain=zed.dev&sz=64" width="30" height="30" alt="Zed"></a>
   <a href="https://aider.chat" title="Aider"><img src="https://www.google.com/s2/favicons?domain=aider.chat&sz=64" width="30" height="30" alt="Aider"></a>
-  <a href="https://github.com/aaif-goose/goose" title="goose"><img src="https://www.google.com/s2/favicons?domain=block.github.io&sz=64" width="30" height="30" alt="goose"></a>
+  <a href="https://github.com/aaif-goose/goose" title="goose"><img src="https://www.google.com/s2/favicons?domain=block.github.io/goose&sz=64" width="30" height="30" alt="goose"></a>
   <a href="https://github.com/charmbracelet/crush" title="Crush"><img src="https://www.google.com/s2/favicons?domain=charm.sh&sz=64" width="30" height="30" alt="Crush"></a>
   <a href="https://factory.ai" title="Droid"><img src="https://www.google.com/s2/favicons?domain=factory.ai&sz=64" width="30" height="30" alt="Droid"></a>
   <a href="https://trae.ai" title="Trae"><img src="https://www.google.com/s2/favicons?domain=trae.ai&sz=64" width="30" height="30" alt="Trae"></a>
@@ -41,6 +43,7 @@
   <a href="https://openclaw.ai" title="OpenClaw"><img src="https://www.google.com/s2/favicons?domain=openclaw.ai&sz=64" width="30" height="30" alt="OpenClaw"></a>
   <a href="https://nousresearch.com" title="Hermes Agent"><img src="https://www.google.com/s2/favicons?domain=nousresearch.com&sz=64" width="30" height="30" alt="Hermes Agent"></a>
   <a href="https://deepseek.com" title="DeepSeek Harness"><img src="https://www.google.com/s2/favicons?domain=deepseek.com&sz=64" width="30" height="30" alt="DeepSeek Harness"></a>
+  <a href="https://pi.dev" title="Pi"><img src="https://www.google.com/s2/favicons?domain=pi.dev&sz=64" width="30" height="30" alt="Pi"></a>
 </p>
 
 <p align="center"><b>Any model vendor behind one endpoint</b></p>
@@ -110,12 +113,14 @@
 | <img src="https://www.google.com/s2/favicons?domain=cline.bot&sz=64" width="16" height="16" alt=""> **Cline** | — | ✅ OpenAI | ✅ | ✅ | — | — | npm |
 | <img src="https://www.google.com/s2/favicons?domain=qwen.ai&sz=64" width="16" height="16" alt=""> **Qwen Code** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm |
 | <img src="https://www.google.com/s2/favicons?domain=iflow.cn&sz=64" width="16" height="16" alt=""> **iFlow CLI** | — | ✅ OpenAI | ✅ | — | ✅ | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=kimi.com&sz=64" width="16" height="16" alt=""> **Kimi Code CLI** | — | ✅ OpenAI | ✅ | ✅ | ✅ | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=codebuddy.ai&sz=64" width="16" height="16" alt=""> **CodeBuddy Code** | — | ✅ OpenAI | ✅ | ✅ | ✅ | — | npm |
 | <img src="https://www.google.com/s2/favicons?domain=roocode.com&sz=64" width="16" height="16" alt=""> **Roo Code** | — | — | — | — | — | — | — |
 | <img src="https://www.google.com/s2/favicons?domain=github.com&sz=64" width="16" height="16" alt=""> **Copilot CLI** | — | — | — | — | — | — | npm |
 | <img src="https://www.google.com/s2/favicons?domain=continue.dev&sz=64" width="16" height="16" alt=""> **Continue** | — | ✅ OpenAI | — | — | — | — | npm |
 | <img src="https://www.google.com/s2/favicons?domain=zed.dev&sz=64" width="16" height="16" alt=""> **Zed** | — | ✅ OpenAI | — | — | — | — | brew |
 | <img src="https://www.google.com/s2/favicons?domain=aider.chat&sz=64" width="16" height="16" alt=""> **Aider** | — | ✅ OpenAI | — | — | — | — | — |
-| <img src="https://www.google.com/s2/favicons?domain=block.github.io&sz=64" width="16" height="16" alt=""> **goose** | — | ✅ OpenAI | — | — | — | — | brew |
+| <img src="https://www.google.com/s2/favicons?domain=block.github.io/goose&sz=64" width="16" height="16" alt=""> **goose** | — | ✅ OpenAI | — | — | — | — | brew |
 | <img src="https://www.google.com/s2/favicons?domain=charm.sh&sz=64" width="16" height="16" alt=""> **Crush** | — | — | — | — | — | — | npm |
 | <img src="https://www.google.com/s2/favicons?domain=factory.ai&sz=64" width="16" height="16" alt=""> **Droid** | — | ✅ OpenAI | — | — | — | — | — |
 | <img src="https://www.google.com/s2/favicons?domain=trae.ai&sz=64" width="16" height="16" alt=""> **Trae** | — | — | — | — | — | — | brew |
@@ -125,6 +130,7 @@
 | <img src="https://www.google.com/s2/favicons?domain=openclaw.ai&sz=64" width="16" height="16" alt=""> **OpenClaw** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm |
 | <img src="https://www.google.com/s2/favicons?domain=nousresearch.com&sz=64" width="16" height="16" alt=""> **Hermes Agent** | ✅ | ✅ OpenAI | — | — | — | — | — |
 | <img src="https://www.google.com/s2/favicons?domain=deepseek.com&sz=64" width="16" height="16" alt=""> **DeepSeek Harness** | ✅ | ✅ OpenAI | ✅ | ✅ | — | ✅ | npm |
+| <img src="https://www.google.com/s2/favicons?domain=pi.dev&sz=64" width="16" height="16" alt=""> **Pi** | — | ✅ OpenAI | — | ✅ | ✅ | — | npm |
 
 - **Monitoring** — audit-only records of what the agent did: prompts, tool calls, permission prompts. Nothing an agent does waits on Gateway, and no answer changes because monitoring is on.
 - **Provider** — Gateway writes the agent's own configuration to point it at a bound provider, in the wire format that agent's client speaks. An agent without it still reaches Gateway through the environment variables the UI shows.
@@ -132,14 +138,13 @@
 - **Sessions** — prompts and token usage read straight from the agent's own transcripts, including what never went through Gateway.
 - **Install** — the package managers Gateway installs and upgrades it with. Everything else is a download from its vendor's page.
 
-Every agent in the table is found on this machine either way, listed with the account it is signed in to and what it has spent, and started or stopped from its card; the columns are what comes on top of that. Roo Code, Copilot CLI, Crush and Trae stop there on purpose: Roo Code and Trae keep their provider settings inside VS Code's own state rather than in a file of their own, Copilot CLI talks to GitHub's own backend and has no base URL to change, and Crush's configuration moved to a shell script that a written file would silently lose to. Zed is the one partial switch — it keeps API keys in the OS keychain, so Gateway writes the endpoint and the model list and the key is entered once in Zed itself.
-
 ## Features
 
 - **[Is the API behind that key what it was sold as?](#the-killer-feature-is-the-api-behind-that-key-what-it-was-sold-as)** — a reseller can quietly swap in a cheaper model or fake a cache hit, and none of it shows up in the traffic. Authenticity asks the upstream directly and grades it A–F.
 - **[Switch every agent's provider from one place](#send-an-agents-traffic-through-gateway)** — change an API key or base URL once, and every agent pointed at Gateway picks it up.
 - **[Add a provider, an MCP server, a prompt or a skill from a link](#import-from-a-link)** — click a vendor's "add this" button on the web and Gateway opens with what the link carries, before any of it is written.
 - **[Run several instances of one agent side by side](#what-to-do-next)** — e.g. multiple Claude Desktop instances, each signed in to a different account.
+- **[Install, upgrade and roll back the agents themselves](#what-to-do-next)** — which build each agent is on against what its package manager publishes, and back to an older release when an update broke something.
 - **[See the whole request, not just a count](#recording-prompts)** — every prompt, message and tool schema an agent sent, kept on this machine.
 - **[Say what each agent may do](#what-each-agent-is-allowed-to-do)** — around forty switches per agent, in groups, over its tools, models and providers, enforced by Casbin on every request it relays.
 - **[Know what every agent spent, even off Gateway](#what-the-agents-spend-including-what-never-went-through-gateway)** — read straight from the agents' own transcripts.
@@ -151,6 +156,11 @@ Every agent in the table is found on this machine either way, listed with the ac
 | :---: | :---: |
 | [![Agents](https://cdn.casbin.org/img/casbin-gateway-home.png)](https://cdn.casbin.org/img/casbin-gateway-home.png) | [![Skills, MCP & Prompts](https://cdn.casbin.org/img/casbin-gateway-skills.png)](https://cdn.casbin.org/img/casbin-gateway-skills.png) |
 | What each one runs on, which account it is signed in to, what it has spent there, and whether it is running | Every skill, MCP server and instruction file of every agent, side by side, copied from one agent to another |
+
+| What each agent is allowed to do | Which build each agent is on |
+| :---: | :---: |
+| [![Permissions](https://cdn.casbin.org/img/casbin-gateway-permissions.png)](https://cdn.casbin.org/img/casbin-gateway-permissions.png) | [![Agent versions](https://cdn.casbin.org/img/casbin-gateway-versions.png)](https://cdn.casbin.org/img/casbin-gateway-versions.png) |
+| Around forty switches over the agent's tools, models and providers, compiled to a Casbin policy and enforced on every request it relays | The build on this machine against the one its package manager publishes, installed, upgraded, rolled back or removed from the row it is on |
 
 | What the agents spent | One endpoint per model vendor |
 | :---: | :---: |
@@ -180,7 +190,7 @@ irm https://raw.githubusercontent.com/apache/casbin-gateway/master/scripts/insta
 
 Either one downloads the build for this machine, unpacks it into `~/.local/share/casbin-gateway` (`%LOCALAPPDATA%\casbin-gateway` on Windows), puts a `casbin-gateway` command on your PATH, starts it, and arranges for it to start again when you log in. The terminal you installed from is yours again straight away.
 
-Gateway then opens in its own window — no sign-in: it serves this machine only and signs the local admin in on sight. Closing that window leaves Gateway running behind its tray icon, which is also where you reopen the window and quit for real. There is a **Casbin Gateway** entry on your desktop and in the Start menu, in `~/Applications`, or in the application menu, depending on the platform. An archive unpacked by hand gets the same entry the first time the launcher runs.
+Gateway then opens in its own window — no sign-in: it serves this machine only and signs the local admin in on sight. Closing that window leaves Gateway running behind its tray icon, which is also where you reopen the window, turn **Start at Login** off and on — **Settings → Startup** is the same switch — and quit for real. There is a **Casbin Gateway** entry on your desktop and in the Start menu, in `~/Applications`, or in the application menu, depending on the platform. An archive unpacked by hand gets the same entry the first time the launcher runs.
 
 If you would rather use a browser, or you are on a machine with no desktop at all, everything is still at **http://localhost:17000**, and `casbin-gateway start` runs the server on its own with no window and no tray.
 
@@ -209,7 +219,7 @@ Gateway installed some other way, or in a directory it cannot write to, says so 
 | **Usage** | What every agent on this machine spent, over time and broken down by model and by agent, read from the agents' own transcripts — so it counts the requests that never went through Gateway. A second tab shows what Gateway relayed, which is the only account that knows which provider answered and whether it failed. | Nothing |
 | **Model pricing** | What a million tokens costs, which is what every figure on the Usage page is worked out from. Edit a price by hand, or let Gateway reprice the models this machine has run from the [models.dev](https://models.dev) catalogue on a schedule; a price you edited yourself is left alone. | Nothing |
 
-A page with tabs or sections is in the sidebar under its own name, so the rail lands on the test cases, the MCP servers or the security settings rather than only on the top of the page they are on. **⌘K**, or **Ctrl+K**, opens a search box over whichever page you are on: every page by name, and every agent and provider on this machine, which is how you reach one of thirty providers without paging through the list.
+A page with tabs or sections is in the sidebar under its own name, so the rail lands on the test cases, the MCP servers or the security settings rather than only on the top of the page they are on. **⌘K**, or **Ctrl+K**, opens a search box over whichever page you are on: every page by name, and every agent and provider on this machine, which is how you reach one of thirty providers without paging through the list. The header switches the UI between light and dark, between three palettes — **Amber & Ink**, **Terminal** and **Indigo** — and between English and Chinese.
 
 Agents are found by reading the user accounts, home directories and install paths of **the machine Gateway runs on**, so run it on the machine whose agents you want to watch.
 
@@ -312,7 +322,7 @@ reprice the models this machine has run from the [models.dev](https://models.dev
 - **Stop**: `casbin-gateway stop`. **Start again**: `casbin-gateway start`. **Check**: `casbin-gateway status`. All three work from any directory — the command is a wrapper that always starts Gateway in its install directory, where its data lives.
 - **Run in the foreground** instead, to watch it: `casbin-gateway`, stopped with `Ctrl-C`. In the background its console output goes to `logs/casbin-gateway.out`.
 - **Upgrade**: press the version in the top-right corner and then **Update now**, or run the install command again. Your database and settings are untouched either way.
-- **Remove**: delete `~/.local/share/casbin-gateway` and `~/.local/bin/casbin-gateway` (on Windows, `%LOCALAPPDATA%\casbin-gateway` and its PATH entry), plus the startup entry the installer names when it finishes.
+- **Remove**: `casbin-gateway uninstall` first. Deleting the directory is the part you can do yourself; what it cannot undo is everything Gateway wrote outside it — the monitoring hooks in every agent's own configuration, the provider each agent was pointed at, the login entry, the desktop entries and the `ccswitch://` scheme, all of which would otherwise be left naming a program that is no longer there. It puts all of that back, then names the two things to delete by hand: `~/.local/share/casbin-gateway` and `~/.local/bin/casbin-gateway` (on Windows, `%LOCALAPPDATA%\casbin-gateway` and its PATH entry).
 
 Set `INSTALL_DIR` to install somewhere else, `NO_START=1` to install without starting, or `NO_AUTOSTART=1` to install without starting at login.
 
