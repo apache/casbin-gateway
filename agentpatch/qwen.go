@@ -16,11 +16,13 @@ package agentpatch
 
 import "github.com/apache/casbin-gateway/agenthook"
 
+// Qwen Code is a Gemini CLI fork: the same settings file under its own
+// directory, with Claude Code's event names in it.
 func init() {
 	register(settingsHookPatcher{
-		agentId: "gemini-cli",
-		name:    "Gemini CLI",
-		dir:     ".gemini",
-		events:  agenthook.GeminiEvents,
+		agentId: "qwen-code",
+		name:    "Qwen Code",
+		dir:     ".qwen",
+		events:  agenthook.QwenEvents,
 	})
 }

@@ -1,0 +1,8 @@
+{
+  "id": "copilot-cli",
+  "displayName": "Copilot CLI",
+  "installUrl": "https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli",
+  "execName": "copilot",
+  "stateDir": "copilot",
+  "npmPackage": "@github/copilot"
+}

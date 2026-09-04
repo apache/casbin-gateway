@@ -1,0 +1,8 @@
+{
+  "id": "qwen-code",
+  "displayName": "Qwen Code",
+  "installUrl": "https://github.com/QwenLM/qwen-code",
+  "execName": "qwen",
+  "stateDir": "qwen",
+  "npmPackage": "@qwen-code/qwen-code"
+}

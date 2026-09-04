@@ -107,6 +107,7 @@ var normalizers = map[string]func(map[string]any, string, time.Time) *agentmonit
 	"claude-code": Normalize,
 	"cursor":      NormalizeCursor,
 	"gemini-cli":  NormalizeGemini,
+	"qwen-code":   NormalizeQwen,
 	"windsurf":    NormalizeWindsurf,
 }
 

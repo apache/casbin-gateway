@@ -1,0 +1,8 @@
+{
+  "id": "iflow-cli",
+  "displayName": "iFlow CLI",
+  "installUrl": "https://platform.iflow.cn/en/cli",
+  "execName": "iflow",
+  "stateDir": "iflow",
+  "npmPackage": "@iflow-ai/iflow-cli"
+}

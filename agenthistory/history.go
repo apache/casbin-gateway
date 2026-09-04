@@ -75,10 +75,11 @@ var transcriptDirs = []struct {
 }{
 	{agent: "claude-code", parts: []string{".claude", "projects"}},
 	{agent: "codex-cli", parts: []string{".codex", "sessions"}},
-	// The Gemini CLI keeps one directory per project hash, and OpenClaw one per
-	// agent id; both hold the sessions a level or two further down, which is
-	// where the walk finds them.
+	// The Gemini CLI and its Qwen Code fork keep one directory per project hash,
+	// and OpenClaw one per agent id; all hold the sessions a level or two
+	// further down, which is where the walk finds them.
 	{agent: "gemini-cli", parts: []string{".gemini", "tmp"}},
+	{agent: "qwen-code", parts: []string{".qwen", "tmp"}},
 	{agent: "openclaw", parts: []string{".openclaw", "agents"}},
 	// Claude Desktop writes one directory per Cowork session, named by the
 	// session id, with the transcript inside it under a fixed name.

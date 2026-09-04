@@ -181,6 +181,34 @@ var layouts = map[string]layout{
 		mcp:    &mcpLayout{file: under(".gemini", "settings.json"), store: &jsonStore{paths: [][]string{{"mcpServers"}}}},
 		prompt: promptFile("GEMINI.md", ".gemini"),
 	},
+	// Qwen Code is a Gemini CLI fork and keeps the same layout under its own
+	// directory, the shared ~/.agents skills included.
+	"qwen-code": {
+		skills: &skillLayout{sources: []skillSource{
+			userSkills(".qwen", "skills"),
+			userSkills(".agents", "skills"),
+			pluginSkills(".qwen", "extensions"),
+		}},
+		mcp:    &mcpLayout{file: under(".qwen", "settings.json"), store: &jsonStore{paths: [][]string{{"mcpServers"}}}},
+		prompt: promptFile("QWEN.md", ".qwen"),
+	},
+	"iflow-cli": {
+		mcp:    &mcpLayout{file: under(".iflow", "settings.json"), store: &jsonStore{paths: [][]string{{"mcpServers"}}}},
+		prompt: promptFile("IFLOW.md", ".iflow"),
+	},
+	// Cline's IDE extension, CLI and SDK share one ~/.cline: the skills sit
+	// directly under it, the MCP servers with the rest of the app state.
+	"cline": {
+		skills: &skillLayout{sources: []skillSource{
+			userSkills(".cline", "skills"),
+			userSkills(".agents", "skills"),
+			pluginSkills(".cline", "plugins"),
+		}},
+		mcp: &mcpLayout{
+			file:  under(".cline", "data", "settings", "cline_mcp_settings.json"),
+			store: &jsonStore{paths: [][]string{{"mcpServers"}}},
+		},
+	},
 	"windsurf": {
 		mcp: &mcpLayout{
 			file:  under(".codeium", "windsurf", "mcp_config.json"),

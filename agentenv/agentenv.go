@@ -80,6 +80,13 @@ var agentVars = map[string][]variable{
 		{key: "GEMINI_API_KEY", secret: true},
 		{key: "GEMINI_MODEL"},
 	},
+	// Qwen Code is a Gemini CLI fork and reads ~/.qwen/.env the same way, which
+	// never replaces a variable the shell already exports.
+	"qwen-code": {
+		{key: "OPENAI_BASE_URL", endpoint: true},
+		{key: "OPENAI_API_KEY", secret: true},
+		{key: "OPENAI_MODEL"},
+	},
 	// dsh resolves the route's key by name, and the environment answers before
 	// the credentials file does.
 	"dsh": {

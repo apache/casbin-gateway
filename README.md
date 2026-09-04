@@ -24,6 +24,11 @@
   <a href="https://gemini.google.com" title="Gemini CLI"><img src="https://www.google.com/s2/favicons?domain=gemini.google.com&sz=64" width="30" height="30" alt="Gemini CLI"></a>
   <a href="https://cursor.com" title="Cursor / Cursor Agent"><img src="https://www.google.com/s2/favicons?domain=cursor.com&sz=64" width="30" height="30" alt="Cursor"></a>
   <a href="https://windsurf.com" title="Windsurf"><img src="https://www.google.com/s2/favicons?domain=windsurf.com&sz=64" width="30" height="30" alt="Windsurf"></a>
+  <a href="https://cline.bot" title="Cline"><img src="https://www.google.com/s2/favicons?domain=cline.bot&sz=64" width="30" height="30" alt="Cline"></a>
+  <a href="https://github.com/QwenLM/qwen-code" title="Qwen Code"><img src="https://www.google.com/s2/favicons?domain=qwen.ai&sz=64" width="30" height="30" alt="Qwen Code"></a>
+  <a href="https://platform.iflow.cn/en/cli" title="iFlow CLI"><img src="https://www.google.com/s2/favicons?domain=iflow.cn&sz=64" width="30" height="30" alt="iFlow CLI"></a>
+  <a href="https://roocode.com" title="Roo Code"><img src="https://www.google.com/s2/favicons?domain=roocode.com&sz=64" width="30" height="30" alt="Roo Code"></a>
+  <a href="https://github.com/github/copilot-cli" title="Copilot CLI"><img src="https://www.google.com/s2/favicons?domain=github.com&sz=64" width="30" height="30" alt="Copilot CLI"></a>
   <a href="https://opencode.ai" title="opencode / opencode Desktop"><img src="https://www.google.com/s2/favicons?domain=opencode.ai&sz=64" width="30" height="30" alt="opencode"></a>
   <a href="https://openagentai.org" title="OpenAgent"><img src="https://www.google.com/s2/favicons?domain=openagentai.org&sz=64" width="30" height="30" alt="OpenAgent"></a>
   <a href="https://openclaw.ai" title="OpenClaw"><img src="https://www.google.com/s2/favicons?domain=openclaw.ai&sz=64" width="30" height="30" alt="OpenClaw"></a>

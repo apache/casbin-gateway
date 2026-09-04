@@ -1,0 +1,9 @@
+{
+  "id": "cline",
+  "displayName": "Cline",
+  "installUrl": "https://docs.cline.bot/getting-started/installing-cline",
+  "execName": "cline",
+  "instanceEnv": "CLINE_DIR",
+  "stateDir": "cline",
+  "npmPackage": "cline"
+}

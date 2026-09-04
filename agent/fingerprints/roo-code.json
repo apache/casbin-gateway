@@ -1,0 +1,7 @@
+{
+  "id": "roo-code",
+  "displayName": "Roo Code",
+  "installUrl": "https://docs.roocode.com/getting-started/installing",
+  "execName": "roo",
+  "stateDir": "roo"
+}

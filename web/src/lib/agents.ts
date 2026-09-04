@@ -99,6 +99,12 @@ export function agentSetupNoteKey(agentId: string) {
     return "agent:opencode config hint";
   case "gemini-cli":
     return "agent:Gemini CLI config hint";
+  case "qwen-code":
+    return "agent:Qwen Code config hint";
+  case "iflow-cli":
+    return "agent:iFlow CLI config hint";
+  case "cline":
+    return "agent:Cline config hint";
   default:
     return "";
   }

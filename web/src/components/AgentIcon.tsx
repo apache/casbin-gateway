@@ -30,6 +30,11 @@ const agentSites: Record<string, string> = {
   "opencode Desktop": "opencode.ai",
   "DeepSeek Harness": "deepseek.com",
   "Gemini CLI": "gemini.google.com",
+  "Qwen Code": "qwen.ai",
+  "iFlow CLI": "iflow.cn",
+  Cline: "cline.bot",
+  "Roo Code": "roocode.com",
+  "Copilot CLI": "github.com",
 };
 
 const agentKey = (agent: unknown) =>

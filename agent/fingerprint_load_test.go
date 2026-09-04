@@ -22,9 +22,10 @@ import (
 
 func TestFingerprintsLoad(t *testing.T) {
 	want := []string{
-		"claude-code", "claude-desktop", "codex-cli", "codex", "cursor-agent",
-		"cursor", "dsh", "gemini-cli", "hermes-agent", "openagent", "openclaw",
-		"opencode-desktop", "opencode",
+		"claude-code", "claude-desktop", "cline", "codex-cli", "codex",
+		"copilot-cli", "cursor-agent", "cursor", "dsh", "gemini-cli",
+		"hermes-agent", "iflow-cli", "openagent", "openclaw",
+		"opencode-desktop", "opencode", "qwen-code", "roo-code",
 		"windsurf",
 	}
 
