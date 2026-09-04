@@ -3,96 +3,112 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* shadcn's neutral base palette. --primary is a neutral near-black rather than
-   a hue, so the semantic colours below carry all the meaning a page needs.
-   Those three are kept low-chroma on purpose: they are ink for a word or a
-   dot, never a wash behind a panel. */
+/* "Amber & Ink". The palette comes off the casbin mark: the orange star is the
+   primary, the shield green is success, the gopher blue is info. Nothing here
+   is a true neutral — every grey carries a warm hue, so the page reads as paper
+   and ink rather than as a default component library. */
 :root {
-  --radius: 0.625rem;
+  --radius: 0.5rem;
 
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --success: oklch(0.52 0.115 152);
-  --success-foreground: oklch(0.985 0 0);
-  --warning: oklch(0.55 0.115 65);
-  --warning-foreground: oklch(0.985 0 0);
-  --info: oklch(0.52 0.115 248);
-  --info-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* Paper, with the card lifted a shade above it: that gap is most of the
+     layering the page needs, so panels can stay nearly shadowless. */
+  --background: oklch(0.974 0.010 83);
+  --foreground: oklch(0.205 0.014 60);
+  --card: oklch(0.999 0.003 85);
+  --card-foreground: oklch(0.205 0.014 60);
+  --popover: oklch(0.999 0.003 85);
+  --popover-foreground: oklch(0.205 0.014 60);
 
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  /* Deep enough to serve as link ink and as a button fill under white. */
+  --primary: oklch(0.545 0.155 48);
+  --primary-foreground: oklch(0.99 0.012 90);
+  --secondary: oklch(0.955 0.014 78);
+  --secondary-foreground: oklch(0.30 0.024 55);
+  --muted: oklch(0.957 0.011 78);
+  --muted-foreground: oklch(0.505 0.020 62);
+  --accent: oklch(0.945 0.028 70);
+  --accent-foreground: oklch(0.33 0.050 48);
 
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Held apart from --primary by hue and chroma, not by lightness alone: these
+     are ink for a word or a dot and often sit in the same row as a link. */
+  --destructive: oklch(0.545 0.205 25);
+  --destructive-foreground: oklch(0.99 0.012 90);
+  --success: oklch(0.505 0.125 150);
+  --success-foreground: oklch(0.99 0.012 90);
+  --warning: oklch(0.545 0.120 90);
+  --warning-foreground: oklch(0.99 0.012 90);
+  --info: oklch(0.520 0.115 235);
+  --info-foreground: oklch(0.99 0.012 90);
+
+  --border: oklch(0.893 0.014 75);
+  --input: oklch(0.878 0.016 75);
+  --ring: oklch(0.545 0.155 48);
+
+  --chart-1: oklch(0.620 0.155 48);
+  --chart-2: oklch(0.580 0.115 200);
+  --chart-3: oklch(0.660 0.130 92);
+  --chart-4: oklch(0.500 0.115 150);
+  --chart-5: oklch(0.520 0.130 300);
+
+  /* The rail is a deeper sheet of the same paper, so it reads as a separate
+     surface without needing a heavy border. */
+  --sidebar: oklch(0.950 0.016 80);
+  --sidebar-foreground: oklch(0.245 0.016 60);
+  --sidebar-primary: oklch(0.545 0.155 48);
+  --sidebar-primary-foreground: oklch(0.99 0.012 90);
+  --sidebar-accent: oklch(0.922 0.032 68);
+  --sidebar-accent-foreground: oklch(0.355 0.085 45);
+  --sidebar-border: oklch(0.886 0.018 75);
+  --sidebar-ring: oklch(0.545 0.155 48);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --success: oklch(0.72 0.105 158);
-  --success-foreground: oklch(0.145 0 0);
-  --warning: oklch(0.78 0.115 72);
-  --warning-foreground: oklch(0.145 0 0);
-  --info: oklch(0.7 0.095 245);
-  --info-foreground: oklch(0.145 0 0);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 18%);
-  --ring: oklch(0.556 0 0);
+  /* Warm charcoal, not neutral black: the same hue the light mode uses for ink. */
+  --background: oklch(0.175 0.010 62);
+  --foreground: oklch(0.955 0.008 85);
+  --card: oklch(0.218 0.012 62);
+  --card-foreground: oklch(0.955 0.008 85);
+  --popover: oklch(0.228 0.012 62);
+  --popover-foreground: oklch(0.955 0.008 85);
 
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
+  --primary: oklch(0.735 0.152 58);
+  --primary-foreground: oklch(0.200 0.045 50);
+  --secondary: oklch(0.272 0.014 62);
+  --secondary-foreground: oklch(0.945 0.010 82);
+  --muted: oklch(0.272 0.014 62);
+  --muted-foreground: oklch(0.715 0.016 72);
+  --accent: oklch(0.305 0.028 58);
+  --accent-foreground: oklch(0.930 0.030 72);
 
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.985 0 0);
-  --sidebar-primary-foreground: oklch(0.205 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 12%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Filled semantic chips are a lit swatch with dark ink here — white on a warm
+     fill bright enough to read against this background never clears 4.5:1. */
+  --destructive: oklch(0.680 0.180 25);
+  --destructive-foreground: oklch(0.175 0.030 30);
+  --success: oklch(0.735 0.130 152);
+  --success-foreground: oklch(0.175 0.020 150);
+  --warning: oklch(0.785 0.125 92);
+  --warning-foreground: oklch(0.190 0.030 80);
+  --info: oklch(0.720 0.105 235);
+  --info-foreground: oklch(0.175 0.025 240);
+
+  --border: oklch(0.86 0.030 70 / 14%);
+  --input: oklch(0.86 0.030 70 / 20%);
+  --ring: oklch(0.735 0.152 58);
+
+  --chart-1: oklch(0.740 0.155 55);
+  --chart-2: oklch(0.720 0.105 200);
+  --chart-3: oklch(0.800 0.125 92);
+  --chart-4: oklch(0.680 0.115 152);
+  --chart-5: oklch(0.700 0.125 302);
+
+  --sidebar: oklch(0.198 0.011 62);
+  --sidebar-foreground: oklch(0.930 0.010 82);
+  --sidebar-primary: oklch(0.735 0.152 58);
+  --sidebar-primary-foreground: oklch(0.200 0.045 50);
+  --sidebar-accent: oklch(0.312 0.038 55);
+  --sidebar-accent-foreground: oklch(0.900 0.045 72);
+  --sidebar-border: oklch(0.86 0.030 70 / 14%);
+  --sidebar-ring: oklch(0.735 0.152 58);
 }
 
 @theme inline {
@@ -142,7 +158,10 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  /* Inter is never fetched, so the CJK faces are what a zh reader actually
+     gets; without them Windows falls back to a mismatched SimSun. */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   --font-mono: "Cascadia Code", "Fira Mono", Consolas, ui-monospace, monospace;
 }
 
@@ -156,6 +175,18 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  ::selection {
+    background-color: color-mix(in oklab, var(--primary) 22%, transparent);
+  }
+  /* Titles set a touch tighter than the body — at these sizes that tracking is
+     most of what separates a heading from bold text. */
+  h1, h2, h3, [data-slot="card-title"], [data-slot="dialog-title"] {
+    letter-spacing: -0.012em;
+  }
+  /* Counts, costs and token totals are read down a column, not across a line. */
+  table {
+    font-variant-numeric: tabular-nums;
   }
 }
 
@@ -174,8 +205,15 @@
     background-color: var(--border);
     border-radius: 4px;
   }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in oklab, var(--primary) 45%, transparent);
+  }
   .scrollbar-thin::-webkit-scrollbar-track {
     background: transparent;
+  }
+  /* Figures that should line up with each other rather than with prose. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
   }
 }
 

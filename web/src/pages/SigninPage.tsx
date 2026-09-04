@@ -99,7 +99,7 @@ export default function SigninPage() {
           <img
             src={`${Setting.StaticBaseUrl}/img/logo_384x96.png`}
             alt="Casbin Gateway"
-            className="h-10 w-auto max-w-[260px] object-contain"
+            className="h-10 w-auto max-w-[260px] object-contain dark:invert dark:hue-rotate-180"
           />
         </div>
 

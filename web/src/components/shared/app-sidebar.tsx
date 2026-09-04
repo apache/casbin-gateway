@@ -84,11 +84,13 @@ function NavLink({
     <Link
       to={to}
       className={cn(
-        "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors",
+        "relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors",
         collapsed && "justify-center px-0",
         nested && !collapsed && "pl-9 text-[13px]",
         active
-          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+          // The amber rule is what marks the page you are on; the tinted fill
+          // alone is too quiet to find at a glance down a rail this long.
+          ? "bg-sidebar-accent text-sidebar-accent-foreground before:bg-sidebar-primary font-medium before:absolute before:top-1.5 before:bottom-1.5 before:left-0 before:w-[3px] before:rounded-full before:content-['']"
           : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
       )}
     >
@@ -170,7 +172,13 @@ export function AppSidebar({
             <img
               src={`${Setting.StaticBaseUrl}/img/logo_384x96.png`}
               alt="Casbin Gateway"
-              className={cn("w-auto object-contain transition-all", railCollapsed ? "h-5" : "h-7 max-w-[150px]")}
+              // The wordmark is black ink on transparent. Inverting luminance
+              // and rotating the hue back lights it up without draining the
+              // colour out of the gopher and the shield.
+              className={cn(
+                "w-auto object-contain transition-all dark:invert dark:hue-rotate-180",
+                railCollapsed ? "h-5" : "h-7 max-w-[150px]",
+              )}
             />
           </Link>
         </div>

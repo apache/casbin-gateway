@@ -319,7 +319,7 @@ export default function App() {
           <footer className="flex items-center justify-center border-t py-5">
             <a target="_blank" rel="noreferrer" href="https://github.com/apache/casbin-gateway">
               <img
-                className="h-[30px] w-auto"
+                className="h-[30px] w-auto dark:invert dark:hue-rotate-180"
                 alt="Casbin"
                 src={`${Setting.StaticBaseUrl}/img/casbin_logo_1024x256.png`}
               />
