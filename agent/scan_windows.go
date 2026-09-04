@@ -162,13 +162,7 @@ func localAppData(home homeDir) string   { return appDataDir(home, "Local", "LOC
 func roamingAppData(home homeDir) string { return appDataDir(home, "Roaming", "APPDATA") }
 
 func scanHermesWindows(home homeDir) []Installation {
-	hermesHome := filepath.Join(localAppData(home), "hermes")
-	if isCurrentHome(home.path) {
-		if configured := os.Getenv("HERMES_HOME"); configured != "" {
-			hermesHome = configured
-		}
-	}
-	root := filepath.Join(hermesHome, hermes.ProjectDir)
+	root := filepath.Join(hermes.Home(home.path), hermes.ProjectDir)
 	launcher := filepath.Join(root, "venv", "Scripts", hermes.ExecName+".exe")
 	return hermesInstallation(launcher, home.owner, root)
 }

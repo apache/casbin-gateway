@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/apache/casbin-gateway/agenthome"
 	"github.com/apache/casbin-gateway/internal/hermes"
@@ -280,12 +279,13 @@ func (hermesWriter) save(path string, document *yamledit.Document) error {
 	return changes.commit()
 }
 
-// configPath is the file Hermes reads its settings from, in the home directory
-// its own launcher keeps them in.
+// configPath is the file Hermes reads its settings from, in the Hermes home of
+// the installation's owner: %LOCALAPPDATA%\hermes on Windows, ~/.hermes
+// elsewhere.
 func (hermesWriter) configPath(target Target) (string, error) {
 	home, err := agenthome.Resolve(target.Owner)
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".hermes", "config.yaml"), nil
+	return hermes.ConfigPath(home), nil
 }

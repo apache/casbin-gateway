@@ -251,18 +251,7 @@ func (hermesPatcher) layoutOf(target Target) (hermesLayout, error) {
 	if err != nil {
 		return hermesLayout{}, err
 	}
-	hermesHome := filepath.Join(home, ".hermes")
-	if runtime.GOOS == "windows" {
-		hermesHome = filepath.Join(home, "AppData", "Local", "hermes")
-		if isProcessHome(home) {
-			if local := os.Getenv("LOCALAPPDATA"); local != "" {
-				hermesHome = filepath.Join(local, "hermes")
-			}
-		}
-	}
-	if configured := os.Getenv("HERMES_HOME"); configured != "" && isProcessHome(home) {
-		hermesHome = configured
-	}
+	hermesHome := hermes.Home(home)
 	return hermesLayout{
 		home:       hermesHome,
 		configPath: filepath.Join(hermesHome, "config.yaml"),
@@ -320,22 +309,4 @@ func readHermesObserverConfig(pluginDir string) (hermesObserverConfig, bool, err
 	}
 	return config, config.Owner == "casbin-gateway" &&
 		config.SchemaVersion == hermesConfigSchema, nil
-}
-
-func isProcessHome(home string) bool {
-	current, err := os.UserHomeDir()
-	if err != nil {
-		return false
-	}
-	left, right := filepath.Clean(home), filepath.Clean(current)
-	if resolved, err := filepath.EvalSymlinks(left); err == nil {
-		left = resolved
-	}
-	if resolved, err := filepath.EvalSymlinks(right); err == nil {
-		right = resolved
-	}
-	if runtime.GOOS == "windows" {
-		return strings.EqualFold(left, right)
-	}
-	return left == right
 }
