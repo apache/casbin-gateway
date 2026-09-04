@@ -74,6 +74,12 @@ func lookupAccount(owner string) (*user.User, error) {
 	return nil, err
 }
 
+// SameAccount reports whether two owner names name the same account, ignoring
+// any DOMAIN\ or @domain qualifier one of them carries.
+func SameAccount(left, right string) bool {
+	return sameAccount(left, right)
+}
+
 func sameAccount(left, right string) bool {
 	return strings.EqualFold(accountName(left), accountName(right))
 }
