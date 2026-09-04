@@ -40,8 +40,8 @@ import (
 func OriginFilter(ctx *context.Context) {
 	host := ctx.Request.Host
 	if !isAllowedHost(host) {
-		denyOrigin(ctx, fmt.Sprintf("%q is not a name this Gateway answers to; add it to \"Allowed hosts\" on the Settings page to reach Gateway under that name",
-			hostnameOf(host)))
+		denyOrigin(ctx, fmt.Sprintf("%q is not a name this Gateway answers to; add it to \"Allowed hosts\" on the Settings page (%s) to reach Gateway under that name",
+			hostnameOf(host), settingsUrl()))
 		return
 	}
 
@@ -50,7 +50,8 @@ func OriginFilter(ctx *context.Context) {
 		return
 	}
 	if !isAllowedOrigin(origin) && !isAllowedExtensionCall(ctx, origin) {
-		denyOrigin(ctx, fmt.Sprintf("%s is another site, and Gateway is not callable from one; add it to \"Allowed origins\" on the Settings page to allow it", origin))
+		denyOrigin(ctx, fmt.Sprintf("%s is another site, and Gateway is not callable from one; add it to \"Allowed origins\" on the Settings page (%s) to allow it",
+			origin, settingsUrl()))
 		return
 	}
 
@@ -60,6 +61,20 @@ func OriginFilter(ctx *context.Context) {
 	if isPreflight(ctx) {
 		ctx.ResponseWriter.WriteHeader(http.StatusOK)
 	}
+}
+
+// settingsUrl is where the two lists are edited. It is built from the address
+// Gateway binds to rather than from the Host header, which is the very thing a
+// refused request cannot be trusted about.
+func settingsUrl() string {
+	addr := conf.GetHttpAddr()
+	if addr == "0.0.0.0" || addr == "::" {
+		addr = "localhost"
+	}
+	if ip := net.ParseIP(addr); ip != nil && ip.To4() == nil {
+		addr = "[" + addr + "]"
+	}
+	return fmt.Sprintf("http://%s:%d/settings#network", addr, conf.GetHttpPort())
 }
 
 func denyOrigin(ctx *context.Context, message string) {
