@@ -110,6 +110,15 @@ type SkillImport struct {
 // balance with, and the flags that would activate what was imported — Gateway
 // asks the reader that instead.
 func ParseImportLink(owner string, raw string) (*ImportLink, error) {
+	// New API sites hand out connection info as JSON rather than a link; it is
+	// pasted into the same box, so it is read here.
+	if provider, isChannel, err := providerFromNewApiChannel(owner, raw); isChannel {
+		if err != nil {
+			return nil, err
+		}
+		return &ImportLink{Resource: ImportResourceProvider, Provider: provider}, nil
+	}
+
 	query, err := importLinkQuery(raw)
 	if err != nil {
 		return nil, err

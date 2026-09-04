@@ -15,6 +15,7 @@
 package object
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
@@ -107,4 +108,58 @@ func linkModels(query url.Values) []string {
 		models = append(models, name)
 	}
 	return models
+}
+
+// NewApiChannelType marks the connection info a New API site copies out of its
+// channel page. It is JSON rather than a link, and carries only these two
+// fields, so it is read where a link is pasted instead of getting a box of its
+// own.
+const NewApiChannelType = "newapi_channel_conn"
+
+type newApiChannel struct {
+	Type string `json:"_type"`
+	Key  string `json:"key"`
+	Url  string `json:"url"`
+}
+
+// providerFromNewApiChannel reads that connection info. The second value says
+// whether the text was this format at all, so text that is not falls through to
+// being read as a link.
+func providerFromNewApiChannel(owner string, raw string) (*Provider, bool, error) {
+	value := strings.TrimSpace(raw)
+	if !strings.HasPrefix(value, "{") {
+		return nil, false, nil
+	}
+
+	var channel newApiChannel
+	if err := json.Unmarshal([]byte(value), &channel); err != nil {
+		return nil, true, fmt.Errorf("this is neither a link nor JSON: %w", err)
+	}
+	if channel.Type != NewApiChannelType {
+		return nil, true, fmt.Errorf("this JSON is not New API connection info: %q", channel.Type)
+	}
+
+	site := strings.TrimRight(strings.TrimSpace(channel.Url), "/")
+	parsed, err := url.Parse(site)
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
+		return nil, true, fmt.Errorf("this connection info does not name a site: %q", channel.Url)
+	}
+	key := strings.TrimSpace(channel.Key)
+	if key == "" {
+		return nil, true, fmt.Errorf("this connection info carries no API key")
+	}
+
+	return &Provider{
+		Owner:       owner,
+		DisplayName: strings.TrimPrefix(parsed.Host, "www."),
+		// A New API site resells every vendor behind one OpenAI-compatible
+		// endpoint, so the models are whatever that one site sells.
+		Type:     "custom",
+		Status:   "enabled",
+		AuthMode: ProviderAuthProvider,
+		BaseUrl:  site,
+		ApiKey:   key,
+		Models:   []string{},
+		Icon:     site,
+	}, true, nil
 }

@@ -99,7 +99,7 @@ export function ProviderSourcePicker({
   onLink,
 }: {
   onPick: (source: ProviderSource) => void;
-  /** A vendor's own "add this provider" link, pasted rather than typed out. */
+  /** A vendor's "add this provider" link, or New API connection info. */
   onLink?: (link: string) => Promise<void>;
 }) {
   const [query, setQuery] = React.useState("");
@@ -148,7 +148,7 @@ export function ProviderSourcePicker({
         <div className="grid gap-1.5 rounded-lg border border-dashed p-3">
           <span className="flex items-center gap-2 text-sm font-medium">
             <Link2 className="size-4" />
-            {i18next.t("provider:Paste a provider link")}
+            {i18next.t("provider:Paste a link or connection info")}
           </span>
           <div className="flex flex-wrap gap-2">
             <Input
@@ -160,15 +160,15 @@ export function ProviderSourcePicker({
                   importLink();
                 }
               }}
-              placeholder="ccswitch://v1/import?resource=provider&..."
+              placeholder={"ccswitch://v1/import?... or {\"_type\":\"newapi_channel_conn\",...}"}
               className="min-w-0 flex-1"
             />
             <Button type="button" variant="outline" loading={importing} onClick={importLink}>
-              {i18next.t("provider:Read the link")}
+              {i18next.t("provider:Read it")}
             </Button>
           </div>
           <span className="text-muted-foreground text-xs">
-            {i18next.t("provider:Paste a provider link hint")}
+            {i18next.t("provider:Paste a link or connection info hint")}
           </span>
         </div>
       )}
