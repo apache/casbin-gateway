@@ -146,11 +146,10 @@ func patcherFor(target Target) (patcher, error) {
 	if target.Path == "" {
 		return nil, errors.New("path is required")
 	}
+	// An installation with no patcher is one Gateway can discover but cannot
+	// monitor, which is what StatusOf and EnsurePatched already call it.
 	patcher, ok := patchers[target.AgentId]
-	if !ok {
-		return nil, fmt.Errorf("unknown agent %q", target.AgentId)
-	}
-	if !patcher.Supported() {
+	if !ok || !patcher.Supported() {
 		return nil, fmt.Errorf("%s: %w", target.AgentId, ErrNotSupported)
 	}
 	return patcher, nil
