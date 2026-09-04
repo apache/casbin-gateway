@@ -195,6 +195,8 @@ export function AgentGridCard({
   busy: boolean;
   runBusy: boolean;
   onEnable: (providerId: string) => void;
+  /** Called once a program is picked for an agent nothing here can start. */
+  onLocated?: () => void;
   onToggleRunning: (agent: Agent, running: boolean) => void;
   onTogglePatch: () => void;
 }) {
@@ -365,6 +367,7 @@ export function AgentGridCard({
           status={status}
           busy={runBusy}
           className="h-7 px-2 text-xs"
+          onLocated={onLocated}
           onToggle={onToggleRunning}
         />
 

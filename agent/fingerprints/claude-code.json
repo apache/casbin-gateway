@@ -6,6 +6,9 @@
   "instanceEnv": "CLAUDE_CONFIG_DIR",
   "stateDir": "claude",
   "npmPackage": "@anthropic-ai/claude-code",
+  "bundledDirs": [
+    "Claude/claude-code/*"
+  ],
   "wingetPackage": "Anthropic.ClaudeCode",
   "homebrewCasks": [
     "claude-code",

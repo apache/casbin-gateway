@@ -303,6 +303,7 @@ export default function HomePage({account}: {account: Account}) {
               busy={busyKey === agentKey(agent)}
               runBusy={runBusyKey === agentKey(agent)}
               onEnable={providerId => activateProvider(agent, providerId)}
+              onLocated={() => scan(true)}
               onToggleRunning={toggleRunning}
               onTogglePatch={() => togglePatch(agent)}
             />

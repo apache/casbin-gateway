@@ -190,6 +190,7 @@
     "No instances yet": "暂无实例 - 添加一个即可用第二个账号登录",
     "No other provider speaks this API": "没有其他供应商使用相同的 API 协议",
     "No output yet": "暂无输出",
+    "No program hint": "网关找到了该智能体的数据目录，但没有找到它的可执行程序，因此无法从这里启动。选择程序后即可启动。",
     "No provider yet": "还没有添加任何供应商。",
     "No rule yet": "还没有任何规则",
     "No supported agents found": "没有发现本机安装的智能体",

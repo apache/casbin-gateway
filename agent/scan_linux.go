@@ -44,6 +44,7 @@ func scan(ctx context.Context) []Installation {
 			if ctx.Err() != nil {
 				return installations
 			}
+			installations = append(installations, scanBundledDirs(fingerprint, home)...)
 			installations = append(installations, scanNative(fingerprint, home)...)
 			installations = append(installations, scanHomeDirs(fingerprint, home)...)
 			installations = append(installations, scanNpmPatterns(ctx, fingerprint, userNpmPatterns(fingerprint, home.path), home.owner, fileOwner)...)
@@ -79,6 +80,12 @@ func scan(ctx context.Context) []Installation {
 	result := expandSharedCodexInstallations(dedupeInstallations(installations), homes)
 	fillAccounts(result, homes)
 	return result
+}
+
+// appDataRoot is where an app keeps the data of one account, which is where a
+// copy of an agent it ships goes.
+func appDataRoot(home homeDir) string {
+	return filepath.Join(home.path, ".config")
 }
 
 func readHomes(passwdPath string) []homeDir {

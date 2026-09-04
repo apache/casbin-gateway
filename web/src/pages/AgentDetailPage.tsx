@@ -147,11 +147,13 @@ function RuntimeCard({
   agent,
   status,
   busy,
+  onLocated,
   onToggle,
 }: {
   agent: Agent;
   status?: AgentRuntime;
   busy: boolean;
+  onLocated: () => void;
   onToggle: (agent: Agent, running: boolean) => void;
 }) {
   return (
@@ -174,7 +176,7 @@ function RuntimeCard({
           </p>
         )}
 
-        <RunButton agent={agent} status={status} busy={busy} onToggle={onToggle} />
+        <RunButton agent={agent} status={status} busy={busy} onLocated={onLocated} onToggle={onToggle} />
       </CardContent>
     </Card>
   );
@@ -474,6 +476,7 @@ export default function AgentDetailPage({account}: {account: Account}) {
           agent={agent}
           status={runtimeOf(runtime, agent)}
           busy={runBusyKey === agentKey(agent)}
+          onLocated={() => scan(true)}
           onToggle={toggleRunning}
         />
 

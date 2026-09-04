@@ -184,6 +184,10 @@ func resolve(installation agent.Installation, action string, version string) Pla
 		plan.Detail = "Gateway was pointed at this program rather than installing it, so it is removed from the list rather than from disk"
 		return plan
 	}
+	if installation.InstallMethod == agent.InstallMethodBundled {
+		plan.Detail = "This copy belongs to the app that downloaded it, which is what updates and removes it"
+		return plan
+	}
 
 	notes := []string{}
 	spec := target{installation: installation, packages: packages,

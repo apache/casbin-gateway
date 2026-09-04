@@ -190,6 +190,7 @@
     "No instances yet": "No instances yet - add one to sign in with a second account",
     "No other provider speaks this API": "No other provider speaks this API",
     "No output yet": "No output yet",
+    "No program hint": "Gateway found this agent's files but not its program, so there is nothing here to start. Pick the program and it can be started from here.",
     "No provider yet": "No provider has been added yet.",
     "No rule yet": "no rule yet",
     "No supported agents found": "No supported agents found",

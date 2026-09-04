@@ -53,6 +53,7 @@ func scan(ctx context.Context) []Installation {
 				return installations
 			}
 			installations = append(installations, scanWindowsNative(fingerprint, home)...)
+			installations = append(installations, scanBundledDirs(fingerprint, home)...)
 			installations = append(installations, scanWindowsWinget(ctx, fingerprint, home)...)
 			installations = append(installations, scanWindowsNpm(ctx, fingerprint, home)...)
 			installations = append(installations, scanWindowsUserPrograms(ctx, fingerprint, home)...)
@@ -178,6 +179,10 @@ func appDataDir(home homeDir, kind, variable string) string {
 
 func localAppData(home homeDir) string   { return appDataDir(home, "Local", "LOCALAPPDATA") }
 func roamingAppData(home homeDir) string { return appDataDir(home, "Roaming", "APPDATA") }
+
+// appDataRoot is where an app keeps the data of one account, which is where a
+// copy of an agent it ships goes.
+func appDataRoot(home homeDir) string { return roamingAppData(home) }
 
 func scanHermesWindows(home homeDir) []Installation {
 	root := filepath.Join(hermes.Home(home.path), hermes.ProjectDir)

@@ -205,6 +205,7 @@ export default function AgentsPage({account}: {account: Account}) {
             agent={record}
             status={runtimeOf(runtime, record)}
             busy={runBusyKey === agentKey(record)}
+            onLocated={() => scan(true)}
             onToggle={toggleRunning}
           />
           <ToolUpgradeConfirmDialog

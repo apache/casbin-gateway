@@ -12,15 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {Play, Square} from "lucide-react";
+import {FolderSearch, Play, Square} from "lucide-react";
 import i18next from "i18next";
 
+import {AgentPathDialog} from "@/components/AgentPathDialog";
 import {ConfirmDialog} from "@/components/shared/confirm-dialog";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {SimpleTooltip} from "@/components/ui/tooltip";
 import {cn} from "@/lib/utils";
 import type {Agent, AgentRuntime} from "@/types";
+
+/**
+ * Why an installation is not running. A missing program is the one answer the
+ * user can act on, so it is said in their own language rather than passed
+ * through from the host.
+ */
+function stoppedHint(status: AgentRuntime) {
+  return status.canStart ? status.detail : i18next.t("agent:No program hint");
+}
 
 /** Whether the installation has live processes, with its pids on hover. */
 export function RunBadge({status}: {status?: AgentRuntime}) {
@@ -29,7 +39,7 @@ export function RunBadge({status}: {status?: AgentRuntime}) {
   }
   if (!status.running) {
     return (
-      <SimpleTooltip title={status.detail}>
+      <SimpleTooltip title={stoppedHint(status)}>
         <span>
           <Badge variant="muted">{i18next.t("agent:Stopped")}</Badge>
         </span>
@@ -57,7 +67,7 @@ export function RunDot({status}: {status?: AgentRuntime}) {
   const state = i18next.t(status.running ? "agent:Running" : "agent:Stopped");
   const detail = status.running
     ? `${i18next.t("agent:Processes")}: ${status.pids.join(", ")}`
-    : status.detail;
+    : stoppedHint(status);
 
   return (
     <SimpleTooltip title={detail ? `${state} · ${detail}` : state}>
@@ -74,12 +84,17 @@ export function RunDot({status}: {status?: AgentRuntime}) {
 /**
  * The start/stop control. Starting is harmless enough to happen on the click,
  * while stopping ends work in progress and is confirmed first.
+ *
+ * An installation found by the state directory it left behind has no program to
+ * run, and a greyed-out button is a dead end there: it offers the picker that
+ * points Gateway at the program instead.
  */
 export function RunButton({
   agent,
   status,
   busy,
   className,
+  onLocated,
   onToggle,
 }: {
   agent: Agent;
@@ -87,6 +102,8 @@ export function RunButton({
   busy: boolean;
   /** The cards run it smaller than a table row does. */
   className?: string;
+  /** Called once a program is picked, which is when a rescan can start it. */
+  onLocated?: () => void;
   onToggle: (agent: Agent, running: boolean) => void;
 }) {
   if (status?.running) {
@@ -105,22 +122,38 @@ export function RunButton({
     );
   }
 
-  const startable = status?.canStart === true;
+  // Only once the status is in: until then nothing is known about a launcher.
+  if (status !== undefined && !status.canStart) {
+    return (
+      <SimpleTooltip title={i18next.t("agent:No program hint")}>
+        <span>
+          <AgentPathDialog
+            agentId={agent.agentId}
+            name={agent.name}
+            onAdded={onLocated}
+            trigger={
+              <Button size="sm" variant="outline" className={className}>
+                <FolderSearch />
+                {i18next.t("agent:Locate")}
+              </Button>
+            }
+          />
+        </span>
+      </SimpleTooltip>
+    );
+  }
+
   return (
-    <SimpleTooltip title={startable ? "" : status?.detail}>
-      <span>
-        <Button
-          size="sm"
-          variant="outline"
-          className={className}
-          disabled={!startable}
-          loading={busy}
-          onClick={() => onToggle(agent, false)}
-        >
-          <Play />
-          {i18next.t("agent:Start")}
-        </Button>
-      </span>
-    </SimpleTooltip>
+    <Button
+      size="sm"
+      variant="outline"
+      className={className}
+      disabled={status === undefined}
+      loading={busy}
+      onClick={() => onToggle(agent, false)}
+    >
+      <Play />
+      {i18next.t("agent:Start")}
+    </Button>
   );
 }

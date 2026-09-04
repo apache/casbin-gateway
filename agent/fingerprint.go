@@ -59,9 +59,14 @@ type Fingerprint struct {
 	WingetPackage       string   `json:"wingetPackage,omitempty"`
 	// MsStorePackage is the Microsoft Store product id, which is how winget
 	// installs an agent published nowhere else.
-	MsStorePackage      string   `json:"msStorePackage,omitempty"`
-	MSIXFamily          string   `json:"msixFamily,omitempty"`
-	DesktopInstallerDir string   `json:"desktopInstallerDir,omitempty"`
+	MsStorePackage      string `json:"msStorePackage,omitempty"`
+	MSIXFamily          string `json:"msixFamily,omitempty"`
+	DesktopInstallerDir string `json:"desktopInstallerDir,omitempty"`
+	// BundledDirs are directories another app keeps its own copy of this agent
+	// in, under the account's application data - %APPDATA% on Windows,
+	// ~/Library/Application Support on macOS, ~/.config elsewhere. A "*" segment
+	// is the directory these apps keep one of per release.
+	BundledDirs         []string `json:"bundledDirs,omitempty"`
 	WindowsProgramDirs  []string `json:"windowsProgramDirs,omitempty"`
 	WindowsUserDirs     []string `json:"windowsUserDirs,omitempty"`
 	HomeDirs            []string `json:"homeDirs,omitempty"`
