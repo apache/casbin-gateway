@@ -57,10 +57,13 @@ export interface NavGroup {
  * not need the tree rebuilt.
  */
 export const navGroups: NavGroup[] = [
+  // The setup pages come first — agents, the models behind them, and the gates
+  // they pass through — then what agents ran and what it cost, settings last.
   {key: "/", label: "agent:Agents", icon: Bot, path: "/"},
   // The table of installations is the home screen's own advanced view, linked
   // from it rather than competing with it in the rail.
   {key: "/agents", label: "agent:Advanced view", icon: Table2, path: "/agents", adminOnly: true, hidden: true},
+  {key: "/providers", label: "provider:Providers", icon: Plug, path: "/providers"},
   {
     key: "/agent-configs",
     label: "agentConfig:Skills, MCP & Prompts",
@@ -68,6 +71,8 @@ export const navGroups: NavGroup[] = [
     path: "/agent-configs",
     adminOnly: true,
   },
+  {key: "/authenticity", label: "audit:Authenticity", icon: ShieldCheck, path: "/authenticity", adminOnly: true},
+  {key: "/permissions", label: "agent:Permissions", icon: ShieldHalf, path: "/permissions", adminOnly: true},
   {
     key: "/agent-sessions",
     label: "agent:Agent Sessions",
@@ -76,9 +81,6 @@ export const navGroups: NavGroup[] = [
     adminOnly: true,
   },
   {key: "/agent-records", label: "agent:Agent Records", icon: FileSearch, path: "/agent-records", adminOnly: true},
-  {key: "/permissions", label: "agent:Permissions", icon: ShieldHalf, path: "/permissions", adminOnly: true},
-  {key: "/providers", label: "provider:Providers", icon: Plug, path: "/providers"},
-  {key: "/authenticity", label: "audit:Authenticity", icon: ShieldCheck, path: "/authenticity", adminOnly: true},
   {key: "/llm-records", label: "llm:LLM Records", icon: Logs, path: "/llm-records", adminOnly: true},
   {key: "/usage", label: "usage:Usage", icon: ChartColumn, path: "/usage", adminOnly: true},
   {key: "/pricing", label: "usage:Model pricing", icon: CircleDollarSign, path: "/pricing", adminOnly: true},
