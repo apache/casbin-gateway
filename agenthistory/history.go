@@ -146,6 +146,7 @@ func scan(home string) []Session {
 	// compressed one its own reader has to open.
 	sessions = append(sessions, scanOpencode(home)...)
 	sessions = append(sessions, scanDsh(home)...)
+	sessions = append(sessions, scanCursor(home)...)
 
 	sort.SliceStable(sessions, func(left, right int) bool {
 		return sessions[left].LastTime > sessions[right].LastTime

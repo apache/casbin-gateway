@@ -92,7 +92,7 @@
 | <img src="https://www.google.com/s2/favicons?domain=openai.com&sz=64" width="16" height="16" alt=""> **Codex CLI** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm · brew |
 | <img src="https://www.google.com/s2/favicons?domain=openai.com&sz=64" width="16" height="16" alt=""> **ChatGPT 桌面版（Codex）** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | — |
 | <img src="https://www.google.com/s2/favicons?domain=gemini.google.com&sz=64" width="16" height="16" alt=""> **Gemini CLI** | ✅ | ✅ Gemini | ✅ | ✅ | ✅ | ✅ | npm |
-| <img src="https://www.google.com/s2/favicons?domain=cursor.com&sz=64" width="16" height="16" alt=""> **Cursor** | ✅ | — | ✅ | ✅ | — | — | brew |
+| <img src="https://www.google.com/s2/favicons?domain=cursor.com&sz=64" width="16" height="16" alt=""> **Cursor** | ✅ | — | ✅ | ✅ | — | ✅ | brew |
 | <img src="https://www.google.com/s2/favicons?domain=cursor.com&sz=64" width="16" height="16" alt=""> **Cursor Agent** | ✅ | — | ✅ | ✅ | — | — | — |
 | <img src="https://www.google.com/s2/favicons?domain=windsurf.com&sz=64" width="16" height="16" alt=""> **Windsurf** | ✅ | — | ✅ | — | ✅ | — | brew |
 | <img src="https://www.google.com/s2/favicons?domain=opencode.ai&sz=64" width="16" height="16" alt=""> **opencode** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm |
