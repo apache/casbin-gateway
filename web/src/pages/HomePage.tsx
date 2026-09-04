@@ -311,7 +311,7 @@ export default function HomePage({account}: {account: Account}) {
       )}
 
       {/* What is not here yet, so an empty machine has somewhere to go. */}
-      <AgentCatalog agents={agents} enabled={scanned} installer={installer} />
+      <AgentCatalog agents={agents} enabled={scanned} installer={installer} onLocated={() => scan(true)} />
     </PageContainer>
   );
 }

@@ -31,6 +31,7 @@ import (
 // discovered binary or traversing arbitrary filesystem roots.
 func scan(ctx context.Context) []Installation {
 	homes := readHomes("/etc/passwd")
+	paths := newPathIndex()
 
 	var installations []Installation
 	for i := range fingerprints {
@@ -50,6 +51,7 @@ func scan(ctx context.Context) []Installation {
 		installations = append(installations, scanSystemNpm(ctx, fingerprint)...)
 		installations = append(installations, scanSystemPackages(ctx, fingerprint)...)
 		installations = append(installations, scanHomebrew(ctx, fingerprint)...)
+		installations = append(installations, scanPathDirs(fingerprint, paths, installations[mark:])...)
 		stampAgentId(installations, mark, fingerprint.ID)
 		installations = append(installations, scanStateDirs(fingerprint, homes, installations[mark:])...)
 		fillMissingVersions(installations, mark, fingerprint)
@@ -71,6 +73,9 @@ func scan(ctx context.Context) []Installation {
 	// Last, so that an agent found both on disk and by its port keeps the
 	// richer install-layout row when the two resolve to the same executable.
 	installations = append(installations, scanLocalServers(ctx)...)
+	// After every layout, so a chosen program yields to the same one found where
+	// its installer puts it.
+	installations = append(installations, ManualInstallations()...)
 	result := expandSharedCodexInstallations(dedupeInstallations(installations), homes)
 	fillAccounts(result, homes)
 	return result

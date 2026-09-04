@@ -27,6 +27,7 @@ import type {
   AgentUpdate,
   AgentUsage,
   AgentVersionCatalog,
+  BrowseListing,
 } from "@/types";
 
 export interface PatchTarget {
@@ -66,6 +67,21 @@ export function setAgentVersion(target: PatchTarget, version: string) {
 /** Removes one installation with the manager that installed it. */
 export function uninstallAgent(target: PatchTarget) {
   return request<AgentInstallJob>("/api/uninstall-agent", "POST", target);
+}
+
+/** Lists one directory of the host, for picking a program out of it. */
+export function browseLocalPath(path = "") {
+  return request<BrowseListing>(`/api/browse-local-path${query({path: path})}`);
+}
+
+/** Records a program someone chose as an installation of an agent. */
+export function addAgentPath(agentId: string, path: string) {
+  return request<Agent>("/api/add-agent-path", "POST", {agentId: agentId, path: path});
+}
+
+/** Forgets one such program, leaving what is on disk alone. */
+export function removeAgentPath(agentId: string, path: string) {
+  return request<string>("/api/remove-agent-path", "POST", {agentId: agentId, path: path});
 }
 
 /** The releases one agent's package manager publishes, newest first. */

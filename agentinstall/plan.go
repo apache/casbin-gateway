@@ -180,6 +180,10 @@ func resolve(installation agent.Installation, action string, version string) Pla
 		plan.Detail = "Gateway found this agent's configuration directory but not its program, so there is nothing here to remove"
 		return plan
 	}
+	if action == ActionUninstall && installation.InstallMethod == agent.InstallMethodManual {
+		plan.Detail = "Gateway was pointed at this program rather than installing it, so it is removed from the list rather than from disk"
+		return plan
+	}
 
 	notes := []string{}
 	spec := target{installation: installation, packages: packages,

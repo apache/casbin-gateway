@@ -72,6 +72,14 @@ func Scan(forceRefresh bool) ([]Installation, error) {
 	return cloneInstallations(current.result), current.err
 }
 
+// invalidateScanCache drops the cached result so a change Gateway made itself
+// shows up without waiting the cache out.
+func invalidateScanCache() {
+	installationCache.Lock()
+	installationCache.updatedAt = time.Time{}
+	installationCache.Unlock()
+}
+
 func scanWithTimeout() ([]Installation, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), scanTimeout)
 	defer cancel()

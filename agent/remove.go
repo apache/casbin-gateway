@@ -35,8 +35,11 @@ var sharedInstallDirs = map[string]bool{
 // fingerprint declares for this agent, or, where that directory is shared, the
 // launcher alone. The second result marks which of the two it is. An agent's
 // state directory is never part of the answer.
+// A program someone pointed Gateway at is never deleted: forgetting the row is
+// what removing it means.
 func RemovablePathOf(installation Installation) (string, bool) {
-	if installation.Path == "" || installation.InstallMethod == InstallMethodConfig {
+	if installation.Path == "" || installation.InstallMethod == InstallMethodConfig ||
+		installation.InstallMethod == InstallMethodManual {
 		return "", false
 	}
 

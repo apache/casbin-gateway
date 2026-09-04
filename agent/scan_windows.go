@@ -37,6 +37,7 @@ type homeDir struct {
 // neither executes discovered binaries nor walks arbitrary filesystem roots.
 func scan(ctx context.Context) []Installation {
 	homes := windowsHomes(ctx)
+	paths := newPathIndex()
 
 	var installations []Installation
 	for i := range fingerprints {
@@ -58,6 +59,7 @@ func scan(ctx context.Context) []Installation {
 		installations = append(installations, scanWindowsDesktop(ctx, fingerprint, homes)...)
 		installations = append(installations, scanMachineWinget(ctx, fingerprint)...)
 		installations = append(installations, scanMachinePrograms(ctx, fingerprint)...)
+		installations = append(installations, scanPathDirs(fingerprint, paths, installations[mark:])...)
 		stampAgentId(installations, mark, fingerprint.ID)
 		installations = append(installations, scanStateDirs(fingerprint, homes, installations[mark:])...)
 		fillMissingVersions(installations, mark, fingerprint)
@@ -73,6 +75,9 @@ func scan(ctx context.Context) []Installation {
 	// Last, so that an agent found both on disk and by its port keeps the
 	// richer install-layout row when the two resolve to the same executable.
 	installations = append(installations, scanLocalServers(ctx)...)
+	// After every layout, so a chosen program yields to the same one found where
+	// its installer puts it.
+	installations = append(installations, ManualInstallations()...)
 
 	installations = expandSharedCodexWindowsInstallations(dedupeInstallations(installations), homes)
 	// Whatever layout an installation came from, its launcher may carry a

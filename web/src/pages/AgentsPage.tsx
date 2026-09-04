@@ -19,6 +19,7 @@ import i18next from "i18next";
 import * as Setting from "@/Setting";
 import {AgentCatalog} from "@/components/AgentCatalog";
 import {AgentIcon} from "@/components/AgentIcon";
+import {AgentPathForgetButton} from "@/components/AgentPathDialog";
 import {RunBadge, RunButton} from "@/components/AgentRunControl";
 import {
   AgentUpdateBadge,
@@ -39,6 +40,7 @@ import {
   agentDetailPath,
   agentKey,
   directMode,
+  manualMethod,
   monitorAgentId,
   runtimeOf,
   updateOf,
@@ -228,6 +230,9 @@ export default function AgentsPage({account}: {account: Account}) {
             onConfirm={() => installer.uninstall(record)}
           />
           {patchButton(record)}
+          {record.installMethod === manualMethod ? (
+            <AgentPathForgetButton agent={record} onRemoved={() => scan(true)} />
+          ) : null}
         </div>
       ),
     },
@@ -320,7 +325,7 @@ export default function AgentsPage({account}: {account: Account}) {
         }
       />
 
-      <AgentCatalog agents={agents} enabled={scanned} installer={installer} />
+      <AgentCatalog agents={agents} enabled={scanned} installer={installer} onLocated={() => scan(true)} />
     </PageContainer>
   );
 }

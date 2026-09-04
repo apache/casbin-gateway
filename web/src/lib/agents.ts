@@ -42,6 +42,9 @@ export const builtinProvider = "-";
 export const gatewayMode = "gateway";
 export const directMode = "direct";
 
+/** A program someone pointed Gateway at, forgotten rather than uninstalled. */
+export const manualMethod = "manual";
+
 /**
  * What the agent talks to with nothing bound: the model its own configuration
  * names, or the service it signs in to. Binding nothing puts it back on this.

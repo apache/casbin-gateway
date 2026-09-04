@@ -27,9 +27,12 @@ export function AgentCatalog({
   agents,
   enabled = true,
   installer,
+  onLocated,
 }: {
   agents: Agent[];
   enabled?: boolean;
+  /** Called once a program is picked, which is when a rescan drops its row. */
+  onLocated?: () => void;
   /**
    * The page's own installer. It is passed in rather than made here: the page
    * upgrades the agents it already has through the same one, and two of them
@@ -59,6 +62,7 @@ export function AgentCatalog({
             job={jobs[item.agentId]}
             busy={busyId === item.agentId}
             onInstall={install}
+            onLocated={onLocated}
           />
         ))}
       </div>

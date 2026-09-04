@@ -362,6 +362,28 @@ export interface AgentCatalogEntry {
   install: AgentInstallPlan;
 }
 
+/** One file or directory of a host listing, for the program picker. */
+export interface BrowseEntry {
+  name: string;
+  path: string;
+  dir: boolean;
+  size?: number;
+  /** True for a file this host would run, the only kind to pick. */
+  executable?: boolean;
+}
+
+/** One directory of the host, listed for choosing a program in it. */
+export interface BrowseListing {
+  path: string;
+  /** Empty at the top of a tree. */
+  parent: string;
+  home: string;
+  /** Where a walk can start: the drives on Windows, "/" elsewhere. */
+  roots: string[];
+  entries: BrowseEntry[];
+  truncated?: boolean;
+}
+
 /** The live processes of one agent installation, keyed by owner and path. */
 export interface AgentRuntime {
   agentId: string;
