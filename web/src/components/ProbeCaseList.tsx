@@ -23,6 +23,7 @@ import {EmptyState} from "@/components/shared/empty-state";
 import {Field, FormDialog} from "@/components/shared/form-dialog";
 import {Loading} from "@/components/shared/loading";
 import {NumberInput} from "@/components/shared/number-input";
+import {protocolOptions} from "@/components/shared/brand-options";
 import {SimpleSelect} from "@/components/shared/simple-select";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
@@ -442,11 +443,7 @@ function CaseDialog({
           <SimpleSelect
             value={draft.protocol}
             onChange={value => set({protocol: value as ProbeCase["protocol"]})}
-            options={[
-              {label: i18next.t("audit:Both APIs"), value: ""},
-              {label: "Anthropic", value: "anthropic"},
-              {label: "OpenAI", value: "openai"},
-            ]}
+            options={[{label: i18next.t("audit:Both APIs"), value: ""}, ...protocolOptions]}
           />
         </Field>
         <Field label={i18next.t("audit:Only these vendors")} hint={i18next.t("audit:Vendors hint")}>

@@ -48,6 +48,8 @@ export function emptyQuotaConfig(): QuotaConfig {
 export interface QuotaPreset {
   key: string;
   label: string;
+  /** The site, or the image, the project's own mark comes from. */
+  icon: string;
   config: QuotaConfig;
 }
 
@@ -55,6 +57,7 @@ export const quotaPresets: QuotaPreset[] = [
   {
     key: "newapi",
     label: "New API",
+    icon: "newapi.pro",
     config: {
       ...emptyQuotaConfig(),
       url: "/api/user/self",
@@ -68,6 +71,9 @@ export const quotaPresets: QuotaPreset[] = [
   {
     key: "oneapi",
     label: "One API",
+    // One API has no site of its own, and the logo in its repository is
+    // OpenAI's, so it is marked by where the project lives instead.
+    icon: "github.com",
     config: {
       ...emptyQuotaConfig(),
       url: "/api/user/self",

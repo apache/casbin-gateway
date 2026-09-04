@@ -26,6 +26,8 @@ export interface SelectOption {
   label: React.ReactNode;
   value: string;
   disabled?: boolean;
+  /** What a search matches against, for a label that is a brand mark and a name. */
+  text?: string;
 }
 
 // Radix refuses an item whose value is the empty string, but "" is exactly how
@@ -165,7 +167,11 @@ export function SearchSelect({
                 </CommandItem>
               ) : null}
               {items.map(option => (
-                <CommandItem key={option.value} value={String(option.label)} onSelect={() => pick(option.value)}>
+                <CommandItem
+                  key={option.value}
+                  value={option.text ?? String(option.label)}
+                  onSelect={() => pick(option.value)}
+                >
                   <Check className={cn("size-4", option.value === value ? "opacity-100" : "opacity-0")} />
                   {option.label}
                 </CommandItem>

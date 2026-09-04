@@ -30,6 +30,7 @@ import {CodeText, ResultScreen} from "@/components/shared/misc";
 import {NumberInput} from "@/components/shared/number-input";
 import {PageContainer, PageHeader, Section} from "@/components/shared/page-header";
 import {PasswordInput} from "@/components/shared/password-input";
+import {baseUrlOptions, providerTypeOptions} from "@/components/shared/brand-options";
 import {SearchSelect, SimpleSelect} from "@/components/shared/simple-select";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
@@ -37,7 +38,6 @@ import {Textarea} from "@/components/ui/textarea";
 import {
   authClient,
   baseUrlPlaceholder,
-  baseUrlPresets,
   providerProtocol,
   gatewayBaseUrl,
   localShell,
@@ -195,11 +195,7 @@ export default function ProviderEditPage() {
           <SimpleSelect
             value={provider.type}
             onChange={value => setField("type", value)}
-            options={[
-              {label: "OpenAI", value: "openai"},
-              {label: "Anthropic", value: "anthropic"},
-              {label: "Custom", value: "custom"},
-            ]}
+            options={providerTypeOptions}
           />
         </Field>
         <Field
@@ -216,7 +212,7 @@ export default function ProviderEditPage() {
             allowCustomValue
             value={provider.baseUrl}
             placeholder={baseUrlPlaceholder(provider.type)}
-            options={baseUrlPresets(provider.type)}
+            options={baseUrlOptions(provider.type)}
             onChange={value => setField("baseUrl", value)}
           />
         </Field>

@@ -23,6 +23,7 @@ import {AgentIcon} from "@/components/AgentIcon";
 import {DataTable, type Column} from "@/components/shared/data-table";
 import {CodeBlock, CodeText, DescriptionList, UnauthorizedResult} from "@/components/shared/misc";
 import {PageContainer, PageHeader} from "@/components/shared/page-header";
+import {agentOption} from "@/components/shared/brand-options";
 import {SimpleSelect} from "@/components/shared/simple-select";
 import {getOutcomeVariant, monitorAgentId} from "@/lib/agents";
 import {MessageAlert} from "@/components/ui/alert";
@@ -292,7 +293,7 @@ export default function AgentRecordsPage({account}: {account: Account}) {
           onChange={value => setFilter("agent", value)}
           options={[
             {label: i18next.t("agent:All agents"), value: ALL},
-            ...agentOptions.map(value => ({label: value, value})),
+            ...agentOptions.map(value => agentOption(value)),
           ]}
         />
         <SimpleSelect

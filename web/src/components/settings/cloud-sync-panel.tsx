@@ -20,6 +20,7 @@ import * as CloudSyncBackend from "@/backend/CloudSyncBackend";
 import * as Setting from "@/Setting";
 import {Field} from "@/components/shared/form-dialog";
 import {PasswordInput} from "@/components/shared/password-input";
+import {storageOption} from "@/components/shared/brand-options";
 import {SimpleSelect} from "@/components/shared/simple-select";
 import {MessageAlert} from "@/components/ui/alert";
 import {Badge} from "@/components/ui/badge";
@@ -216,7 +217,7 @@ export function CloudSyncPanel({onSynced}: {onSynced: () => void}) {
                 setKind(value);
                 setTested("");
               }}
-              options={kinds.map(item => ({label: text(item.displayName), value: item.name}))}
+              options={kinds.map(item => storageOption(item.name, text(item.displayName)))}
             />
           </Field>
 

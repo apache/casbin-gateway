@@ -22,6 +22,7 @@ import {Field} from "@/components/shared/form-dialog";
 import {NumberInput} from "@/components/shared/number-input";
 import {PasswordInput} from "@/components/shared/password-input";
 import {Section} from "@/components/shared/page-header";
+import {vendorOption} from "@/components/shared/brand-options";
 import {SimpleSelect} from "@/components/shared/simple-select";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
@@ -222,7 +223,7 @@ export function ProviderQuotaSection({
                   onChange({...preset.config, headers: {...preset.config.headers}});
                 }
               }}
-              options={quotaPresets.map(preset => ({label: preset.label, value: preset.key}))}
+              options={quotaPresets.map(preset => vendorOption(preset.key, preset.label, preset.icon))}
             />
           </Field>
           <Field label={i18next.t("provider:Balance URL")} htmlFor="quota-url" hint={i18next.t("provider:Balance URL hint")}>

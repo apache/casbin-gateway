@@ -24,6 +24,7 @@ import {UsageBreakdown} from "@/components/usage/usage-breakdown";
 import {UsageHero} from "@/components/usage/usage-hero";
 import {UsageTrendChart} from "@/components/usage/usage-trend-chart";
 import {PageContainer, PageHeader} from "@/components/shared/page-header";
+import {agentOption} from "@/components/shared/brand-options";
 import {SimpleSelect} from "@/components/shared/simple-select";
 import {UnauthorizedResult} from "@/components/shared/misc";
 import {MessageAlert} from "@/components/ui/alert";
@@ -285,7 +286,7 @@ export default function UsagePage({account}: {account: Account}) {
               onChange={setAgent}
               options={[
                 {label: i18next.t("usage:Every agent"), value: ""},
-                ...knownAgents.map(name => ({label: name, value: name})),
+                ...knownAgents.map(name => agentOption(name)),
               ]}
             />
             <SimpleSelect

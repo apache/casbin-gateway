@@ -556,10 +556,6 @@ export function presetOfSource(source: ProviderSource) {
 }
 
 /** The base URLs and models offered for a provider type, from the vendors of it. */
-export function baseUrlPresets(type: string) {
-  return providerPresets.filter(preset => preset.type === type).map(preset => preset.baseUrl);
-}
-
 export function modelPresets(type: string) {
   return providerPresets.filter(preset => preset.type === type).flatMap(preset => preset.models);
 }

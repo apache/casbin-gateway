@@ -13,12 +13,13 @@
 // limitations under the License.
 
 import * as React from "react";
-import {FileCog, RotateCcw} from "lucide-react";
+import {Bot, FileCog, RotateCcw} from "lucide-react";
 import i18next from "i18next";
 
 import * as AgentBackend from "@/backend/AgentBackend";
 import {EnvSnippet} from "@/components/EnvSnippet";
 import {EnvWarningBanner} from "@/components/EnvWarningBanner";
+import {AgentIcon} from "@/components/AgentIcon";
 import {ProviderIcon} from "@/components/ProviderIcon";
 import {ConfirmDialog} from "@/components/shared/confirm-dialog";
 import {Loading} from "@/components/shared/loading";
@@ -260,6 +261,7 @@ export function ProviderCard({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={builtinProvider}>
+              <AgentIcon agent={agent.agentId || agent.name} size={16} fallback={<Bot className="size-4" />} />
               {agentBuiltin(agent)}
               <span className="ml-2 text-xs text-muted-foreground">
                 {i18next.t("agent:Built-in")}

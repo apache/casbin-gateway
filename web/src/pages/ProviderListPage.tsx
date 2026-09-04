@@ -39,6 +39,7 @@ import {ErrorState} from "@/components/shared/empty-state";
 import {Field, FormDialog} from "@/components/shared/form-dialog";
 import {PageContainer, PageHeader} from "@/components/shared/page-header";
 import {PasswordInput} from "@/components/shared/password-input";
+import {baseUrlOptions, providerTypeOptions} from "@/components/shared/brand-options";
 import {SearchSelect, SimpleSelect} from "@/components/shared/simple-select";
 import {MessageAlert} from "@/components/ui/alert";
 import {Badge} from "@/components/ui/badge";
@@ -51,7 +52,6 @@ import {
   authProvider,
   authClient,
   baseUrlPlaceholder,
-  baseUrlPresets,
   customSource,
   providerIdOf,
   providerSlug,
@@ -589,7 +589,7 @@ export default function ProviderListPage({account}: {account: Account}) {
                   id="provider-base-url"
                   value={form.baseUrl}
                   placeholder={baseUrlPlaceholder(form.type)}
-                  options={baseUrlPresets(form.type)}
+                  options={baseUrlOptions(form.type)}
                   onChange={value => setFormField("baseUrl", value)}
                 />
               </Field>
@@ -670,11 +670,7 @@ export default function ProviderListPage({account}: {account: Account}) {
                 <SimpleSelect
                   value={form.type}
                   onChange={value => setFormField("type", value)}
-                  options={[
-                    {label: "OpenAI", value: "openai"},
-                    {label: "Anthropic", value: "anthropic"},
-                    {label: "Custom", value: "custom"},
-                  ]}
+                  options={providerTypeOptions}
                 />
               </Field>
               {source.key === customSource ? null : (
@@ -684,7 +680,7 @@ export default function ProviderListPage({account}: {account: Account}) {
                     id="provider-base-url"
                     value={form.baseUrl}
                     placeholder={baseUrlPlaceholder(form.type)}
-                    options={baseUrlPresets(form.type)}
+                    options={baseUrlOptions(form.type)}
                     onChange={value => setFormField("baseUrl", value)}
                   />
                 </Field>

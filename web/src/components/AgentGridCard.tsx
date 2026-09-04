@@ -286,6 +286,7 @@ export function AgentGridCard({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={builtinProvider}>
+                <AgentIcon agent={agent.agentId || agent.name} size={16} fallback={<Bot className="size-4" />} />
                 {agentBuiltin(agent)}
                 <span className="text-muted-foreground ml-2 text-xs">
                   {i18next.t("agent:Built-in")}

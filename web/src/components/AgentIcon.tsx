@@ -47,13 +47,22 @@ const agentSites: Record<string, string> = {
   "CodeBuddy Code": "codebuddy.ai",
 };
 
+// Records name an agent by id, and a few ids do not spell out the name above.
+const agentIdSites: Record<string, string> = {
+  codebuddy: "codebuddy.ai",
+  dsh: "deepseek.com",
+  "kimi-code": "kimi.com",
+};
+
 const agentKey = (agent: unknown) =>
   String(agent || "")
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "");
 
-const agentSitesByKey = Object.keys(agentSites).reduce<Record<string, string>>((sites, name) => {
-  sites[agentKey(name)] = agentSites[name];
+const agentSitesByKey = [agentSites, agentIdSites].reduce<Record<string, string>>((sites, source) => {
+  Object.keys(source).forEach(name => {
+    sites[agentKey(name)] = source[name];
+  });
   return sites;
 }, {});
 

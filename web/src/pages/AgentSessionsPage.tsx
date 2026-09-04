@@ -23,6 +23,7 @@ import {AgentIcon} from "@/components/AgentIcon";
 import {DataTable, type Column} from "@/components/shared/data-table";
 import {UnauthorizedResult} from "@/components/shared/misc";
 import {PageContainer, PageHeader} from "@/components/shared/page-header";
+import {agentOption} from "@/components/shared/brand-options";
 import {SimpleSelect} from "@/components/shared/simple-select";
 import {StatCard} from "@/components/shared/stat-card";
 import {SimpleTooltip} from "@/components/ui/tooltip";
@@ -350,7 +351,10 @@ export default function AgentSessionsPage({account}: {account: Account}) {
           value={agent}
           onChange={setAgent}
           aria-label={i18next.t("agent:Agent")}
-          options={[{label: i18next.t("agent:All agents"), value: ""}, ...agentOptions]}
+          options={[
+            {label: i18next.t("agent:All agents"), value: ""},
+            ...agentOptions.map(name => agentOption(name)),
+          ]}
         />
       </div>
 
