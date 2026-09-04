@@ -48,22 +48,38 @@ func wrapActionResponse(affected bool, e ...error) *Response {
 }
 
 func (c *ApiController) GetSessionClaims() *auth.Claims {
-	s := c.GetSession("user")
+	store := c.sessionStore(false)
+	if store == nil {
+		return nil
+	}
+
+	s := store.Get("user")
 	if s == nil {
 		return nil
 	}
 
-	claims := s.(auth.Claims)
+	claims, ok := s.(auth.Claims)
+	if !ok {
+		return nil
+	}
+
 	return &claims
 }
 
 func (c *ApiController) SetSessionClaims(claims *auth.Claims) {
-	if claims == nil {
-		c.DelSession("user")
+	store := c.sessionStore(claims != nil)
+	if store == nil {
 		return
 	}
 
-	c.SetSession("user", *claims)
+	if claims == nil {
+		store.Delete("user")
+	} else {
+		store.Set("user", *claims)
+	}
+
+	// Nothing else writes the session out now that beego does not start it.
+	store.SessionRelease(c.Ctx.ResponseWriter)
 }
 
 func (c *ApiController) GetSessionUser() *auth.User {

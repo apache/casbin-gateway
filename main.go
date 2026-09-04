@@ -17,7 +17,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"time"
 
@@ -27,6 +26,7 @@ import (
 	"github.com/apache/casbin-gateway/agentpatch"
 	"github.com/apache/casbin-gateway/casdoor"
 	"github.com/apache/casbin-gateway/conf"
+	"github.com/apache/casbin-gateway/controllers"
 	"github.com/apache/casbin-gateway/mcpserver"
 	"github.com/apache/casbin-gateway/object"
 	"github.com/apache/casbin-gateway/proxy"
@@ -35,7 +35,6 @@ import (
 	"github.com/apache/casbin-gateway/util"
 	"github.com/apache/casbin-gateway/version"
 	"github.com/beego/beego"
-	_ "github.com/beego/beego/session/redis"
 )
 
 // daemonLogPath is where a background Gateway sends the console output nobody
@@ -139,17 +138,7 @@ func main() {
 	beego.InsertFilter("/*", beego.BeforeRouter, routers.TransparentStatic)
 	beego.InsertFilter("/api/*", beego.BeforeRouter, routers.ApiFilter)
 
-	if beego.AppConfig.String("redisEndpoint") == "" {
-		beego.BConfig.WebConfig.Session.SessionProvider = "file"
-		beego.BConfig.WebConfig.Session.SessionProviderConfig = "./tmp"
-	} else {
-		beego.BConfig.WebConfig.Session.SessionProvider = "redis"
-		beego.BConfig.WebConfig.Session.SessionProviderConfig = beego.AppConfig.String("redisEndpoint")
-	}
-	beego.BConfig.WebConfig.Session.SessionGCMaxLifetime = 3600 * 24 * 365
-	// The session is only ever presented by Gateway's own pages, so the browser
-	// is told to keep it off requests another site makes.
-	beego.BConfig.WebConfig.Session.SessionCookieSameSite = http.SameSiteStrictMode
+	controllers.InitSessions()
 
 	port := conf.GetHttpPort()
 	addr := conf.GetHttpAddr()
