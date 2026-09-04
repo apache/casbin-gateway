@@ -123,9 +123,12 @@ func executableVersionFile(binaryPath, fileName string) string {
 // stateDirVersion reads the version out of the newest records the agent wrote
 // under its state directory. An installation found by its configuration alone
 // has no program to read a version from, but its own records name one.
-func stateDirVersion(stateDir, glob string) string {
+func stateDirVersion(stateDir, glob, field string) string {
 	if stateDir == "" || glob == "" {
 		return ""
+	}
+	if field == "" {
+		field = "version"
 	}
 	matches, err := filepath.Glob(filepath.Join(stateDir, filepath.FromSlash(glob)))
 	if err != nil {
@@ -152,15 +155,15 @@ func stateDirVersion(stateDir, glob string) string {
 	}
 
 	for _, file := range files {
-		if version := recordVersion(file.path); version != "" {
+		if version := recordVersion(file.path, field); version != "" {
 			return version
 		}
 	}
 	return ""
 }
 
-// recordVersion is the "version" field of the first JSON record that has one.
-func recordVersion(path string) string {
+// recordVersion is the version field of the first JSON record that has one.
+func recordVersion(path, field string) string {
 	file, err := os.Open(path)
 	if err != nil {
 		return ""
@@ -181,15 +184,37 @@ func recordVersion(path string) string {
 		return ""
 	}
 
+	segments := strings.Split(field, ".")
 	for _, line := range bytes.Split(head, []byte("\n")) {
-		var record struct {
-			Version string `json:"version"`
-		}
+		var record map[string]json.RawMessage
 		if json.Unmarshal(bytes.TrimSpace(line), &record) != nil {
 			continue
 		}
-		if version := sanitizeVersion(record.Version); version != "" {
+		if version := sanitizeVersion(recordField(record, segments)); version != "" {
 			return version
+		}
+	}
+	return ""
+}
+
+// recordField walks a dotted path into one record, and is empty unless the path
+// ends on a string.
+func recordField(record map[string]json.RawMessage, segments []string) string {
+	for index, segment := range segments {
+		raw, ok := record[segment]
+		if !ok {
+			return ""
+		}
+		if index == len(segments)-1 {
+			var value string
+			if json.Unmarshal(raw, &value) != nil {
+				return ""
+			}
+			return value
+		}
+		record = nil
+		if json.Unmarshal(raw, &record) != nil {
+			return ""
 		}
 	}
 	return ""
@@ -204,7 +229,8 @@ func fillMissingVersions(installations []Installation, mark int, fingerprint *Fi
 			continue
 		}
 		if installations[i].InstallMethod == InstallMethodConfig {
-			installations[i].Version = stateDirVersion(installations[i].Path, fingerprint.StateVersionGlob)
+			installations[i].Version = stateDirVersion(
+				installations[i].Path, fingerprint.StateVersionGlob, fingerprint.StateVersionField)
 			continue
 		}
 		version := executableBuildVersion(

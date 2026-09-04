@@ -63,6 +63,12 @@ func main() {
 		return
 	}
 
+	// "uninstall" gives back what installing took outside the install
+	// directory, which deleting that directory cannot do for itself.
+	if service.RunUninstall(os.Args, conf.GetHttpPort()) {
+		return
+	}
+
 	// The executable an earlier update replaced is only removable once nothing
 	// is running from it, which is now.
 	version.CleanupBackup()

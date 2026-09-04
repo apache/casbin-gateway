@@ -123,7 +123,7 @@ func (p cursorPatcher) Status(target Target) (Status, error) {
 		return Status{Detail: "Cursor hooks are not installed"}, nil
 	}
 	for _, event := range agenthook.CursorEvents {
-		if !hasFlatHook(hooks[event], isCursorHook) {
+		if !hasFlatHook(hooks[event], isCurrentCursorHook) {
 			return Status{Detail: "Cursor hooks need refresh"}, nil
 		}
 	}
@@ -213,6 +213,14 @@ func removeCursorHooks(config map[string]any) bool {
 		delete(config, "hooks")
 	}
 	return changed
+}
+
+func isCurrentCursorHook(handler map[string]any) bool {
+	if !isCursorHook(handler) {
+		return false
+	}
+	command, _ := handler["command"].(string)
+	return commandIsCurrent(command)
 }
 
 func isCursorHook(handler map[string]any) bool {

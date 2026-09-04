@@ -116,7 +116,7 @@ func (p settingsHookPatcher) Status(target Target) (Status, error) {
 		return Status{Detail: p.name + " hooks are not installed"}, nil
 	}
 	for _, event := range p.events {
-		if !hasHook(hooks[event], p.owns) {
+		if !hasHook(hooks[event], p.current) {
 			return Status{Detail: p.name + " hooks need refresh"}, nil
 		}
 	}
@@ -204,6 +204,16 @@ func (p settingsHookPatcher) owns(handler map[string]any) bool {
 	return strings.Contains(command, agenthook.OwnershipFlag) &&
 		strings.Contains(command, "--agent "+p.agentId) &&
 		strings.Contains(command, "--records-url")
+}
+
+// current narrows owns to a hook this Gateway would write now. owns stays the
+// broad test, so Unpatch still removes one an earlier install left behind.
+func (p settingsHookPatcher) current(handler map[string]any) bool {
+	if !p.owns(handler) {
+		return false
+	}
+	command, _ := handler["command"].(string)
+	return commandIsCurrent(command)
 }
 
 func newSettingsHook(command string) map[string]any {

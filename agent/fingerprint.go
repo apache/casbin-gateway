@@ -71,6 +71,9 @@ type Fingerprint struct {
 	// records carry the version of the agent that wrote them. It is the only
 	// version an installation found by its configuration alone can report.
 	StateVersionGlob string `json:"stateVersionGlob,omitempty"`
+	// StateVersionField is the dotted path to that version within a record, for
+	// an agent that does not keep it at the top level under "version".
+	StateVersionField string `json:"stateVersionField,omitempty"`
 	// StateIgnore names the entries an agent writes on its own, without being
 	// installed here: what an app that embeds the agent leaves behind. A state
 	// directory holding nothing else is not evidence of an installation.

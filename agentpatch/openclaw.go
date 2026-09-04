@@ -87,11 +87,21 @@ func (p openclawPatcher) Status(target Target) (Status, error) {
 	if err != nil {
 		return Status{}, err
 	}
-	if _, err := os.Stat(filepath.Join(layout.hookDir, "handler.js")); err != nil {
+	handler, err := os.ReadFile(filepath.Join(layout.hookDir, "handler.js"))
+	if err != nil {
 		if os.IsNotExist(err) {
 			return Status{Detail: "OpenClaw hook is not installed"}, nil
 		}
 		return Status{}, err
+	}
+	current, err := recordsURL()
+	if err != nil {
+		return Status{}, err
+	}
+	// A handler left by an older Gateway, or by one listening on another port,
+	// reports nowhere. Re-patching is what rewrites it.
+	if !strings.Contains(string(handler), jsonString(current)) {
+		return Status{Detail: "OpenClaw hook needs refresh"}, nil
 	}
 	enabled, err := openclawHookEnabled(layout.configPath)
 	if err != nil {

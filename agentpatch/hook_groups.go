@@ -177,3 +177,34 @@ func gatewayExecutable() (string, error) {
 	}
 	return executable, nil
 }
+
+// commandIsCurrent reports whether a hook command line runs this executable and
+// reports to this Gateway. A hook an earlier install left behind keeps its own
+// path and port, so calling it active is what leaves an agent reporting nowhere
+// while the UI says its hooks are on. Re-patching is what rewrites it.
+func commandIsCurrent(command string) bool {
+	executable, err := gatewayExecutable()
+	if err != nil {
+		return false
+	}
+	url, err := recordsURL()
+	if err != nil {
+		return false
+	}
+	return strings.Contains(command, quoteArg(executable)) && strings.Contains(command, url)
+}
+
+// argsAreCurrent is commandIsCurrent for an agent whose configuration keeps the
+// program and its arguments apart.
+func argsAreCurrent(executable string, args []string) bool {
+	self, err := gatewayExecutable()
+	if err != nil || executable != self {
+		return false
+	}
+	url, err := recordsURL()
+	if err != nil {
+		return false
+	}
+	index := stringIndex(args, "--records-url")
+	return index >= 0 && index+1 < len(args) && args[index+1] == url
+}

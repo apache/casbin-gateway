@@ -5,5 +5,7 @@
   "execName": "copilot",
   "stateDir": "copilot",
   "stateIgnore": ["config.json", "logs"],
-  "npmPackage": "@github/copilot"
+  "npmPackage": "@github/copilot",
+  "stateVersionGlob": "session-state/*/events.jsonl",
+  "stateVersionField": "data.copilotVersion"
 }

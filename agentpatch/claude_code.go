@@ -113,7 +113,7 @@ func (claudeCodePatcher) Status(target Target) (Status, error) {
 		return Status{Detail: "Claude Code hooks are not installed"}, nil
 	}
 	for _, event := range claudeCodeHookEvents {
-		if !hasHook(hooks[event], isClaudeCodeHook) {
+		if !hasHook(hooks[event], isCurrentClaudeCodeHook) {
 			return Status{Detail: "Claude Code hooks need refresh"}, nil
 		}
 	}
@@ -224,6 +224,17 @@ func isClaudeCodeHook(handler map[string]any) bool {
 	return len(args) > 0 && args[0] == agenthook.Subcommand && stringIndex(args, agenthook.OwnershipFlag) >= 0 &&
 		agentIndex >= 0 && agentIndex+1 < len(args) && args[agentIndex+1] == "claude-code" &&
 		stringIndex(args, "--records-url") >= 0
+}
+
+// isCurrentClaudeCodeHook narrows isClaudeCodeHook to a hook this Gateway would
+// write now. The broad test stays what Unpatch removes by, so one an earlier
+// install left behind is still cleaned up.
+func isCurrentClaudeCodeHook(handler map[string]any) bool {
+	if !isClaudeCodeHook(handler) {
+		return false
+	}
+	command, _ := handler["command"].(string)
+	return argsAreCurrent(command, stringArray(handler["args"]))
 }
 
 func hookEventSupportsMatcher(event string) bool {

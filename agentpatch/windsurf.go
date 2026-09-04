@@ -103,7 +103,7 @@ func (p windsurfPatcher) Status(target Target) (Status, error) {
 		return Status{Detail: "Cascade hooks are not installed"}, nil
 	}
 	for _, event := range agenthook.WindsurfEvents {
-		if !hasFlatHook(hooks[event], isWindsurfHook) {
+		if !hasFlatHook(hooks[event], isCurrentWindsurfHook) {
 			return Status{Detail: "Cascade hooks need refresh"}, nil
 		}
 	}
@@ -188,6 +188,14 @@ func removeWindsurfHooks(config map[string]any) bool {
 		delete(config, "hooks")
 	}
 	return changed
+}
+
+func isCurrentWindsurfHook(handler map[string]any) bool {
+	if !isWindsurfHook(handler) {
+		return false
+	}
+	command, _ := handler["command"].(string)
+	return commandIsCurrent(command)
 }
 
 func isWindsurfHook(handler map[string]any) bool {
