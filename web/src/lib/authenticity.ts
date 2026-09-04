@@ -80,6 +80,18 @@ export const gradeStyles: Record<
   },
 };
 
+/**
+ * Every grade as the range of scores it is cut from, which is the one thing a
+ * letter cannot say about itself.
+ */
+export function gradeRanges() {
+  return gradeFloors.map((entry, index) => ({
+    grade: entry.grade,
+    low: entry.floor,
+    high: index === 0 ? 100 : gradeFloors[index - 1].floor - 1,
+  }));
+}
+
 export function gradeStyleOf(grade: ProbeGrade | undefined) {
   return gradeStyles[grade ?? "unknown"] ?? gradeStyles.unknown;
 }
@@ -175,6 +187,15 @@ export function caseQuestion(probeCase: ProbeCase) {
 
 export function caseMethod(probeCase: ProbeCase) {
   return localized(probeCase, "method");
+}
+
+/**
+ * The question a check was drawn from, so a tile can show what was asked and
+ * not only what came back. Empty for a report older than the stored suite.
+ */
+export function checkQuestion(check: ProbeCheck, cases: ProbeCase[]) {
+  const known = cases.find(probeCase => probeCase.name === check.case);
+  return known ? caseQuestion(known) : "";
 }
 
 /**

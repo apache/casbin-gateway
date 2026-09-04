@@ -12,13 +12,44 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import {HelpCircle} from "lucide-react";
 import i18next from "i18next";
 
 import {cn} from "@/lib/utils";
-import {formatScore, gradeLetter, gradeStyleOf} from "@/lib/authenticity";
+import {formatScore, gradeLetter, gradeRanges, gradeStyleOf, gradeStyles} from "@/lib/authenticity";
 import {Badge} from "@/components/ui/badge";
 import {SimpleTooltip} from "@/components/ui/tooltip";
 import type {ProbeGrade, ProviderProbe} from "@/types";
+
+/**
+ * Which score buys which letter. A letter on its own is a verdict nobody can
+ * check, so the scale sits behind the question mark next to every grade.
+ */
+export function GradeScaleTip({className}: {className?: string}) {
+  return (
+    <SimpleTooltip
+      className="max-w-xs"
+      title={
+        <div className="flex flex-col gap-1">
+          <span className="font-medium">{i18next.t("audit:How a score becomes a letter")}</span>
+          {gradeRanges().map(entry => (
+            <div key={entry.grade} className="flex items-center gap-2">
+              <span className="w-3 shrink-0 font-semibold">{entry.grade}</span>
+              <span className="w-14 shrink-0 tabular-nums opacity-80">{`${entry.low}–${entry.high}`}</span>
+              <span>{i18next.t(gradeStyles[entry.grade].label)}</span>
+            </div>
+          ))}
+          <span className="opacity-80">{i18next.t("audit:Score is the weighted share")}</span>
+        </div>
+      }
+    >
+      <HelpCircle
+        className={cn("text-muted-foreground size-3.5 shrink-0 cursor-help", className)}
+        aria-label={i18next.t("audit:How a score becomes a letter")}
+      />
+    </SimpleTooltip>
+  );
+}
 
 /**
  * The score as a dial. The number is the weighted share of the test cases that

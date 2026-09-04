@@ -17,16 +17,17 @@ import {Link} from "react-router-dom";
 import {ShieldCheck} from "lucide-react";
 import i18next from "i18next";
 
+import * as ProbeCaseBackend from "@/backend/ProbeCaseBackend";
 import * as ProviderBackend from "@/backend/ProviderBackend";
-import {ScoreBadge, ScoreDial} from "@/components/AuthenticityScore";
+import {GradeScaleTip, ScoreBadge, ScoreDial} from "@/components/AuthenticityScore";
 import {ProviderIcon} from "@/components/ProviderIcon";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
 import {cn} from "@/lib/utils";
-import {gradeStyleOf, probeFindings, summarizeAuthenticity} from "@/lib/authenticity";
+import {checkTitle, gradeStyleOf, probeFindings, summarizeAuthenticity} from "@/lib/authenticity";
 import {providerIdOf} from "@/lib/providers";
-import type {Provider, ProviderProbe, ProviderProbeMode} from "@/types";
+import type {ProbeCase, Provider, ProviderProbe, ProviderProbeMode} from "@/types";
 
 /** How often the scores are read again while the page is open. */
 const refreshMs = 20000;
@@ -39,18 +40,62 @@ function fill(key: string, values: Record<string, string | number>) {
   );
 }
 
+/**
+ * What a row says about itself in one plain sentence, so a state nobody has
+ * clicked into still reads as something. A row that failed names the cases it
+ * failed: "F" alone is a letter, not a finding.
+ */
+function stateOf(probe: ProviderProbe | undefined, cases: ProbeCase[]) {
+  if (!probe) {
+    return i18next.t("audit:Not probed yet");
+  }
+  if (!probe.ok) {
+    return i18next.t("audit:The probe could not run");
+  }
+  const {alerts, warnings} = probeFindings(probe);
+  const names = (checks: typeof alerts) => checks.map(check => checkTitle(check, cases)).join(", ");
+  if (alerts.length > 0) {
+    return fill("audit:Cases that failed", {names: names(alerts)});
+  }
+  if (warnings.length > 0) {
+    return fill("audit:Cases that were flagged", {names: names(warnings)});
+  }
+  return i18next.t(gradeStyleOf(probe.grade).label);
+}
+
 /** One provider's line: who it is, what it scored, and what failed if anything. */
-function ProviderScore({provider, probe}: {provider: Provider; probe?: ProviderProbe}) {
+function ProviderScore({
+  provider,
+  probe,
+  cases,
+}: {
+  provider: Provider;
+  probe?: ProviderProbe;
+  /** The suite as it stands now, which is what names a case in the reader's
+   * language rather than by the English it was stored under. */
+  cases: ProbeCase[];
+}) {
   const {alerts, warnings} = probeFindings(probe);
   const name = provider.displayName || provider.name;
 
   return (
     <Link
       to={`/authenticity?tab=report&provider=${encodeURIComponent(providerIdOf(provider))}`}
-      className="hover:border-foreground/20 hover:bg-accent/40 flex min-w-0 items-center gap-2 rounded-lg border px-2.5 py-1.5 transition-colors"
+      className="hover:border-foreground/20 hover:bg-accent/40 flex min-w-0 items-start gap-2 rounded-lg border px-2.5 py-1.5 transition-colors"
     >
-      <ProviderIcon icon={provider.icon} baseUrl={provider.baseUrl} alt={name} size={16} />
-      <span className="truncate text-xs">{name}</span>
+      <ProviderIcon
+        icon={provider.icon}
+        baseUrl={provider.baseUrl}
+        alt={name}
+        size={16}
+        className="mt-0.5"
+      />
+      <div className="flex min-w-0 flex-col">
+        <span className="truncate text-xs">{name}</span>
+        <span className="text-muted-foreground line-clamp-2 text-[11px] leading-snug">
+          {stateOf(probe, cases)}
+        </span>
+      </div>
       <div className="ml-auto flex shrink-0 items-center gap-1.5">
         {alerts.length > 0 ? (
           <Badge variant="danger">{fill("audit:Failed cases", {count: alerts.length})}</Badge>
@@ -80,6 +125,7 @@ export function AuthenticityOverview({
   className?: string;
 }) {
   const [probes, setProbes] = React.useState<ProviderProbe[]>([]);
+  const [cases, setCases] = React.useState<ProbeCase[]>([]);
   const [mode, setMode] = React.useState<ProviderProbeMode>("auto");
   const [loaded, setLoaded] = React.useState(false);
 
@@ -100,6 +146,14 @@ export function AuthenticityOverview({
     load();
     const interval = setInterval(load, refreshMs);
     return () => clearInterval(interval);
+  }, []);
+
+  // Read once: the suite names the cases a row failed, and it does not change
+  // while a page is open.
+  React.useEffect(() => {
+    ProbeCaseBackend.getProbeCases()
+      .then(res => setCases(res.status === "ok" ? (res.data ?? []) : []))
+      .catch(() => undefined);
   }, []);
 
   const configured = providers.filter(provider => provider.status !== "disabled");
@@ -134,6 +188,7 @@ export function AuthenticityOverview({
             <div className="flex items-center gap-1.5">
               <ShieldCheck className="text-muted-foreground size-3.5" />
               <span className="text-sm font-medium">{i18next.t("audit:Authenticity")}</span>
+              <GradeScaleTip />
             </div>
             <span className="text-xs">
               {summary.graded === 0
@@ -167,6 +222,7 @@ export function AuthenticityOverview({
                 key={providerIdOf(entry.provider)}
                 provider={entry.provider}
                 probe={entry.probe}
+                cases={cases}
               />
             ))}
           </div>

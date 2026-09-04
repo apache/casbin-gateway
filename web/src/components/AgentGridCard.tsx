@@ -170,6 +170,7 @@ export function AgentGridCard({
   busy,
   runBusy,
   onEnable,
+  onLocated,
   onToggleRunning,
   onTogglePatch,
 }: {

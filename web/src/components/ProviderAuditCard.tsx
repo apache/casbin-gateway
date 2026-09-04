@@ -13,18 +13,19 @@
 // limitations under the License.
 
 import * as React from "react";
+import {Link} from "react-router-dom";
 import {Stethoscope} from "lucide-react";
 import i18next from "i18next";
 
 import * as Setting from "@/Setting";
-import {ScoreDial} from "@/components/AuthenticityScore";
+import {GradeScaleTip, ScoreDial} from "@/components/AuthenticityScore";
 import {ProviderIcon} from "@/components/ProviderIcon";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
 import {SimpleTooltip} from "@/components/ui/tooltip";
 import {cn} from "@/lib/utils";
-import {checkTitle, gradeStyleOf, probeFindings} from "@/lib/authenticity";
+import {checkQuestion, checkTitle, gradeStyleOf, probeFindings} from "@/lib/authenticity";
 import {formatCost, formatTokens} from "@/lib/usage";
 import type {
   LlmAuditCheck,
@@ -78,12 +79,18 @@ function fill(key: string, values: Record<string, string | number>) {
 /** One measurement, whichever side it was measured from. */
 function CheckTile({
   title,
+  question,
+  caseName,
   value,
   detail,
   level,
   weight,
 }: {
   title: React.ReactNode;
+  /** What was asked. An answer read without its question explains nothing. */
+  question?: string;
+  /** The case behind the question, which the question links to. */
+  caseName?: string;
   value: React.ReactNode;
   detail: React.ReactNode;
   level: LlmAuditLevel;
@@ -103,6 +110,20 @@ function CheckTile({
           </SimpleTooltip>
         ) : null}
       </div>
+      {question ? (
+        caseName ? (
+          <SimpleTooltip title={i18next.t("audit:See how this is judged")}>
+            <Link
+              to={`/authenticity?tab=cases&case=${encodeURIComponent(caseName)}`}
+              className="hover:text-foreground text-foreground/75 text-xs leading-snug underline decoration-dotted underline-offset-2"
+            >
+              {question}
+            </Link>
+          </SimpleTooltip>
+        ) : (
+          <span className="text-foreground/75 text-xs leading-snug">{question}</span>
+        )
+      ) : null}
       <span className={cn("text-lg font-semibold tabular-nums", style.value)}>{value}</span>
       <span className="text-muted-foreground text-xs leading-snug">{detail}</span>
     </div>
@@ -343,7 +364,10 @@ function ScoreHeadline({probe}: {probe: ProviderProbe}) {
     <div className="bg-card flex items-center gap-4 rounded-lg border p-3">
       <ScoreDial probe={probe} size={84} />
       <div className="flex min-w-0 flex-col gap-1">
-        <span className="text-sm font-semibold">{i18next.t(style.label)}</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm font-semibold">{i18next.t(style.label)}</span>
+          <GradeScaleTip />
+        </div>
         <span className="text-muted-foreground text-xs leading-snug">{i18next.t(style.verdict)}</span>
         <span className="text-muted-foreground text-xs">
           {fill("audit:Score from cases", {
@@ -438,6 +462,8 @@ function ProbeSection({
               <CheckTile
                 key={`${check.case}-${check.key}-${index}`}
                 title={check.case ? checkTitle(check, cases) : probeTitle(check.key)}
+                question={checkQuestion(check, cases)}
+                caseName={check.case}
                 value={probeValue(check)}
                 detail={probeDetail(check, probe)}
                 level={check.level}

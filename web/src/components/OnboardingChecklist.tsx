@@ -33,9 +33,13 @@ function readDismissed(): boolean {
   }
 }
 
-function persistDismissed() {
+function writeDismissed(dismissed: boolean) {
   try {
-    localStorage.setItem(dismissedStorageKey, "true");
+    if (dismissed) {
+      localStorage.setItem(dismissedStorageKey, "true");
+    } else {
+      localStorage.removeItem(dismissedStorageKey);
+    }
   } catch {
     // Private-mode storage failures must not take the page down.
   }
@@ -48,13 +52,21 @@ interface Step {
   to: string;
 }
 
+export interface Onboarding {
+  steps: Step[];
+  /** Whether the card is on screen, which is what the reopen entry hangs off. */
+  open: boolean;
+  dismiss: () => void;
+  reopen: () => void;
+}
+
 /**
- * The three-step path from an empty machine to seeing traffic flow, taken
- * from the README's "Send an agent's traffic through Gateway" section. It
- * disappears once every step is done, and stays gone across reloads once
- * dismissed by hand.
+ * The three-step path from an empty machine to seeing traffic flow, taken from
+ * the README's "Send an agent's traffic through Gateway" section. It hides
+ * itself once every step is done and stays hidden once dismissed, so the state
+ * is held here rather than inside the card: something has to offer it back.
  */
-export function OnboardingChecklist({
+export function useOnboarding({
   providers,
   agents,
   stats,
@@ -62,8 +74,12 @@ export function OnboardingChecklist({
   providers: Provider[];
   agents: Agent[];
   stats: LlmAgentStat[];
-}) {
+}): Onboarding {
   const [dismissed, setDismissed] = React.useState(readDismissed);
+  // Set by the reopen entry, which shows the card again even where every step
+  // is done: someone asking for the guide is asking to read it, not to be told
+  // there is nothing left to do.
+  const [reopened, setReopened] = React.useState(false);
 
   const steps: Step[] = [
     {
@@ -85,16 +101,36 @@ export function OnboardingChecklist({
       to: "/llm-records",
     },
   ];
-  const doneCount = steps.filter(step => step.done).length;
 
-  if (dismissed || doneCount === steps.length) {
-    return null;
-  }
-
-  const dismiss = () => {
-    persistDismissed();
-    setDismissed(true);
+  return {
+    steps: steps,
+    open: reopened || (!dismissed && !steps.every(step => step.done)),
+    dismiss: () => {
+      writeDismissed(true);
+      setDismissed(true);
+      setReopened(false);
+    },
+    reopen: () => {
+      writeDismissed(false);
+      setDismissed(false);
+      setReopened(true);
+    },
   };
+}
+
+/** The entry that brings the card back, for whoever closed it. */
+export function OnboardingButton({onboarding}: {onboarding: Onboarding}) {
+  return (
+    <Button variant="ghost" onClick={onboarding.reopen}>
+      <ListChecks />
+      {i18next.t("agent:Getting started")}
+    </Button>
+  );
+}
+
+export function OnboardingChecklist({onboarding}: {onboarding: Onboarding}) {
+  const steps = onboarding.steps;
+  const doneCount = steps.filter(step => step.done).length;
 
   return (
     <Card className="gap-0 py-0 shadow-xs">
@@ -110,7 +146,12 @@ export function OnboardingChecklist({
             </div>
             <Progress value={(doneCount / steps.length) * 100} className="h-1.5" />
           </div>
-          <Button variant="ghost" size="icon-sm" onClick={dismiss} aria-label={i18next.t("general:Dismiss")}>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onboarding.dismiss}
+            aria-label={i18next.t("general:Dismiss")}
+          >
             <X />
           </Button>
         </div>

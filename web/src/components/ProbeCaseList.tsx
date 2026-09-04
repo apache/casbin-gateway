@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import * as React from "react";
+import {useLocation} from "react-router-dom";
 import {ChevronDown, FlaskConical, Pencil, Plus, RotateCcw, Trash2} from "lucide-react";
 import i18next from "i18next";
 
@@ -301,6 +302,7 @@ function CaseParams({probeCase}: {probeCase: ProbeCase}) {
 function CaseCard({
   probeCase,
   share,
+  lit,
   onEdit,
   onDelete,
   onToggle,
@@ -309,15 +311,30 @@ function CaseCard({
   probeCase: ProbeCase;
   /** What this case is worth of everything weighted, as a percentage. */
   share: number;
+  /** Set when a report tile linked here, which opens the case and lights it. */
+  lit: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onToggle: (enabled: boolean) => void;
   busy: boolean;
 }) {
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = React.useState(lit);
+
+  React.useEffect(() => {
+    if (lit) {
+      setOpen(true);
+    }
+  }, [lit]);
 
   return (
-    <Card className={cn(!probeCase.enabled && "opacity-60")}>
+    <Card
+      data-probe-case={probeCase.name}
+      className={cn(
+        "scroll-mt-20 transition-shadow",
+        !probeCase.enabled && "opacity-60",
+        lit && "ring-primary/60 ring-2",
+      )}
+    >
       <CardContent className="flex flex-col gap-3 p-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium">{caseTitle(probeCase)}</span>
@@ -654,7 +671,7 @@ function CaseDialog({
  * every case can be reweighted, turned off, rewritten or added to, because the
  * questions worth asking of a reseller are not the same everywhere.
  */
-export function ProbeCaseList({onChanged}: {onChanged?: () => void}) {
+export function ProbeCaseList({focus = "", onChanged}: {focus?: string; onChanged?: () => void}) {
   const [cases, setCases] = React.useState<ProbeCase[] | null>(null);
   const [draft, setDraft] = React.useState<ProbeCase | null>(null);
   const [creating, setCreating] = React.useState(false);
@@ -676,6 +693,26 @@ export function ProbeCaseList({onChanged}: {onChanged?: () => void}) {
   React.useEffect(() => {
     load();
   }, [load]);
+
+  // A case linked to from a report tile is scrolled to and lit for a moment,
+  // otherwise the click lands on a long list that looks unchanged.
+  const [lit, setLit] = React.useState("");
+  // Keyed on the navigation, so clicking the same tile twice scrolls again.
+  const navigation = useLocation().key;
+
+  const loaded = cases !== null;
+
+  React.useEffect(() => {
+    if (focus === "" || !loaded) {
+      return;
+    }
+    document
+      .querySelector(`[data-probe-case="${CSS.escape(focus)}"]`)
+      ?.scrollIntoView({behavior: "smooth", block: "start"});
+    setLit(focus);
+    const off = setTimeout(() => setLit(""), 2500);
+    return () => clearTimeout(off);
+  }, [focus, navigation, loaded]);
 
   const done = () => {
     load();
@@ -796,6 +833,7 @@ export function ProbeCaseList({onChanged}: {onChanged?: () => void}) {
               key={probeCase.name}
               probeCase={probeCase}
               share={weighted === 0 ? 0 : (probeCase.weight / weighted) * 100}
+              lit={lit === probeCase.name}
               busy={busy === probeCase.name}
               onEdit={() => {
                 setCreating(false);

@@ -41,6 +41,8 @@ export default function AuthenticityPage({account}: {account: Account}) {
   const tab: AuthenticityTab = searchParams.get("tab") === "cases" ? "cases" : "report";
   // Set when the overview above was clicked, so the report opens at that card.
   const focus = searchParams.get("provider") ?? "";
+  // Set when a report tile was clicked, so the suite opens at the case it asks.
+  const caseFocus = searchParams.get("case") ?? "";
   const setTab = (next: AuthenticityTab) =>
     setSearchParams(
       previous => {
@@ -80,7 +82,11 @@ export default function AuthenticityPage({account}: {account: Account}) {
         </TabsList>
       </Tabs>
 
-      {tab === "report" ? <ProviderAuditPanel owner={account.name} focus={focus} /> : <ProbeCaseList />}
+      {tab === "report" ? (
+        <ProviderAuditPanel owner={account.name} focus={focus} />
+      ) : (
+        <ProbeCaseList focus={caseFocus} />
+      )}
     </PageContainer>
   );
 }

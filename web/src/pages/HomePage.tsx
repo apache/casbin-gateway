@@ -24,7 +24,7 @@ import * as Setting from "@/Setting";
 import {AgentCatalog} from "@/components/AgentCatalog";
 import {AuthenticityOverview} from "@/components/AuthenticityOverview";
 import {AgentGridCard} from "@/components/AgentGridCard";
-import {OnboardingChecklist} from "@/components/OnboardingChecklist";
+import {OnboardingButton, OnboardingChecklist, useOnboarding} from "@/components/OnboardingChecklist";
 import {EmptyState, ErrorState} from "@/components/shared/empty-state";
 import {Loading} from "@/components/shared/loading";
 import {UnauthorizedResult} from "@/components/shared/misc";
@@ -189,6 +189,10 @@ export default function HomePage({account}: {account: Account}) {
     return () => clearInterval(interval);
   }, [isAdmin]);
 
+  // Held here rather than inside the card, so the header can offer the guide
+  // back to whoever closed it.
+  const onboarding = useOnboarding({providers: providers, agents: agents, stats: stats});
+
   if (!isAdmin) {
     return <UnauthorizedResult />;
   }
@@ -214,6 +218,7 @@ export default function HomePage({account}: {account: Account}) {
         description={account.hostname}
         actions={
           <>
+            {loaded && !onboarding.open ? <OnboardingButton onboarding={onboarding} /> : null}
             <Button asChild variant="ghost">
               <Link to="/agents">
                 <Table2 />
@@ -225,7 +230,7 @@ export default function HomePage({account}: {account: Account}) {
         }
       />
 
-      {loaded ? <OnboardingChecklist providers={providers} agents={agents} stats={stats} /> : null}
+      {loaded && onboarding.open ? <OnboardingChecklist onboarding={onboarding} /> : null}
 
       {/* With no agents to show, the failure is the whole page and is rendered
           below instead; here it sits above the cards that are still on screen. */}
