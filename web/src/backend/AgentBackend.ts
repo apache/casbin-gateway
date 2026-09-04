@@ -24,7 +24,9 @@ import type {
   AgentRuntime,
   AgentSession,
   AgentTranscript,
+  AgentUpdate,
   AgentUsage,
+  AgentVersionCatalog,
 } from "@/types";
 
 export interface PatchTarget {
@@ -43,14 +45,52 @@ export function getAgentCatalog() {
   return request<AgentCatalogEntry[]>("/api/get-agent-catalog");
 }
 
-/** Installs an agent this machine lacks; the job runs on past this response. */
-export function installAgent(agentId: string) {
-  return request<AgentInstallJob>("/api/install-agent", "POST", {agentId: agentId});
+/**
+ * Installs an agent this machine lacks; the job runs on past this response.
+ * `version` pins it to one published release, empty for the current one.
+ */
+export function installAgent(agentId: string, version = "") {
+  return request<AgentInstallJob>("/api/install-agent", "POST", {agentId: agentId, version: version});
 }
 
 /** Updates one installation through the package manager that installed it. */
 export function upgradeAgent(target: PatchTarget) {
   return request<AgentInstallJob>("/api/upgrade-agent", "POST", target);
+}
+
+/** Moves one installation onto a chosen release, up or down. */
+export function setAgentVersion(target: PatchTarget, version: string) {
+  return request<AgentInstallJob>("/api/set-agent-version", "POST", {...target, version: version});
+}
+
+/** Removes one installation with the manager that installed it. */
+export function uninstallAgent(target: PatchTarget) {
+  return request<AgentInstallJob>("/api/uninstall-agent", "POST", target);
+}
+
+/** The releases one agent's package manager publishes, newest first. */
+export function getAgentVersions(agentId: string, installMethod = "", forceRefresh = false) {
+  return request<AgentVersionCatalog>(
+    `/api/get-agent-versions${query({
+      agentId: agentId,
+      installMethod: installMethod,
+      refresh: forceRefresh ? "true" : "",
+    })}`,
+  );
+}
+
+/**
+ * Which installations have a newer release waiting, from cached lookups.
+ * `scope` of "all" adds a row per agent this machine has none of, naming the
+ * release a first install would land on.
+ */
+export function getAgentUpdates(forceRefresh = false, scope: "installed" | "all" = "installed") {
+  return request<AgentUpdate[]>(
+    `/api/get-agent-updates${query({
+      refresh: forceRefresh ? "true" : "",
+      scope: scope === "all" ? "all" : "",
+    })}`,
+  );
 }
 
 /** Every install and upgrade this Gateway process has run, newest first. */

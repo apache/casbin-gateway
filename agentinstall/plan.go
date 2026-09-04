@@ -29,8 +29,10 @@ import (
 
 // The actions a plan describes.
 const (
-	ActionInstall = "install"
-	ActionUpgrade = "upgrade"
+	ActionInstall   = "install"
+	ActionUpgrade   = "upgrade"
+	ActionDowngrade = "downgrade"
+	ActionUninstall = "uninstall"
 )
 
 // The package managers Gateway can drive. They are also the install methods a
@@ -48,7 +50,10 @@ type Plan struct {
 	Action  string `json:"action"`
 	Manager string `json:"manager,omitempty"`
 	// Command is the command line as it will run, shown before it does.
-	Command   string `json:"command,omitempty"`
+	Command string `json:"command,omitempty"`
+	// Version is the release a pinned install asks for, empty for the plans
+	// that take whatever the manager calls latest.
+	Version   string `json:"version,omitempty"`
 	Available bool   `json:"available"`
 	Detail    string `json:"detail,omitempty"`
 	// InstallUrl is the vendor's own page, which is all that is left for an
@@ -62,8 +67,23 @@ type Plan struct {
 // InstallPlan picks the manager that can install an agent this host does not
 // have: the one it is published on, whose own program is on PATH.
 func InstallPlan(agentId string) Plan {
+	return InstallVersionPlan(agentId, "")
+}
+
+// InstallVersionPlan installs a chosen release rather than the current one, for
+// a machine that wants the version the rest of its fleet is on.
+func InstallVersionPlan(agentId string, version string) Plan {
+	if version != "" && !IsValidVersion(version) {
+		return Plan{AgentId: agentId, Action: ActionInstall, Version: version,
+			InstallUrl: agent.PackagesOf(agentId).InstallUrl,
+			Detail:     "\"" + version + "\" is not a version number"}
+	}
+	return installPlan(agentId, version)
+}
+
+func installPlan(agentId string, version string) Plan {
 	packages := agent.PackagesOf(agentId)
-	plan := Plan{AgentId: agentId, Action: ActionInstall, InstallUrl: packages.InstallUrl}
+	plan := Plan{AgentId: agentId, Action: ActionInstall, Version: version, InstallUrl: packages.InstallUrl}
 
 	for _, manager := range installOrder() {
 		switch manager {
@@ -72,10 +92,12 @@ func InstallPlan(agentId string) Plan {
 				continue
 			}
 			if program := lookup("npm"); program != "" {
-				return fill(plan, ManagerNpm, program, "install", "-g", packages.Npm+"@latest")
+				return fill(plan, ManagerNpm, program, "install", "-g", packages.Npm+"@"+requestedRelease(version))
 			}
 		case ManagerHomebrew:
-			if packages.HomebrewCask == "" {
+			// A cask names one version, so a pinned install has to go somewhere
+			// that keeps the older ones.
+			if packages.HomebrewCask == "" || version != "" {
 				continue
 			}
 			if program := lookup("brew"); program != "" {
@@ -86,7 +108,11 @@ func InstallPlan(agentId string) Plan {
 				continue
 			}
 			if program := lookup("winget"); program != "" {
-				return fill(plan, ManagerWinget, program, append([]string{"install", "--id", packages.Winget, "--exact"}, wingetFlags...)...)
+				args := []string{"install", "--id", packages.Winget, "--exact"}
+				if version != "" {
+					args = append(args, "--version", version)
+				}
+				return fill(plan, ManagerWinget, program, append(args, wingetFlags...)...)
 			}
 		}
 	}
@@ -98,41 +124,125 @@ func InstallPlan(agentId string) Plan {
 // UpgradePlan upgrades an installation in place, through the manager that put
 // it there: another one would install a second copy beside it.
 func UpgradePlan(agentId string, installMethod string) Plan {
+	return managerPlan(agentId, installMethod, ActionUpgrade, "")
+}
+
+// VersionPlan moves an installation onto one published release, through the
+// manager that owns its tree. Going back is what it is for: an agent whose new
+// release broke something is pinned to the one before it.
+func VersionPlan(agentId string, installMethod string, version string, current string) Plan {
+	action := ActionUpgrade
+	if CompareVersions(version, current) < 0 {
+		action = ActionDowngrade
+	}
+
+	plan := managerPlan(agentId, installMethod, action, version)
+	if !IsValidVersion(version) {
+		return Plan{AgentId: agentId, Action: action, Version: version,
+			InstallUrl: plan.InstallUrl, Detail: "\"" + version + "\" is not a version number"}
+	}
+	return plan
+}
+
+// UninstallPlan removes an installation with the manager that installed it.
+// Only the program goes: an agent's own state directory holds its sign-in and
+// its history, and a reinstall finds them where it left them.
+func UninstallPlan(agentId string, installMethod string) Plan {
+	return managerPlan(agentId, installMethod, ActionUninstall, "")
+}
+
+// managerPlan builds the command for one action against an installation whose
+// manager is known. Everything but the version comes from the fingerprint.
+func managerPlan(agentId string, installMethod string, action string, version string) Plan {
 	packages := agent.PackagesOf(agentId)
-	plan := Plan{AgentId: agentId, Action: ActionUpgrade, InstallUrl: packages.InstallUrl}
+	plan := Plan{AgentId: agentId, Action: action, Version: version, InstallUrl: packages.InstallUrl}
 
 	switch installMethod {
 	case ManagerNpm:
 		if packages.Npm == "" {
 			break
 		}
-		if program := lookup("npm"); program != "" {
-			return fill(plan, ManagerNpm, program, "install", "-g", packages.Npm+"@latest")
+		program := lookup("npm")
+		if program == "" {
+			plan.Detail = "npm installed this agent but is not on Gateway's PATH"
+			return plan
 		}
-		plan.Detail = "npm installed this agent but is not on Gateway's PATH"
-		return plan
+		if action == ActionUninstall {
+			return fill(plan, ManagerNpm, program, "uninstall", "-g", packages.Npm)
+		}
+		return fill(plan, ManagerNpm, program, "install", "-g", packages.Npm+"@"+requestedRelease(version))
 	case ManagerHomebrew:
 		if packages.HomebrewCask == "" {
 			break
 		}
-		if program := lookup("brew"); program != "" {
-			return fill(plan, ManagerHomebrew, program, "upgrade", "--cask", packages.HomebrewCask)
+		program := lookup("brew")
+		if program == "" {
+			plan.Detail = "Homebrew installed this agent but is not on Gateway's PATH"
+			return plan
 		}
-		plan.Detail = "Homebrew installed this agent but is not on Gateway's PATH"
+		switch action {
+		case ActionUninstall:
+			return fill(plan, ManagerHomebrew, program, "uninstall", "--cask", packages.HomebrewCask)
+		case ActionUpgrade:
+			if version == "" {
+				return fill(plan, ManagerHomebrew, program, "upgrade", "--cask", packages.HomebrewCask)
+			}
+		}
+		// A cask carries one version, the current one, so there is no older
+		// release to ask it for.
+		plan.Detail = "Homebrew only installs the version its cask names; use the vendor's own downloads for an older one"
 		return plan
 	case ManagerWinget:
 		if packages.Winget == "" {
 			break
 		}
-		if program := lookup("winget"); program != "" {
-			return fill(plan, ManagerWinget, program, append([]string{"upgrade", "--id", packages.Winget, "--exact"}, wingetFlags...)...)
+		program := lookup("winget")
+		if program == "" {
+			plan.Detail = "winget installed this agent but is not on Gateway's PATH"
+			return plan
 		}
-		plan.Detail = "winget installed this agent but is not on Gateway's PATH"
-		return plan
+		exact := []string{"--id", packages.Winget, "--exact"}
+		switch action {
+		case ActionUninstall:
+			return fill(plan, ManagerWinget, program, append(append([]string{"uninstall"}, exact...), wingetUninstallFlags...)...)
+		case ActionUpgrade:
+			if version == "" {
+				return fill(plan, ManagerWinget, program, append(append([]string{"upgrade"}, exact...), wingetFlags...)...)
+			}
+		}
+		// An older version needs the install verb: upgrade refuses to move back.
+		return fill(plan, ManagerWinget, program,
+			append(append([]string{"install"}, append(exact, "--version", version)...), wingetFlags...)...)
 	}
 
-	plan.Detail = "this agent was installed as \"" + installMethod + "\", which Gateway cannot upgrade; use its own updater"
+	plan.Detail = "this agent was installed as \"" + installMethod + "\", which Gateway cannot " + action + "; use its own updater"
 	return plan
+}
+
+// requestedRelease is the npm tag or version an install asks for.
+func requestedRelease(version string) string {
+	if version == "" {
+		return "latest"
+	}
+	return version
+}
+
+// IsValidVersion accepts what a package manager would recognise as a release
+// and nothing else: a version reaches here from a request, and it is the one
+// part of a command that Gateway does not build from a fingerprint.
+func IsValidVersion(version string) bool {
+	if version == "" || len(version) > 64 || (version[0] < '0' || version[0] > '9') {
+		return false
+	}
+	for i := 0; i < len(version); i++ {
+		c := version[i]
+		digit := c >= '0' && c <= '9'
+		letter := (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+		if !digit && !letter && c != '.' && c != '-' && c != '+' && c != '_' {
+			return false
+		}
+	}
+	return true
 }
 
 // wingetFlags keep an install unattended: winget otherwise stops on a licence
@@ -141,6 +251,13 @@ var wingetFlags = []string{
 	"--silent",
 	"--accept-package-agreements",
 	"--accept-source-agreements",
+	"--disable-interactivity",
+}
+
+// wingetUninstallFlags are the ones an uninstall takes: it has no package
+// agreement to accept, and rejects the flag that would accept one.
+var wingetUninstallFlags = []string{
+	"--silent",
 	"--disable-interactivity",
 }
 

@@ -46,6 +46,8 @@ type Job struct {
 	Action  string `json:"action"`
 	Manager string `json:"manager"`
 	Command string `json:"command"`
+	// Version is the release the job pinned, empty for the current one.
+	Version string `json:"version,omitempty"`
 	Running bool   `json:"running"`
 	// Ok is the outcome of a finished job, false while one runs.
 	Ok bool `json:"ok"`
@@ -86,6 +88,7 @@ func Start(plan Plan) (Job, error) {
 		Action:    plan.Action,
 		Manager:   plan.Manager,
 		Command:   plan.Command,
+		Version:   plan.Version,
 		Running:   true,
 		StartTime: now(),
 	}}

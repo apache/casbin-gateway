@@ -20,6 +20,7 @@ import i18next from "i18next";
 import {AgentIcon} from "@/components/AgentIcon";
 import {AgentCardInstances} from "@/components/AgentInstances";
 import {AgentUsageTrend, hasUsageTrend} from "@/components/AgentUsageTrend";
+import {AgentUpdateBadge} from "@/components/AgentVersionDialog";
 import {RunButton, RunDot} from "@/components/AgentRunControl";
 import {ProviderIcon} from "@/components/ProviderIcon";
 import {QuotaBadge} from "@/components/ProviderQuota";
@@ -49,6 +50,7 @@ import type {
   Agent,
   AgentAccount,
   AgentRuntime,
+  AgentUpdate,
   AgentUsageStat,
   LlmAgentStat,
   Provider,
@@ -162,6 +164,7 @@ export function AgentGridCard({
   stats,
   usage,
   status,
+  update,
   instances,
   recording,
   busy,
@@ -183,6 +186,8 @@ export function AgentGridCard({
    */
   usage?: AgentUsageStat;
   status?: AgentRuntime;
+  /** The release check for this installation, absent until it lands. */
+  update?: AgentUpdate;
   /** The extra copies of this agent, for the agents that can run more than one. */
   instances?: AgentInstanceControls;
   /** False while llmRecordMode is off, when a zero would be a lie. */
@@ -245,6 +250,7 @@ export function AgentGridCard({
                 {agent.path}
               </p>
             </SimpleTooltip>
+            <AgentUpdateBadge update={update} className="mt-1 text-[11px]" />
             <AccountLine account={agent.account} />
           </div>
           <RunDot status={status} />

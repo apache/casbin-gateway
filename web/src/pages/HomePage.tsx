@@ -38,6 +38,8 @@ import {
   useAgentInstall,
   useAgentInstances,
   useAgents,
+  useAgentUpdates,
+  updateOf,
   usageOf,
 } from "@/lib/agents";
 import type {
@@ -83,8 +85,13 @@ export default function HomePage({account}: {account: Account}) {
     togglePatch,
     activateProvider,
   } = useAgents(isAdmin);
+  // Which cards have a newer release waiting, looked up in the registries.
+  const updates = useAgentUpdates(isAdmin);
   // Installs the agents this machine is missing, listed under the cards.
-  const installer = useAgentInstall(isAdmin, () => scan(true));
+  const installer = useAgentInstall(isAdmin, () => {
+    scan(true);
+    updates.reload(true);
+  });
   // Every agent's extra copies in one listing, so a page of cards costs one
   // request rather than one per card.
   const instances = useAgentInstances("", isAdmin);
@@ -290,6 +297,7 @@ export default function HomePage({account}: {account: Account}) {
               stats={stats.find(item => item.agent === agent.agentId)}
               usage={usageOf(usage, agent)}
               status={runtimeOf(runtime, agent)}
+              update={updateOf(updates.updates, agent)}
               instances={instances}
               recording={recording}
               busy={busyKey === agentKey(agent)}

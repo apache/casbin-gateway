@@ -26,6 +26,11 @@ import {AgentIcon} from "@/components/AgentIcon";
 import {AgentInstances} from "@/components/AgentInstances";
 import {accountLabel} from "@/components/AgentGridCard";
 import {RunBadge, RunButton} from "@/components/AgentRunControl";
+import {
+  AgentUpdateBadge,
+  AgentVersionDialog,
+  ToolUninstallConfirmDialog,
+} from "@/components/AgentVersionDialog";
 import {InstallOutput, ToolUpgradeConfirmDialog} from "@/components/ToolUpgradeConfirmDialog";
 import {DataTable, type Column} from "@/components/shared/data-table";
 import {PermissionCard} from "@/components/PermissionCard";
@@ -44,9 +49,11 @@ import {
   getOutcomeVariant,
   monitorAgentId,
   runtimeOf,
+  updateOf,
   useAgentInstall,
   useAgents,
   useAgentSessions,
+  useAgentUpdates,
 } from "@/lib/agents";
 import {formatCost, formatTokens} from "@/lib/usage";
 import type {
@@ -242,8 +249,12 @@ export default function AgentDetailPage({account}: {account: Account}) {
     setRouting,
     writeProvider,
   } = useAgents(isAdmin);
+  const updates = useAgentUpdates(isAdmin);
   // The upgrade rescans when it ends, so the version above is the new one.
-  const installer = useAgentInstall(isAdmin, () => scan(true));
+  const installer = useAgentInstall(isAdmin, () => {
+    scan(true);
+    updates.reload(true);
+  });
   const [tab, setTab] = React.useState<Tab>("Agent Sessions");
   const [records, setRecords] = React.useState<AgentRecord[]>([]);
   const [recordError, setRecordError] = React.useState("");
@@ -436,6 +447,7 @@ export default function AgentDetailPage({account}: {account: Account}) {
         />
         <h1 className="text-xl font-semibold tracking-tight">{agent.name}</h1>
         <Badge variant="secondary">{agent.version || i18next.t("agent:Unknown")}</Badge>
+        <AgentUpdateBadge update={updateOf(updates.updates, agent)} />
         <Button
           variant="outline"
           size="sm"
@@ -491,7 +503,10 @@ export default function AgentDetailPage({account}: {account: Account}) {
               <code className="text-xs">{agent.agentId}</code>
             </InfoRow>
             <InfoRow label={i18next.t("agent:Version")}>
-              {agent.version || i18next.t("agent:Unknown")}
+              <span className="flex flex-wrap items-center gap-2">
+                <span className="tabular-nums">{agent.version || i18next.t("agent:Unknown")}</span>
+                <AgentUpdateBadge update={updateOf(updates.updates, agent)} />
+              </span>
             </InfoRow>
             <InfoRow label={i18next.t("agent:Install Method")}>
               <span className="flex flex-wrap items-center gap-2">
@@ -501,6 +516,21 @@ export default function AgentDetailPage({account}: {account: Account}) {
                   job={installer.jobs[agent.agentId]}
                   busy={installer.busyId === agent.agentId}
                   onConfirm={() => installer.upgrade(agent)}
+                />
+                <AgentVersionDialog
+                  agentId={agent.agentId}
+                  name={agent.name}
+                  installMethod={agent.installMethod}
+                  installedVersion={agent.version}
+                  update={updateOf(updates.updates, agent)}
+                  busy={installer.busyId === agent.agentId}
+                  fallbackDetail={agent.upgrade?.detail}
+                  onSelect={version => installer.setVersion(agent, version)}
+                />
+                <ToolUninstallConfirmDialog
+                  agent={agent}
+                  busy={installer.busyId === agent.agentId}
+                  onConfirm={() => installer.uninstall(agent)}
                 />
               </span>
             </InfoRow>

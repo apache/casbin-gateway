@@ -31,6 +31,9 @@ func (c *ApiController) InstallAgent() {
 
 	var form struct {
 		AgentId string `json:"agentId"`
+		// Version pins the install to one published release, empty for the one
+		// the manager calls current.
+		Version string `json:"version"`
 	}
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &form); err != nil {
 		c.ResponseError(err.Error())
@@ -41,7 +44,7 @@ func (c *ApiController) InstallAgent() {
 		return
 	}
 
-	job, err := agentinstall.Start(agentinstall.InstallPlan(form.AgentId))
+	job, err := agentinstall.Start(agentinstall.InstallVersionPlan(form.AgentId, form.Version))
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -80,4 +83,97 @@ func (c *ApiController) GetAgentInstallJobs() {
 	}
 
 	c.ResponseOk(agentinstall.Jobs())
+}
+
+// SetAgentVersion moves one installation onto a chosen release, up or down,
+// through the package manager that installed it. The version is the only part
+// of the command that comes from the request, and it is refused unless it reads
+// as a version number.
+func (c *ApiController) SetAgentVersion() {
+	if c.RequireAdmin() {
+		return
+	}
+
+	var form struct {
+		Version string `json:"version"`
+	}
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &form); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	installation, ok := c.readAgentInstallation()
+	if !ok {
+		return
+	}
+
+	plan := agentinstall.VersionPlan(
+		installation.AgentId, installation.InstallMethod, form.Version, installation.Version)
+	job, err := agentinstall.Start(plan)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(job)
+}
+
+// UninstallAgent removes one discovered installation with the manager that put
+// it there. Only the program goes: the agent's own state directory keeps its
+// sign-in and its history, so reinstalling it finds them again.
+func (c *ApiController) UninstallAgent() {
+	if c.RequireAdmin() {
+		return
+	}
+
+	installation, ok := c.readAgentInstallation()
+	if !ok {
+		return
+	}
+
+	job, err := agentinstall.Start(
+		agentinstall.UninstallPlan(installation.AgentId, installation.InstallMethod))
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(job)
+}
+
+// GetAgentVersions lists what the package manager publishes for one agent: the
+// release it calls current, and the older ones a downgrade can go back to.
+func (c *ApiController) GetAgentVersions() {
+	if c.RequireAdmin() {
+		return
+	}
+
+	agentId := c.GetString("agentId")
+	if !agent.IsKnownAgentId(agentId) {
+		c.ResponseError("unknown agent: " + agentId)
+		return
+	}
+
+	c.ResponseOk(agentinstall.VersionsOf(agentId, c.GetString("installMethod"), c.GetString("refresh") == "true"))
+}
+
+// GetAgentUpdates reports which installations have a newer release waiting.
+// The lookups are cached, so the pages can ask on every load; refresh asks the
+// registries again. scope=all adds a row for every agent this host has none of,
+// naming the release an install would land on.
+func (c *ApiController) GetAgentUpdates() {
+	if c.RequireAdmin() {
+		return
+	}
+
+	installations, err := agent.Scan(false)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	force := c.GetString("refresh") == "true"
+	updates := agentinstall.UpdatesFor(installations, force)
+	if c.GetString("scope") == "all" {
+		updates = append(updates, agentinstall.UpdatesForMissing(installations, force)...)
+	}
+	c.ResponseOk(updates)
 }

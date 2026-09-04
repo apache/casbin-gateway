@@ -187,6 +187,8 @@ export interface Agent {
   proxyBaseUrl?: string;
   /** The command that would update this installation where it stands. */
   upgrade?: AgentInstallPlan;
+  /** The command that would remove it with the manager that installed it. */
+  uninstall?: AgentInstallPlan;
   /** Whether a second copy of this agent can run beside the first. */
   supportsInstances?: boolean;
 }
@@ -274,15 +276,48 @@ export interface AgentInstance {
  */
 export interface AgentInstallPlan {
   agentId: string;
-  /** "install" for an agent this machine lacks, "upgrade" for one it has. */
+  /** "install", "upgrade", "downgrade" or "uninstall". */
   action: string;
   /** The package manager that would do it: npm, winget or homebrew. */
   manager?: string;
   command?: string;
+  /** The release a pinned install asks for, absent for the current one. */
+  version?: string;
   available: boolean;
   /** Why there is no command, when there is none. */
   detail?: string;
   installUrl?: string;
+}
+
+/** What one agent's package manager publishes, for the version picker. */
+export interface AgentVersionCatalog {
+  agentId: string;
+  manager?: string;
+  package?: string;
+  /** The release the manager calls current. */
+  latest?: string;
+  /** Every published release, newest first. */
+  versions: string[];
+  /** The command a version change runs, with the release left as "{version}".
+   *  Absent for a manager that only installs the one version it indexes. */
+  commandTemplate?: string;
+  /** Why there is nothing to list, when there is nothing. */
+  detail?: string;
+  checkedAt?: string;
+}
+
+/** One installation measured against what its package manager publishes. */
+export interface AgentUpdate {
+  agentId: string;
+  path: string;
+  owner: string;
+  manager?: string;
+  current?: string;
+  latest?: string;
+  /** A newer release is waiting. False while either version is unknown. */
+  available: boolean;
+  detail?: string;
+  checkedAt?: string;
 }
 
 /** One install or upgrade, polled while the package manager works. */
@@ -294,6 +329,8 @@ export interface AgentInstallJob {
   command: string;
   running: boolean;
   ok: boolean;
+  /** The release a pinned install asked for, absent for the current one. */
+  version?: string;
   /** The tail of what the package manager printed, on both streams. */
   output: string;
   error?: string;

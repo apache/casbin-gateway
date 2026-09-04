@@ -34,6 +34,7 @@ import AgentDetailPage from "@/pages/AgentDetailPage";
 import AgentRecordsPage from "@/pages/AgentRecordsPage";
 import AgentSessionPage from "@/pages/AgentSessionPage";
 import AgentSessionsPage from "@/pages/AgentSessionsPage";
+import AgentVersionsPage from "@/pages/AgentVersionsPage";
 import AgentsPage from "@/pages/AgentsPage";
 import AuthCallback from "@/pages/AuthCallback";
 import AuthenticityPage from "@/pages/AuthenticityPage";
@@ -284,6 +285,10 @@ export default function App() {
                 />
                 <Route path="/account" element={requireSignin(user => <AccountPage account={user} />)} />
                 <Route path="/agents" element={requireSignin(user => <AgentsPage account={user} />)} />
+                <Route
+                  path="/agent-versions"
+                  element={requireSignin(user => <AgentVersionsPage account={user} />)}
+                />
                 <Route
                   path="/agents/:agentId"
                   element={requireSignin(user => <AgentDetailPage account={user} />)}

@@ -20,6 +20,11 @@ import * as Setting from "@/Setting";
 import {AgentCatalog} from "@/components/AgentCatalog";
 import {AgentIcon} from "@/components/AgentIcon";
 import {RunBadge, RunButton} from "@/components/AgentRunControl";
+import {
+  AgentUpdateBadge,
+  AgentVersionDialog,
+  ToolUninstallConfirmDialog,
+} from "@/components/AgentVersionDialog";
 import {ToolUpgradeConfirmDialog} from "@/components/ToolUpgradeConfirmDialog";
 import {ConfirmDialog} from "@/components/shared/confirm-dialog";
 import {DataTable, type Column} from "@/components/shared/data-table";
@@ -36,8 +41,10 @@ import {
   directMode,
   monitorAgentId,
   runtimeOf,
+  updateOf,
   useAgentInstall,
   useAgents,
+  useAgentUpdates,
 } from "@/lib/agents";
 import type {Account, Agent} from "@/types";
 
@@ -57,9 +64,15 @@ export default function AgentsPage({account}: {account: Account}) {
     toggleRunning,
     togglePatch,
   } = useAgents(isAdmin);
+  // The release check runs against the registries, so it loads on its own and
+  // marks the rows once it lands.
+  const updates = useAgentUpdates(isAdmin);
   // One installer for the page: it installs what is missing below the table and
-  // upgrades what is in it.
-  const installer = useAgentInstall(isAdmin, () => scan(true));
+  // upgrades, downgrades or removes what is in it.
+  const installer = useAgentInstall(isAdmin, () => {
+    scan(true);
+    updates.reload(true);
+  });
 
   if (!isAdmin) {
     return <UnauthorizedResult />;
@@ -85,8 +98,12 @@ export default function AgentsPage({account}: {account: Account}) {
     {
       title: i18next.t("agent:Version"),
       key: "version",
-      dataIndex: "version",
-      render: (value: string) => value || i18next.t("agent:Unknown"),
+      render: (_value, record) => (
+        <span className="flex flex-wrap items-center gap-1.5">
+          <span className="tabular-nums">{record.version || i18next.t("agent:Unknown")}</span>
+          <AgentUpdateBadge update={updateOf(updates.updates, record)} />
+        </span>
+      ),
     },
     {
       title: i18next.t("agent:Install Method"),
@@ -194,6 +211,21 @@ export default function AgentsPage({account}: {account: Account}) {
             busy={installer.busyId === record.agentId}
             onConfirm={() => installer.upgrade(record)}
           />
+          <AgentVersionDialog
+            agentId={record.agentId}
+            name={record.name}
+            installMethod={record.installMethod}
+            installedVersion={record.version}
+            update={updateOf(updates.updates, record)}
+            busy={installer.busyId === record.agentId}
+            fallbackDetail={record.upgrade?.detail}
+            onSelect={version => installer.setVersion(record, version)}
+          />
+          <ToolUninstallConfirmDialog
+            agent={record}
+            busy={installer.busyId === record.agentId}
+            onConfirm={() => installer.uninstall(record)}
+          />
           {patchButton(record)}
         </div>
       ),
@@ -264,18 +296,26 @@ export default function AgentsPage({account}: {account: Account}) {
           inContainer ? "agent:Running in a container detail" : "agent:No supported agents found",
         )}
         toolbar={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              scan(true);
-              loadRuntime();
-            }}
-            loading={loading}
-          >
-            <RefreshCw />
-            {i18next.t("agent:Scan")}
-          </Button>
+          <div className="flex items-center gap-2">
+            {updates.outdated > 0 ? (
+              <Badge variant="warning">
+                {`${updates.outdated} ${i18next.t("agent:updates available")}`}
+              </Badge>
+            ) : null}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                scan(true);
+                loadRuntime();
+                updates.reload(true);
+              }}
+              loading={loading || updates.checking}
+            >
+              <RefreshCw />
+              {i18next.t("agent:Scan")}
+            </Button>
+          </div>
         }
       />
 

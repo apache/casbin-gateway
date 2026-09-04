@@ -21,6 +21,7 @@ import {
   Link2,
   Logs,
   MessageSquare,
+  PackageCheck,
   Plug,
   Settings,
   ShieldCheck,
@@ -66,6 +67,13 @@ export const navGroups: NavGroup[] = [
   // The table of installations is the home screen's own advanced view, linked
   // from it rather than competing with it in the rail.
   {key: "/agents", label: "agent:Advanced view", icon: Table2, path: "/agents", adminOnly: true, hidden: true},
+  {
+    key: "/agent-versions",
+    label: "agent:Agent versions",
+    icon: PackageCheck,
+    path: "/agent-versions",
+    adminOnly: true,
+  },
   {key: "/providers", label: "provider:Providers", icon: Plug, path: "/providers"},
   // Reached by clicking a vendor's "add this to Gateway" link, which is why it
   // is named by the breadcrumb but not offered in the rail.

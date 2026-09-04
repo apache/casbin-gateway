@@ -26,6 +26,7 @@ import type {
   AgentInstance,
   AgentRuntime,
   AgentSession,
+  AgentUpdate,
   AgentUsage,
   AgentUsageStat,
   Provider,
@@ -552,7 +553,7 @@ export function useAgentInstall(enabled = true, onFinished?: () => void) {
       Setting.showMessage(
         job.ok ? "success" : "error",
         job.ok
-          ? `${i18next.t(job.action === "upgrade" ? "agent:Agent upgraded" : "agent:Agent installed")}: ${job.name}`
+          ? `${i18next.t(installOutcomeKey(job.action))}: ${job.name}${job.version ? ` ${job.version}` : ""}`
           : `${i18next.t("agent:Failed to install the agent")}: ${job.error || job.name}`,
       );
       finished.current?.();
@@ -578,19 +579,109 @@ export function useAgentInstall(enabled = true, onFinished?: () => void) {
   );
 
   const install = React.useCallback(
-    (agentId: string) => start(agentId, () => AgentBackend.installAgent(agentId)),
+    (agentId: string, version = "") =>
+      start(agentId, () => AgentBackend.installAgent(agentId, version)),
     [start],
   );
 
   const upgrade = React.useCallback(
-    (agent: Agent) =>
-      start(agent.agentId, () =>
-        AgentBackend.upgradeAgent({agentId: agent.agentId, path: agent.path, owner: agent.owner}),
-      ),
+    (agent: Agent) => start(agent.agentId, () => AgentBackend.upgradeAgent(installTarget(agent))),
     [start],
   );
 
-  return {jobs, busyId, install, upgrade, reload: load};
+  const setVersion = React.useCallback(
+    (agent: Agent, version: string) =>
+      start(agent.agentId, () => AgentBackend.setAgentVersion(installTarget(agent), version)),
+    [start],
+  );
+
+  const uninstall = React.useCallback(
+    (agent: Agent) => start(agent.agentId, () => AgentBackend.uninstallAgent(installTarget(agent))),
+    [start],
+  );
+
+  return {jobs, busyId, install, upgrade, setVersion, uninstall, reload: load};
+}
+
+function installTarget(agent: Agent) {
+  return {agentId: agent.agentId, path: agent.path, owner: agent.owner};
+}
+
+/** What a finished job is reported as, which is not the same for all four. */
+function installOutcomeKey(action: string) {
+  switch (action) {
+  case "upgrade":
+    return "agent:Agent upgraded";
+  case "downgrade":
+    return "agent:Agent moved to an older version";
+  case "uninstall":
+    return "agent:Agent uninstalled";
+  default:
+    return "agent:Agent installed";
+  }
+}
+
+/** How often the registries are asked again while a page stays open. */
+const updatePollMs = 10 * 60 * 1000;
+
+/**
+ * useAgentUpdates asks which installations have a newer release waiting. The
+ * answer comes from a registry rather than from disk, so it is loaded on its
+ * own: a page shows its agents at once and marks the outdated ones when the
+ * lookups land.
+ *
+ * `scope` of "all" also names the release a first install would land on for the
+ * agents this machine has none of, which is what a page listing every agent
+ * needs and what one listing only installations does not.
+ */
+export function useAgentUpdates(enabled = true, scope: "installed" | "all" = "installed") {
+  const [list, setList] = React.useState<AgentUpdate[]>([]);
+  const [checking, setChecking] = React.useState(false);
+
+  const load = React.useCallback(
+    (forceRefresh = false) => {
+      if (!enabled) {
+        return;
+      }
+
+      setChecking(true);
+      AgentBackend.getAgentUpdates(forceRefresh, scope)
+        .then(res => setList(res.status === "ok" ? (res.data ?? []) : []))
+        .catch(() => undefined)
+        .then(() => setChecking(false));
+    },
+    [enabled, scope],
+  );
+
+  React.useEffect(() => load(), [load]);
+
+  React.useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
+    const timer = window.setInterval(() => load(true), updatePollMs);
+    return () => window.clearInterval(timer);
+  }, [enabled, load]);
+
+  // An installation is keyed by where it is, an agent that has none by its id:
+  // the rows for the missing ones carry no path to tell them apart by.
+  const updates = React.useMemo(
+    () => Object.fromEntries(list.filter(item => item.path !== "").map(item => [agentKey(item), item])),
+    [list],
+  );
+  const missing = React.useMemo(
+    () => Object.fromEntries(list.filter(item => item.path === "").map(item => [item.agentId, item])),
+    [list],
+  );
+  const outdated = list.filter(item => item.available).length;
+
+  return {updates, missing, outdated, checking, reload: load};
+}
+
+/** The release check for one installation, before the lookups have landed. */
+export function updateOf(updates: Record<string, AgentUpdate>, agent: Pick<Agent, "owner" | "path">) {
+  return updates[agentKey(agent)];
 }
 
 /** The run state of one installation, before the first listing has landed. */

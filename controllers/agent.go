@@ -54,6 +54,8 @@ type discoveredAgent struct {
 	// Upgrade is the command that would update this installation in place,
 	// through the package manager that installed it.
 	Upgrade agentinstall.Plan `json:"upgrade"`
+	// Uninstall is the command that would remove it with that same manager.
+	Uninstall agentinstall.Plan `json:"uninstall"`
 	// SupportsInstances says whether this agent can be run more than once at a
 	// time, each copy signed in to an account of its own.
 	SupportsInstances bool `json:"supportsInstances"`
@@ -93,6 +95,7 @@ func (c *ApiController) GetAgents() {
 			Mode:           object.ModeGateway,
 			ProviderConfig: agentprovider.StatusOf(providerTarget(target)),
 			Upgrade:        agentinstall.UpgradePlan(installation.AgentId, installation.InstallMethod),
+			Uninstall:      agentinstall.UninstallPlan(installation.AgentId, installation.InstallMethod),
 
 			SupportsInstances: agent.SupportsInstances(installation.AgentId),
 		}
