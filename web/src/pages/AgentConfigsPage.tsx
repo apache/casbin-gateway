@@ -25,6 +25,7 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  ScanSearch,
   Send,
   Trash2,
 } from "lucide-react";
@@ -39,6 +40,7 @@ import {DetailDialog, type DetailTarget} from "@/components/agent-config/detail-
 import {InstallSkillDialog} from "@/components/agent-config/install-skill-dialog";
 import {PromptDialog, type PromptTarget} from "@/components/agent-config/prompt-dialog";
 import {TrashDialog} from "@/components/agent-config/trash-dialog";
+import {UnmanagedSkillsDialog} from "@/components/agent-config/unmanaged-skills-dialog";
 import {ConfirmDialog} from "@/components/shared/confirm-dialog";
 import {DataTable, type Column} from "@/components/shared/data-table";
 import {EmptyState} from "@/components/shared/empty-state";
@@ -167,6 +169,7 @@ export default function AgentConfigsPage({account}: {account: Account}) {
   const [addOpen, setAddOpen] = React.useState(false);
   const [installOpen, setInstallOpen] = React.useState(false);
   const [trashOpen, setTrashOpen] = React.useState(false);
+  const [untrackedOpen, setUntrackedOpen] = React.useState(false);
   const [deleting, setDeleting] = React.useState("");
   const [updating, setUpdating] = React.useState("");
 
@@ -499,6 +502,12 @@ export default function AgentConfigsPage({account}: {account: Account}) {
                 {i18next.t("agentConfig:Add MCP server")}
               </Button>
             ) : null}
+            {kind === "skill" && inventories.length > 0 ? (
+              <Button variant="outline" onClick={() => setUntrackedOpen(true)}>
+                <ScanSearch className="size-4" />
+                {i18next.t("agentConfig:Untracked skills")}
+              </Button>
+            ) : null}
             {inventories.length > 0 ? (
               <Button variant="outline" onClick={() => setTrashOpen(true)}>
                 <Trash2 className="size-4" />
@@ -643,6 +652,13 @@ export default function AgentConfigsPage({account}: {account: Account}) {
           onDone={refresh}
         />
       ) : null}
+
+      <UnmanagedSkillsDialog
+        open={untrackedOpen}
+        onOpenChange={setUntrackedOpen}
+        agentNames={agentNames}
+        onDone={refresh}
+      />
 
       <TrashDialog
         open={trashOpen}

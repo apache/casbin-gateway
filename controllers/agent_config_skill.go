@@ -170,3 +170,44 @@ func (c *ApiController) InstallSkills() {
 	}
 	c.ResponseOk(result)
 }
+
+// GetUnmanagedSkills lists the skills on this host that Gateway did not install
+// and has no record of, each with the source skill it looks like a copy of.
+func (c *ApiController) GetUnmanagedSkills() {
+	if c.RequireAdmin() {
+		return
+	}
+
+	views, err := agentConfigViews(false)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	inventories := make([]*agentconfig.Inventory, 0, len(views))
+	for _, view := range views {
+		inventories = append(inventories, view.Inventory)
+	}
+	c.ResponseOk(agentconfig.ScanUnmanaged(inventories))
+}
+
+// AdoptSkills records scanned skills against the sources they came from, so a
+// skill installed by hand is tracked from then on like an installed one.
+func (c *ApiController) AdoptSkills() {
+	if c.RequireAdmin() {
+		return
+	}
+
+	var request agentconfig.AdoptRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &request); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	result, err := agentconfig.AdoptSkills(request)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(result)
+}

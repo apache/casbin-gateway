@@ -217,6 +217,12 @@ export function counted(count: number, oneKey: string, manyKey: string, token = 
   return count === 1 ? i18next.t(oneKey) : i18next.t(manyKey).replace(token, String(count));
 }
 
+/** The last part of a catalog name, which is the folder a skill lands in. */
+export function folderOf(name: string) {
+  const cut = name.lastIndexOf("/");
+  return cut < 0 ? name : name.slice(cut + 1);
+}
+
 export function formatBytes(bytes: number | undefined) {
   if (!bytes) {
     return "";

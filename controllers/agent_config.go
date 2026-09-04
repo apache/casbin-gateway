@@ -41,14 +41,20 @@ type agentConfigView struct {
 // GetAgentConfigs lists the skills, MCP servers and instructions of every agent
 // on this host whose configuration layout Gateway knows.
 func (c *ApiController) GetAgentConfigs() {
-	if c.RequireAdmin() {
-		return
-	}
-
-	installations, err := agent.Scan(c.GetString("refresh") == "true")
+	views, err := agentConfigViews(c.GetString("refresh") == "true")
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
+	}
+	c.ResponseOk(views)
+}
+
+// agentConfigViews reads the configuration of every agent on this host, one
+// view per location rather than per agent id.
+func agentConfigViews(refresh bool) ([]*agentConfigView, error) {
+	installations, err := agent.Scan(refresh)
+	if err != nil {
+		return nil, err
 	}
 
 	collected := &agentConfigs{seen: map[string]*agentConfigView{}}
@@ -69,7 +75,7 @@ func (c *ApiController) GetAgentConfigs() {
 	}
 
 	sort.Slice(collected.views, func(i, j int) bool { return collected.views[i].Name < collected.views[j].Name })
-	c.ResponseOk(collected.views)
+	return collected.views, nil
 }
 
 // agentConfigs collects one view per configuration location. Several agent ids

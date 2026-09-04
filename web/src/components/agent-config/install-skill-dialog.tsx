@@ -37,7 +37,7 @@ import {
 import {Input} from "@/components/ui/input";
 import {Switch} from "@/components/ui/switch";
 import {SimpleTooltip} from "@/components/ui/tooltip";
-import {counted, formatBytes, sharedName} from "@/lib/agent-configs";
+import {counted, folderOf, formatBytes, sharedName} from "@/lib/agent-configs";
 import {cn} from "@/lib/utils";
 import type {
   AgentConfigInventory,
@@ -46,12 +46,6 @@ import type {
   SkillInstallMode,
   SkillSource,
 } from "@/types";
-
-/** The last part of a catalog name, which is the folder a skill lands in. */
-function folderOf(name: string) {
-  const cut = name.lastIndexOf("/");
-  return cut < 0 ? name : name.slice(cut + 1);
-}
 
 /**
  * Installing skills from outside this machine: pick a source, pick what it

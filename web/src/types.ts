@@ -1096,6 +1096,33 @@ export interface SkillCatalog {
   skills: SkillCatalogItem[];
 }
 
+/** Where an untracked skill appears to have come from. */
+export interface SkillMatch {
+  sourceId: string;
+  sourceName: string;
+  /** The name inside the source, and the folder it is in. */
+  skill: string;
+  path: string;
+  /** The source holds exactly this content. */
+  same: boolean;
+  /** Recognized by its content after being renamed here. */
+  byDigest?: boolean;
+}
+
+/** One skill on disk that Gateway did not install and has no record of. */
+export interface UnmanagedSkill {
+  agentId: string;
+  owner: string;
+  name: string;
+  path: string;
+  description?: string;
+  files?: number;
+  bytes?: number;
+  digest?: string;
+  modified?: number;
+  match?: SkillMatch;
+}
+
 /**
  * How an installed skill relates to its source: a copy the agent then owns, or
  * a link that follows Gateway's copy of the source whenever it is fetched again.

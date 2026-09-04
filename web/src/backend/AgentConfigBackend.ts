@@ -25,6 +25,7 @@ import type {
   SkillInstallMode,
   SkillSource,
   SkillSourceKind,
+  UnmanagedSkill,
 } from "@/types";
 
 export interface CopyRequest {
@@ -171,4 +172,22 @@ export function getSkillCatalog(owner: string, id: string, refresh = false) {
 
 export function installSkills(body: InstallSkillsRequest) {
   return request<AgentConfigPlanItem[]>("/api/install-skills", "POST", body);
+}
+
+/** One scanned skill, and the source skill it is to be recorded against. */
+export interface AdoptSkillItem {
+  agentId: string;
+  name: string;
+  sourceId: string;
+  skill: string;
+}
+
+/** The skills on this host that Gateway did not install and has no record of. */
+export function getUnmanagedSkills() {
+  return request<UnmanagedSkill[]>("/api/get-unmanaged-skills");
+}
+
+/** Records scanned skills against their sources, so they are tracked from now on. */
+export function adoptSkills(owner: string, items: AdoptSkillItem[]) {
+  return request<AgentConfigPlanItem[]>("/api/adopt-skills", "POST", {owner: owner, items: items});
 }

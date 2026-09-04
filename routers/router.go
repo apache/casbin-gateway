@@ -104,6 +104,8 @@ func initAPI() {
 	beego.Router("/api/delete-skill-source", &controllers.ApiController{}, "POST:DeleteSkillSource")
 	beego.Router("/api/get-skill-catalog", &controllers.ApiController{}, "GET:GetSkillCatalog")
 	beego.Router("/api/install-skills", &controllers.ApiController{}, "POST:InstallSkills")
+	beego.Router("/api/get-unmanaged-skills", &controllers.ApiController{}, "GET:GetUnmanagedSkills")
+	beego.Router("/api/adopt-skills", &controllers.ApiController{}, "POST:AdoptSkills")
 
 	// Provider routes for LLM gateway milestone 1.1.
 	beego.Router("/api/get-providers", &controllers.ApiController{}, "GET:GetProviders")
