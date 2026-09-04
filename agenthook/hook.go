@@ -88,7 +88,7 @@ func Run(args []string, input io.Reader, output io.Writer) error {
 		request := map[string]any{
 			"agent":      *agentID,
 			"tool":       tool,
-			"sessionKey": stringValue(event["session_id"]),
+			"sessionKey": firstString(event, "session_id", "conversation_id"),
 			"toolUseId":  stringValue(event["tool_use_id"]),
 		}
 		if allow, reason := allowed(*decisionURL, *ingestToken, request); !allow {

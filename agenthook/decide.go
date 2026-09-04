@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This file is the blocking half of the hook. A pre-tool event asks Gateway
-// whether the call may go ahead, and an agent that speaks a refusal writes it
-// on stdout in its own words. Everything else about the hook stays an
+// This file is the blocking half of the hook. The event an agent fires before
+// it runs a tool asks Gateway whether the call may go ahead, and a refusal is
+// written on stdout in that agent's own words. Every other event stays an
 // observation.
 
 package agenthook
@@ -40,17 +40,50 @@ type decision struct {
 	Reason string `json:"reason"`
 }
 
-// preToolEvent reports whether this event is the one asked before a tool runs,
-// by the name each agent gives it, and the tool it is about.
+// preToolEvents are the events each agent fires before running a tool, and can
+// be told to refuse. An agent absent from here only observes.
+var preToolEvents = map[string][]string{
+	"claude-code": {"PreToolUse"},
+	"qwen-code":   {"PreToolUse"},
+	"gemini-cli":  {"BeforeTool"},
+	// Cursor asks separately for a shell command and an MCP call, and neither
+	// carries a tool name the general event would have given.
+	"cursor": {"preToolUse", "beforeShellExecution", "beforeMCPExecution"},
+}
+
+// preToolEvent reports whether this event is one the agent is waiting on, and
+// the tool it is about, named the way the permissions catalogue names tools.
 func preToolEvent(agentID string, event map[string]any) (string, bool) {
-	if agentID != "claude-code" {
+	name := stringValue(event["hook_event_name"])
+	if name == "" || !listed(preToolEvents[agentID], name) {
 		return "", false
 	}
-	if name, _ := event["hook_event_name"].(string); name != "PreToolUse" {
-		return "", false
+
+	switch name {
+	case "beforeShellExecution":
+		// Only the command is carried, and running one is the whole of what
+		// this event is.
+		return "shell", true
+	case "beforeMCPExecution":
+		server := stringValue(event["mcp_server_name"])
+		tool := stringValue(event["tool_name"])
+		if server == "" {
+			return tool, tool != ""
+		}
+		return "mcp__" + server + "__" + tool, true
 	}
-	tool, _ := event["tool_name"].(string)
+
+	tool := stringValue(event["tool_name"])
 	return tool, tool != ""
+}
+
+func listed(values []string, name string) bool {
+	for _, value := range values {
+		if value == name {
+			return true
+		}
+	}
+	return false
 }
 
 // allowed asks Gateway whether this tool call may go ahead. Anything that goes
@@ -92,18 +125,26 @@ func allowed(url string, token string, request map[string]any) (bool, string) {
 	return false, answer.Data.Reason
 }
 
-// writeDenial tells the agent to refuse the call, in the shape it reads. Claude
-// Code takes a permission decision off the hook's stdout; an agent with no such
-// shape is left alone, since a hook that only observes must print nothing.
+// writeDenial tells the agent to refuse the call, in the shape it reads. The
+// three schemas below are the agents' own, and an agent Gateway has no schema
+// for is left alone: a hook that only observes must print nothing at all.
 func writeDenial(out io.Writer, agentID string, reason string) {
-	if agentID != "claude-code" {
+	var answer map[string]any
+	switch agentID {
+	case "claude-code", "qwen-code":
+		answer = map[string]any{
+			"hookSpecificOutput": map[string]any{
+				"hookEventName":            "PreToolUse",
+				"permissionDecision":       "deny",
+				"permissionDecisionReason": reason,
+			},
+		}
+	case "gemini-cli":
+		answer = map[string]any{"decision": "deny", "reason": reason}
+	case "cursor":
+		answer = map[string]any{"permission": "deny", "user_message": reason, "agent_message": reason}
+	default:
 		return
 	}
-	_ = json.NewEncoder(out).Encode(map[string]any{
-		"hookSpecificOutput": map[string]any{
-			"hookEventName":            "PreToolUse",
-			"permissionDecision":       "deny",
-			"permissionDecisionReason": reason,
-		},
-	})
+	_ = json.NewEncoder(out).Encode(answer)
 }

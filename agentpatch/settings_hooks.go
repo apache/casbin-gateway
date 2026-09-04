@@ -28,7 +28,7 @@ import (
 // hold up the session.
 const hookTimeoutMs = 5000
 
-// settingsHookPatcher installs Gateway's audit-only command hooks into one
+// settingsHookPatcher installs Gateway's command hooks into one
 // agent's settings.json. The Gemini CLI and the forks that took its
 // configuration all spell hooks the same way — events keyed by name, each an
 // array of groups holding command handlers — and differ only in where the file
@@ -45,6 +45,11 @@ type settingsHookPatcher struct {
 func (p settingsHookPatcher) AgentId() string { return p.agentId }
 
 func (settingsHookPatcher) Supported() bool { return true }
+
+// Decides: both CLIs written with this patcher wait on their pre-tool event -
+// the Gemini CLI's BeforeTool and Qwen Code's PreToolUse - and honour a refusal
+// written on the hook's stdout.
+func (settingsHookPatcher) Decides() bool { return true }
 
 func (p settingsHookPatcher) Patch(target Target) error {
 	stateMutex.Lock()
@@ -126,9 +131,9 @@ func (p settingsHookPatcher) Status(target Target) (Status, error) {
 func (p settingsHookPatcher) PatchNotice(patched bool) (string, string) {
 	restart := "Restart any " + p.name + " session that is already running."
 	if patched {
-		return "Removes Gateway's audit-only " + p.name + " hooks.", restart
+		return "Removes Gateway's " + p.name + " hooks, and with them the check before each tool call.", restart
 	}
-	return "Installs audit-only " + p.name + " hooks. Hooks observe events and never block an action.", restart
+	return "Installs Gateway's " + p.name + " hooks. They observe events, and refuse a tool call this agent's permissions do not allow; an agent nobody has restricted is never held up.", restart
 }
 
 func (p settingsHookPatcher) settingsPath(target Target) (string, error) {

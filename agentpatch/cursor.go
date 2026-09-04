@@ -48,6 +48,10 @@ func (p cursorPatcher) AgentId() string { return p.id }
 
 func (cursorPatcher) Supported() bool { return true }
 
+// Decides: Cursor waits on preToolUse, beforeShellExecution and
+// beforeMCPExecution, and a hook that answers "deny" stops the call.
+func (cursorPatcher) Decides() bool { return true }
+
 func (p cursorPatcher) Patch(target Target) error {
 	stateMutex.Lock()
 	defer stateMutex.Unlock()
@@ -132,10 +136,10 @@ func (p cursorPatcher) Status(target Target) (Status, error) {
 
 func (cursorPatcher) PatchNotice(patched bool) (string, string) {
 	if patched {
-		return "Removes Gateway's audit-only Cursor hooks. The editor and the CLI share them, so both stop reporting.",
+		return "Removes Gateway's Cursor hooks. The editor and the CLI share them, so both stop reporting and stop being checked.",
 			"Restart any Cursor session that is already running."
 	}
-	return "Installs audit-only Cursor hooks. They observe events and never block an action; the CLI reports fewer of them than the editor.",
+	return "Installs Gateway's Cursor hooks. They observe events, and refuse a shell command, an MCP call or a tool call this agent's permissions do not allow; the CLI reports fewer events than the editor, and an agent nobody has restricted is never held up.",
 		"Restart any Cursor session that is already running."
 }
 

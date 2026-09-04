@@ -135,11 +135,16 @@ func hookArgs(agentId string, target Target) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	decision, err := decisionURL()
+	if err != nil {
+		return nil, err
+	}
 	return []string{
 		agenthook.Subcommand,
 		agenthook.OwnershipFlag,
 		"--agent", agentId,
 		"--records-url", url,
+		"--decision-url", decision,
 		"--agent-path", target.Path,
 		"--user", target.Owner,
 		"--ingest-token", token,
@@ -191,7 +196,15 @@ func commandIsCurrent(command string) bool {
 	if err != nil {
 		return false
 	}
-	return strings.Contains(command, quoteArg(executable)) && strings.Contains(command, url)
+	// A hook written before Gateway could decide a tool call carries no
+	// decision endpoint, and calling it current would leave it observing for
+	// good.
+	decision, err := decisionURL()
+	if err != nil {
+		return false
+	}
+	return strings.Contains(command, quoteArg(executable)) &&
+		strings.Contains(command, url) && strings.Contains(command, decision)
 }
 
 // argsAreCurrent is commandIsCurrent for an agent whose configuration keeps the
