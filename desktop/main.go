@@ -70,6 +70,17 @@ func main() {
 		return
 	}
 
+	// A "ccswitch://" link the browser was asked to open Gateway with. It is
+	// routed to the running server and shown on a page before anything of it
+	// is kept, because a link like this arrives from a vendor's website.
+	if link := importLinkArg(os.Args); link != "" {
+		if err := openImportLink(link); err != nil {
+			fmt.Fprintln(os.Stderr, "casbin-gateway-desktop:", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	if len(os.Args) > 1 && os.Args[1] == "window" {
 		url := ""
 		if len(os.Args) > 2 {

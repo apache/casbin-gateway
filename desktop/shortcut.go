@@ -40,8 +40,18 @@ func setShortcuts(enabled bool) (string, error) {
 			return "", err
 		}
 		path = installed
-	} else if err := removeShortcuts(); err != nil {
-		return "", err
+		// A vendor's "add this provider" button opens a link rather than a
+		// page, so the entries are only half of what an install puts in place.
+		if err := registerScheme(); err != nil {
+			return "", err
+		}
+	} else {
+		if err := unregisterScheme(); err != nil {
+			return "", err
+		}
+		if err := removeShortcuts(); err != nil {
+			return "", err
+		}
 	}
 
 	_ = os.WriteFile(shortcutMarker(), []byte(path), 0o644)

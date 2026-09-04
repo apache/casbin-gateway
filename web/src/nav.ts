@@ -18,6 +18,7 @@ import {
   ChartColumn,
   CircleDollarSign,
   FileSearch,
+  Link2,
   Logs,
   MessageSquare,
   Plug,
@@ -66,6 +67,9 @@ export const navGroups: NavGroup[] = [
   // from it rather than competing with it in the rail.
   {key: "/agents", label: "agent:Advanced view", icon: Table2, path: "/agents", adminOnly: true, hidden: true},
   {key: "/providers", label: "provider:Providers", icon: Plug, path: "/providers"},
+  // Reached by clicking a vendor's "add this to Gateway" link, which is why it
+  // is named by the breadcrumb but not offered in the rail.
+  {key: "/import", label: "link:Import from a link", icon: Link2, path: "/import", adminOnly: true, hidden: true},
   {
     key: "/agent-configs",
     label: "agentConfig:Skills, MCP & Prompts",

@@ -20,10 +20,10 @@ import (
 	"strings"
 )
 
-// providerLinkScheme is CC Switch's. Vendors already publish "add to CC Switch"
+// ImportLinkScheme is CC Switch's. Vendors already publish "add this provider"
 // links in this format, so Gateway reads that one rather than inventing a
 // second one nobody would be given.
-const providerLinkScheme = "ccswitch"
+const ImportLinkScheme = "ccswitch"
 
 // providerLinkApps are the values CC Switch accepts in "app". Only the wire
 // format matters here, and only Claude speaks Anthropic's.
@@ -37,30 +37,21 @@ var providerLinkApps = map[string]string{
 	"hermes":    "openai",
 }
 
-// ParseProviderLink turns a "ccswitch://v1/import?resource=provider&..." link
-// into a provider, filling in what the link says and leaving the rest to the
-// form. Nothing is stored: the caller shows the result and the person adding it
-// decides, because a link like this arrives from a vendor's website.
+// ParseProviderLink reads a link that has to be a provider, which is what the
+// provider pages import. Every other resource is read by ParseImportLink.
 func ParseProviderLink(owner string, raw string) (*Provider, error) {
-	parsed, err := url.Parse(strings.TrimSpace(raw))
+	link, err := ParseImportLink(owner, raw)
 	if err != nil {
-		return nil, fmt.Errorf("this is not a link: %w", err)
+		return nil, err
 	}
-	if parsed.Scheme != providerLinkScheme {
-		return nil, fmt.Errorf("a provider link starts with %q, not %q", providerLinkScheme+"://", parsed.Scheme)
+	if link.Provider == nil {
+		return nil, fmt.Errorf("this link carries a %q, not a provider", link.Resource)
 	}
-	if parsed.Host != "v1" {
-		return nil, fmt.Errorf("unsupported link version: %s", parsed.Host)
-	}
-	if strings.Trim(parsed.Path, "/") != "import" {
-		return nil, fmt.Errorf("unsupported link path: %s", parsed.Path)
-	}
+	return link.Provider, nil
+}
 
-	query := parsed.Query()
-	if resource := query.Get("resource"); resource != "provider" {
-		return nil, fmt.Errorf("this link carries a %q, which Gateway cannot import", resource)
-	}
-
+// providerFromLink fills in what the link says and leaves the rest to the form.
+func providerFromLink(owner string, query url.Values) (*Provider, error) {
 	app := query.Get("app")
 	protocol, known := providerLinkApps[app]
 	if !known {

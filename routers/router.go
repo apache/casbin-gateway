@@ -111,6 +111,12 @@ func initAPI() {
 	beego.Router("/api/get-unmanaged-skills", &controllers.ApiController{}, "GET:GetUnmanagedSkills")
 	beego.Router("/api/adopt-skills", &controllers.ApiController{}, "POST:AdoptSkills")
 
+	// A vendor's "add this to Gateway" link, whether it was pasted into a page
+	// or clicked outside the browser and routed here by the URL scheme handler.
+	beego.Router("/api/parse-import-link", &controllers.ApiController{}, "POST:ParseImportLink")
+	beego.Router("/api/open-import-link", &controllers.ApiController{}, "POST:OpenImportLink")
+	beego.Router("/api/get-pending-import-link", &controllers.ApiController{}, "GET:GetPendingImportLink")
+
 	// Provider routes for LLM gateway milestone 1.1.
 	beego.Router("/api/get-providers", &controllers.ApiController{}, "GET:GetProviders")
 	beego.Router("/api/get-provider", &controllers.ApiController{}, "GET:GetProvider")

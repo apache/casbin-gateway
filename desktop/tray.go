@@ -36,9 +36,19 @@ var ownsServer struct {
 }
 
 func runTray() {
-	// An archive that was unpacked by hand has no way in but the executable
-	// itself, so the first start is what gives it one.
-	go ensureShortcuts()
+	go func() {
+		// An archive that was unpacked by hand has no way in but the executable
+		// itself, so the first start is what gives it one.
+		ensureShortcuts()
+
+		// Unlike the shortcuts, this is reasserted on every start: the handler
+		// records a path, and an update or a move would otherwise leave links
+		// opening a Gateway that is no longer there. It follows the shortcuts
+		// because on Linux the desktop entry is what carries the registration.
+		if err := registerScheme(); err != nil {
+			fmt.Fprintln(os.Stderr, "casbin-gateway-desktop: could not claim ccswitch:// links:", err)
+		}
+	}()
 
 	// The tray menu is drawn by this process too, so it blurs on a scaled
 	// display for the same reason the window did.

@@ -63,6 +63,16 @@ func fetchTrayMenu() (*trayMenu, error) {
 	return menu, nil
 }
 
+// openImportLinkOnServer leaves a clicked link with the server for the import
+// page to pick up.
+func openImportLinkOnServer(link string) error {
+	body, err := json.Marshal(map[string]string{"link": link})
+	if err != nil {
+		return err
+	}
+	return callApi(http.MethodPost, "/api/open-import-link", body, nil)
+}
+
 func setAgentProvider(agentId string, providerId string) error {
 	body, err := json.Marshal(map[string]string{"agentId": agentId, "provider": providerId})
 	if err != nil {

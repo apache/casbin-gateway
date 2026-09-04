@@ -83,17 +83,21 @@ func desktopEntry(executable string) string {
 	// Path is where the entry starts it: the Gateway keeps its database, logs
 	// and temporary files in the working directory, so an entry that started it
 	// elsewhere would start a second, empty installation.
+	// The %u is what hands a clicked link to the launcher, and MimeType is what
+	// offers the entry as the thing that opens one. Started from the menu the
+	// %u expands to nothing, which is the ordinary start.
 	return fmt.Sprintf(`[Desktop Entry]
 Type=Application
 Name=%s
 Comment=Local gateway for AI agents
-Exec="%s"
+Exec="%s" %%u
 Path=%s
 Icon=%s
 Terminal=false
 Categories=Development;Network;
+MimeType=%s;
 StartupWMClass=%s-desktop
-`, shortcutName, executable, gatewayHome(), appId, serverName)
+`, shortcutName, executable, gatewayHome(), appId, schemeMimeType, serverName)
 }
 
 // installDesktopIcon puts the same entry on the desktop itself. Most desktops

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import * as React from "react";
-import {Link, useNavigate} from "react-router-dom";
+import {Link, useLocation, useNavigate} from "react-router-dom";
 import {
   ChevronDown,
   ExternalLink,
@@ -118,6 +118,7 @@ function Advanced({defaultOpen, children}: {defaultOpen: boolean; children: Reac
 
 export default function ProviderListPage({account}: {account: Account}) {
   const navigate = useNavigate();
+  const location = useLocation();
   const isAdmin = Setting.isAdminUser(account);
   const [data, setData] = React.useState<Provider[]>([]);
   const [total, setTotal] = React.useState(0);
@@ -288,8 +289,18 @@ export default function ProviderListPage({account}: {account: Account}) {
     setSource(picked);
   };
 
-  // A vendor's link fills the same form a card would, and then stops: what it
-  // carries — a base URL and often a key — is shown before anything is stored.
+  // What a link carries — a base URL and often a key — fills the same form a
+  // card would, and then stops: it is shown before anything is stored.
+  const fillFromLink = React.useCallback(
+    (parsed: Provider) => {
+      setForm({...newProvider(account.name, parsed.displayName), ...parsed, name: providerSlug(parsed.displayName)});
+      setNameError("");
+      setSource(providerSources.find(item => item.key === customSource) ?? null);
+      setAddOpen(true);
+    },
+    [account.name],
+  );
+
   const importLink = (link: string) => {
     return ProviderBackend.parseProviderLink(link)
       .then(res => {
@@ -297,14 +308,23 @@ export default function ProviderListPage({account}: {account: Account}) {
           Setting.showMessage("error", res.msg || i18next.t("provider:This link cannot be read"));
           return;
         }
-        const parsed = res.data;
-        setForm({...newProvider(account.name, parsed.displayName), ...parsed, name: providerSlug(parsed.displayName)});
-        setNameError("");
-        setSource(providerSources.find(item => item.key === customSource) ?? null);
-        setAddOpen(true);
+        fillFromLink(res.data);
       })
       .catch(error => Setting.showMessage("error", `${error}`));
   };
+
+  // A link clicked outside the browser lands on the import page, which sends
+  // the provider it carried on to here. It travels in history state rather than
+  // in the address because it holds a key; clearing it is what stops a reload
+  // from opening the dialog again.
+  React.useEffect(() => {
+    const imported = (location.state as {importProvider?: Provider} | null)?.importProvider;
+    if (imported === undefined) {
+      return;
+    }
+    fillFromLink(imported);
+    navigate(location.pathname, {replace: true, state: null});
+  }, [location, navigate, fillFromLink]);
 
   // The upstream is probed before the provider is stored, so a key that was
   // pasted wrong is caught here rather than by the first agent that uses it.

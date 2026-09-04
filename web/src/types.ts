@@ -1127,6 +1127,42 @@ export interface AgentConfigTrashEntry {
   deletedAt: number;
 }
 
+/** What a vendor's "add this to Gateway" link carries. */
+export type ImportResource = "provider" | "mcp" | "prompt" | "skill";
+
+export interface ImportLink {
+  resource: ImportResource;
+  provider?: Provider;
+  mcp?: McpImport;
+  prompt?: PromptImport;
+  skill?: SkillImport;
+}
+
+/** One or more MCP servers, as the JSON block the link carried. */
+export interface McpImport {
+  name: string;
+  config: string;
+  /** The agents the link asks for, as ids of the agents on this host. */
+  targets: string[];
+  /** The apps it named that Gateway does not manage. */
+  unknown: string[];
+}
+
+export interface PromptImport {
+  name: string;
+  description: string;
+  content: string;
+  targets: string[];
+  unknown: string[];
+}
+
+export interface SkillImport {
+  name: string;
+  repo: string;
+  ref: string;
+  subdir: string;
+}
+
 /** Where a skill source's content comes from. */
 export type SkillSourceKind = "github" | "archive" | "upload" | "local";
 

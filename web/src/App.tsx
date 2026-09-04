@@ -37,6 +37,7 @@ import AgentsPage from "@/pages/AgentsPage";
 import AuthCallback from "@/pages/AuthCallback";
 import AuthenticityPage from "@/pages/AuthenticityPage";
 import HomePage from "@/pages/HomePage";
+import ImportLinkPage from "@/pages/ImportLinkPage";
 import PermissionsPage from "@/pages/PermissionsPage";
 import ProviderEditPage from "@/pages/ProviderEditPage";
 import ProviderListPage from "@/pages/ProviderListPage";
@@ -290,6 +291,7 @@ export default function App() {
                   path="/agent-sessions/:sessionKey"
                   element={requireSignin(user => <AgentSessionPage account={user} />)}
                 />
+                <Route path="/import" element={requireSignin(() => <ImportLinkPage />)} />
                 <Route path="/settings" element={requireSignin(user => <SettingPage account={user} />)} />
                 <Route
                   path="/permissions"
