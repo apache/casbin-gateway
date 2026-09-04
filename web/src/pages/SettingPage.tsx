@@ -18,6 +18,7 @@ import i18next from "i18next";
 import * as SettingBackend from "@/backend/SettingBackend";
 import * as Setting from "@/Setting";
 import {BackupPanel} from "@/components/settings/backup-panel";
+import {CloudSyncPanel} from "@/components/settings/cloud-sync-panel";
 import {ImportExportPanel} from "@/components/settings/import-export-panel";
 import {Field} from "@/components/shared/form-dialog";
 import {Loading} from "@/components/shared/loading";
@@ -38,6 +39,9 @@ export default function SettingPage({account}: {account: Account}) {
   const isAdmin = Setting.isAdminUser(account);
   const [setting, setSetting] = React.useState<SettingType | null>(null);
   const [saving, setSaving] = React.useState(false);
+  // Bumped when a cloud sync pulls something, which is what makes the list of
+  // backups above it reload.
+  const [synced, setSynced] = React.useState(0);
 
   // The panels below store parts of this same row, so the form is reloaded
   // after one of them writes rather than left to save what it read on load.
@@ -200,7 +204,9 @@ export default function SettingPage({account}: {account: Account}) {
         {textField("httpProxy", i18next.t("setting:Outbound SOCKS5 proxy"), i18next.t("setting:Outbound SOCKS5 proxy hint"))}
       </Section>
 
-      <BackupPanel onSettingChanged={load} />
+      <BackupPanel onSettingChanged={load} reloadToken={synced} />
+
+      <CloudSyncPanel onSynced={() => setSynced(count => count + 1)} />
 
       <ImportExportPanel onSettingChanged={load} />
     </PageContainer>

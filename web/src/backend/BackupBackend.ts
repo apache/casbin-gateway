@@ -55,10 +55,14 @@ export function deleteBackup(name: string) {
   return request<BackupState>("/api/delete-backup", "POST", {name: name});
 }
 
-export function updateBackupSchedule(mode: BackupMode, intervalHours: number, retention: number) {
+/** The schedule, and the directory the snapshots are written to: an empty one
+ *  is the default beside the database, and a synced folder is how they end up
+ *  in Dropbox, OneDrive, iCloud Drive or on a NAS. */
+export function updateBackupSchedule(mode: BackupMode, intervalHours: number, retention: number, dir: string) {
   return request<BackupState>("/api/update-backup-schedule", "POST", {
     mode: mode,
     intervalHours: intervalHours,
     retention: retention,
+    dir: dir,
   });
 }

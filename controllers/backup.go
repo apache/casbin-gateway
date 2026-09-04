@@ -16,7 +16,9 @@ package controllers
 
 import (
 	"encoding/json"
+	"os"
 
+	"github.com/apache/casbin-gateway/cloudsync"
 	"github.com/apache/casbin-gateway/object"
 )
 
@@ -179,8 +181,11 @@ func (c *ApiController) DeleteBackup() {
 	c.GetBackupState()
 }
 
-// UpdateBackupSchedule stores the schedule on the built-in setting row, the
-// same place the Settings page saves everything else.
+// UpdateBackupSchedule stores the schedule, and the directory the snapshots go
+// in, on the built-in setting row - the same place the Settings page saves
+// everything else. The directory is the other way to put the data in Dropbox,
+// OneDrive, iCloud Drive or a NAS share: point it at the folder their client
+// already syncs and every snapshot is uploaded as it is written.
 func (c *ApiController) UpdateBackupSchedule() {
 	if c.RequireAdmin() {
 		return
@@ -190,6 +195,7 @@ func (c *ApiController) UpdateBackupSchedule() {
 		Mode          string `json:"mode"`
 		IntervalHours int    `json:"intervalHours"`
 		Retention     int    `json:"retention"`
+		Dir           string `json:"dir"`
 	}
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &request); err != nil {
 		c.ResponseError(err.Error())
@@ -208,6 +214,17 @@ func (c *ApiController) UpdateBackupSchedule() {
 		return
 	}
 
+	// An empty directory is the default one beside the database. Anything else
+	// is created here: a folder that cannot be made is a setting that would
+	// otherwise fail every backup from now on, silently.
+	dir := cloudsync.ExpandPath(request.Dir)
+	if dir != "" {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			c.ResponseError(err.Error())
+			return
+		}
+	}
+
 	setting, err := object.GetBuiltInSetting()
 	if err != nil {
 		c.ResponseError(err.Error())
@@ -221,6 +238,7 @@ func (c *ApiController) UpdateBackupSchedule() {
 	setting.BackupMode = request.Mode
 	setting.BackupIntervalHours = request.IntervalHours
 	setting.BackupRetention = request.Retention
+	setting.BackupDir = dir
 	if _, err := object.UpdateSetting(object.BuiltInSettingId, setting); err != nil {
 		c.ResponseError(err.Error())
 		return

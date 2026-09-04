@@ -61,6 +61,14 @@ type Setting struct {
 	BackupRetention     int    `xorm:"int" json:"backupRetention"`
 	BackupDir           string `xorm:"varchar(500)" json:"backupDir"`
 
+	// CloudSyncMode is "auto" or "off", the kind is which storage the backups
+	// are copied to, and the options are what that kind was asked for. The
+	// options are one JSON document rather than a column each: a kind added
+	// later brings its own keys, and this table should not have to learn them.
+	CloudSyncMode    string `xorm:"varchar(20)" json:"cloudSyncMode"`
+	CloudSyncKind    string `xorm:"varchar(50)" json:"cloudSyncKind"`
+	CloudSyncOptions string `xorm:"varchar(2000)" json:"cloudSyncOptions"`
+
 	AgentPatchStateDir      string `xorm:"varchar(500)" json:"agentPatchStateDir"`
 	AgentRecordCapacity     int    `xorm:"int" json:"agentRecordCapacity"`
 	AgentMonitorPollSeconds int    `xorm:"int" json:"agentMonitorPollSeconds"`
@@ -104,6 +112,10 @@ func SyncSettingToConf(setting *Setting) {
 		"backupIntervalHours": strconv.Itoa(setting.BackupIntervalHours),
 		"backupRetention":     strconv.Itoa(setting.BackupRetention),
 		"backupDir":           setting.BackupDir,
+
+		"cloudSyncMode":    setting.CloudSyncMode,
+		"cloudSyncKind":    setting.CloudSyncKind,
+		"cloudSyncOptions": setting.CloudSyncOptions,
 
 		"agentPatchStateDir":      setting.AgentPatchStateDir,
 		"agentRecordCapacity":     strconv.Itoa(setting.AgentRecordCapacity),
@@ -237,6 +249,8 @@ func InitBuiltInSetting() {
 		}
 	}
 
+	initCloudSyncSetting(setting)
+
 	SyncSettingToConf(setting)
 }
 
@@ -267,6 +281,8 @@ func newSettingFromConf() *Setting {
 		BackupIntervalHours: conf.GetBackupIntervalHours(),
 		BackupRetention:     conf.GetBackupRetention(),
 		BackupDir:           conf.GetBackupDir(),
+
+		CloudSyncMode: CloudSyncOff,
 
 		AgentPatchStateDir:      conf.GetAgentPatchStateDir(),
 		AgentRecordCapacity:     conf.GetAgentRecordCapacity(),

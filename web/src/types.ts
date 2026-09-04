@@ -847,6 +847,12 @@ export interface Setting {
   backupIntervalHours: number;
   backupRetention: number;
   backupDir: string;
+
+  cloudSyncMode: CloudSyncMode;
+  cloudSyncKind: string;
+  /** The options of the chosen kind, as one JSON document: a kind added later
+   *  brings its own keys, and this row does not have to learn them. */
+  cloudSyncOptions: string;
 }
 
 export type BackupMode = "auto" | "off";
@@ -931,6 +937,72 @@ export interface BackupState {
   latest: string;
   error: string;
   backups: Backup[];
+  /** The synced folders this machine has, offered as a place to keep them. */
+  folders: SyncedFolder[];
+}
+
+export type CloudSyncMode = "auto" | "off";
+
+export type CloudSyncDirection = "both" | "up" | "down";
+
+/** A folder on this machine that a desktop client already syncs. */
+export interface SyncedFolder {
+  name: string;
+  path: string;
+  /** The path with Gateway's own subdirectory on the end, which is what
+   *  picking the folder fills the field with. */
+  suggested: string;
+}
+
+/** One thing a storage kind needs to be told. The server describes its own
+ *  form, so a kind added later needs no change here. */
+export interface CloudSyncField {
+  name: string;
+  label: string;
+  type: "text" | "secret" | "switch";
+  placeholder: string;
+  hint: string;
+  required: boolean;
+}
+
+/** One storage Gateway can copy the backups to. */
+export interface CloudSyncKind {
+  name: string;
+  displayName: string;
+  description: string;
+  fields: CloudSyncField[];
+}
+
+/** One file at the target. */
+export interface CloudSyncFile {
+  name: string;
+  size: number;
+  modifiedTime: string;
+}
+
+/** What one run did. */
+export interface CloudSyncResult {
+  uploaded: string[];
+  downloaded: string[];
+  removed: string[];
+  skipped: number;
+  errors: string[];
+  remote: CloudSyncFile[];
+}
+
+/** Where the backups are copied to, and how the last run went. */
+export interface CloudSyncState {
+  mode: CloudSyncMode;
+  kind: string;
+  options: Record<string, string>;
+  kinds: CloudSyncKind[];
+  folders: SyncedFolder[];
+  /** Where the copies land, in one line and without credentials. */
+  target: string;
+  running: boolean;
+  syncedTime: string;
+  error: string;
+  result: CloudSyncResult | null;
 }
 
 /** The kinds of configuration the Skills, MCP & Prompts page manages. */

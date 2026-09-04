@@ -52,6 +52,10 @@ func initAPI() {
 	beego.Router("/api/restore-backup", &controllers.ApiController{}, "POST:RestoreBackup")
 	beego.Router("/api/delete-backup", &controllers.ApiController{}, "POST:DeleteBackup")
 	beego.Router("/api/update-backup-schedule", &controllers.ApiController{}, "POST:UpdateBackupSchedule")
+	beego.Router("/api/get-cloud-sync-state", &controllers.ApiController{}, "GET:GetCloudSyncState")
+	beego.Router("/api/update-cloud-sync", &controllers.ApiController{}, "POST:UpdateCloudSync")
+	beego.Router("/api/test-cloud-sync", &controllers.ApiController{}, "POST:TestCloudSync")
+	beego.Router("/api/run-cloud-sync", &controllers.ApiController{}, "POST:RunCloudSync")
 
 	beego.Router("/api/get-agents", &controllers.ApiController{}, "GET:GetAgents")
 	beego.Router("/api/get-agent-catalog", &controllers.ApiController{}, "GET:GetAgentCatalog")

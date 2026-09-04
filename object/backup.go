@@ -25,6 +25,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/apache/casbin-gateway/cloudsync"
 	"github.com/apache/casbin-gateway/conf"
 	"github.com/apache/casbin-gateway/util"
 	"github.com/beego/beego"
@@ -89,6 +90,10 @@ type BackupState struct {
 	IntervalHours int    `json:"intervalHours"`
 	Retention     int    `json:"retention"`
 	Dir           string `json:"dir"`
+	// Folders are the synced folders this machine has, so that putting the
+	// backups straight into Dropbox, OneDrive, iCloud Drive or a NAS share is a
+	// choice on the page rather than a path to go and find.
+	Folders []cloudsync.Folder `json:"folders"`
 	// NextTime is when the schedule runs again, empty when nothing is scheduled.
 	TakenTime string    `json:"takenTime"`
 	NextTime  string    `json:"nextTime"`
@@ -104,8 +109,11 @@ func GetBackupMode() string {
 	return BackupAuto
 }
 
+// backupDir is where the snapshots are written. The path is expanded here, so
+// that pointing it at "~/Dropbox/Casbin Gateway" or "%OneDrive%\Backups" works
+// wherever it was typed.
 func backupDir() string {
-	return conf.GetBackupDir()
+	return cloudsync.ExpandPath(conf.GetBackupDir())
 }
 
 // backupPath resolves one name inside the backup directory. A name that is not
@@ -166,6 +174,10 @@ func CreateBackup(reason string) (*Backup, error) {
 	if err := pruneBackups(); err != nil {
 		beego.Error("the old backups could not be pruned:", err)
 	}
+
+	// A copy on this disk is not a backup of this disk, so the snapshot goes to
+	// wherever the cloud sync points as soon as it has been written.
+	cloudSyncAfterBackup()
 
 	return describeBackup(name, int64(len(data)), snapshot), nil
 }
@@ -296,6 +308,7 @@ func GetBackupState() (*BackupState, error) {
 		IntervalHours: conf.GetBackupIntervalHours(),
 		Retention:     conf.GetBackupRetention(),
 		Dir:           backupDir(),
+		Folders:       cloudsync.DetectFolders(),
 		Latest:        backupLatest,
 		Error:         backupError,
 		Backups:       backups,
@@ -321,8 +334,9 @@ func GetBackupState() (*BackupState, error) {
 	return state, nil
 }
 
-// StartBackupSchedule takes a snapshot of the configuration every so often. The
-// schedule is read each time round rather than held, so turning it off stops it.
+// StartBackupSchedule takes a snapshot of the configuration every so often, and
+// copies the snapshots to the cloud sync target on the same round. The schedule
+// is read each time round rather than held, so turning it off stops it.
 func StartBackupSchedule() {
 	go func() {
 		time.Sleep(backupDelay)
@@ -335,6 +349,10 @@ func StartBackupSchedule() {
 					backupMutex.Unlock()
 				}
 			}
+			// Copying the backups off the machine is on the same schedule as
+			// taking them, and runs whether or not one was due: the pull is how
+			// this machine learns what another one backed up.
+			cloudSyncTick()
 			time.Sleep(backupTick)
 		}
 	}()

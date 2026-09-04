@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import * as React from "react";
-import {Archive, Download, History, Trash2} from "lucide-react";
+import {Archive, Download, FolderSymlink, History, Trash2} from "lucide-react";
 import i18next from "i18next";
 
 import * as BackupBackend from "@/backend/BackupBackend";
@@ -25,6 +25,7 @@ import {MessageAlert} from "@/components/ui/alert";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
+import {Input} from "@/components/ui/input";
 import {Switch} from "@/components/ui/switch";
 import type {Backup, BackupState, ImportReport} from "@/types";
 
@@ -151,10 +152,13 @@ function BackupRow({
  * is also taken in front of every import, so the restore below is what undoes
  * one that turned out to be the wrong file.
  */
-export function BackupPanel({onSettingChanged}: {onSettingChanged: () => void}) {
+export function BackupPanel({onSettingChanged, reloadToken = 0}: {onSettingChanged: () => void; reloadToken?: number}) {
   const [state, setState] = React.useState<BackupState | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [report, setReport] = React.useState<ImportReport | null>(null);
+  // Null while the field shows what is stored, a string once it is being
+  // edited: the directory only moves when the button beside it is pressed.
+  const [dir, setDir] = React.useState<string | null>(null);
 
   const load = React.useCallback(() => {
     BackupBackend.getBackupState()
@@ -166,7 +170,9 @@ export function BackupPanel({onSettingChanged}: {onSettingChanged: () => void}) 
       .catch(() => undefined);
   }, []);
 
-  React.useEffect(load, [load]);
+  // A sync that pulled backups from the cloud target changes this list, and the
+  // panel that did it says so by bumping the token.
+  React.useEffect(load, [load, reloadToken]);
 
   if (state === null) {
     return null;
@@ -193,8 +199,10 @@ export function BackupPanel({onSettingChanged}: {onSettingChanged: () => void}) 
       .then(() => setBusy(false));
   };
 
-  const schedule = (mode: BackupState["mode"], intervalHours: number, retention: number) =>
-    apply(BackupBackend.updateBackupSchedule(mode, intervalHours, retention));
+  const schedule = (mode: BackupState["mode"], intervalHours: number, retention: number, directory?: string) =>
+    apply(BackupBackend.updateBackupSchedule(mode, intervalHours, retention, directory ?? state.dir)).then(() =>
+      setDir(null),
+    );
 
   const backUpNow = () => {
     setReport(null);
@@ -312,8 +320,32 @@ export function BackupPanel({onSettingChanged}: {onSettingChanged: () => void}) 
           </div>
         </div>
 
-        <div className="text-muted-foreground text-xs">
-          {i18next.t("setting:Backups live in {dir}").replace("{dir}", state.dir)}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-muted-foreground text-xs">{i18next.t("setting:Where backups live")}</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              className="h-8 max-w-md"
+              value={dir ?? state.dir}
+              disabled={busy}
+              aria-label={i18next.t("setting:Where backups live")}
+              onChange={event => setDir(event.target.value)}
+            />
+            <Button
+              variant="outline"
+              size="xs"
+              disabled={busy || dir === null || dir === state.dir}
+              onClick={() => schedule(state.mode, state.intervalHours, state.retention, dir ?? state.dir)}
+            >
+              {i18next.t("general:Save")}
+            </Button>
+            {(state.folders ?? []).map(folder => (
+              <Button key={folder.path} variant="ghost" size="xs" disabled={busy} onClick={() => setDir(folder.suggested)}>
+                <FolderSymlink />
+                {folder.name}
+              </Button>
+            ))}
+          </div>
+          <span className="text-muted-foreground text-xs">{i18next.t("setting:Where backups live hint")}</span>
         </div>
 
         {state.error === "" ? null : (
