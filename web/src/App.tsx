@@ -25,6 +25,7 @@ import {AppHeader} from "@/components/shared/app-header";
 import {AppSidebar, persistOpenKeys, readSavedOpenKeys, useIsDesktop} from "@/components/shared/app-sidebar";
 import {CommandPalette, useCommandPalette} from "@/components/shared/command-palette";
 import {Loading} from "@/components/shared/loading";
+import {Logo} from "@/components/shared/logo";
 import {TooltipProvider} from "@/components/ui/tooltip";
 import {cn} from "@/lib/utils";
 import AccountPage from "@/pages/AccountPage";
@@ -330,11 +331,7 @@ export default function App() {
 
           <footer className="flex items-center justify-center border-t py-5">
             <a target="_blank" rel="noreferrer" href="https://github.com/apache/casbin-gateway">
-              <img
-                className="h-[30px] w-auto dark:invert dark:hue-rotate-180"
-                alt="Casbin"
-                src={`${Setting.StaticBaseUrl}/img/casbin_logo_1024x256.png`}
-              />
+              <Logo className="h-[30px] w-auto" />
             </a>
           </footer>
         </div>

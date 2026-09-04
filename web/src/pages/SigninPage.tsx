@@ -20,6 +20,7 @@ import * as AccountBackend from "@/backend/AccountBackend";
 import * as Conf from "@/Conf";
 import * as Setting from "@/Setting";
 import {Loading} from "@/components/shared/loading";
+import {Logo} from "@/components/shared/logo";
 import {ResultScreen} from "@/components/shared/misc";
 import {PasswordInput} from "@/components/shared/password-input";
 import {Button} from "@/components/ui/button";
@@ -96,11 +97,7 @@ export default function SigninPage() {
     <div className="bg-muted/30 flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-sm">
         <div className="mb-9 flex justify-center">
-          <img
-            src={`${Setting.StaticBaseUrl}/img/logo_384x96.png`}
-            alt="Casbin Gateway"
-            className="h-10 w-auto max-w-[260px] object-contain dark:invert dark:hue-rotate-180"
-          />
+          <Logo className="h-10 w-auto max-w-[260px] object-contain" />
         </div>
 
         <form onSubmit={onSubmit} className="bg-card grid gap-4 rounded-xl border p-6 shadow-sm">

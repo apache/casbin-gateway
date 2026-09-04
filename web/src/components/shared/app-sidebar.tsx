@@ -17,9 +17,9 @@ import {Link} from "react-router-dom";
 import {ChevronDown, type LucideIcon} from "lucide-react";
 import i18next from "i18next";
 
-import * as Setting from "@/Setting";
 import {cn} from "@/lib/utils";
 import {navGroups, type NavGroup} from "@/nav";
+import {Logo, LogoMark} from "@/components/shared/logo";
 import {SimpleTooltip} from "@/components/ui/tooltip";
 
 const OPEN_KEYS_STORAGE = "siderMenuOpenKeys";
@@ -169,17 +169,11 @@ export function AppSidebar({
       >
         <div className={cn("flex h-13 shrink-0 items-center border-b px-5", railCollapsed && "justify-center px-0")}>
           <Link to="/" className="flex items-center overflow-hidden">
-            <img
-              src={`${Setting.StaticBaseUrl}/img/logo_384x96.png`}
-              alt="Casbin Gateway"
-              // The wordmark is black ink on transparent. Inverting luminance
-              // and rotating the hue back lights it up without draining the
-              // colour out of the gopher and the shield.
-              className={cn(
-                "w-auto object-contain transition-all dark:invert dark:hue-rotate-180",
-                railCollapsed ? "h-5" : "h-7 max-w-[150px]",
-              )}
-            />
+            {railCollapsed ? (
+              <LogoMark className="h-7 w-auto object-contain transition-all" />
+            ) : (
+              <Logo className="h-7 w-auto max-w-[150px] object-contain transition-all" />
+            )}
           </Link>
         </div>
 
