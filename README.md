@@ -112,6 +112,7 @@
 
 - **[Is the API behind that key what it was sold as?](#the-killer-feature-is-the-api-behind-that-key-what-it-was-sold-as)** — a reseller can quietly swap in a cheaper model or fake a cache hit, and none of it shows up in the traffic. Authenticity asks the upstream directly and grades it A–F.
 - **[Switch every agent's provider from one place](#send-an-agents-traffic-through-gateway)** — change an API key or base URL once, and every agent pointed at Gateway picks it up.
+- **[Add a provider, an MCP server, a prompt or a skill from a link](#import-from-a-link)** — click a vendor's "add this" button on the web and Gateway opens with what the link carries, before any of it is written.
 - **[Run several instances of one agent side by side](#what-to-do-next)** — e.g. multiple Claude Desktop instances, each signed in to a different account.
 - **[See the whole request, not just a count](#recording-prompts)** — every prompt, message and tool schema an agent sent, kept on this machine.
 - **[Say what each agent may do](#what-each-agent-is-allowed-to-do)** — around forty switches per agent, in groups, over its tools, models and providers, enforced by Casbin on every request it relays.
@@ -173,13 +174,15 @@ Gateway installed some other way, or in a directory it cannot write to, says so 
 | --- | --- | --- |
 | **Agents** | Every AI coding agent installed on this machine — Claude Code, Codex CLI, Cursor, the Gemini CLI, opencode and more — four cards to a row, each naming the account it is signed in to, the provider it answers to, what it has spent, and whether it is running right now. Start or stop one from its card, or run several **instances** of the same agent at once, each with a state directory and an account of its own. An agent this machine does not have is listed too, and installed or upgraded from the page through the package manager the host already has. | Nothing |
 | **Skills, MCP & Prompts** | Every skill, MCP server and instruction file of every agent in one table. Install skills from a GitHub repository, a `.zip` or `.tar.gz`, or a folder on this machine, into one agent or several at once. Add an MCP server the same way, edit the instructions an agent reads before every session, open one, delete it, or copy it into another agent. | Nothing |
-| **Sessions** | Every session those agents have had, read from the transcripts they leave on disk: the whole conversation, message by message. | Nothing |
+| **Sessions** | Every session those agents have had, read from the transcripts they leave on disk: the whole conversation, message by message. How many there are, how many ran today and how many came from a transcript rather than from monitoring, then filtered down to one agent or one of those two sources. | Nothing |
 | **Activity** | What a monitored agent is doing as it does it — each tool call, its target and how long it took. | Monitoring on for an agent |
 | **Providers** | One endpoint in front of your model vendors. Gateway holds the API key, so the agents never have it — or forwards the agent's own sign-in and holds nothing. | A vendor API key, or nothing at all |
 | **Authenticity** | A score out of 100 and a grade for every provider, measured without being asked — see [the section below](#the-killer-feature-is-the-api-behind-that-key-what-it-was-sold-as). | A provider with an API key |
 | **LLM Records** | Every request an agent relayed: the full system prompt, every message and tool call, the schema of every tool the model was offered, plus tokens and cost. | A provider, and `llmRecordMode` — see [Recording prompts](#recording-prompts) |
 | **Usage** | What every agent on this machine spent, over time and broken down by model and by agent, read from the agents' own transcripts — so it counts the requests that never went through Gateway. A second tab shows what Gateway relayed, which is the only account that knows which provider answered and whether it failed. | Nothing |
 | **Model pricing** | What a million tokens costs, which is what every figure on the Usage page is worked out from. Edit a price by hand, or let Gateway reprice the models this machine has run from the [models.dev](https://models.dev) catalogue on a schedule; a price you edited yourself is left alone. | Nothing |
+
+A page with tabs or sections is in the sidebar under its own name, so the rail lands on the test cases, the MCP servers or the security settings rather than only on the top of the page they are on. **⌘K**, or **Ctrl+K**, opens a search box over whichever page you are on: every page by name, and every agent and provider on this machine, which is how you reach one of thirty providers without paging through the list.
 
 Agents are found by reading the user accounts, home directories and install paths of **the machine Gateway runs on**, so run it on the machine whose agents you want to watch.
 
@@ -225,6 +228,16 @@ An agent signed in with a ChatGPT or Claude subscription has no API key to paste
 The environment snippet for such a provider sets the base URL and nothing else — a token there would replace the sign-in the agent already has. Gateway records and routes the traffic exactly as it does for a provider with a key; it just never sees one.
 
 Codex is the exception: its ChatGPT sign-in talks to an endpoint no provider stands in for, so a Codex CLI still needs a provider with an API key.
+
+### Import from a link
+
+Vendors put an "add this to my agent manager" button on their own pages, which opens a `ccswitch://` link rather than a page. Gateway reads that format instead of inventing a second one nobody would be given a button for, and one link carries any of four things: a provider with its base URL, key and model list; an MCP server, as the JSON block a server is written in; a set of instructions for an agent to read before every session; or a repository to install skills from.
+
+Gateway claims the scheme on Windows and Linux when it starts, so clicking such a button opens Gateway on the **Import** page with everything the link held laid out — the arguments an MCP server would be run with, the instructions in full, the repository a skill would come from. **Nothing is written until the button under it is pressed**: the link came from a website, so its values are read first. A provider goes on to the Providers form, where it is reviewed and probed against the upstream before it is stored; the other three are written through the same endpoints that add one by hand, into the agents you tick. A link names apps rather than the agents on this machine, and the ones Gateway does not manage are named back to you rather than quietly dropped.
+
+The link is handed to Gateway in the body of an API call, not in the address of the page it opens, because a provider link carries an API key and an address is kept in browser history and sent on to wherever the page navigates next.
+
+The scheme is taken from whatever held it only the first time, and given back when Gateway is removed; a registration that is already Gateway's own is rewritten on every start, since it records a path that an update or a move would otherwise leave pointing at a Gateway that is no longer there. On macOS nothing is claimed at all — a URL scheme there belongs to an application bundle and the link arrives as an Apple event, which this launcher has no loop to receive, so declaring it would take links away from whatever can open them. Paste the link into the box on the Import page instead, which works on every platform; the Providers page takes a provider link the same way.
 
 ### What each agent is allowed to do
 
