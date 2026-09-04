@@ -13,7 +13,17 @@
 // limitations under the License.
 
 import * as React from "react";
-import {LogIn, Play, Plus, RefreshCw, Square, Trash2, UserPlus, Users} from "lucide-react";
+import {
+  LoaderCircle,
+  LogIn,
+  Play,
+  Plus,
+  RefreshCw,
+  Square,
+  Trash2,
+  UserPlus,
+  Users,
+} from "lucide-react";
 import i18next from "i18next";
 
 import {accountLabel} from "@/components/AgentGridCard";
@@ -305,11 +315,62 @@ export function AgentInstances({agent, enabled = true}: {agent: Agent; enabled?:
   );
 }
 
+/** One copy as a chip: a dot for whether it runs, its name, and a click to flip that. */
+function InstanceChip({
+  instance,
+  busy,
+  onToggle,
+}: {
+  instance: AgentInstance;
+  busy: boolean;
+  onToggle: (instance: AgentInstance) => void;
+}) {
+  const action = i18next.t(instance.running ? "agent:Stop" : "agent:Start");
+  const name = instanceLabel(instance);
+  const blocked = !instance.running && !instance.canStart;
+  const who = instance.account ? instance.account.email || "" : "";
+
+  return (
+    <SimpleTooltip
+      title={
+        blocked
+          ? [name, instance.detail].filter(Boolean).join(" · ")
+          : [`${action} ${name}`, who].filter(Boolean).join(" · ")
+      }
+    >
+      <span>
+        <button
+          type="button"
+          disabled={blocked || busy}
+          aria-label={`${action}: ${name}`}
+          className={cn(
+            "bg-muted/50 hover:bg-muted flex max-w-[8rem] items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px] transition-colors disabled:opacity-50",
+            instance.running && "border-success/40",
+          )}
+          onClick={() => onToggle(instance)}
+        >
+          {busy ? (
+            <LoaderCircle className="size-2.5 shrink-0 animate-spin" />
+          ) : (
+            <span
+              className={cn(
+                "size-1.5 shrink-0 rounded-full",
+                instance.running ? "bg-success" : "bg-muted-foreground/40",
+              )}
+            />
+          )}
+          <span className="truncate">{name}</span>
+        </button>
+      </span>
+    </SimpleTooltip>
+  );
+}
+
 /**
- * The instances of one agent as a grid card shows them: an icon for the section,
- * one line per copy with the account it is signed in to, and the control that
- * starts or stops it. The card has no room for words about any of it, so the
- * names live in the tooltips and the renaming on the detail page.
+ * The instances of one agent as a grid card shows them: one wrapping row of
+ * chips, each a copy that a click starts or stops. The card has no room for
+ * words about any of it, so the accounts live in the tooltips and the renaming
+ * on the detail page.
  */
 export function AgentCardInstances({
   agent,
@@ -324,34 +385,24 @@ export function AgentCardInstances({
 
   const instances = instancesOf(controls.instances, agent);
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-muted-foreground flex items-center gap-1 text-[11px]">
+    <div className="flex flex-wrap items-center gap-1">
+      <SimpleTooltip title={i18next.t("agent:Instances hint")}>
+        <span className="text-muted-foreground mr-0.5 flex items-center gap-1 text-[11px]">
           <Users className="size-3" />
-          {i18next.t("agent:Instances")}
-          {instances.length > 0 ? ` · ${instances.length}` : null}
+          {instances.length > 0 ? instances.length : i18next.t("agent:Instances")}
         </span>
-        <AddInstanceButton agent={agent} controls={controls} compact />
-      </div>
+      </SimpleTooltip>
 
       {instances.map(instance => (
-        <div key={instance.name} className="flex items-center gap-2">
-          <span
-            className={cn(
-              "size-1.5 shrink-0 rounded-full",
-              instance.running ? "bg-success" : "bg-muted-foreground/40",
-            )}
-          />
-          <SimpleTooltip title={instance.account ? instance.account.email : instance.dataDir}>
-            <span className="min-w-0 flex-1 truncate text-[11px]">{instanceLabel(instance)}</span>
-          </SimpleTooltip>
-          <InstanceRunButton
-            instance={instance}
-            busy={controls.busyName === instance.name}
-            onToggle={controls.toggleRunning}
-          />
-        </div>
+        <InstanceChip
+          key={instance.name}
+          instance={instance}
+          busy={controls.busyName === instance.name}
+          onToggle={controls.toggleRunning}
+        />
       ))}
+
+      <AddInstanceButton agent={agent} controls={controls} compact />
     </div>
   );
 }
