@@ -50,7 +50,7 @@ func ServeIfInvoked() {
 	if len(os.Args) < 2 || os.Args[1] != Subcommand {
 		return
 	}
-	timer := time.AfterFunc(hookLifetime, func() { os.Exit(0) })
+	timer := time.AfterFunc(hookLifetime, terminateSelf)
 	defer timer.Stop()
 	_ = Run(os.Args[2:], os.Stdin, os.Stdout)
 	os.Exit(0)
