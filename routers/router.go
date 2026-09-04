@@ -43,6 +43,8 @@ func initAPI() {
 	beego.Router("/api/get-update-status", &controllers.ApiController{}, "GET:GetUpdateStatus")
 	beego.Router("/api/get-setting", &controllers.ApiController{}, "GET:GetSetting")
 	beego.Router("/api/update-setting", &controllers.ApiController{}, "POST:UpdateSetting")
+	beego.Router("/api/get-autostart", &controllers.ApiController{}, "GET:GetAutostart")
+	beego.Router("/api/update-autostart", &controllers.ApiController{}, "POST:UpdateAutostart")
 
 	beego.Router("/api/export-snapshot", &controllers.ApiController{}, "POST:ExportSnapshot")
 	beego.Router("/api/import-snapshot", &controllers.ApiController{}, "POST:ImportSnapshot")

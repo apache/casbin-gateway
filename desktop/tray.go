@@ -83,6 +83,10 @@ func onTrayReady() {
 	systray.AddSeparator()
 	mQuit := systray.AddMenuItem("Quit", "Close the window and leave the tray")
 
+	// The Settings page writes the same login entry, so the checkbox follows it
+	// rather than showing what was true when the menu was built.
+	go watchAutostart(mAutostart)
+
 	port := httpPort()
 
 	// The window is opened from a goroutine so that the tray answers clicks
@@ -137,6 +141,17 @@ func watchStatus(item *systray.MenuItem, port int) {
 			item.SetTitle(fmt.Sprintf("Running on port %d", port))
 		} else {
 			item.SetTitle("Not running")
+		}
+		time.Sleep(probeInterval)
+	}
+}
+
+func watchAutostart(item *systray.MenuItem) {
+	for {
+		if autostartEnabled() {
+			item.Check()
+		} else {
+			item.Uncheck()
 		}
 		time.Sleep(probeInterval)
 	}

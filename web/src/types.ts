@@ -1316,3 +1316,12 @@ export interface VersionInfo {
   releaseUrl: string;
   installCommand: string;
 }
+
+/** Whether this machine starts Gateway at login. Host state, not a setting: it
+ *  lives in the login entry the desktop launcher and the tray share. */
+export interface AutostartState {
+  /** False where there is no desktop launcher to start, as in a container. */
+  supported: boolean;
+  enabled: boolean;
+  launcher: string;
+}

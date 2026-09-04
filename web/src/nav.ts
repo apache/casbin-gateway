@@ -123,6 +123,7 @@ export const navGroups: NavGroup[] = [
     adminOnly: true,
     // One long page, so the children are its sections rather than tabs.
     children: [
+      {key: "/settings#startup", label: "setting:Startup", path: "/settings#startup"},
       {key: "/settings#llm-records", label: "setting:LLM records", path: "/settings#llm-records"},
       {key: "/settings#probes", label: "setting:Channel probes", path: "/settings#probes"},
       {key: "/settings#agents", label: "setting:Agents", path: "/settings#agents"},

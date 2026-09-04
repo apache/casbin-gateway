@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import {query, request} from "@/backend/request";
-import type {UpdateStatus, VersionInfo} from "@/types";
+import type {AutostartState, UpdateStatus, VersionInfo} from "@/types";
 
 /** The token an agent has to send to the relay, and whether it is needed here. */
 export function getRelayToken() {
@@ -32,4 +32,13 @@ export function updateGateway() {
 
 export function getUpdateStatus() {
   return request<UpdateStatus>("/api/get-update-status");
+}
+
+/** Whether this machine starts Gateway at login. */
+export function getAutostart() {
+  return request<AutostartState>("/api/get-autostart");
+}
+
+export function updateAutostart(enabled: boolean) {
+  return request<AutostartState>("/api/update-autostart", "POST", {enabled: enabled});
 }

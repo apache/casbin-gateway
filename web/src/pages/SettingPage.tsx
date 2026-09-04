@@ -21,6 +21,7 @@ import * as Setting from "@/Setting";
 import {BackupPanel} from "@/components/settings/backup-panel";
 import {CloudSyncPanel} from "@/components/settings/cloud-sync-panel";
 import {ImportExportPanel} from "@/components/settings/import-export-panel";
+import {StartupPanel} from "@/components/settings/startup-panel";
 import {Field} from "@/components/shared/form-dialog";
 import {Loading} from "@/components/shared/loading";
 import {UnauthorizedResult} from "@/components/shared/misc";
@@ -148,6 +149,10 @@ export default function SettingPage({account}: {account: Account}) {
           </Button>
         }
       />
+
+      <div id="startup" className="scroll-mt-20">
+        <StartupPanel />
+      </div>
 
       <Section id="llm-records" columns={2} title={i18next.t("setting:LLM records")} description={i18next.t("setting:LLM records description")}>
         <Field label={i18next.t("setting:Record mode")}>
