@@ -607,7 +607,7 @@ export default function AgentDetailPage({account}: {account: Account}) {
             <DataTable
               columns={recordColumns}
               dataSource={records}
-              rowKey={record => record.id}
+              rowKey={record => String(record.id)}
               pageSize={0}
               emptyText={i18next.t("agent:Monitoring, no activity yet")}
             />
