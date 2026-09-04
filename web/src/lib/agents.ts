@@ -115,6 +115,12 @@ export function agentSetupNoteKey(agentId: string) {
     return "agent:Droid config hint";
   case "zed":
     return "agent:Zed config hint";
+  case "pi":
+    return "agent:Pi config hint";
+  case "kimi-code":
+    return "agent:Kimi Code config hint";
+  case "codebuddy":
+    return "agent:CodeBuddy config hint";
   default:
     return "";
   }

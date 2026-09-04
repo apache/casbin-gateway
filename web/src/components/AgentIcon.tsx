@@ -42,6 +42,9 @@ const agentSites: Record<string, string> = {
   Crush: "charm.sh",
   Droid: "factory.ai",
   Trae: "trae.ai",
+  Pi: "pi.dev",
+  "Kimi Code CLI": "kimi.com",
+  "CodeBuddy Code": "codebuddy.ai",
 };
 
 const agentKey = (agent: unknown) =>

@@ -1,0 +1,9 @@
+{
+  "id": "pi",
+  "displayName": "Pi",
+  "installUrl": "https://pi.dev/docs/latest/quickstart",
+  "execName": "pi",
+  "instanceEnv": "PI_CODING_AGENT_DIR",
+  "stateDir": "pi",
+  "npmPackage": "@earendil-works/pi-coding-agent"
+}

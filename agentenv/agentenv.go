@@ -107,6 +107,13 @@ var agentVars = map[string][]variable{
 	"dsh": {
 		{key: "CASBIN_GATEWAY_API_KEY", secret: true},
 	},
+	// CodeBuddy reads the model from the environment before settings.json, so
+	// this one wins over the selection a switch writes. The endpoint is not
+	// listed with it: a custom model entry carries its own url, which
+	// CODEBUDDY_BASE_URL does not reach.
+	"codebuddy": {
+		{key: "CODEBUDDY_MODEL"},
+	},
 }
 
 // value is one variable found set, with where it was found.

@@ -1,0 +1,9 @@
+{
+  "id": "codebuddy",
+  "displayName": "CodeBuddy Code",
+  "installUrl": "https://www.codebuddy.ai/docs/cli/installation",
+  "execName": "codebuddy",
+  "instanceEnv": "CODEBUDDY_CONFIG_DIR",
+  "stateDir": "codebuddy",
+  "npmPackage": "@tencent-ai/codebuddy-code"
+}

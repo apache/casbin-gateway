@@ -1,0 +1,10 @@
+{
+  "id": "kimi-code",
+  "displayName": "Kimi Code CLI",
+  "installUrl": "https://moonshotai.github.io/kimi-code/en/guides/getting-started",
+  "execName": "kimi",
+  "instanceEnv": "KIMI_CODE_HOME",
+  "stateDir": "kimi-code",
+  "npmPackage": "@moonshot-ai/kimi-code",
+  "homeDirs": [".kimi-code/bin"]
+}

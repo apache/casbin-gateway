@@ -241,6 +241,36 @@ var layouts = map[string]layout{
 	},
 	"opencode":         opencodeLayout,
 	"opencode-desktop": opencodeLayout,
+	// pi keeps everything under ~/.pi/agent and reads the shared ~/.agents
+	// skills beside its own. It ships no MCP client of its own: a server is
+	// reached through an extension, which is not a file Gateway can write.
+	"pi": {
+		skills: &skillLayout{sources: []skillSource{
+			userSkills(".pi", "agent", "skills"),
+			userSkills(".agents", "skills"),
+		}},
+		prompt: promptFile("AGENTS.md", ".pi", "agent"),
+	},
+	// Kimi Code keeps its own skills beside its config and reads the shared
+	// ~/.agents skills too, which stay in the home rather than moving with
+	// KIMI_CODE_HOME so the other agents keep reading them.
+	"kimi-code": {
+		skills: &skillLayout{sources: []skillSource{
+			userSkills(".kimi-code", "skills"),
+			userSkills(".agents", "skills"),
+			pluginSkills(".kimi-code", "plugins"),
+		}},
+		mcp:    &mcpLayout{file: under(".kimi-code", "mcp.json"), store: &jsonStore{paths: [][]string{{"mcpServers"}}}},
+		prompt: promptFile("AGENTS.md", ".kimi-code"),
+	},
+	"codebuddy": {
+		skills: &skillLayout{sources: []skillSource{
+			userSkills(".codebuddy", "skills"),
+			pluginSkills(".codebuddy", "plugins"),
+		}},
+		mcp:    &mcpLayout{file: under(".codebuddy", ".mcp.json"), store: &jsonStore{paths: [][]string{{"mcpServers"}}}},
+		prompt: promptFile("CODEBUDDY.md", ".codebuddy"),
+	},
 }
 
 var codexLayout = layout{

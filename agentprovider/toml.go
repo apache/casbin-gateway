@@ -139,17 +139,66 @@ func tomlAssigns(line string, key string) bool {
 	return strings.HasPrefix(strings.TrimSpace(text[len(key):]), "=")
 }
 
+// tomlCutTablesUnder removes every table under parent whose own key starts with
+// prefix, and their sub-tables. It is how a set of entries written under one
+// name is taken back out without knowing what was in it.
+func tomlCutTablesUnder(text string, parent string, prefix string) string {
+	lines := strings.Split(text, "\n")
+	kept := make([]string, 0, len(lines))
+	dropping := false
+
+	for _, line := range lines {
+		if header, ok := tomlHeader(line); ok {
+			dropping = len(header) > 1 && header[0] == parent && strings.HasPrefix(header[1], prefix)
+		}
+		if !dropping {
+			kept = append(kept, line)
+		}
+	}
+	return strings.Join(kept, "\n")
+}
+
 // tomlTable renders one table with string values, sorted by the given order so
 // the file reads the same after every switch.
 func tomlTable(path []string, keys []string, values map[string]string) string {
+	quoted := map[string]string{}
+	for key, value := range values {
+		if value != "" {
+			quoted[key] = strconv.Quote(value)
+		}
+	}
+	return tomlRawTable(path, keys, quoted)
+}
+
+// tomlRawTable is tomlTable for values that are already TOML literals, which is
+// what a table mixing strings with numbers needs.
+func tomlRawTable(path []string, keys []string, values map[string]string) string {
+	names := make([]string, 0, len(path))
+	for _, part := range path {
+		names = append(names, tomlKey(part))
+	}
+
 	builder := &strings.Builder{}
-	fmt.Fprintf(builder, "[%s]\n", strings.Join(path, "."))
+	fmt.Fprintf(builder, "[%s]\n", strings.Join(names, "."))
 	for _, key := range keys {
 		if values[key] != "" {
-			fmt.Fprintf(builder, "%s = %s\n", key, strconv.Quote(values[key]))
+			fmt.Fprintf(builder, "%s = %s\n", key, values[key])
 		}
 	}
 	return builder.String()
+}
+
+// tomlKey is one part of a table path, quoted when it holds anything a bare key
+// may not: a "." would otherwise nest the table a level deeper.
+func tomlKey(part string) string {
+	for _, letter := range part {
+		if letter >= 'a' && letter <= 'z' || letter >= 'A' && letter <= 'Z' ||
+			letter >= '0' && letter <= '9' || letter == '-' || letter == '_' {
+			continue
+		}
+		return strconv.Quote(part)
+	}
+	return part
 }
 
 // tomlAppend puts a rendered block at the end of a document, separated from
