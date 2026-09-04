@@ -107,6 +107,18 @@
 | <img src="https://www.google.com/s2/favicons?domain=cursor.com&sz=64" width="16" height="16" alt=""> **Cursor** | ✅ | — | ✅ | ✅ | — | ✅ | brew |
 | <img src="https://www.google.com/s2/favicons?domain=cursor.com&sz=64" width="16" height="16" alt=""> **Cursor Agent** | ✅ | — | ✅ | ✅ | — | — | — |
 | <img src="https://www.google.com/s2/favicons?domain=windsurf.com&sz=64" width="16" height="16" alt=""> **Windsurf** | ✅ | — | ✅ | — | ✅ | — | brew |
+| <img src="https://www.google.com/s2/favicons?domain=cline.bot&sz=64" width="16" height="16" alt=""> **Cline** | — | ✅ OpenAI | ✅ | ✅ | — | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=qwen.ai&sz=64" width="16" height="16" alt=""> **Qwen Code** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm |
+| <img src="https://www.google.com/s2/favicons?domain=iflow.cn&sz=64" width="16" height="16" alt=""> **iFlow CLI** | — | ✅ OpenAI | ✅ | — | ✅ | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=roocode.com&sz=64" width="16" height="16" alt=""> **Roo Code** | — | — | — | — | — | — | — |
+| <img src="https://www.google.com/s2/favicons?domain=github.com&sz=64" width="16" height="16" alt=""> **Copilot CLI** | — | — | — | — | — | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=continue.dev&sz=64" width="16" height="16" alt=""> **Continue** | — | ✅ OpenAI | — | — | — | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=zed.dev&sz=64" width="16" height="16" alt=""> **Zed** | — | ✅ OpenAI | — | — | — | — | brew |
+| <img src="https://www.google.com/s2/favicons?domain=aider.chat&sz=64" width="16" height="16" alt=""> **Aider** | — | ✅ OpenAI | — | — | — | — | — |
+| <img src="https://www.google.com/s2/favicons?domain=block.github.io&sz=64" width="16" height="16" alt=""> **goose** | — | ✅ OpenAI | — | — | — | — | brew |
+| <img src="https://www.google.com/s2/favicons?domain=charm.sh&sz=64" width="16" height="16" alt=""> **Crush** | — | — | — | — | — | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=factory.ai&sz=64" width="16" height="16" alt=""> **Droid** | — | ✅ OpenAI | — | — | — | — | — |
+| <img src="https://www.google.com/s2/favicons?domain=trae.ai&sz=64" width="16" height="16" alt=""> **Trae** | — | — | — | — | — | — | brew |
 | <img src="https://www.google.com/s2/favicons?domain=opencode.ai&sz=64" width="16" height="16" alt=""> **opencode** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm |
 | <img src="https://www.google.com/s2/favicons?domain=opencode.ai&sz=64" width="16" height="16" alt=""> **opencode 桌面版** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | — |
 | <img src="https://www.google.com/s2/favicons?domain=openagentai.org&sz=64" width="16" height="16" alt=""> **OpenAgent** | ✅ | — | — | — | — | — | — |
@@ -119,6 +131,8 @@
 - **MCP · 技能 · 提示词** —— 在 Agent 之间读取、对比和复制 MCP 服务器、技能和指令文件。
 - **会话** —— 直接从 Agent 自己的会话记录里读提示词和 token 用量，包括没走 Gateway 的那部分。
 - **安装** —— Gateway 能用来安装和升级它的包管理器。其余的都只能去厂商页面下载。
+
+表里的每个 Agent，无论支持到哪一步，都能在本机被发现，列出它登录的账号和花了多少，并在卡片上直接启动或停止；上面这些列是在这之外多出来的部分。Roo Code、Copilot CLI、Crush 和 Trae 只做到这一步，是有意为之：Roo Code 和 Trae 把供应商配置放在 VS Code 自己的内部状态里，而不是某个自己的配置文件；Copilot CLI 接的是 GitHub 自己的后端，没有 base URL 可改；Crush 的配置改成了一个 shell 脚本，写进文件反而会被它悄悄盖掉。Zed 是唯一写一半的：它把 API Key 存在系统钥匙串里，所以 Gateway 只写端点和模型列表，Key 需要在 Zed 里填一次。
 
 ## 功能特性
 
@@ -182,7 +196,7 @@ Gateway 会在自己的窗口里打开 —— 不用登录：它只服务本机�
 
 | 页面 | 你能得到什么 | 需要什么 |
 | --- | --- | --- |
-| **Agents** | 本机安装的每一个 AI 编程 Agent —— Claude Code、Codex CLI、Cursor、Gemini CLI、opencode 等等 —— 一行四张卡片，每张写明它登录的是哪个账号、接的是哪个 Provider、花了多少、此刻是不是在跑。可以在卡片上直接启动或停止，也可以给同一个 Agent 开多个**实例**，每个实例有自己的状态目录和自己的登录账号，同时运行。本机没装的 Agent 也会列出来，可以直接用宿主机已有的包管理器安装或升级。 | 无 |
+| **Agents** | 本机安装的每一个 AI 编程 Agent —— Claude Code、Codex CLI、Cursor、Gemini CLI、opencode 等等 —— 一行四张卡片，每张写明它登录的是哪个账号、接的是哪个 Provider、花了多少（会话记录够长的话，还会按天画出最近一个月的曲线）、此刻是不是在跑。可以在卡片上直接启动或停止，也可以给同一个 Agent 开多个**实例**，每个实例有自己的状态目录和自己的登录账号，同时运行。本机没装的 Agent 也会列出来，可以直接用宿主机已有的包管理器安装或升级。 | 无 |
 | **Skills, MCP & Prompts** | 所有 Agent 的所有技能、MCP 服务器和提示词文件汇总在一张表里。可以从 GitHub 仓库、`.zip` / `.tar.gz` 压缩包，或本机的一个目录安装技能，一次装进一个或多个 Agent。MCP 服务器也一样，还能编辑某个 Agent 每次会话前读到的提示词，或者打开、删除、复制到另一个 Agent。 | 无 |
 | **Sessions** | 这些 Agent 的每一次会话，从它们留在磁盘上的会话记录里读出来：完整的对话，一条一条。一共多少次、今天跑了多少次、其中多少条是从会话记录里读来而不是监控到的，都在页头；再按 Agent 或按这两种来源筛。 | 无 |
 | **Activity** | 被监控的 Agent 正在做什么：每一次工具调用、调用的目标，以及耗时。 | 给某个 Agent 打开监控 |

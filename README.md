@@ -107,6 +107,18 @@
 | <img src="https://www.google.com/s2/favicons?domain=cursor.com&sz=64" width="16" height="16" alt=""> **Cursor** | ✅ | — | ✅ | ✅ | — | ✅ | brew |
 | <img src="https://www.google.com/s2/favicons?domain=cursor.com&sz=64" width="16" height="16" alt=""> **Cursor Agent** | ✅ | — | ✅ | ✅ | — | — | — |
 | <img src="https://www.google.com/s2/favicons?domain=windsurf.com&sz=64" width="16" height="16" alt=""> **Windsurf** | ✅ | — | ✅ | — | ✅ | — | brew |
+| <img src="https://www.google.com/s2/favicons?domain=cline.bot&sz=64" width="16" height="16" alt=""> **Cline** | — | ✅ OpenAI | ✅ | ✅ | — | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=qwen.ai&sz=64" width="16" height="16" alt=""> **Qwen Code** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm |
+| <img src="https://www.google.com/s2/favicons?domain=iflow.cn&sz=64" width="16" height="16" alt=""> **iFlow CLI** | — | ✅ OpenAI | ✅ | — | ✅ | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=roocode.com&sz=64" width="16" height="16" alt=""> **Roo Code** | — | — | — | — | — | — | — |
+| <img src="https://www.google.com/s2/favicons?domain=github.com&sz=64" width="16" height="16" alt=""> **Copilot CLI** | — | — | — | — | — | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=continue.dev&sz=64" width="16" height="16" alt=""> **Continue** | — | ✅ OpenAI | — | — | — | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=zed.dev&sz=64" width="16" height="16" alt=""> **Zed** | — | ✅ OpenAI | — | — | — | — | brew |
+| <img src="https://www.google.com/s2/favicons?domain=aider.chat&sz=64" width="16" height="16" alt=""> **Aider** | — | ✅ OpenAI | — | — | — | — | — |
+| <img src="https://www.google.com/s2/favicons?domain=block.github.io&sz=64" width="16" height="16" alt=""> **goose** | — | ✅ OpenAI | — | — | — | — | brew |
+| <img src="https://www.google.com/s2/favicons?domain=charm.sh&sz=64" width="16" height="16" alt=""> **Crush** | — | — | — | — | — | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=factory.ai&sz=64" width="16" height="16" alt=""> **Droid** | — | ✅ OpenAI | — | — | — | — | — |
+| <img src="https://www.google.com/s2/favicons?domain=trae.ai&sz=64" width="16" height="16" alt=""> **Trae** | — | — | — | — | — | — | brew |
 | <img src="https://www.google.com/s2/favicons?domain=opencode.ai&sz=64" width="16" height="16" alt=""> **opencode** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | npm |
 | <img src="https://www.google.com/s2/favicons?domain=opencode.ai&sz=64" width="16" height="16" alt=""> **opencode Desktop** | ✅ | ✅ OpenAI | ✅ | ✅ | ✅ | ✅ | — |
 | <img src="https://www.google.com/s2/favicons?domain=openagentai.org&sz=64" width="16" height="16" alt=""> **OpenAgent** | ✅ | — | — | — | — | — | — |
@@ -119,6 +131,8 @@
 - **MCP · Skills · Prompt** — read, compare and copy MCP servers, skills and the instruction file between agents.
 - **Sessions** — prompts and token usage read straight from the agent's own transcripts, including what never went through Gateway.
 - **Install** — the package managers Gateway installs and upgrades it with. Everything else is a download from its vendor's page.
+
+Every agent in the table is found on this machine either way, listed with the account it is signed in to and what it has spent, and started or stopped from its card; the columns are what comes on top of that. Roo Code, Copilot CLI, Crush and Trae stop there on purpose: Roo Code and Trae keep their provider settings inside VS Code's own state rather than in a file of their own, Copilot CLI talks to GitHub's own backend and has no base URL to change, and Crush's configuration moved to a shell script that a written file would silently lose to. Zed is the one partial switch — it keeps API keys in the OS keychain, so Gateway writes the endpoint and the model list and the key is entered once in Zed itself.
 
 ## Features
 
@@ -184,7 +198,7 @@ Gateway installed some other way, or in a directory it cannot write to, says so 
 
 | Page | What you get | What it needs |
 | --- | --- | --- |
-| **Agents** | Every AI coding agent installed on this machine — Claude Code, Codex CLI, Cursor, the Gemini CLI, opencode and more — four cards to a row, each naming the account it is signed in to, the provider it answers to, what it has spent, and whether it is running right now. Start or stop one from its card, or run several **instances** of the same agent at once, each with a state directory and an account of its own. An agent this machine does not have is listed too, and installed or upgraded from the page through the package manager the host already has. | Nothing |
+| **Agents** | Every AI coding agent installed on this machine — Claude Code, Codex CLI, Cursor, the Gemini CLI, opencode and more — four cards to a row, each naming the account it is signed in to, the provider it answers to, what it has spent — day by day over the last month, wherever its own transcripts carry that much — and whether it is running right now. Start or stop one from its card, or run several **instances** of the same agent at once, each with a state directory and an account of its own. An agent this machine does not have is listed too, and installed or upgraded from the page through the package manager the host already has. | Nothing |
 | **Skills, MCP & Prompts** | Every skill, MCP server and instruction file of every agent in one table. Install skills from a GitHub repository, a `.zip` or `.tar.gz`, or a folder on this machine, into one agent or several at once. Add an MCP server the same way, edit the instructions an agent reads before every session, open one, delete it, or copy it into another agent. | Nothing |
 | **Sessions** | Every session those agents have had, read from the transcripts they leave on disk: the whole conversation, message by message. How many there are, how many ran today and how many came from a transcript rather than from monitoring, then filtered down to one agent or one of those two sources. | Nothing |
 | **Activity** | What a monitored agent is doing as it does it — each tool call, its target and how long it took. | Monitoring on for an agent |
