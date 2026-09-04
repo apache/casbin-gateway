@@ -143,6 +143,7 @@ export default function ProviderEditPage() {
           return;
         }
         Setting.showMessage("success", i18next.t("provider:Provider saved"));
+        navigate("/providers");
       })
       .catch(error => {
         Setting.showMessage("error", `${i18next.t("provider:Failed to save")}: ${error}`);

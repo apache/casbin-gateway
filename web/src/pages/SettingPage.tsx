@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import * as React from "react";
-import {useLocation} from "react-router-dom";
+import {useLocation, useNavigate} from "react-router-dom";
 import i18next from "i18next";
 
 import * as SettingBackend from "@/backend/SettingBackend";
@@ -66,6 +66,7 @@ export default function SettingPage({account}: {account: Account}) {
   // The rail links to a section by hash, and the browser cannot honour that on
   // its own while the page is still the loading placeholder.
   const {hash} = useLocation();
+  const navigate = useNavigate();
   const loaded = setting !== null;
   React.useEffect(() => {
     if (!loaded || !hash) {
@@ -94,8 +95,8 @@ export default function SettingPage({account}: {account: Account}) {
       .then(res => {
         setSaving(false);
         if (res.status === "ok") {
-          setSetting(res.data);
           Setting.showMessage("success", i18next.t("general:Successfully saved"));
+          navigate("/");
         } else {
           Setting.showMessage("error", `${i18next.t("general:Failed to save")}: ${res.msg}`);
         }
