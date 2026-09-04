@@ -25,6 +25,10 @@ import (
 
 const claudeCodeHookTimeoutSeconds = 5
 
+// claudeCodeDecisionEvent is the one event whose answer Claude Code reads, and
+// so the only one installed as a blocking hook.
+const claudeCodeDecisionEvent = "PreToolUse"
+
 var claudeCodeHookEvents = []string{
 	"SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse",
 	"PostToolUseFailure", "PermissionRequest", "PermissionDenied",
@@ -41,6 +45,10 @@ func init() {
 func (claudeCodePatcher) AgentId() string { return "claude-code" }
 
 func (claudeCodePatcher) Supported() bool { return true }
+
+// Decides: the PreToolUse hook is installed blocking, so Claude Code waits for
+// Gateway's verdict before it runs a tool.
+func (claudeCodePatcher) Decides() bool { return true }
 
 func (claudeCodePatcher) Patch(target Target) error {
 	stateMutex.Lock()
@@ -91,9 +99,9 @@ func (claudeCodePatcher) Unpatch(target Target) error {
 // the UI that gave no hint about what changes or whether a restart is needed.
 func (claudeCodePatcher) PatchNotice(patched bool) (string, string) {
 	if patched {
-		return "Removes Gateway's audit-only Claude Code hooks.", "Restart any Claude Code session that is already running."
+		return "Removes Gateway's Claude Code hooks, and with them the check before each tool call.", "Restart any Claude Code session that is already running."
 	}
-	return "Installs audit-only Claude Code hooks. Hooks observe events and never block an action.", "Restart any Claude Code session that is already running."
+	return "Installs Gateway's Claude Code hooks. They observe events, and refuse a tool call this agent's permissions do not allow; an agent nobody has restricted is never held up.", "Restart any Claude Code session that is already running."
 }
 
 func (claudeCodePatcher) Status(target Target) (Status, error) {
@@ -137,6 +145,10 @@ func claudeCodeHookCommand(target Target) (string, []string, error) {
 	if err != nil {
 		return "", nil, err
 	}
+	decision, err := decisionURL()
+	if err != nil {
+		return "", nil, err
+	}
 	token, err := IssueIngestToken(target)
 	if err != nil {
 		return "", nil, err
@@ -146,6 +158,7 @@ func claudeCodeHookCommand(target Target) (string, []string, error) {
 		agenthook.OwnershipFlag,
 		"--agent", "claude-code",
 		"--records-url", url,
+		"--decision-url", decision,
 		"--agent-path", target.Path,
 		"--user", target.Owner,
 		"--ingest-token", token,
@@ -169,7 +182,7 @@ func normalizeClaudeCodeHooks(config map[string]any, command string, args []stri
 		if err != nil {
 			return fmt.Errorf("hooks.%s: %w", event, err)
 		}
-		group := map[string]any{"hooks": []any{newClaudeCodeHook(command, args)}}
+		group := map[string]any{"hooks": []any{newClaudeCodeHook(event, command, args)}}
 		if hookEventSupportsMatcher(event) {
 			group["matcher"] = ""
 		}
@@ -178,12 +191,15 @@ func normalizeClaudeCodeHooks(config map[string]any, command string, args []stri
 	return nil
 }
 
-func newClaudeCodeHook(command string, args []string) map[string]any {
+func newClaudeCodeHook(event string, command string, args []string) map[string]any {
 	return map[string]any{
 		"type":    "command",
 		"command": command,
 		"args":    args,
-		"async":   true,
+		// Every event but the one Claude Code waits on for a verdict runs
+		// detached: an async hook's output is never read, so PreToolUse has to
+		// be the one that holds the session for as long as the decision takes.
+		"async":   event != claudeCodeDecisionEvent,
 		"timeout": claudeCodeHookTimeoutSeconds,
 	}
 }
@@ -234,7 +250,19 @@ func isCurrentClaudeCodeHook(handler map[string]any) bool {
 		return false
 	}
 	command, _ := handler["command"].(string)
-	return argsAreCurrent(command, stringArray(handler["args"]))
+	if !argsAreCurrent(command, stringArray(handler["args"])) {
+		return false
+	}
+	// A hook installed before Gateway could decide a tool call carries no
+	// decision endpoint, and reporting it as current would leave it observing
+	// for good.
+	decision, err := decisionURL()
+	if err != nil {
+		return false
+	}
+	args := stringArray(handler["args"])
+	index := stringIndex(args, "--decision-url")
+	return index >= 0 && index+1 < len(args) && args[index+1] == decision
 }
 
 func hookEventSupportsMatcher(event string) bool {

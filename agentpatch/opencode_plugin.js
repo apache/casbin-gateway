@@ -12,17 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Audit-only opencode plugin. Every hook observes and returns; none of them
-// reads or writes the output object opencode passes in, so no tool call,
-// permission or message is changed by monitoring being on.
+// Gateway's opencode plugin. Every hook but one observes and returns, changing
+// nothing about the session. The exception is tool.execute.before, which asks
+// Gateway whether the call is allowed and throws when it is not: that is what
+// holds an opencode pointed at a provider Gateway never sees.
 
 const AGENT = __CASBIN_GATEWAY_AGENT__;
 const RECORDS_URL = __CASBIN_GATEWAY_RECORDS_URL__;
+const DECISION_URL = __CASBIN_GATEWAY_DECISION_URL__;
 const AGENT_PATH = __CASBIN_GATEWAY_AGENT_PATH__;
 const OWNER = __CASBIN_GATEWAY_OWNER__;
 const INGEST_TOKEN = __CASBIN_GATEWAY_INGEST_TOKEN__;
 const INGEST_TOKEN_HEADER = __CASBIN_GATEWAY_INGEST_TOKEN_HEADER__;
 const POST_TIMEOUT_MS = 3000;
+// The session waits on the verdict, so a Gateway that is slow to answer is
+// treated as one that is not running.
+const DECIDE_TIMEOUT_MS = 2000;
 const MAX_OBJECT_CHARS = 16 * 1024;
 const MAX_TEXT_CHARS = 4 * 1024;
 
@@ -92,6 +97,30 @@ function post(record) {
   }
 }
 
+// decide asks Gateway whether a tool call may go ahead. Anything that goes
+// wrong - Gateway down, a timeout, a body that will not parse - allows the
+// call: a plugin that cannot get a verdict must not stop opencode working.
+async function decide(tool, sessionID, callID) {
+  if (!DECISION_URL || !tool) return "";
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), DECIDE_TIMEOUT_MS);
+    const headers = { "Content-Type": "application/json" };
+    if (INGEST_TOKEN) headers[INGEST_TOKEN_HEADER] = INGEST_TOKEN;
+    const response = await fetch(DECISION_URL, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ agent: AGENT, tool, sessionKey: sessionID || "", toolUseId: callID || "" }),
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timer));
+    const answer = await response.json();
+    if (answer?.status !== "ok" || answer?.data?.allow !== false) return "";
+    return answer.data.reason || `the permissions of agent ${AGENT} do not allow ${tool}`;
+  } catch {
+    return "";
+  }
+}
+
 // promptText joins the text parts of a message. Attachments and file contents
 // are left out: the record says what was asked, not what was pasted in.
 function promptText(parts) {
@@ -149,6 +178,10 @@ export const CasbinGatewayMonitor = async () => {
         toolName: input?.tool || "",
         object: objectFor({ args: output?.args }),
       });
+      // Throwing is how a plugin refuses a call: opencode abandons the tool and
+      // hands the message back to the model.
+      const refusal = await decide(input?.tool, input?.sessionID, input?.callID);
+      if (refusal) throw new Error(refusal);
     },
 
     "tool.execute.after": async (input, output) => {

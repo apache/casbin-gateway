@@ -179,12 +179,26 @@ export function routedAgentId(agent: Agent) {
 }
 
 /**
- * Whether what this agent calls is its own gateway endpoint. Only the requests
- * that arrive there are held to its permissions, so an agent this is false for
- * is not restricted by them at all, whatever its switches say.
+ * Whether what this agent calls is its own gateway endpoint. The requests that
+ * arrive there are the ones the proxy can hold: it takes a forbidden tool out
+ * of the body, and it is the only place the model and provider rules are read.
  */
 export function agentRoutedHere(agent: Agent) {
   return routedAgentId(agent) === agent.agentId;
+}
+
+/**
+ * Whether this agent's own hook asks Gateway before it runs a tool. That is the
+ * other enforcement point, and the one that does not care where the agent sends
+ * its requests - but it only decides tool calls.
+ */
+export function agentDecidesHere(agent: Agent) {
+  return agent.decides === true;
+}
+
+/** Whether the tool switches reach this agent at all, either way. */
+export function agentToolsEnforced(agent: Agent) {
+  return agentRoutedHere(agent) || agentDecidesHere(agent);
 }
 
 /**

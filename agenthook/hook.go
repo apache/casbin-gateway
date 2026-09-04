@@ -52,12 +52,13 @@ func ServeIfInvoked() {
 	}
 	timer := time.AfterFunc(hookLifetime, func() { os.Exit(0) })
 	defer timer.Stop()
-	_ = Run(os.Args[2:], os.Stdin)
+	_ = Run(os.Args[2:], os.Stdin, os.Stdout)
 	os.Exit(0)
 }
 
-// Run reads one Claude Code hook event and reports its normalized record.
-func Run(args []string, input io.Reader) error {
+// Run reads one hook event, decides it where the agent is waiting on a verdict,
+// and reports its normalized record.
+func Run(args []string, input io.Reader, output io.Writer) error {
 	flags := flag.NewFlagSet(Subcommand, flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	managed := flags.Bool("casbin-gateway-agent-monitor", false, "Gateway-managed monitor hook")
@@ -66,6 +67,7 @@ func Run(args []string, input io.Reader) error {
 	agentPath := flags.String("agent-path", "", "agent installation path")
 	owner := flags.String("user", "", "agent installation owner")
 	ingestToken := flags.String("ingest-token", "", "credential presented to the Gateway record endpoint")
+	decisionURL := flags.String("decision-url", "", "Gateway endpoint that decides a tool call")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -80,6 +82,20 @@ func Run(args []string, input io.Reader) error {
 	if err := decoder.Decode(&event); err != nil {
 		return err
 	}
+	// The verdict comes before the record: the agent is held up until this hook
+	// answers, and the report is best effort either way.
+	if tool, ok := preToolEvent(*agentID, event); ok {
+		request := map[string]any{
+			"agent":      *agentID,
+			"tool":       tool,
+			"sessionKey": stringValue(event["session_id"]),
+			"toolUseId":  stringValue(event["tool_use_id"]),
+		}
+		if allow, reason := allowed(*decisionURL, *ingestToken, request); !allow {
+			writeDenial(output, *agentID, reason)
+		}
+	}
+
 	record := normalize(event, *agentPath, time.Now())
 	if record == nil || *recordsURL == "" {
 		return nil

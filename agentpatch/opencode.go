@@ -50,6 +50,10 @@ func (p opencodePatcher) AgentId() string { return p.id }
 
 func (opencodePatcher) Supported() bool { return true }
 
+// Decides: the plugin asks Gateway in tool.execute.before and throws on a
+// refusal, so the call never runs.
+func (opencodePatcher) Decides() bool { return true }
+
 func (p opencodePatcher) Patch(target Target) error {
 	path, err := p.pluginPath(target)
 	if err != nil {
@@ -90,9 +94,13 @@ func (p opencodePatcher) Status(target Target) (Status, error) {
 	if err != nil {
 		return Status{}, err
 	}
+	decision, err := decisionURL()
+	if err != nil {
+		return Status{}, err
+	}
 	// A plugin left by an older Gateway, or by one listening on another port,
-	// reports nowhere. Re-patching is what rewrites it.
-	if !strings.Contains(string(data), jsonString(current)) {
+	// reports nowhere and decides nothing. Re-patching is what rewrites it.
+	if !strings.Contains(string(data), jsonString(current)) || !strings.Contains(string(data), jsonString(decision)) {
 		return Status{Detail: "opencode plugin needs refresh"}, nil
 	}
 	if !IsApplied(target) {
@@ -103,10 +111,10 @@ func (p opencodePatcher) Status(target Target) (Status, error) {
 
 func (opencodePatcher) PatchNotice(patched bool) (string, string) {
 	if patched {
-		return "Removes Gateway's audit-only opencode plugin. The CLI and the desktop app share it, so both stop reporting.",
+		return "Removes Gateway's opencode plugin. The CLI and the desktop app share it, so both stop reporting and stop being checked.",
 			"Restart any opencode session that is already running."
 	}
-	return "Installs an audit-only opencode plugin. It observes sessions, tool calls and permission prompts, and changes none of them.",
+	return "Installs Gateway's opencode plugin. It observes sessions, tool calls and permission prompts, and refuses a tool call the permissions do not allow; an agent nobody has restricted is never held up.",
 		"Restart any opencode session that is already running."
 }
 
@@ -125,6 +133,10 @@ func renderOpencodePlugin(target Target) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	decision, err := decisionURL()
+	if err != nil {
+		return "", err
+	}
 	token, err := IssueIngestToken(monitorTarget(target))
 	if err != nil {
 		return "", err
@@ -134,6 +146,7 @@ func renderOpencodePlugin(target Target) (string, error) {
 	for placeholder, value := range map[string]string{
 		"__CASBIN_GATEWAY_AGENT__":               jsonString(opencodeMonitorId),
 		"__CASBIN_GATEWAY_RECORDS_URL__":         jsonString(url),
+		"__CASBIN_GATEWAY_DECISION_URL__":        jsonString(decision),
 		"__CASBIN_GATEWAY_AGENT_PATH__":          jsonString(target.Path),
 		"__CASBIN_GATEWAY_OWNER__":               jsonString(target.Owner),
 		"__CASBIN_GATEWAY_INGEST_TOKEN__":        jsonString(token),

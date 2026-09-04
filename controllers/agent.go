@@ -32,6 +32,8 @@ import (
 	"github.com/apache/casbin-gateway/agentprovider"
 	"github.com/apache/casbin-gateway/object"
 	"github.com/apache/casbin-gateway/service"
+	"github.com/apache/casbin-gateway/util"
+	"github.com/beego/beego"
 )
 
 type discoveredAgent struct {
@@ -360,6 +362,70 @@ func (c *ApiController) GetAgentUsage() {
 // that monitoring already reported is not listed twice.
 func sessionSeenKey(agentId string, sessionKey string) string {
 	return agentId + "/" + sessionKey
+}
+
+// CheckAgentTool decides one tool call for the hook an agent runs before
+// executing it. This is the enforcement point for the traffic that never comes
+// through the proxy: whatever provider an agent talks to, the tool still runs
+// on this machine, and the hook asks here first.
+//
+// It authenticates the way record ingestion does, with the per-installation
+// credential issued at Patch time, and it answers "allowed" rather than an
+// error whenever the decision cannot be made - a hook that cannot get a verdict
+// must not wedge every session on the machine.
+func (c *ApiController) CheckAgentTool() {
+	if _, ok := c.directLoopbackClient(); !ok {
+		c.ResponseError("agent tool checks are limited to direct loopback requests")
+		return
+	}
+	tokenAgentId, ok := agentpatch.ValidateIngestToken(c.Ctx.Input.Header(agentmonitor.IngestTokenHeader))
+	if !ok {
+		c.ResponseError("an agent tool check requires a valid installation token")
+		return
+	}
+
+	var form struct {
+		Agent      string `json:"agent"`
+		Tool       string `json:"tool"`
+		SessionKey string `json:"sessionKey"`
+		ToolUseId  string `json:"toolUseId"`
+	}
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &form); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if form.Agent == "" {
+		c.ResponseError("agent is required")
+		return
+	}
+	// The token decides which agent a caller may ask for, so a compromised hook
+	// cannot have another installation's rules applied to its calls.
+	if tokenAgentId != "" && !strings.EqualFold(form.Agent, tokenAgentId) {
+		c.ResponseError("agent does not match the installation this token was issued for")
+		return
+	}
+
+	agentIds := agentmonitor.SharedAgentIds(form.Agent)
+	allowed, reason, err := object.CheckAgentTool(agentIds, form.Tool)
+	if err != nil {
+		beego.Error("agent tool check failed, the call was allowed:", err)
+	}
+	if !allowed {
+		// A refusal is worth a record of its own: the agent tells the model it
+		// was blocked, and nothing else would show it on the records page.
+		agentmonitor.AddRecord(&agentmonitor.Record{
+			Agent:       agentmonitor.MonitorAgentId(form.Agent),
+			CreatedTime: util.GetCurrentTime(),
+			EventType:   "permission",
+			Action:      "denied",
+			Outcome:     "denied",
+			SessionKey:  form.SessionKey,
+			ToolUseId:   form.ToolUseId,
+			ToolName:    form.Tool,
+			Detail:      reason,
+		})
+	}
+	c.ResponseOk(map[string]any{"allow": allowed, "reason": reason})
 }
 
 // AddAgentRecord accepts reports from a hook or MCP process launched locally by

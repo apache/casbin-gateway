@@ -38,7 +38,14 @@ import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Switch} from "@/components/ui/switch";
 import {TagsInput} from "@/components/ui/tags-input";
 import {Textarea} from "@/components/ui/textarea";
-import {agentRoutedHere, directMode, gatewayMode, routedAgentId} from "@/lib/agents";
+import {
+  agentDecidesHere,
+  agentRoutedHere,
+  agentToolsEnforced,
+  directMode,
+  gatewayMode,
+  routedAgentId,
+} from "@/lib/agents";
 import {providerIdOf} from "@/lib/providers";
 import {cn} from "@/lib/utils";
 import type {
@@ -285,12 +292,19 @@ function AdvancedView({
   );
 }
 
-/** Why the rules below are reaching nothing. An agent whose own configuration
- *  does not name its gateway endpoint never relays a request through Gateway,
- *  so its switches decide nothing until it is bound again. */
+/** Where the rules below are actually applied. An agent that relays through
+ *  Gateway is held in the request; one that does not is held by the hook
+ *  Gateway installed in it, which only decides tool calls; an agent with
+ *  neither is held nowhere, and says so. */
 function RoutingWarning({agent}: {agent: Agent}) {
   if (agentRoutedHere(agent)) {
     return null;
+  }
+
+  if (agentDecidesHere(agent)) {
+    return (
+      <p className="text-sm text-muted-foreground">{i18next.t("agent:Hook enforced hint")}</p>
+    );
   }
 
   const routed = routedAgentId(agent);
@@ -399,7 +413,7 @@ export function PermissionCard({
             {i18next.t("agent:Permissions")}
             {!permission.enabled ? (
               <Badge variant="muted">{i18next.t("agent:Unrestricted")}</Badge>
-            ) : !agentRoutedHere(agent) ? (
+            ) : !agentToolsEnforced(agent) ? (
               <Badge variant="warning">{i18next.t("agent:Not enforced")}</Badge>
             ) : blocked.length === 0 ? (
               <Badge variant="muted">{i18next.t("agent:Enforced")}</Badge>

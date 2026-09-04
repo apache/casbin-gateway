@@ -43,11 +43,15 @@ func monitorTarget(target Target) Target {
 
 // Status is the monitoring state shown beside an agent installation.
 type Status struct {
-	Supported bool   `json:"supported"`
-	Patched   bool   `json:"patched"`
-	Detail    string `json:"detail,omitempty"`
-	Notice    string `json:"notice,omitempty"`
-	Followup  string `json:"followup,omitempty"`
+	Supported bool `json:"supported"`
+	Patched   bool `json:"patched"`
+	// Decides reports that this installation's hook is in place and asks
+	// Gateway before a tool call, which is what holds an agent whose requests
+	// never come through the proxy.
+	Decides  bool   `json:"decides"`
+	Detail   string `json:"detail,omitempty"`
+	Notice   string `json:"notice,omitempty"`
+	Followup string `json:"followup,omitempty"`
 }
 
 type patcher interface {
@@ -60,6 +64,13 @@ type patcher interface {
 
 type noticer interface {
 	PatchNotice(bool) (notice string, followup string)
+}
+
+// decider is a patcher whose hook asks Gateway before a tool runs, and so
+// enforces this agent's permissions wherever its model traffic goes. A patcher
+// that only observes does not implement it.
+type decider interface {
+	Decides() bool
 }
 
 var patchers = map[string]patcher{}
@@ -88,6 +99,9 @@ func StatusOf(target Target) Status {
 		status = Status{Detail: err.Error()}
 	}
 	status.Supported = patcher.Supported()
+	if source, ok := patcher.(decider); ok {
+		status.Decides = status.Patched && source.Decides()
+	}
 	if status.Supported {
 		if source, ok := patcher.(noticer); ok {
 			status.Notice, status.Followup = source.PatchNotice(status.Patched)

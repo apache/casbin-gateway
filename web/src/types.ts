@@ -173,6 +173,9 @@ export interface Agent {
   account?: AgentAccount;
   supported: boolean;
   patched: boolean;
+  /** Whether this installation's hook asks Gateway before it runs a tool, which
+   *  is what holds an agent whose requests never come through the proxy. */
+  decides?: boolean;
   detail?: string;
   notice?: string;
   followup?: string;

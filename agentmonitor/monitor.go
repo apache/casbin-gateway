@@ -94,6 +94,26 @@ func MonitorAgentId(agentID string) string {
 	return canonicalAgentID(agentID)
 }
 
+// sharedAgentIds are the front ends that report under one canonical id, keyed
+// by that id. They read the same configuration file, so one patched
+// installation speaks for all of them.
+var sharedAgentIds = map[string][]string{
+	"codex-cli": {"codex_vscode", "codex-vscode"},
+	"opencode":  {"opencode-desktop"},
+	"cursor":    {"cursor-agent"},
+}
+
+// SharedAgentIds is every agent id this installation covers, the canonical one
+// first. A hook is installed once per configuration file, so the id it reports
+// under is not the only one it acts for.
+func SharedAgentIds(agentID string) []string {
+	canonical := canonicalAgentID(agentID)
+	if canonical == "" {
+		return nil
+	}
+	return append([]string{canonical}, sharedAgentIds[canonical]...)
+}
+
 func canonicalAgentID(agentID string) string {
 	switch strings.ToLower(strings.TrimSpace(agentID)) {
 	case "codex_vscode", "codex-vscode":

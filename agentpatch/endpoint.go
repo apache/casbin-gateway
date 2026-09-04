@@ -24,17 +24,29 @@ import (
 
 const defaultHttpPort = "17000"
 
-// recordsURL is the loopback endpoint a patched installation reports to. A
-// malformed httpport would bake an unreachable URL into an agent's config, so
-// it is rejected while the operator can still see the error.
+// recordsURL is the loopback endpoint a patched installation reports to.
 func recordsURL() (string, error) {
+	return loopbackURL("/api/add-agent-record")
+}
+
+// decisionURL is the loopback endpoint a patched installation asks before it
+// runs a tool. It is what holds an agent whose model traffic never comes
+// through the proxy.
+func decisionURL() (string, error) {
+	return loopbackURL("/api/check-agent-tool")
+}
+
+// loopbackURL builds one of those. A malformed httpport would bake an
+// unreachable URL into an agent's config, so it is rejected while the operator
+// can still see the error.
+func loopbackURL(path string) (string, error) {
 	port := strings.TrimSpace(conf.GetConfigString("httpport"))
 	if port == "" {
 		port = defaultHttpPort
 	}
 	number, err := strconv.Atoi(port)
 	if err != nil || number <= 0 || number > 65535 {
-		return "", fmt.Errorf("cannot build the agent record endpoint: httpport %q is not a valid port", port)
+		return "", fmt.Errorf("cannot build the agent endpoint %s: httpport %q is not a valid port", path, port)
 	}
-	return fmt.Sprintf("http://127.0.0.1:%d/api/add-agent-record", number), nil
+	return fmt.Sprintf("http://127.0.0.1:%d%s", number, path), nil
 }
