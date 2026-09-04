@@ -38,7 +38,7 @@ import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Switch} from "@/components/ui/switch";
 import {TagsInput} from "@/components/ui/tags-input";
 import {Textarea} from "@/components/ui/textarea";
-import {directMode} from "@/lib/agents";
+import {agentRoutedHere, directMode, gatewayMode, routedAgentId} from "@/lib/agents";
 import {providerIdOf} from "@/lib/providers";
 import {cn} from "@/lib/utils";
 import type {
@@ -285,6 +285,32 @@ function AdvancedView({
   );
 }
 
+/** Why the rules below are reaching nothing. An agent whose own configuration
+ *  does not name its gateway endpoint never relays a request through Gateway,
+ *  so its switches decide nothing until it is bound again. */
+function RoutingWarning({agent}: {agent: Agent}) {
+  if (agentRoutedHere(agent)) {
+    return null;
+  }
+
+  const routed = routedAgentId(agent);
+  return (
+    <p className="text-sm text-warning">
+      {routed !== "" ? (
+        <>
+          {i18next.t("agent:Shared config permission hint")} <code>{routed}</code>
+        </>
+      ) : agent.providerConfig?.supported === false ? (
+        i18next.t("agent:Unknown routing permission hint")
+      ) : (agent.mode || gatewayMode) === directMode ? (
+        i18next.t("agent:Direct mode permission hint")
+      ) : (
+        i18next.t("agent:Unrouted permission hint")
+      )}
+    </p>
+  );
+}
+
 /**
  * What one agent is allowed to ask Gateway for: the tools it may be offered, the
  * models it may name and the providers its requests may reach. The switches are
@@ -373,6 +399,8 @@ export function PermissionCard({
             {i18next.t("agent:Permissions")}
             {!permission.enabled ? (
               <Badge variant="muted">{i18next.t("agent:Unrestricted")}</Badge>
+            ) : !agentRoutedHere(agent) ? (
+              <Badge variant="warning">{i18next.t("agent:Not enforced")}</Badge>
             ) : blocked.length === 0 ? (
               <Badge variant="muted">{i18next.t("agent:Enforced")}</Badge>
             ) : (
@@ -397,17 +425,18 @@ export function PermissionCard({
           />
           <span>
             {i18next.t("agent:Enforce permissions")}
-            <span className="block text-muted-foreground">
-              {i18next.t(permission.enabled ? "agent:Enforced hint" : "agent:Unrestricted hint")}
-            </span>
+            {/* The claim that every relayed request is held to the rules is only
+                made where it is true; where it is not, the warning below says
+                why instead. */}
+            {!permission.enabled || agentRoutedHere(agent) ? (
+              <span className="block text-muted-foreground">
+                {i18next.t(permission.enabled ? "agent:Enforced hint" : "agent:Unrestricted hint")}
+              </span>
+            ) : null}
           </span>
         </label>
 
-        {/* An agent that was written the provider's own URL never calls the
-            proxy, so there is nothing here to hold it to. */}
-        {permission.enabled && agent.mode === directMode ? (
-          <p className="text-sm text-warning">{i18next.t("agent:Direct mode permission hint")}</p>
-        ) : null}
+        {permission.enabled ? <RoutingWarning agent={agent} /> : null}
 
         <div className={cn("space-y-3", !permission.enabled && "pointer-events-none opacity-50")}>
           <div className="space-y-2">

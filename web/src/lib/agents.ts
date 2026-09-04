@@ -160,6 +160,31 @@ export function agentProtocol(agent: Agent) {
 }
 
 /**
+ * The agent id the configuration on disk routes to, empty when it names
+ * anything other than a gateway agent endpoint. Two front ends can share one
+ * configuration file - the opencode CLI and its desktop app do - so the id
+ * written there is not always the agent being looked at.
+ */
+export function routedAgentId(agent: Agent) {
+  const marker = "/v1/agents/";
+  const current = agent.providerConfig?.current ?? "";
+  const index = current.indexOf(marker);
+  if (index === -1) {
+    return "";
+  }
+  return decodeURIComponent(current.slice(index + marker.length).split("/")[0]);
+}
+
+/**
+ * Whether what this agent calls is its own gateway endpoint. Only the requests
+ * that arrive there are held to its permissions, so an agent this is false for
+ * is not restricted by them at all, whatever its switches say.
+ */
+export function agentRoutedHere(agent: Agent) {
+  return routedAgentId(agent) === agent.agentId;
+}
+
+/**
  * Whether an agent can be pointed at a provider serving this wire format.
  * Through the gateway any provider will do: the proxy translates between the
  * APIs. A direct binding writes the provider's own URL into the agent config,

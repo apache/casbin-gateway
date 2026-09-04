@@ -28,7 +28,7 @@ import {PageContainer, PageHeader} from "@/components/shared/page-header";
 import {UnauthorizedResult} from "@/components/shared/misc";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
-import {useAgents} from "@/lib/agents";
+import {agentRoutedHere, useAgents} from "@/lib/agents";
 import {cn} from "@/lib/utils";
 import type {Account, Agent, AgentPermission, Provider} from "@/types";
 
@@ -65,6 +65,10 @@ function AgentRow({
       {!restricted ? (
         <Badge variant="muted" className="shrink-0 font-normal">
           {i18next.t("agent:Unrestricted")}
+        </Badge>
+      ) : !agentRoutedHere(agent) ? (
+        <Badge variant="warning" className="shrink-0 font-normal">
+          {i18next.t("agent:Not enforced")}
         </Badge>
       ) : blocked === 0 ? (
         <Badge variant="muted" className="shrink-0 font-normal">
