@@ -18,7 +18,7 @@ import {toast} from "sonner";
 
 import * as Conf from "@/Conf";
 import {CopyButton} from "@/components/shared/misc";
-import type {Account, ApiResponse, ThemeAlgorithm} from "@/types";
+import type {Account, ApiResponse, Palette, ThemeAlgorithm} from "@/types";
 
 /**
  * Where the REST API lives. It stays empty on purpose: the dev server proxies
@@ -229,6 +229,24 @@ export function readThemeAlgorithm(): ThemeAlgorithm {
 export function saveThemeAlgorithm(themeAlgorithm: ThemeAlgorithm) {
   localStorage.setItem("themeAlgorithm", JSON.stringify(themeAlgorithm));
   applyThemeAlgorithm(themeAlgorithm);
+}
+
+// The palette is orthogonal to light/dark: each one defines both, so switching
+// palettes never drags the reader out of the mode they chose.
+export const Palettes: Palette[] = ["amber", "neutral"];
+
+export function applyPalette(palette: Palette) {
+  document.documentElement.setAttribute("data-palette", palette);
+}
+
+export function readPalette(): Palette {
+  const raw = localStorage.getItem("palette");
+  return Palettes.includes(raw as Palette) ? (raw as Palette) : "amber";
+}
+
+export function savePalette(palette: Palette) {
+  localStorage.setItem("palette", palette);
+  applyPalette(palette);
 }
 
 export function setLanguage(language: string) {

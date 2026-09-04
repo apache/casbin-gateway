@@ -15,6 +15,9 @@
 /** The theme the shell renders in; "dark" toggles the .dark class on <html>. */
 export type ThemeAlgorithm = ("default" | "dark")[];
 
+/** Which colour set the theme draws from, light or dark; see index.css. */
+export type Palette = "amber" | "neutral";
+
 /**
  * The envelope every /api handler returns (controllers.Response): "ok" or
  * "error" in `status`, the payload in `data`, and a second value such as a row

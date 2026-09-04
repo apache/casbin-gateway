@@ -14,11 +14,22 @@
 
 import * as React from "react";
 import {useNavigate} from "react-router-dom";
-import {ChevronDown, Languages, LogOut, Moon, PanelLeft, PanelLeftClose, Settings, Sun} from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  Languages,
+  LogOut,
+  Moon,
+  PanelLeft,
+  PanelLeftClose,
+  Palette as PaletteIcon,
+  Settings,
+  Sun,
+} from "lucide-react";
 import i18next from "i18next";
 
 import * as Setting from "@/Setting";
-import type {Account, ThemeAlgorithm} from "@/types";
+import type {Account, Palette, ThemeAlgorithm} from "@/types";
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
 import {Button} from "@/components/ui/button";
 import {
@@ -54,6 +65,43 @@ function ThemeToggle({
         {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
       </Button>
     </SimpleTooltip>
+  );
+}
+
+// The swatches are literal rather than var(--primary): the menu has to show the
+// palette you are not in, and both colours have to read on either background.
+const paletteSwatch: Record<Palette, string> = {
+  amber: "oklch(0.64 0.16 52)",
+  neutral: "oklch(0.62 0 0)",
+};
+
+const paletteLabel: Record<Palette, string> = {
+  amber: "general:Amber & Ink",
+  neutral: "general:Neutral",
+};
+
+function PaletteSelect({palette, onChange}: {palette: Palette; onChange: (next: Palette) => void}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon-sm" aria-label={i18next.t("general:Palette")}>
+          <PaletteIcon />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {Setting.Palettes.map(option => (
+          <DropdownMenuItem
+            key={option}
+            className={cn(palette === option && "font-semibold")}
+            onSelect={() => onChange(option)}
+          >
+            <span className="size-3 shrink-0 rounded-full" style={{backgroundColor: paletteSwatch[option]}} />
+            {i18next.t(paletteLabel[option])}
+            {palette === option ? <Check className="ml-auto size-3.5" /> : null}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -171,6 +219,8 @@ export function AppHeader({
   isAdmin,
   themeAlgorithm,
   onThemeChange,
+  colorPalette,
+  onColorPaletteChange,
   onSignout,
   onOpenPalette,
 }: {
@@ -181,6 +231,8 @@ export function AppHeader({
   isAdmin: boolean;
   themeAlgorithm: ThemeAlgorithm;
   onThemeChange: (next: ThemeAlgorithm) => void;
+  colorPalette: Palette;
+  onColorPaletteChange: (next: Palette) => void;
   onSignout: () => void;
   onOpenPalette: () => void;
 }) {
@@ -202,6 +254,7 @@ export function AppHeader({
         {account ? <CommandPaletteTrigger onOpen={onOpenPalette} /> : null}
         <VersionPanel isAdmin={isAdmin} signedIn={account !== null && account !== undefined} />
         <ThemeToggle themeAlgorithm={themeAlgorithm} onChange={onThemeChange} />
+        <PaletteSelect palette={colorPalette} onChange={onColorPaletteChange} />
         <LanguageSelect />
         <AccountMenu account={account} onSignout={onSignout} />
       </div>

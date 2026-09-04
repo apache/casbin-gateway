@@ -46,7 +46,7 @@ import UsagePage from "@/pages/UsagePage";
 import PricingPage from "@/pages/PricingPage";
 import SettingPage from "@/pages/SettingPage";
 import SigninPage from "@/pages/SigninPage";
-import type {Account, ThemeAlgorithm} from "@/types";
+import type {Account, Palette, ThemeAlgorithm} from "@/types";
 
 Setting.initCasdoorSdk(Conf.AuthConfig);
 
@@ -62,6 +62,11 @@ export default function App() {
     // Applied before the first paint so a dark-mode reload never flashes the
     // light palette.
     Setting.applyThemeAlgorithm(stored);
+    return stored;
+  });
+  const [colorPalette, setColorPalette] = React.useState<Palette>(() => {
+    const stored = Setting.readPalette();
+    Setting.applyPalette(stored);
     return stored;
   });
   const [collapsed, setCollapsed] = React.useState(() => localStorage.getItem(collapsedKey) === "true");
@@ -133,6 +138,11 @@ export default function App() {
   const changeTheme = (next: ThemeAlgorithm) => {
     setThemeAlgorithm(next);
     Setting.saveThemeAlgorithm(next);
+  };
+
+  const changeColorPalette = (next: Palette) => {
+    setColorPalette(next);
+    Setting.savePalette(next);
   };
 
   const getAccount = React.useCallback(() => {
@@ -239,6 +249,8 @@ export default function App() {
             isAdmin={Setting.isAdminUser(account)}
             themeAlgorithm={themeAlgorithm}
             onThemeChange={changeTheme}
+            colorPalette={colorPalette}
+            onColorPaletteChange={changeColorPalette}
             onSignout={signout}
             onOpenPalette={() => palette.setOpen(true)}
           />
