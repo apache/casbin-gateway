@@ -75,16 +75,18 @@ export function ScoreDial({
           stroke="currentColor"
         />
       </svg>
+      {/* The ring is the one thing here that takes the grade's colour; the
+          number inside it is ordinary text. */}
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
         <span
-          className={cn("font-semibold tabular-nums leading-none", style.text)}
+          className="font-semibold tabular-nums leading-none"
           style={{fontSize: size / 3.8}}
         >
           {formatScore(probe)}
         </span>
         {spelled || measured ? (
           <span
-            className={cn("font-medium tracking-wide uppercase leading-none", style.text)}
+            className="text-muted-foreground font-medium tracking-wide uppercase leading-none"
             style={{fontSize: labelSize}}
           >
             {spelled ? label : letter}
@@ -117,7 +119,7 @@ export function ScoreBadge({
 
   return (
     <SimpleTooltip title={title}>
-      <Badge className={cn("gap-1.5 font-medium", style.badge, className)}>
+      <Badge variant="outline" className={cn("gap-1.5 font-medium", style.badge, className)}>
         <span className="tabular-nums">
           {gradeLetter(grade)}
           {grade === "unknown" ? "" : ` · ${formatScore(probe)}`}

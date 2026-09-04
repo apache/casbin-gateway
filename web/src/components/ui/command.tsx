@@ -17,6 +17,7 @@ import {Command as CommandPrimitive} from "cmdk";
 import {SearchIcon} from "lucide-react";
 
 import {cn} from "@/lib/utils";
+import {Dialog, DialogContent, DialogTitle} from "@/components/ui/dialog";
 
 function Command({className, ...props}: React.ComponentProps<typeof CommandPrimitive>) {
   return (
@@ -28,6 +29,17 @@ function Command({className, ...props}: React.ComponentProps<typeof CommandPrimi
       )}
       {...props}
     />
+  );
+}
+
+function CommandDialog({title, children, ...props}: React.ComponentProps<typeof Dialog> & {title: string}) {
+  return (
+    <Dialog {...props}>
+      <DialogContent className="overflow-hidden p-0" showCloseButton={false}>
+        <DialogTitle className="sr-only">{title}</DialogTitle>
+        <Command className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-2.5">{children}</Command>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -103,4 +115,4 @@ function CommandShortcut({className, ...props}: React.ComponentProps<"span">) {
   );
 }
 
-export {Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem, CommandShortcut, CommandSeparator};
+export {Command, CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem, CommandShortcut, CommandSeparator};

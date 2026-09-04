@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import * as React from "react";
-import {CircleAlert, CircleCheck, CircleHelp, Stethoscope, TriangleAlert} from "lucide-react";
+import {Stethoscope} from "lucide-react";
 import i18next from "i18next";
 
 import * as Setting from "@/Setting";
@@ -43,11 +43,13 @@ const visibleModels = 4;
 /** Mirrors llmAuditMinSample on the server, for the sentence that explains it. */
 const minSample = 20;
 
-const levelStyles: Record<LlmAuditLevel, {text: string; border: string; icon: React.ElementType}> = {
-  ok: {text: "text-success", border: "border-success/25 bg-success/5", icon: CircleCheck},
-  warn: {text: "text-warning", border: "border-warning/30 bg-warning/5", icon: TriangleAlert},
-  alert: {text: "text-destructive", border: "border-destructive/30 bg-destructive/5", icon: CircleAlert},
-  unknown: {text: "text-muted-foreground", border: "border-border", icon: CircleHelp},
+// A tile is a neutral surface. The level is a dot beside the title, and only a
+// case that failed colours anything larger than that.
+const levelStyles: Record<LlmAuditLevel, {dot: string; value: string; border: string}> = {
+  ok: {dot: "bg-success", value: "text-foreground", border: ""},
+  warn: {dot: "bg-warning", value: "text-foreground", border: ""},
+  alert: {dot: "bg-destructive", value: "text-destructive", border: "border-destructive/35"},
+  unknown: {dot: "bg-muted-foreground/40", value: "text-muted-foreground", border: ""},
 };
 
 function percent(share: number) {
@@ -89,12 +91,11 @@ function CheckTile({
   weight?: number;
 }) {
   const style = levelStyles[level] ?? levelStyles.unknown;
-  const Icon = style.icon;
 
   return (
-    <div className={cn("flex flex-col gap-1 rounded-lg border p-3", style.border)}>
+    <div className={cn("bg-card flex flex-col gap-1 rounded-lg border p-3", style.border)}>
       <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
-        <Icon className={cn("size-3.5 shrink-0", style.text)} />
+        <span className={cn("size-1.5 shrink-0 rounded-full", style.dot)} />
         <span className="truncate">{title}</span>
         {weight && level !== "unknown" ? (
           <SimpleTooltip title={i18next.t("audit:Weight hint")}>
@@ -102,7 +103,7 @@ function CheckTile({
           </SimpleTooltip>
         ) : null}
       </div>
-      <span className={cn("text-lg font-semibold tabular-nums", style.text)}>{value}</span>
+      <span className={cn("text-lg font-semibold tabular-nums", style.value)}>{value}</span>
       <span className="text-muted-foreground text-xs leading-snug">{detail}</span>
     </div>
   );
@@ -339,10 +340,10 @@ function ScoreHeadline({probe}: {probe: ProviderProbe}) {
   const {alerts, warnings, measured} = probeFindings(probe);
 
   return (
-    <div className="flex items-center gap-4 rounded-lg border p-3">
+    <div className="bg-card flex items-center gap-4 rounded-lg border p-3">
       <ScoreDial probe={probe} size={84} />
       <div className="flex min-w-0 flex-col gap-1">
-        <span className={cn("text-sm font-semibold", style.text)}>{i18next.t(style.label)}</span>
+        <span className="text-sm font-semibold">{i18next.t(style.label)}</span>
         <span className="text-muted-foreground text-xs leading-snug">{i18next.t(style.verdict)}</span>
         <span className="text-muted-foreground text-xs">
           {fill("audit:Score from cases", {

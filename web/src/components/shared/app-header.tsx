@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {SimpleTooltip} from "@/components/ui/tooltip";
 import {BreadcrumbBar} from "@/components/shared/breadcrumb-bar";
+import {CommandPaletteTrigger} from "@/components/shared/command-palette";
 import {VersionPanel} from "@/components/shared/version-panel";
 
 function ThemeToggle({
@@ -163,6 +164,7 @@ export function AppHeader({
   themeAlgorithm,
   onThemeChange,
   onSignout,
+  onOpenPalette,
 }: {
   collapsed: boolean;
   onToggleSidebar: () => void;
@@ -172,6 +174,7 @@ export function AppHeader({
   themeAlgorithm: ThemeAlgorithm;
   onThemeChange: (next: ThemeAlgorithm) => void;
   onSignout: () => void;
+  onOpenPalette: () => void;
 }) {
   return (
     <header className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-0 z-30 flex h-13 shrink-0 items-center justify-between gap-2 border-b px-2 backdrop-blur">
@@ -187,7 +190,8 @@ export function AppHeader({
         <BreadcrumbBar uri={uri} />
       </div>
 
-      <div className="flex items-center gap-0.5 pr-1">
+      <div className="flex items-center gap-1.5 pr-1">
+        {account ? <CommandPaletteTrigger onOpen={onOpenPalette} /> : null}
         <VersionPanel isAdmin={isAdmin} signedIn={account !== null && account !== undefined} />
         <ThemeToggle themeAlgorithm={themeAlgorithm} onChange={onThemeChange} />
         <LanguageSelect />

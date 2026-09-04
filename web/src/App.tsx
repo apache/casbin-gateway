@@ -23,6 +23,7 @@ import * as Setting from "@/Setting";
 import {findGroupOf, selectedKeyOf} from "@/nav";
 import {AppHeader} from "@/components/shared/app-header";
 import {AppSidebar, persistOpenKeys, readSavedOpenKeys, useIsDesktop} from "@/components/shared/app-sidebar";
+import {CommandPalette, useCommandPalette} from "@/components/shared/command-palette";
 import {Loading} from "@/components/shared/loading";
 import {TooltipProvider} from "@/components/ui/tooltip";
 import {cn} from "@/lib/utils";
@@ -68,6 +69,7 @@ export default function App() {
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
   const isDesktop = useIsDesktop();
   const location = useLocation();
+  const palette = useCommandPalette();
 
   const selectedKey = selectedKeyOf(location.pathname, location.search, location.hash);
   const wasCollapsedRef = React.useRef(false);
@@ -237,7 +239,17 @@ export default function App() {
             themeAlgorithm={themeAlgorithm}
             onThemeChange={changeTheme}
             onSignout={signout}
+            onOpenPalette={() => palette.setOpen(true)}
           />
+
+          {account ? (
+            <CommandPalette
+              open={palette.open}
+              onOpenChange={palette.setOpen}
+              account={account}
+              isAdmin={Setting.isAdminUser(account)}
+            />
+          ) : null}
 
           {/* min-w-0 keeps a wide table from stretching the whole layout. */}
           <main className="flex min-w-0 flex-1 flex-col">

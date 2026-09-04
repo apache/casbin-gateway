@@ -14,10 +14,9 @@
 
 import * as React from "react";
 import {Link} from "react-router-dom";
-import {Activity, ArrowDownToLine, ArrowUpFromLine, CircleDollarSign, Database, Sparkles} from "lucide-react";
+import {Activity, ArrowDownToLine, ArrowUpFromLine, CircleDollarSign, Database, DatabaseZap} from "lucide-react";
 import i18next from "i18next";
 
-import {cn} from "@/lib/utils";
 import {Card, CardContent} from "@/components/ui/card";
 import {Progress} from "@/components/ui/progress";
 import {Skeleton} from "@/components/ui/skeleton";
@@ -29,13 +28,11 @@ function MiniStat({
   icon: Icon,
   label,
   value,
-  accent,
   hint,
 }: {
   icon: React.ComponentType<{className?: string}>;
   label: React.ReactNode;
   value: React.ReactNode;
-  accent: string;
   hint?: React.ReactNode;
 }) {
   // SimpleTooltip renders its child alone when there is no title, so the hint
@@ -44,7 +41,7 @@ function MiniStat({
     <SimpleTooltip title={hint}>
       <div className="bg-background/60 flex flex-col gap-1 rounded-lg border p-3">
         <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
-          <Icon className={cn("size-3.5 shrink-0", accent)} />
+          <Icon className="size-3.5 shrink-0" />
           <span className="truncate">{label}</span>
         </div>
         <span className="text-sm font-semibold tabular-nums">{value}</span>
@@ -107,7 +104,7 @@ export function UsageHero({
                 {i18next.t("llm:Requests")}
               </span>
               <span className="flex items-center gap-1.5 text-sm font-semibold tabular-nums">
-                <Activity className="text-info size-3.5" />
+                <Activity className="text-muted-foreground size-3.5" />
                 {totals.requests.toLocaleString()}
                 {totals.failed ? (
                   <span className="text-warning text-xs font-normal">
@@ -119,8 +116,8 @@ export function UsageHero({
             <div className="bg-border h-8 w-px" />
             <div className="flex flex-col">
               <span className="text-muted-foreground text-[11px] font-medium">{i18next.t("llm:Cost")}</span>
-              <span className="text-success flex items-center gap-1.5 text-sm font-semibold tabular-nums">
-                <CircleDollarSign className="size-3.5" />
+              <span className="flex items-center gap-1.5 text-sm font-semibold tabular-nums">
+                <CircleDollarSign className="text-muted-foreground size-3.5" />
                 {formatCost(totals.cost)}
               </span>
             </div>
@@ -132,33 +129,29 @@ export function UsageHero({
             icon={ArrowDownToLine}
             label={i18next.t("llm:Fresh input")}
             value={formatTokens(totals.promptTokens)}
-            accent="text-info"
           />
           <MiniStat
             icon={ArrowUpFromLine}
             label={i18next.t("llm:Output")}
             value={formatTokens(totals.completionTokens)}
-            accent="text-chart-4"
           />
           <MiniStat
             icon={Database}
             label={i18next.t("llm:Cache write")}
             value={formatTokens(totals.cacheWriteTokens)}
-            accent="text-warning"
             hint={cacheWriteHint}
           />
           <MiniStat
-            icon={Sparkles}
+            icon={DatabaseZap}
             label={i18next.t("llm:Cache read")}
             value={formatTokens(totals.cacheReadTokens)}
-            accent="text-success"
           />
           <div className="bg-background/60 col-span-2 flex flex-col justify-center gap-2 rounded-lg border p-3 lg:col-span-1">
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground font-medium">{i18next.t("llm:Cache hit rate")}</span>
-              <span className="text-success font-semibold tabular-nums">{hitRate.toFixed(hitRate >= 99.95 ? 0 : 1)}%</span>
+              <span className="font-semibold tabular-nums">{hitRate.toFixed(hitRate >= 99.95 ? 0 : 1)}%</span>
             </div>
-            <Progress value={hitRate} tone="success" className="h-1.5" />
+            <Progress value={hitRate} className="h-1.5" />
           </div>
         </div>
 

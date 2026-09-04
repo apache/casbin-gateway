@@ -64,7 +64,7 @@ export function ErrorState({
 }) {
   return (
     <div className={cn("flex flex-col items-center justify-center gap-2 px-6 py-14 text-center", className)}>
-      <div className="bg-destructive/10 text-destructive flex size-10 items-center justify-center rounded-full">
+      <div className="bg-muted text-destructive flex size-10 items-center justify-center rounded-full">
         <TriangleAlert className="size-5" />
       </div>
       <p className="text-sm font-medium">{title ?? i18next.t("general:Could not load this")}</p>

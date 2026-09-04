@@ -27,13 +27,13 @@ const badgeVariants = cva(
         secondary: "border-transparent bg-secondary text-secondary-foreground",
         destructive: "border-transparent bg-destructive text-destructive-foreground",
         outline: "text-foreground",
-        // Semantic tones are tinted rather than solid, so a table row carrying
-        // several of them still reads as a row instead of a row of buttons.
-        success: "border-success/25 bg-success/12 text-success",
-        warning: "border-warning/30 bg-warning/15 text-warning",
-        info: "border-info/25 bg-info/12 text-info",
-        danger: "border-destructive/25 bg-destructive/12 text-destructive",
-        muted: "border-border bg-muted text-muted-foreground",
+        // Semantic tones are outlined rather than filled: the word carries the
+        // colour, so a table of them reads as text instead of a row of pills.
+        success: "border-success/35 text-success",
+        warning: "border-warning/35 text-warning",
+        info: "border-info/35 text-info",
+        danger: "border-destructive/35 text-destructive",
+        muted: "border-transparent bg-muted text-muted-foreground",
       },
     },
     defaultVariants: {variant: "default"},

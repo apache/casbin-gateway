@@ -129,10 +129,10 @@ export function AuthenticityOverview({
           <ScoreDial probe={worst} size={56} />
           <div className="flex min-w-0 flex-col gap-0.5">
             <div className="flex items-center gap-1.5">
-              <ShieldCheck className={cn("size-3.5", style.text)} />
+              <ShieldCheck className="text-muted-foreground size-3.5" />
               <span className="text-sm font-medium">{i18next.t("audit:Authenticity")}</span>
             </div>
-            <span className={cn("text-xs", style.text)}>
+            <span className="text-xs">
               {summary.graded === 0
                 ? i18next.t(mode === "off" ? "audit:Probing is off" : "audit:Measuring now")
                 : i18next.t(style.verdict)}

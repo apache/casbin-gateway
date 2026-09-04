@@ -14,7 +14,7 @@
 
 import * as React from "react";
 import {Link} from "react-router-dom";
-import {CheckCircle2, ChevronRight, Circle, Sparkles, X} from "lucide-react";
+import {CheckCircle2, ChevronRight, Circle, ListChecks, X} from "lucide-react";
 import i18next from "i18next";
 
 import {Button} from "@/components/ui/button";
@@ -100,7 +100,7 @@ export function OnboardingChecklist({
     <Card className="gap-0 py-0 shadow-xs">
       <CardContent className="flex flex-col gap-3 p-4">
         <div className="flex items-center gap-3">
-          <Sparkles className="text-primary size-4 shrink-0" />
+          <ListChecks className="text-muted-foreground size-4 shrink-0" />
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <div className="flex items-center justify-between gap-2">
               <span className="text-sm font-medium">{i18next.t("agent:Getting started")}</span>
@@ -108,7 +108,7 @@ export function OnboardingChecklist({
                 {doneCount}/{steps.length}
               </span>
             </div>
-            <Progress value={(doneCount / steps.length) * 100} tone="success" className="h-1.5" />
+            <Progress value={(doneCount / steps.length) * 100} className="h-1.5" />
           </div>
           <Button variant="ghost" size="icon-sm" onClick={dismiss} aria-label={i18next.t("general:Dismiss")}>
             <X />
@@ -126,7 +126,7 @@ export function OnboardingChecklist({
               )}
             >
               {step.done ? (
-                <CheckCircle2 className="text-success mt-0.5 size-4 shrink-0" />
+                <CheckCircle2 className="text-muted-foreground mt-0.5 size-4 shrink-0" />
               ) : (
                 <Circle className="text-muted-foreground mt-0.5 size-4 shrink-0" />
               )}

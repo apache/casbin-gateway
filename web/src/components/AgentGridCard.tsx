@@ -139,7 +139,7 @@ function PlanUsage({quota}: {quota?: ProviderQuota}) {
       {percent === null ? null : (
         <Progress
           value={percent}
-          tone={percent >= 90 ? "danger" : percent >= 75 ? "warning" : "success"}
+          tone={percent >= 90 ? "danger" : percent >= 75 ? "warning" : "default"}
           className="h-1"
         />
       )}

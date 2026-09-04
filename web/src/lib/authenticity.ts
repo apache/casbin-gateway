@@ -29,7 +29,8 @@ export const gradeFloors: {grade: ProbeGrade; floor: number}[] = [
  * How each grade is painted and worded. The wording is deliberately about what
  * was measured rather than about the provider's character: an F says the answers
  * did not match what the API documents, which is a finding to send to whoever
- * sold the key.
+ * sold the key. The paint is one accent per grade: an outlined badge and the
+ * ring on the dial, never a filled panel.
  */
 export const gradeStyles: Record<
   ProbeGrade,
@@ -37,42 +38,42 @@ export const gradeStyles: Record<
 > = {
   A: {
     text: "text-success",
-    badge: "border-success/30 bg-success/10 text-success",
+    badge: "border-success/35 text-success",
     ring: "text-success",
     label: "audit:Grade A",
     verdict: "audit:Grade A detail",
   },
   B: {
     text: "text-success",
-    badge: "border-success/30 bg-success/10 text-success",
+    badge: "border-success/35 text-success",
     ring: "text-success",
     label: "audit:Grade B",
     verdict: "audit:Grade B detail",
   },
   C: {
     text: "text-warning",
-    badge: "border-warning/30 bg-warning/10 text-warning",
+    badge: "border-warning/35 text-warning",
     ring: "text-warning",
     label: "audit:Grade C",
     verdict: "audit:Grade C detail",
   },
   D: {
     text: "text-warning",
-    badge: "border-warning/30 bg-warning/10 text-warning",
+    badge: "border-warning/35 text-warning",
     ring: "text-warning",
     label: "audit:Grade D",
     verdict: "audit:Grade D detail",
   },
   F: {
     text: "text-destructive",
-    badge: "border-destructive/30 bg-destructive/10 text-destructive",
+    badge: "border-destructive/35 text-destructive",
     ring: "text-destructive",
     label: "audit:Grade F",
     verdict: "audit:Grade F detail",
   },
   unknown: {
     text: "text-muted-foreground",
-    badge: "border-border bg-muted text-muted-foreground",
+    badge: "border-border text-muted-foreground",
     ring: "text-muted-foreground",
     label: "audit:Grade unknown",
     verdict: "audit:Grade unknown detail",

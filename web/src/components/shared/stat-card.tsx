@@ -73,7 +73,7 @@ export function StatCard({
       {percent !== undefined && percent !== null ? (
         <Progress
           value={Math.min(100, Math.max(0, Number(percent) || 0))}
-          tone={percent >= 90 ? "danger" : percent >= 75 ? "warning" : "success"}
+          tone={percent >= 90 ? "danger" : percent >= 75 ? "warning" : "default"}
           className="h-1.5"
         />
       ) : null}

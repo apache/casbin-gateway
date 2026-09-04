@@ -4,7 +4,9 @@
 @custom-variant dark (&:is(.dark *));
 
 /* shadcn's neutral base palette. --primary is a neutral near-black rather than
-   a hue, so the semantic colours below carry all the meaning a page needs. */
+   a hue, so the semantic colours below carry all the meaning a page needs.
+   Those three are kept low-chroma on purpose: they are ink for a word or a
+   dot, never a wash behind a panel. */
 :root {
   --radius: 0.625rem;
 
@@ -24,11 +26,11 @@
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
-  --success: oklch(0.627 0.194 149.214);
+  --success: oklch(0.52 0.115 152);
   --success-foreground: oklch(0.985 0 0);
-  --warning: oklch(0.705 0.187 47.604);
-  --warning-foreground: oklch(0.145 0 0);
-  --info: oklch(0.588 0.158 241.966);
+  --warning: oklch(0.55 0.115 65);
+  --warning-foreground: oklch(0.985 0 0);
+  --info: oklch(0.52 0.115 248);
   --info-foreground: oklch(0.985 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
@@ -67,11 +69,11 @@
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(0.985 0 0);
-  --success: oklch(0.696 0.17 162.48);
+  --success: oklch(0.72 0.105 158);
   --success-foreground: oklch(0.145 0 0);
-  --warning: oklch(0.769 0.188 70.08);
+  --warning: oklch(0.78 0.115 72);
   --warning-foreground: oklch(0.145 0 0);
-  --info: oklch(0.685 0.145 241.966);
+  --info: oklch(0.7 0.095 245);
   --info-foreground: oklch(0.145 0 0);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 18%);

@@ -23,11 +23,13 @@ const alertVariants = cva(
   {
     variants: {
       variant: {
+        // As shadcn ships it: the surface stays neutral. Something wrong
+        // colours its words; something merely worth knowing colours its icon.
         default: "bg-card text-card-foreground",
-        destructive: "border-destructive/30 bg-destructive/8 text-destructive [&>svg]:text-destructive",
-        warning: "border-warning/35 bg-warning/10 text-warning [&>svg]:text-warning",
-        success: "border-success/30 bg-success/8 text-success [&>svg]:text-success",
-        info: "border-info/30 bg-info/8 text-info [&>svg]:text-info",
+        destructive: "bg-card text-destructive [&>svg]:text-destructive",
+        warning: "bg-card text-warning [&>svg]:text-warning",
+        success: "bg-card text-card-foreground [&>svg]:text-success",
+        info: "bg-card text-card-foreground [&>svg]:text-info",
       },
     },
     defaultVariants: {variant: "default"},
