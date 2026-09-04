@@ -45,7 +45,10 @@ function ProviderScore({provider, probe}: {provider: Provider; probe?: ProviderP
   const name = provider.displayName || provider.name;
 
   return (
-    <div className="hover:border-foreground/20 flex min-w-0 items-center gap-2 rounded-lg border px-2.5 py-1.5 transition-colors">
+    <Link
+      to={`/authenticity?tab=report&provider=${encodeURIComponent(providerIdOf(provider))}`}
+      className="hover:border-foreground/20 hover:bg-accent/40 flex min-w-0 items-center gap-2 rounded-lg border px-2.5 py-1.5 transition-colors"
+    >
       <ProviderIcon icon={provider.icon} baseUrl={provider.baseUrl} alt={name} size={16} />
       <span className="truncate text-xs">{name}</span>
       <div className="ml-auto flex shrink-0 items-center gap-1.5">
@@ -56,7 +59,7 @@ function ProviderScore({provider, probe}: {provider: Provider; probe?: ProviderP
         ) : null}
         <ScoreBadge probe={probe} showLabel={false} />
       </div>
-    </div>
+    </Link>
   );
 }
 

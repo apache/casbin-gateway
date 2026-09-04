@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import * as React from "react";
-import {Link} from "react-router-dom";
+import {Link, useLocation} from "react-router-dom";
 import {Logs, RefreshCw, Stethoscope} from "lucide-react";
 import i18next from "i18next";
 
@@ -28,6 +28,7 @@ import {SimpleSelect} from "@/components/shared/simple-select";
 import {MessageAlert} from "@/components/ui/alert";
 import {Button} from "@/components/ui/button";
 import {Card} from "@/components/ui/card";
+import {cn} from "@/lib/utils";
 import {providerIdOf} from "@/lib/providers";
 import type {
   LlmAuditReport,
@@ -116,7 +117,7 @@ function buildRows(
  * documented, which is the only way to learn something a real request never
  * happened to show — and spends a few cents of that provider's own credit.
  */
-export function ProviderAuditPanel({owner}: {owner: string}) {
+export function ProviderAuditPanel({owner, focus = ""}: {owner: string; focus?: string}) {
   const [hours, setHours] = React.useState(24 * 7);
   const [report, setReport] = React.useState<LlmAuditReport | null>(null);
   // Null until a listing lands. An empty list and "not asked yet" must not
@@ -204,6 +205,31 @@ export function ProviderAuditPanel({owner}: {owner: string}) {
 
   const rows = buildRows(providers ?? [], report?.providers ?? [], probes);
 
+  // A card linked to from the overview is scrolled to and lit for a moment,
+  // otherwise the click lands on a page that looks unchanged.
+  const [lit, setLit] = React.useState("");
+  // Keyed on the navigation, so clicking the same tile twice scrolls again.
+  const navigation = useLocation().key;
+
+  React.useEffect(() => {
+    if (focus === "") {
+      return;
+    }
+    const scroll = (behavior: ScrollBehavior) =>
+      document
+        .querySelector(`[data-audit-provider="${CSS.escape(focus)}"]`)
+        ?.scrollIntoView({behavior: behavior, block: "start"});
+    scroll("smooth");
+    // Landed on exactly, once the panels above have loaded and moved the card.
+    const again = setTimeout(() => scroll("auto"), 600);
+    setLit(focus);
+    const off = setTimeout(() => setLit(""), 2500);
+    return () => {
+      clearTimeout(again);
+      clearTimeout(off);
+    };
+  }, [focus, navigation, rows.length, loading]);
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -272,19 +298,27 @@ export function ProviderAuditPanel({owner}: {owner: string}) {
         <>
           <div className="space-y-3">
             {rows.map(row => (
-              <ProviderAuditCard
+              <div
                 key={row.id}
-                audit={row.audit}
-                probe={row.probe}
-                cases={cases}
-                provider={row.provider}
-                providersKnown={providers !== null}
-                probeMode={probeMode}
-                probing={probing.includes(row.id)}
-                // A provider the records still name but nothing is configured
-                // for has no endpoint left to ask.
-                onProbe={row.provider && probeMode !== "off" ? () => runProbe(row.id) : undefined}
-              />
+                data-audit-provider={row.id}
+                className={cn(
+                  "scroll-mt-20 rounded-xl transition-shadow",
+                  lit === row.id ? "ring-primary/60 ring-2" : "",
+                )}
+              >
+                <ProviderAuditCard
+                  audit={row.audit}
+                  probe={row.probe}
+                  cases={cases}
+                  provider={row.provider}
+                  providersKnown={providers !== null}
+                  probeMode={probeMode}
+                  probing={probing.includes(row.id)}
+                  // A provider the records still name but nothing is configured
+                  // for has no endpoint left to ask.
+                  onProbe={row.provider && probeMode !== "off" ? () => runProbe(row.id) : undefined}
+                />
+              </div>
             ))}
           </div>
           <p className="text-muted-foreground text-xs">

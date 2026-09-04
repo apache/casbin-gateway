@@ -39,6 +39,8 @@ export default function AuthenticityPage({account}: {account: Account}) {
   // The tab lives in the URL so the rail can link straight to one of them.
   const [searchParams, setSearchParams] = useSearchParams();
   const tab: AuthenticityTab = searchParams.get("tab") === "cases" ? "cases" : "report";
+  // Set when the overview above was clicked, so the report opens at that card.
+  const focus = searchParams.get("provider") ?? "";
   const setTab = (next: AuthenticityTab) =>
     setSearchParams(
       previous => {
@@ -78,7 +80,7 @@ export default function AuthenticityPage({account}: {account: Account}) {
         </TabsList>
       </Tabs>
 
-      {tab === "report" ? <ProviderAuditPanel owner={account.name} /> : <ProbeCaseList />}
+      {tab === "report" ? <ProviderAuditPanel owner={account.name} focus={focus} /> : <ProbeCaseList />}
     </PageContainer>
   );
 }
