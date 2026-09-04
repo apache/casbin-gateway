@@ -84,6 +84,12 @@ type Setting struct {
 	// first start; clearing it on the Settings page issues a new one.
 	RelayToken string `xorm:"varchar(200)" json:"relayToken"`
 
+	// AllowedHosts is the extra Host header names Gateway answers to, and
+	// AllowedOrigins the browser origins allowed to call it from another site.
+	// Both are comma-separated.
+	AllowedHosts   string `xorm:"varchar(1000)" json:"allowedHosts"`
+	AllowedOrigins string `xorm:"varchar(1000)" json:"allowedOrigins"`
+
 	HttpProxy string `xorm:"varchar(200)" json:"httpProxy"`
 }
 
@@ -129,6 +135,9 @@ func SyncSettingToConf(setting *Setting) {
 
 		"apiKeyEncryptionKey": setting.ApiKeyEncryptionKey,
 		"relayToken":          setting.RelayToken,
+
+		"allowedHosts":   setting.AllowedHosts,
+		"allowedOrigins": setting.AllowedOrigins,
 
 		"httpProxy": setting.HttpProxy,
 	})
@@ -249,6 +258,19 @@ func InitBuiltInSetting() {
 		}
 	}
 
+	// The origin filter used to read these from conf/app.conf alone, so an
+	// installation that listed a name there keeps it when the columns arrive.
+	if setting.AllowedHosts == "" && setting.AllowedOrigins == "" {
+		setting.AllowedHosts = conf.GetConfigStringUnquoted("allowedHosts")
+		setting.AllowedOrigins = conf.GetConfigStringUnquoted("allowedOrigins")
+		if setting.AllowedHosts != "" || setting.AllowedOrigins != "" {
+			if _, err = ormer.Engine.ID(core.PK{setting.Owner, setting.Name}).
+				Cols("allowed_hosts", "allowed_origins").Update(setting); err != nil {
+				panic(err)
+			}
+		}
+	}
+
 	initCloudSyncSetting(setting)
 
 	SyncSettingToConf(setting)
@@ -296,6 +318,9 @@ func newSettingFromConf() *Setting {
 
 		ApiKeyEncryptionKey: conf.GetConfigStringUnquoted("apiKeyEncryptionKey"),
 		RelayToken:          newRelayToken(),
+
+		AllowedHosts:   conf.GetConfigStringUnquoted("allowedHosts"),
+		AllowedOrigins: conf.GetConfigStringUnquoted("allowedOrigins"),
 
 		HttpProxy: conf.GetConfigStringUnquoted("httpProxy"),
 	}

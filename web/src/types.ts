@@ -847,6 +847,11 @@ export interface Setting {
   apiKeyEncryptionKey: string;
   relayToken: string;
 
+  /** Comma-separated: extra Host names Gateway answers to, and the browser
+   *  origins allowed to call it from another site. */
+  allowedHosts: string;
+  allowedOrigins: string;
+
   httpProxy: string;
 
   backupMode: BackupMode;

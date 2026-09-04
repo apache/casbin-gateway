@@ -215,6 +215,8 @@ export default function SettingPage({account}: {account: Account}) {
 
       <Section id="network" columns={2} collapsible title={i18next.t("setting:Network")}>
         {textField("httpProxy", i18next.t("setting:Outbound SOCKS5 proxy"), i18next.t("setting:Outbound SOCKS5 proxy hint"))}
+        {textField("allowedHosts", i18next.t("setting:Allowed hosts"), i18next.t("setting:Allowed hosts hint"))}
+        {textField("allowedOrigins", i18next.t("setting:Allowed origins"), i18next.t("setting:Allowed origins hint"))}
       </Section>
 
       <div id="backups" className="scroll-mt-20">

@@ -166,8 +166,9 @@ func GetAllowedHosts() []string {
 }
 
 // GetAllowedOrigins is the browser origins allowed to call the API from another
-// site. The web UI is served by Gateway itself, so it needs none of them: this
-// is for a page of your own that talks to the relay.
+// site. The web UI is served by Gateway itself, so it needs none of them, and
+// neither does a browser extension calling the relay: this is for a page of
+// your own that talks to the management API.
 func GetAllowedOrigins() []string {
 	return getConfigList("allowedOrigins")
 }

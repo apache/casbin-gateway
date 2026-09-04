@@ -34,11 +34,13 @@ import (
 // Two checks, and a client that is not a browser — curl, an agent CLI — passes
 // both without sending anything. The Host has to name this machine, which the
 // attacker domain of a DNS rebinding does not, and a request carrying an Origin
-// has to come from Gateway's own pages or from an origin the operator listed.
+// has to come from Gateway's own pages, from an installed browser extension
+// calling the relay, or from an origin the operator listed on the Settings
+// page.
 func OriginFilter(ctx *context.Context) {
 	host := ctx.Request.Host
 	if !isAllowedHost(host) {
-		denyOrigin(ctx, fmt.Sprintf("%q is not a name this Gateway answers to; add it to \"allowedHosts\" in conf/app.conf to reach Gateway under that name",
+		denyOrigin(ctx, fmt.Sprintf("%q is not a name this Gateway answers to; add it to \"Allowed hosts\" on the Settings page to reach Gateway under that name",
 			hostnameOf(host)))
 		return
 	}
@@ -47,12 +49,12 @@ func OriginFilter(ctx *context.Context) {
 	if origin == "" || sameOrigin(origin, host) {
 		return
 	}
-	if !isAllowedOrigin(origin) {
-		denyOrigin(ctx, fmt.Sprintf("%s is another site, and Gateway is not callable from one; add it to \"allowedOrigins\" in conf/app.conf to allow it", origin))
+	if !isAllowedOrigin(origin) && !isAllowedExtensionCall(ctx, origin) {
+		denyOrigin(ctx, fmt.Sprintf("%s is another site, and Gateway is not callable from one; add it to \"Allowed origins\" on the Settings page to allow it", origin))
 		return
 	}
 
-	// An origin the operator listed gets the CORS headers the browser needs to
+	// An origin that got through gets the CORS headers the browser needs to
 	// hand the answer to it.
 	writeCorsHeaders(ctx, origin)
 	if isPreflight(ctx) {
@@ -101,6 +103,33 @@ func isOwnHostname(lower string) bool {
 		return false
 	}
 	return lower == own || strings.HasPrefix(lower, own+".")
+}
+
+// isAllowedExtensionCall lets a browser extension use the relay. A page cannot
+// forge an extension origin, so one does not come from another site at all: it
+// comes from software the operator installed, which reaches /v1 the way a local
+// agent does. The management API is not part of the deal — an extension has no
+// business editing providers — so an extension origin is listed like any other
+// to reach that.
+func isAllowedExtensionCall(ctx *context.Context, origin string) bool {
+	return isExtensionOrigin(origin) && isRelayPath(ctx.Request.URL.Path)
+}
+
+var extensionSchemes = []string{"moz-extension://", "chrome-extension://", "safari-web-extension://", "extension://"}
+
+func isExtensionOrigin(origin string) bool {
+	lower := strings.ToLower(origin)
+	for _, scheme := range extensionSchemes {
+		if strings.HasPrefix(lower, scheme) {
+			return true
+		}
+	}
+	return false
+}
+
+// isRelayPath separates the LLM gateway from the management API.
+func isRelayPath(path string) bool {
+	return path == "/v1" || strings.HasPrefix(path, "/v1/") || strings.HasPrefix(path, "/v1beta/")
 }
 
 func isAllowedOrigin(origin string) bool {
