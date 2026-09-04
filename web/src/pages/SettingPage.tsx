@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import * as React from "react";
+import {useLocation} from "react-router-dom";
 import i18next from "i18next";
 
 import * as SettingBackend from "@/backend/SettingBackend";
@@ -60,6 +61,17 @@ export default function SettingPage({account}: {account: Account}) {
   }, [isAdmin]);
 
   React.useEffect(load, [load]);
+
+  // The rail links to a section by hash, and the browser cannot honour that on
+  // its own while the page is still the loading placeholder.
+  const {hash} = useLocation();
+  const loaded = setting !== null;
+  React.useEffect(() => {
+    if (!loaded || !hash) {
+      return;
+    }
+    document.getElementById(hash.slice(1))?.scrollIntoView({block: "start"});
+  }, [hash, loaded]);
 
   if (!isAdmin) {
     return <UnauthorizedResult />;
@@ -137,7 +149,7 @@ export default function SettingPage({account}: {account: Account}) {
         }
       />
 
-      <Section columns={2} title={i18next.t("setting:LLM records")} description={i18next.t("setting:LLM records description")}>
+      <Section id="llm-records" columns={2} title={i18next.t("setting:LLM records")} description={i18next.t("setting:LLM records description")}>
         <Field label={i18next.t("setting:Record mode")}>
           <SimpleSelect
             value={setting.llmRecordMode}
@@ -157,6 +169,7 @@ export default function SettingPage({account}: {account: Account}) {
       </Section>
 
       <Section
+        id="probes"
         columns={2}
         title={i18next.t("setting:Channel probes")}
         description={i18next.t("setting:Channel probes description")}
@@ -181,13 +194,13 @@ export default function SettingPage({account}: {account: Account}) {
         )}
       </Section>
 
-      <Section columns={2} title={i18next.t("setting:Agents")}>
+      <Section id="agents" columns={2} title={i18next.t("setting:Agents")}>
         {textField("agentPatchStateDir", i18next.t("setting:Agent state dir"), i18next.t("setting:Agent state dir hint"))}
         {numberField("agentRecordCapacity", i18next.t("setting:Agent record capacity"), i18next.t("setting:Agent record capacity hint"), 1)}
         {numberField("agentMonitorPollSeconds", i18next.t("setting:Agent poll seconds"), undefined, 1)}
       </Section>
 
-      <Section columns={2} collapsible title={i18next.t("setting:Sign-in")} description={i18next.t("setting:Sign-in description")}>
+      <Section id="signin" columns={2} collapsible title={i18next.t("setting:Sign-in")} description={i18next.t("setting:Sign-in description")}>
         {textField("casdoorEndpoint", i18next.t("setting:Casdoor endpoint"))}
         {textField("clientId", i18next.t("setting:Client ID"))}
         {secretField("clientSecret", i18next.t("setting:Client secret"))}
@@ -195,20 +208,26 @@ export default function SettingPage({account}: {account: Account}) {
         {textField("casdoorApplication", i18next.t("setting:Casdoor application"))}
       </Section>
 
-      <Section columns={2} title={i18next.t("setting:Security")}>
+      <Section id="security" columns={2} title={i18next.t("setting:Security")}>
         {secretField("apiKeyEncryptionKey", i18next.t("setting:API key encryption key"), i18next.t("setting:API key encryption key hint"))}
         {textField("relayToken", i18next.t("setting:Relay token"), i18next.t("setting:Relay token hint"))}
       </Section>
 
-      <Section columns={2} collapsible title={i18next.t("setting:Network")}>
+      <Section id="network" columns={2} collapsible title={i18next.t("setting:Network")}>
         {textField("httpProxy", i18next.t("setting:Outbound SOCKS5 proxy"), i18next.t("setting:Outbound SOCKS5 proxy hint"))}
       </Section>
 
-      <BackupPanel onSettingChanged={load} reloadToken={synced} />
+      <div id="backups" className="scroll-mt-20">
+        <BackupPanel onSettingChanged={load} reloadToken={synced} />
+      </div>
 
-      <CloudSyncPanel onSynced={() => setSynced(count => count + 1)} />
+      <div id="cloud-sync" className="scroll-mt-20">
+        <CloudSyncPanel onSynced={() => setSynced(count => count + 1)} />
+      </div>
 
-      <ImportExportPanel onSettingChanged={load} />
+      <div id="import-export" className="scroll-mt-20">
+        <ImportExportPanel onSettingChanged={load} />
+      </div>
     </PageContainer>
   );
 }

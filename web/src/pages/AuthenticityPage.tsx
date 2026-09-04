@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import * as React from "react";
+import {useSearchParams} from "react-router-dom";
 import i18next from "i18next";
 
 import * as ProviderBackend from "@/backend/ProviderBackend";
@@ -35,7 +36,17 @@ type AuthenticityTab = "report" | "cases";
  */
 export default function AuthenticityPage({account}: {account: Account}) {
   const isAdmin = Setting.isAdminUser(account);
-  const [tab, setTab] = React.useState<AuthenticityTab>("report");
+  // The tab lives in the URL so the rail can link straight to one of them.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab: AuthenticityTab = searchParams.get("tab") === "cases" ? "cases" : "report";
+  const setTab = (next: AuthenticityTab) =>
+    setSearchParams(
+      previous => {
+        previous.set("tab", next);
+        return previous;
+      },
+      {replace: true},
+    );
   const [providers, setProviders] = React.useState<Provider[]>([]);
 
   React.useEffect(() => {

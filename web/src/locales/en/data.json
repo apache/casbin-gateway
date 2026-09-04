@@ -1189,6 +1189,7 @@
   },
   "usage": {
     "Add a price": "Add a price",
+    "Agent spend": "Agent spend",
     "Agents description": "What the agents on this machine spent, read from the transcripts they write themselves. This is the only account of a request that never went through Gateway.",
     "Automatic sync": "Automatic sync",
     "Automatic sync description": "Read the models.dev catalogue on a schedule and reprice the models this machine has been seen running. A price you edited by hand is left alone.",
@@ -1237,6 +1238,7 @@
     "Read from a catalogue of {count} models": "Read from a models.dev catalogue of {count} models.",
     "Recording is off detail": "llmRecordMode is \"off\", so nothing relayed is being counted. The agents' own transcripts are counted either way.",
     "Relayed description": "What Gateway relayed on behalf of the agents. This is the only account that knows which provider answered, and whether it failed.",
+    "Relayed spend": "Relayed spend",
     "Search the catalogue": "Search by model name",
     "Set their prices": "Set their prices",
     "Source": "Source",
@@ -1249,8 +1251,6 @@
     "Trend": "Trend",
     "Updated": "Updated:",
     "Usage": "Usage",
-    "What Gateway relayed": "What Gateway relayed",
-    "What the agents spent": "What the agents spent",
     "models.dev": "models.dev",
     "{count} providers list it": "{count} providers list it"
   }

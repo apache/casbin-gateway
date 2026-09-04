@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import * as React from "react";
+import {useLocation} from "react-router-dom";
 import {ChevronDown} from "lucide-react";
 
 import {cn} from "@/lib/utils";
@@ -49,6 +50,7 @@ export function PageHeader({
  * long form reads as a few short sections rather than one tall column.
  */
 export function Section({
+  id,
   title,
   description,
   columns = 3,
@@ -56,6 +58,8 @@ export function Section({
   collapsible = false,
   children,
 }: {
+  /** Names the section for the rail, which links to it by hash. */
+  id?: string;
   title?: React.ReactNode;
   description?: React.ReactNode;
   columns?: 1 | 2 | 3;
@@ -65,9 +69,19 @@ export function Section({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = React.useState(!collapsible);
+  const {hash} = useLocation();
+  const targeted = id !== undefined && hash === `#${id}`;
+
+  // Arriving at a folded section by link has to unfold it, or the jump lands on
+  // a title with nothing under it.
+  React.useEffect(() => {
+    if (targeted) {
+      setOpen(true);
+    }
+  }, [targeted]);
 
   return (
-    <Card className={cn("gap-4 py-5", className)}>
+    <Card id={id} className={cn("scroll-mt-20 gap-4 py-5", className)}>
       {title || description ? (
         <CardHeader className="px-5">
           {title ? (

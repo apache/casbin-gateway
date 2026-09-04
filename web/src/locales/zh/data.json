@@ -1261,6 +1261,7 @@
   },
   "usage": {
     "Add a price": "新增价格",
+    "Agent spend": "Agent 账单",
     "Agents description": "这台机器上的 agent 花掉的量，读自它们自己写的会话记录。没有经过 Gateway 的请求，只有这一份账。",
     "Automatic sync": "自动同步",
     "Automatic sync description": "定期读取 models.dev 目录，为本机跑过的模型重新定价。你手改过的价格不会被动。",
@@ -1309,6 +1310,7 @@
     "Read from a catalogue of {count} models": "读自 models.dev 的 {count} 个模型目录。",
     "Recording is off detail": "llmRecordMode 是 \"off\"，转发的请求没有被统计。Agent 自己的会话记录不受影响，照常统计。",
     "Relayed description": "Gateway 代为转发的量。只有这一份账知道是哪个 provider 应答的，以及是否失败。",
+    "Relayed spend": "转发账单",
     "Search the catalogue": "按模型名搜索",
     "Set their prices": "去设置价格",
     "Source": "来源",
@@ -1321,8 +1323,6 @@
     "Trend": "趋势",
     "Updated": "已更新：",
     "Usage": "用量",
-    "What Gateway relayed": "Gateway 转发的账",
-    "What the agents spent": "Agent 自己的账",
     "models.dev": "models.dev",
     "{count} providers list it": "{count} 家收录"
   }

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import * as React from "react";
-import {Link} from "react-router-dom";
+import {Link, useSearchParams} from "react-router-dom";
 import {Logs, RefreshCw} from "lucide-react";
 import i18next from "i18next";
 
@@ -84,7 +84,9 @@ function rangeLabel(days: number) {
 
 export default function UsagePage({account}: {account: Account}) {
   const isAdmin = Setting.isAdminUser(account);
-  const [source, setSource] = React.useState<UsageSource>("agents");
+  // The tab lives in the URL so the rail can link straight to one of them.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const source: UsageSource = searchParams.get("tab") === "relayed" ? "relayed" : "agents";
   const [days, setDays] = React.useState(7);
   const [agent, setAgent] = React.useState("");
   const [refreshMs, setRefreshMs] = React.useState(30000);
@@ -247,7 +249,13 @@ export default function UsagePage({account}: {account: Account}) {
   }
 
   const changeSource = (next: UsageSource) => {
-    setSource(next);
+    setSearchParams(
+      previous => {
+        previous.set("tab", next);
+        return previous;
+      },
+      {replace: true},
+    );
     // Each source offers the windows its own granularity can draw, so a window
     // the new one does not have falls back to its default.
     if (!RANGES[next].includes(days)) {
@@ -308,8 +316,8 @@ export default function UsagePage({account}: {account: Account}) {
 
       <Tabs value={source} onValueChange={value => changeSource(value as UsageSource)}>
         <TabsList>
-          <TabsTrigger value="agents">{i18next.t("usage:What the agents spent")}</TabsTrigger>
-          <TabsTrigger value="relayed">{i18next.t("usage:What Gateway relayed")}</TabsTrigger>
+          <TabsTrigger value="agents">{i18next.t("usage:Agent spend")}</TabsTrigger>
+          <TabsTrigger value="relayed">{i18next.t("usage:Relayed spend")}</TabsTrigger>
         </TabsList>
       </Tabs>
 

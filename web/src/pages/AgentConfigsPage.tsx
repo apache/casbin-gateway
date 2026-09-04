@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import * as React from "react";
+import {useSearchParams} from "react-router-dom";
 import {
   AlertTriangle,
   ArrowDownToLine,
@@ -160,7 +161,17 @@ export default function AgentConfigsPage({account}: {account: Account}) {
   const isAdmin = Setting.isAdminUser(account);
   const {inventories, loading, error, scanned, refresh} = useAgentConfigs();
 
-  const [kind, setKind] = React.useState<AgentConfigKind>("skill");
+  // The tab lives in the URL so the rail can link straight to one of them.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const kind = (["skill", "mcp", "prompt"] as const).find(one => one === searchParams.get("tab")) ?? "skill";
+  const setKind = (next: AgentConfigKind) =>
+    setSearchParams(
+      previous => {
+        previous.set("tab", next);
+        return previous;
+      },
+      {replace: true},
+    );
   const [sourceKey, setSourceKey] = React.useState("");
   const [selected, setSelected] = React.useState<string[]>([]);
   const [detail, setDetail] = React.useState<DetailTarget | null>(null);

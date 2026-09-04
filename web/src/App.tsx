@@ -69,7 +69,7 @@ export default function App() {
   const isDesktop = useIsDesktop();
   const location = useLocation();
 
-  const selectedKey = selectedKeyOf(location.pathname);
+  const selectedKey = selectedKeyOf(location.pathname, location.search, location.hash);
   const wasCollapsedRef = React.useRef(false);
   const [openKeys, setOpenKeys] = React.useState<string[]>(() => {
     if (localStorage.getItem(collapsedKey) === "true") {

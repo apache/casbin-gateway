@@ -23,7 +23,9 @@ import {navGroups, type NavGroup} from "@/nav";
 import {SimpleTooltip} from "@/components/ui/tooltip";
 
 const OPEN_KEYS_STORAGE = "siderMenuOpenKeys";
-const DEFAULT_OPEN_KEYS = navGroups.filter(group => group.children).map(group => group.key);
+// Nothing is expanded until the reader is inside a group: nine sections of
+// Settings unfolded on every page would bury the rest of the rail.
+const DEFAULT_OPEN_KEYS: string[] = [];
 
 export function readSavedOpenKeys(): string[] {
   try {
@@ -199,7 +201,7 @@ export function AppSidebar({
               return (
                 <NavLink
                   key={group.key}
-                  to={group.children[0].path}
+                  to={group.path ?? group.children[0].path}
                   active={hasActiveChild}
                   collapsed
                   icon={group.icon}
@@ -208,22 +210,36 @@ export function AppSidebar({
               );
             }
 
+            const header = cn(
+              "flex items-center gap-2.5 text-sm transition-colors",
+              hasActiveChild ? "text-sidebar-foreground font-medium" : "text-sidebar-foreground/70",
+              "hover:text-sidebar-foreground",
+            );
+
             return (
               <div key={group.key}>
-                <button
-                  type="button"
-                  onClick={() => toggleGroup(group.key)}
-                  className={cn(
-                    "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors",
-                    hasActiveChild ? "text-sidebar-foreground font-medium" : "text-sidebar-foreground/70",
-                    "hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
-                  )}
-                  aria-expanded={isOpen}
-                >
-                  {group.icon ? <group.icon className="size-4 shrink-0" /> : null}
-                  <span className="flex-1 truncate text-left">{groupLabel}</span>
-                  <ChevronDown className={cn("size-3.5 shrink-0 transition-transform", isOpen && "rotate-180")} />
-                </button>
+                {/* The label goes to the page, the chevron only unfolds it —
+                    a group is a destination as well as a heading. */}
+                <div className="hover:bg-sidebar-accent/60 flex items-center rounded-md pr-1 transition-colors">
+                  <Link to={group.path ?? group.children[0].path} className={cn(header, "min-w-0 flex-1 px-2.5 py-2")}>
+                    {group.icon ? <group.icon className="size-4 shrink-0" /> : null}
+                    <span className="truncate text-left">{groupLabel}</span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={event => {
+                      // The rail closes itself on any link tap while it is a
+                      // drawer, and unfolding a group is not leaving it.
+                      event.stopPropagation();
+                      toggleGroup(group.key);
+                    }}
+                    className={cn(header, "rounded-md p-1.5")}
+                    aria-expanded={isOpen}
+                    aria-label={groupLabel}
+                  >
+                    <ChevronDown className={cn("size-3.5 shrink-0 transition-transform", isOpen && "rotate-180")} />
+                  </button>
+                </div>
                 {isOpen ? (
                   <div className="mt-0.5 space-y-0.5">
                     {group.children.map(child => (
