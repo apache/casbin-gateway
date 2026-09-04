@@ -110,7 +110,6 @@ func applySetting(previous *object.Setting, setting *object.Setting) error {
 	agentmonitor.Configure(
 		conf.GetAgentPatchStateDir(),
 		time.Duration(conf.GetAgentMonitorPollSeconds())*time.Second,
-		conf.GetAgentRecordCapacity(),
 	)
 
 	if setting.LlmRecordMode == conf.LlmRecordOff {

@@ -41,10 +41,10 @@ var monitorConfig = struct {
 	pollInterval time.Duration
 }{stateDir: DefaultStateDir, pollInterval: DefaultPollInterval}
 
-// Configure selects the directory used for declaration and cursor JSON files,
-// how often local logs are rescanned, and how many records the live window
-// holds. It must be called before Start when the defaults are unsuitable.
-func Configure(stateDir string, pollInterval time.Duration, recordCapacity int) {
+// Configure selects the directory used for declaration and cursor JSON files
+// and how often local logs are rescanned. It must be called before Start when
+// the defaults are unsuitable.
+func Configure(stateDir string, pollInterval time.Duration) {
 	monitorConfig.Lock()
 	if strings.TrimSpace(stateDir) == "" {
 		monitorConfig.stateDir = DefaultStateDir
@@ -57,8 +57,6 @@ func Configure(stateDir string, pollInterval time.Duration, recordCapacity int) 
 		monitorConfig.pollInterval = pollInterval
 	}
 	monitorConfig.Unlock()
-
-	SetRecordCapacity(recordCapacity)
 }
 
 func monitorStatePath(name string) string {
@@ -81,7 +79,7 @@ func Start() error {
 	return errors.Join(startCoworkMonitor(), codexMonitor.start(), openAgentMonitor.start())
 }
 
-// Stop stops every local tailer. It does not persist behaviour records.
+// Stop stops every local tailer.
 func Stop() {
 	stopCoworkMonitor()
 	codexMonitor.stopMonitor()

@@ -33,7 +33,7 @@ import {Label} from "@/components/ui/label";
 import {Switch} from "@/components/ui/switch";
 import type {Account, AgentRecord} from "@/types";
 
-// The server keeps a bounded in-memory window; these are the slices of it the
+// The server keeps a bounded window of rows; these are the slices of it the
 // page can ask for. Without a control here the UI could only ever reach the
 // first 200 of the records the backend was holding.
 const limitOptions = [200, 500, 1000, 5000];
@@ -268,7 +268,7 @@ export default function AgentRecordsPage({account}: {account: Account}) {
     <PageContainer>
       <PageHeader
         title={i18next.t("agent:Agent Records")}
-        description={i18next.t("agent:Records are kept in memory only and are lost when Gateway restarts")}
+        description={i18next.t("agent:Records are stored in the database and survive a Gateway restart")}
         actions={
           <>
             <Label className="text-sm font-normal">

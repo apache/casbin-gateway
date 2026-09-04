@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"github.com/apache/casbin-gateway/auditutil"
-	"github.com/google/uuid"
 )
 
 // IngestTokenHeader carries the per-installation secret that a hook or MCP
@@ -26,10 +25,10 @@ import (
 // packages and the patcher packages can share it without importing each other.
 const IngestTokenHeader = "X-Casbin-Gateway-Agent-Token"
 
-// Record is one observed agent behaviour. It is deliberately independent from
-// Gateway's HTTP traffic record and is retained only in the live monitor store.
+// Record is one observed agent behaviour, as the tailers and the hooks report
+// it. It is deliberately independent from Gateway's HTTP traffic record, and
+// carries no identity of its own: the sink is what gives a stored record one.
 type Record struct {
-	Id          string `json:"id"`
 	CreatedTime string `json:"createdTime"`
 
 	Agent     string `json:"agent"`
@@ -56,9 +55,6 @@ type Record struct {
 }
 
 func normalizeRecord(record *Record) {
-	if record.Id == "" {
-		record.Id = uuid.NewString()
-	}
 	if record.CreatedTime == "" {
 		record.CreatedTime = time.Now().Format(time.RFC3339Nano)
 	}

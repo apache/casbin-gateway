@@ -340,7 +340,7 @@ export interface ProviderHealth {
 }
 
 export interface AgentRecord {
-  id: string;
+  id: number;
   createdTime: string;
   agent: string;
   agentPath?: string;

@@ -288,6 +288,13 @@ func (a *Ormer) createTable() {
 		panic(err)
 	}
 
+	// What the monitored agents on this host were seen doing, which is what the
+	// Activity page is made of.
+	err = a.Engine.Sync2(new(AgentRecord))
+	if err != nil {
+		panic(err)
+	}
+
 	// What an active probe found the last few times it asked a provider's
 	// upstream the questions the passive records cannot answer.
 	err = a.Engine.Sync2(new(ProviderProbe))

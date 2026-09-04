@@ -313,9 +313,9 @@ func GetAgentPatchStateDir() string {
 	return dir
 }
 
-// GetAgentRecordCapacity is how many agent monitoring records Gateway keeps in
-// memory. Records are never written to disk, so this value alone bounds the
-// memory the live window can occupy.
+// GetAgentRecordCapacity is how many agent monitoring records Gateway keeps.
+// They are stored in the database, and the oldest are pruned once the table is
+// over this many rows.
 func GetAgentRecordCapacity() int {
 	res, err := strconv.Atoi(GetConfigString("agentRecordCapacity"))
 	if err != nil || res <= 0 {

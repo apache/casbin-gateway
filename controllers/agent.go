@@ -240,7 +240,7 @@ func (c *ApiController) UnpatchAgent() {
 	c.ResponseOk(agentpatch.StatusOf(target))
 }
 
-// GetAgentRecords returns the current process's in-memory agent activity.
+// GetAgentRecords returns the stored agent activity.
 func (c *ApiController) GetAgentRecords() {
 	if c.RequireAdmin() {
 		return
@@ -255,7 +255,7 @@ func (c *ApiController) GetAgentRecords() {
 		}
 		limit = parsed
 	}
-	c.ResponseOk(agentmonitor.ListRecords(agentmonitor.RecordQuery{
+	c.ResponseOk(object.GetAgentRecords(object.AgentRecordFilter{
 		Agent:     c.Input().Get("agent"),
 		EventType: c.Input().Get("eventType"),
 		Outcome:   c.Input().Get("outcome"),
@@ -264,30 +264,21 @@ func (c *ApiController) GetAgentRecords() {
 	}))
 }
 
-// GetAgentSessions groups the current in-memory records by agent session. The
-// optional agent filter is what an agent's own detail page asks for.
+// GetAgentSessions groups the stored records by agent session. The optional
+// agent filter is what an agent's own detail page asks for.
 func (c *ApiController) GetAgentSessions() {
 	if c.RequireAdmin() {
 		return
 	}
 
 	agentId := c.Input().Get("agent")
-	live := agentmonitor.ListSessions(agentmonitor.RecordQuery{Agent: agentId})
+	sessions := object.GetAgentRecordSessions(agentId)
 
 	// The transcripts on disk are the sessions that already happened, so they
 	// are listed next to the monitored ones rather than only after Patch.
-	sessions := make([]agenthistory.Session, 0, len(live))
 	seen := map[string]bool{}
-	for _, session := range live {
+	for _, session := range sessions {
 		seen[sessionSeenKey(session.Agent, session.SessionKey)] = true
-		sessions = append(sessions, agenthistory.Session{
-			Agent:       session.Agent,
-			SessionKey:  session.SessionKey,
-			Title:       session.Title,
-			RecordCount: session.RecordCount,
-			FirstTime:   session.FirstTime,
-			LastTime:    session.LastTime,
-		})
 	}
 	for _, session := range object.HistoricalSessions(agentId) {
 		if seen[sessionSeenKey(session.Agent, session.SessionKey)] {

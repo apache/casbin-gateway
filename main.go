@@ -105,8 +105,12 @@ func main() {
 	agentmonitor.Configure(
 		conf.GetAgentPatchStateDir(),
 		time.Duration(conf.GetAgentMonitorPollSeconds())*time.Second,
-		conf.GetAgentRecordCapacity(),
 	)
+	// Monitoring observes; the database is what keeps what it saw, so records
+	// outlive the process that collected them.
+	object.StartAgentRecordWriter()
+	defer object.StopAgentRecordWriter()
+	agentmonitor.SetRecordSink(object.AddAgentRecord)
 	if err := agentmonitor.Start(); err != nil {
 		beego.Error("agent monitor could not start:", err)
 	}
@@ -125,6 +129,7 @@ func main() {
 	// calls above would have flushed has to be flushed there instead.
 	version.BeforeRestart = func() {
 		agentmonitor.Stop()
+		object.StopAgentRecordWriter()
 		object.StopLlmRecordWriter()
 	}
 
