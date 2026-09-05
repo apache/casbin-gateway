@@ -82,6 +82,13 @@ func (c *ApiController) GetAgents() {
 		return
 	}
 
+	// A connection's entries name this Gateway's address and program, so they go
+	// stale the same way a hook does. Repairing them here means the fix lands
+	// wherever the agents are listed, without a page of its own to visit.
+	if err := object.EnsureConnectionsCurrent(); err != nil {
+		beego.Error("some connections could not be written again:", err)
+	}
+
 	result := make([]*discoveredAgent, 0, len(installations))
 	baseUrls := map[string]string{}
 	for _, installation := range installations {

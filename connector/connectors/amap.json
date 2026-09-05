@@ -5,7 +5,6 @@
   "icon": "amap.com",
   "description": "Search places, plan driving and walking routes, check the weather, and turn an address into coordinates.",
   "docsUrl": "https://lbs.amap.com/api/mcp-server/summary",
-  "unverified": true,
   "auth": {
     "kind": "token",
     "fields": [

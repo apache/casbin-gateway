@@ -29,10 +29,9 @@ import (
 // single thing rather than a copy per agent: connecting writes it into every
 // agent that was picked, and disconnecting takes it out of all of them.
 //
-// The rendered credential still lands in each agent's own configuration file,
-// because that is where its MCP client reads a server from. Keeping the secret
-// out of those files needs Gateway to proxy the server itself, which it does
-// not do yet.
+// What is written into an agent is Gateway standing in front of the server, so
+// the credential here is the only copy: it is handed to the proxy over loopback
+// when a session starts and never reaches the agent's own file.
 type Connection struct {
 	Owner string `xorm:"varchar(100) notnull pk" json:"owner"`
 	// Name is the connector's catalog id: one connection per connector.
@@ -46,6 +45,13 @@ type Connection struct {
 	Credentials map[string]string `xorm:"mediumtext json" json:"credentials"`
 	// Agents is every agent id this connection's MCP server was written into.
 	Agents []string `xorm:"mediumtext json" json:"agents"`
+	// Endpoint and Executable are the Gateway the written entries name. A
+	// Gateway whose port changed, or that moved on disk, leaves every one of
+	// those entries starting a program that is not there or reporting to a port
+	// nothing answers on; comparing these is what notices, so the entries can be
+	// written again rather than failing silently in each agent.
+	Endpoint   string `xorm:"varchar(255)" json:"endpoint"`
+	Executable string `xorm:"varchar(500)" json:"executable"`
 }
 
 func (connection *Connection) GetId() string {
@@ -132,6 +138,21 @@ func GetConnections(owner string) ([]*Connection, error) {
 		decryptConnection(connection)
 	}
 	sort.Slice(connections, func(i int, j int) bool { return connections[i].Name < connections[j].Name })
+	return connections, nil
+}
+
+// getAllConnections is every connection on this machine, whoever owns it. The
+// repair pass uses it: an entry naming a Gateway that has moved is stale for
+// its owner as much as for anybody else.
+func getAllConnections() ([]*Connection, error) {
+	connections := []*Connection{}
+	if err := ormer.Engine.Find(&connections); err != nil {
+		return nil, err
+	}
+
+	for _, connection := range connections {
+		decryptConnection(connection)
+	}
 	return connections, nil
 }
 

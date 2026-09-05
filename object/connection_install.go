@@ -67,6 +67,14 @@ func InstallConnection(connection *Connection, agentIds []string) ([]*agentconfi
 	planned = append(planned, removeFrom(connection, found.Server.Name, dropped(connection.Agents, agentIds))...)
 
 	connection.Agents = installed(planned, agentIds)
+	// Remembering which Gateway the entries name is what lets a later start
+	// notice that they are stale, see EnsureConnectionsCurrent.
+	if executable, err := agentpatch.GatewayExecutable(); err == nil {
+		connection.Executable = executable
+	}
+	if gatewayUrl, err := agentpatch.GatewayBaseUrl(); err == nil {
+		connection.Endpoint = gatewayUrl
+	}
 	if err := SaveConnection(connection); err != nil {
 		return nil, err
 	}
@@ -99,13 +107,16 @@ func proxyRequest(connection *Connection, found connector.Connector, agentId str
 		Name:      found.Server.Name,
 		Transport: agentconfig.TransportStdio,
 		Command:   executable,
+		// "--flag=value" rather than two arguments: a machine-wide installation
+		// has no owner, and an empty value written as its own argument makes the
+		// flag swallow the next one instead.
 		Args: []string{
 			mcpproxy.Subcommand,
-			"--connection", connection.Name,
-			"--agent", agentId,
-			"--owner", connection.Owner,
-			"--gateway-url", gatewayUrl,
-			"--token", token,
+			"--connection=" + connection.Name,
+			"--agent=" + agentId,
+			"--owner=" + connection.Owner,
+			"--gateway-url=" + gatewayUrl,
+			"--token=" + token,
 		},
 		Overwrite: true,
 	}, nil
@@ -203,4 +214,42 @@ func installed(planned []*agentconfig.PlanItem, agentIds []string) []string {
 	}
 	sort.Strings(found)
 	return found
+}
+
+// EnsureConnectionsCurrent writes again every connection whose entries name a
+// Gateway this one is not. An installation's hooks get the same treatment from
+// agentpatch, and for the same reason: a port that changed or a program that
+// moved leaves the entry naming something that is no longer there, and nothing
+// else on the machine would ever notice.
+//
+// It compares two strings per connection and touches no file when they match,
+// so it is cheap enough to run wherever the agents are listed.
+func EnsureConnectionsCurrent() error {
+	executable, err := agentpatch.GatewayExecutable()
+	if err != nil {
+		return err
+	}
+	gatewayUrl, err := agentpatch.GatewayBaseUrl()
+	if err != nil {
+		return err
+	}
+
+	connections, err := getAllConnections()
+	if err != nil {
+		return err
+	}
+
+	var failed error
+	for _, connection := range connections {
+		if len(connection.Agents) == 0 {
+			continue
+		}
+		if connection.Endpoint == gatewayUrl && connection.Executable == executable {
+			continue
+		}
+		if _, err := InstallConnection(connection, connection.Agents); err != nil {
+			failed = fmt.Errorf("connection %s: %w", connection.GetId(), err)
+		}
+	}
+	return failed
 }

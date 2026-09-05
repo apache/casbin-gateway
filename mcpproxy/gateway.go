@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/apache/casbin-gateway/agentmonitor"
@@ -158,8 +157,23 @@ func toolKey(connection string, tool string) string {
 	return "mcp__" + connection + "__" + tool
 }
 
-// GatewayUrl is the address a patched agent is given for the Gateway on this
-// machine.
-func GatewayUrl(port string) string {
-	return (&url.URL{Scheme: "http", Host: "127.0.0.1:" + port}).String()
+// report records one call through this connection. Nothing waits on it: a
+// record that cannot be written is worth less than the session it would have
+// held up, which is how every other reporter here behaves.
+func (g *gatewayClient) report(tool string, outcome string, detail string) {
+	if g.options.AgentId == "" || g.options.Token == "" {
+		return
+	}
+
+	_, _ = g.post("/api/add-agent-record", map[string]any{
+		"agent":     g.options.AgentId,
+		"user":      g.options.Owner,
+		"eventType": "tool",
+		"action":    "call",
+		"outcome":   outcome,
+		"toolName":  toolKey(g.options.Connection, tool),
+		"mcpServer": g.options.Connection,
+		"mcpTool":   tool,
+		"detail":    detail,
+	}, decideTimeout)
 }

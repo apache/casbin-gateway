@@ -5,7 +5,6 @@
   "icon": "feishu.cn",
   "description": "Work with Lark from inside an agent: messages and groups, documents, spreadsheets, calendars and contacts, through your own company's app.",
   "docsUrl": "https://github.com/larksuite/lark-openapi-mcp",
-  "unverified": true,
   "auth": {
     "kind": "token",
     "fields": [

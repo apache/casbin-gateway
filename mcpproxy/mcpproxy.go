@@ -101,6 +101,9 @@ func Serve(in *os.File, out *os.File, options Options) error {
 	if err := server.Start(proxy.emit); err != nil {
 		return err
 	}
+	// Records are written beside the session rather than in it, so the last few
+	// would be lost to the exit that follows this return.
+	defer proxy.reporting.Wait()
 	return proxy.pump(in)
 }
 
@@ -113,6 +116,18 @@ type proxy struct {
 	// writing serializes what reaches the agent: replies the upstream produced
 	// and refusals written here are both messages on one stream.
 	writing sync.Mutex
+	// reporting counts the records still in flight, so the session waits for
+	// them instead of the process exiting from under them.
+	reporting sync.WaitGroup
+}
+
+// reportCall records one forwarded call without the session waiting on it.
+func (p *proxy) reportCall(tool string) {
+	p.reporting.Add(1)
+	go func() {
+		defer p.reporting.Done()
+		p.client.report(tool, "attempted", "")
+	}()
 }
 
 // message is only what the proxy has to look at. Everything else about a
@@ -144,11 +159,14 @@ func (p *proxy) pump(in *os.File) error {
 		if err := json.Unmarshal(forwarded, &parsed); err == nil && parsed.Method == "tools/call" {
 			allowed, reason := p.client.allowTool(parsed.Params.Name)
 			if !allowed {
+				// The refusal is already recorded by the endpoint that decided
+				// it, so only the calls that go through are reported here.
 				if err := p.refuse(parsed.Id, reason); err != nil {
 					return err
 				}
 				continue
 			}
+			p.reportCall(parsed.Params.Name)
 		}
 
 		if err := p.server.Send(forwarded); err != nil {
