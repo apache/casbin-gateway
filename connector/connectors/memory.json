@@ -1,0 +1,20 @@
+{
+  "id": "memory",
+  "displayName": "Memory",
+  "category": "docs",
+  "icon": "modelcontextprotocol.io",
+  "description": "A knowledge graph the agent writes to and reads back, so what it learned in one session is there in the next.",
+  "docsUrl": "https://github.com/modelcontextprotocol/servers/tree/main/src/memory",
+  "auth": {
+    "kind": "none"
+  },
+  "server": {
+    "name": "memory",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@modelcontextprotocol/server-memory"
+    ]
+  }
+}

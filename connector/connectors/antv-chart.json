@@ -1,0 +1,20 @@
+{
+  "id": "antv-chart",
+  "displayName": "AntV Charts",
+  "category": "docs",
+  "icon": "antv.antgroup.com",
+  "description": "Turns data into a chart image: lines, bars, pies, maps and a couple of dozen more, without a plotting library in the project.",
+  "docsUrl": "https://github.com/antvis/mcp-server-chart",
+  "auth": {
+    "kind": "none"
+  },
+  "server": {
+    "name": "antv-chart",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@antv/mcp-server-chart"
+    ]
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "id": "figma",
+  "displayName": "Figma",
+  "category": "dev",
+  "icon": "figma.com",
+  "description": "Reads a Figma file's layout, styles and components, so an agent can build a screen from the design rather than from a screenshot.",
+  "docsUrl": "https://github.com/GLips/Figma-Context-MCP",
+  "auth": {
+    "kind": "token",
+    "fields": [
+      {
+        "key": "apiKey",
+        "label": "Personal access token",
+        "placeholder": "figd_...",
+        "help": "Figma, Settings, Security, Personal access tokens. Read-only file access is enough.",
+        "secret": true,
+        "required": true
+      }
+    ],
+    "registerUrl": "https://www.figma.com/developers/api#access-tokens"
+  },
+  "server": {
+    "name": "figma",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "figma-developer-mcp",
+      "--figma-api-key=${apiKey}",
+      "--stdio"
+    ]
+  }
+}

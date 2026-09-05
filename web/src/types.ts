@@ -1213,7 +1213,7 @@ export interface AgentConfigTrashEntry {
 }
 
 /** What a vendor's "add this to Gateway" link carries. */
-export type ImportResource = "provider" | "mcp" | "prompt" | "skill";
+export type ImportResource = "provider" | "mcp" | "prompt" | "skill" | "connection";
 
 export interface ImportLink {
   resource: ImportResource;
@@ -1221,6 +1221,22 @@ export interface ImportLink {
   mcp?: McpImport;
   prompt?: PromptImport;
   skill?: SkillImport;
+  connection?: ConnectionImport;
+}
+
+/**
+ * One application a link offers to connect, named by its id in the catalogue.
+ * It carries no credential: opening it takes the reader to the dialog where
+ * they fill those in themselves.
+ */
+export interface ConnectionImport {
+  connector: string;
+  displayName: string;
+  description: string;
+  /** The agents the link asks for, as ids of the agents on this host. */
+  targets: string[];
+  /** The apps it named that Gateway does not manage. */
+  unknown: string[];
 }
 
 /** One or more MCP servers, as the JSON block the link carried. */

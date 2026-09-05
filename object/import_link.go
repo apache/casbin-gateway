@@ -23,6 +23,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/apache/casbin-gateway/agent"
+	"github.com/apache/casbin-gateway/connector"
 )
 
 // The resources an "add this to Gateway" link can carry. The names are CC
@@ -33,6 +34,10 @@ const (
 	ImportResourceMcp      = "mcp"
 	ImportResourcePrompt   = "prompt"
 	ImportResourceSkill    = "skill"
+	// ImportResourceConnection names an application in Gateway's own connector
+	// catalogue. It carries no credential: a link arrives from a website, and
+	// the person it arrives at is the one who fills those in.
+	ImportResourceConnection = "connection"
 )
 
 // importLinkAgents translates the app names CC Switch links use into Gateway's
@@ -65,6 +70,21 @@ type ImportLink struct {
 	Mcp      *McpImport    `json:"mcp,omitempty"`
 	Prompt   *PromptImport `json:"prompt,omitempty"`
 	Skill    *SkillImport  `json:"skill,omitempty"`
+
+	Connection *ConnectionImport `json:"connection,omitempty"`
+}
+
+// ConnectionImport is one application to connect, named by its id in the
+// catalogue. What it carries is a suggestion, not a configuration: opening it
+// is what takes the reader to the dialog they fill in themselves.
+type ConnectionImport struct {
+	Connector   string `json:"connector"`
+	DisplayName string `json:"displayName"`
+	Description string `json:"description"`
+	// Targets are the agents the link asks for, as ids of this host's agents.
+	Targets []string `json:"targets"`
+	// Unknown are the apps it named that Gateway does not manage.
+	Unknown []string `json:"unknown"`
 }
 
 // McpImport is one or more MCP servers, kept as the JSON block the link
@@ -134,6 +154,8 @@ func ParseImportLink(owner string, raw string) (*ImportLink, error) {
 		link.Prompt, err = promptFromLink(query)
 	case ImportResourceSkill:
 		link.Skill, err = skillFromLink(query)
+	case ImportResourceConnection:
+		link.Connection, err = connectionFromLink(query)
 	default:
 		return nil, fmt.Errorf("this link carries a %q, which Gateway cannot import", link.Resource)
 	}
@@ -174,6 +196,29 @@ func mcpFromLink(query url.Values) (*McpImport, error) {
 		Config:  config,
 		Targets: targets,
 		Unknown: unknown,
+	}, nil
+}
+
+// connectionFromLink reads which application a link is offering. A connector
+// this Gateway's catalogue does not have is refused by name rather than shown
+// as an empty card: the reader can then say what they were sent.
+func connectionFromLink(query url.Values) (*ConnectionImport, error) {
+	name := strings.TrimSpace(query.Get("connector"))
+	if name == "" {
+		return nil, fmt.Errorf("the link does not say which application to connect")
+	}
+	found, ok := connector.Get(name)
+	if !ok {
+		return nil, fmt.Errorf("this Gateway has no connector called %q", name)
+	}
+
+	targets, unknown := linkTargets(strings.Split(query.Get("apps"), ","))
+	return &ConnectionImport{
+		Connector:   found.Id,
+		DisplayName: found.DisplayName,
+		Description: found.Description,
+		Targets:     targets,
+		Unknown:     unknown,
 	}, nil
 }
 

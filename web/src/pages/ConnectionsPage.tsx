@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import * as React from "react";
+import {useSearchParams} from "react-router-dom";
 import {ExternalLink, Plug} from "lucide-react";
 import i18next from "i18next";
 
@@ -26,6 +27,7 @@ import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
 import {Input} from "@/components/ui/input";
+import {connectorText as text} from "@/lib/connectors";
 import {cn} from "@/lib/utils";
 import type {Account, ConnectorCatalog, ConnectorEntry, ConnectorTarget, ConnectorTool} from "@/types";
 
@@ -46,23 +48,6 @@ function iconUrl(icon: string) {
 }
 
 /**
- * Catalog entries are written in English and translated like every other
- * string, keyed by what they say. An entry nobody has translated yet falls back
- * to the catalog's own wording rather than rendering its key.
- *
- * A description is a sentence and may hold a ":", which i18next reads as the
- * namespace separator wherever it sits in the key — so the namespace is passed
- * as an option and that splitting is turned off for the lookup, or every
- * sentence holding a colon silently falls back to English.
- */
-function text(value: string | undefined) {
-  if (value === undefined || value === "") {
-    return "";
-  }
-  return i18next.t(value, {ns: "connector", nsSeparator: false, defaultValue: value});
-}
-
-/**
  * The Connections page: every application an agent on this machine can be
  * connected to. A connection is stored here once, credentials included, and
  * written into whichever agents are ticked, which is what makes connecting an
@@ -74,6 +59,10 @@ export default function ConnectionsPage({account}: {account: Account}) {
   const [loading, setLoading] = React.useState(true);
   const [category, setCategory] = React.useState("");
   const [editing, setEditing] = React.useState<ConnectorEntry | null>(null);
+  // An "add this to Gateway" link lands here naming one application, and what
+  // it asks for is this dialog rather than anything written on its behalf.
+  const [params, setParams] = useSearchParams();
+  const asked = params.get("connect") ?? "";
 
   const reload = React.useCallback(() => {
     if (!isAdmin) {
@@ -94,6 +83,22 @@ export default function ConnectionsPage({account}: {account: Account}) {
   }, [account.name, isAdmin]);
 
   React.useEffect(() => reload(), [reload]);
+
+  React.useEffect(() => {
+    if (asked === "" || catalog === null) {
+      return;
+    }
+    const found = catalog.connectors.find(entry => entry.id === asked);
+    if (found) {
+      setEditing(found);
+    } else {
+      Setting.showMessage("error", i18next.t("connector:No such connector").replace("{name}", asked));
+    }
+    // Taken out of the address once it has been acted on, so a refresh does not
+    // reopen a dialog the operator already closed.
+    params.delete("connect");
+    setParams(params, {replace: true});
+  }, [asked, catalog, params, setParams]);
 
   if (!isAdmin) {
     return <UnauthorizedResult />;

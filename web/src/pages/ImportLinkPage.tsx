@@ -32,11 +32,13 @@ import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/compo
 import {Label} from "@/components/ui/label";
 import {Switch} from "@/components/ui/switch";
 import {Textarea} from "@/components/ui/textarea";
+import {connectorText} from "@/lib/connectors";
 import {parseMcpJson} from "@/lib/mcp";
 import type {
   AgentConfigInventory,
   AgentConfigPlanItem,
   ImportLink,
+  ConnectionImport,
   McpImport,
   PromptImport,
   SkillImport,
@@ -159,6 +161,8 @@ export default function ImportLinkPage() {
         <PromptImportCard value={link.prompt} onDone={discard} />
       ) : link.skill ? (
         <SkillImportCard value={link.skill} onDone={discard} />
+      ) : link.connection ? (
+        <ConnectionImportCard value={link.connection} onDone={discard} />
       ) : null}
     </PageContainer>
   );
@@ -512,6 +516,40 @@ function SkillImportCard({value, onDone}: {value: SkillImport; onDone: () => voi
           </Button>
           <Button variant="outline" onClick={onDone} disabled={busy}>
             {i18next.t("link:Discard")}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * One application a link offers to connect. Nothing is written from here: the
+ * link carries no credential, so the only thing to do with it is open the
+ * dialog on the Connections page with this application already picked.
+ */
+function ConnectionImportCard({value, onDone}: {value: ConnectionImport; onDone: () => void}) {
+  const navigate = useNavigate();
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-[15px]">{i18next.t("link:An application to connect")}</CardTitle>
+        <CardDescription>{i18next.t("link:Connection hint")}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <div className="space-y-1">
+          <div className="font-medium">{connectorText(value.displayName)}</div>
+          <p className="text-muted-foreground text-sm">{connectorText(value.description)}</p>
+        </div>
+        <div className="flex justify-end">
+          <Button
+            onClick={() => {
+              onDone();
+              navigate(`/connections?connect=${encodeURIComponent(value.connector)}`);
+            }}
+          >
+            {i18next.t("connector:Connect")}
           </Button>
         </div>
       </CardContent>

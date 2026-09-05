@@ -1,0 +1,20 @@
+{
+  "id": "sequential-thinking",
+  "displayName": "Sequential Thinking",
+  "category": "dev",
+  "icon": "modelcontextprotocol.io",
+  "description": "A tool for working a hard problem through in steps, revising earlier ones as the shape of it becomes clear.",
+  "docsUrl": "https://github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking",
+  "auth": {
+    "kind": "none"
+  },
+  "server": {
+    "name": "sequential-thinking",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@modelcontextprotocol/server-sequential-thinking"
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "id": "stripe",
+  "displayName": "Stripe",
+  "category": "dev",
+  "icon": "stripe.com",
+  "description": "Read and write customers, products, prices, invoices and payments, so an agent can work against your billing without a dashboard.",
+  "docsUrl": "https://docs.stripe.com/mcp",
+  "auth": {
+    "kind": "token",
+    "fields": [
+      {
+        "key": "apiKey",
+        "label": "Secret key",
+        "placeholder": "sk_test_... or rk_...",
+        "help": "Use a restricted key in test mode first. A live secret key can move real money.",
+        "secret": true,
+        "required": true
+      }
+    ],
+    "registerUrl": "https://dashboard.stripe.com/apikeys"
+  },
+  "server": {
+    "name": "stripe",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@stripe/mcp",
+      "--api-key=${apiKey}"
+    ]
+  }
+}
