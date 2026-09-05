@@ -14,6 +14,7 @@
 
 import i18next from "i18next";
 
+import {Fold} from "@/components/shared/fold";
 import {ToolInstallRow} from "@/components/ToolInstallRow";
 import {useAgentCatalog, type useAgentInstall} from "@/lib/agents";
 import type {Agent} from "@/types";
@@ -21,16 +22,21 @@ import type {Agent} from "@/types";
 /**
  * The agents Gateway supports that this machine has none of, each with the
  * click that installs it here. Without them a fresh machine says only that
- * nothing was found, which is the one thing it cannot act on.
+ * nothing was found, which is the one thing it cannot act on - but on a machine
+ * that already has agents it is a dozen cards about software nobody asked for,
+ * so it folds down to the line that names it.
  */
 export function AgentCatalog({
   agents,
   enabled = true,
+  defaultOpen = true,
   installer,
   onLocated,
 }: {
   agents: Agent[];
   enabled?: boolean;
+  /** False where the page has more to say than this, which is the home screen. */
+  defaultOpen?: boolean;
   /** Called once a program is picked, which is when a rescan drops its row. */
   onLocated?: () => void;
   /**
@@ -48,12 +54,13 @@ export function AgentCatalog({
   }
 
   return (
-    <section className="space-y-3">
-      <div>
-        <h2 className="text-sm font-medium">{i18next.t("agent:Not installed")}</h2>
-        <p className="text-muted-foreground text-xs">{i18next.t("agent:Not installed hint")}</p>
-      </div>
-
+    <Fold
+      defaultOpen={defaultOpen}
+      title={i18next
+        .t("agent:{count} agents not installed")
+        .replace("{count}", String(missing.length))}
+      description={i18next.t("agent:Not installed hint")}
+    >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {missing.map(item => (
           <ToolInstallRow
@@ -66,6 +73,6 @@ export function AgentCatalog({
           />
         ))}
       </div>
-    </section>
+    </Fold>
   );
 }

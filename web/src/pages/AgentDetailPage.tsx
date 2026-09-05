@@ -25,6 +25,7 @@ import * as Setting from "@/Setting";
 import {AgentIcon} from "@/components/AgentIcon";
 import {AgentAccounts} from "@/components/AgentAccounts";
 import {AgentInstances} from "@/components/AgentInstances";
+import {AgentUsageTrend, hasUsageTrend} from "@/components/AgentUsageTrend";
 import {accountLabel} from "@/components/AgentGridCard";
 import {RunBadge, RunButton} from "@/components/AgentRunControl";
 import {
@@ -55,6 +56,8 @@ import {
   useAgents,
   useAgentSessions,
   useAgentUpdates,
+  usageAgentId,
+  usageOf,
 } from "@/lib/agents";
 import {formatCost, formatTokens} from "@/lib/usage";
 import type {
@@ -63,6 +66,8 @@ import type {
   AgentRecord,
   AgentRuntime,
   AgentSession,
+  AgentUsage,
+  AgentUsageStat,
   Provider,
   ProviderHealth,
   LlmRecordStats,
@@ -183,14 +188,29 @@ function RuntimeCard({
   );
 }
 
-/** What this agent has spent through the proxy, and on which provider. */
-function UsageCard({stats}: {stats: LlmRecordStats | null}) {
+/**
+ * What this agent has spent through the proxy, and on which provider - with the
+ * shape of what its own transcripts say above it, which is the fuller of the two
+ * accounts and the only one that sees a request Gateway never relayed.
+ */
+function UsageCard({stats, spent}: {stats: LlmRecordStats | null; spent?: AgentUsageStat}) {
   return (
     <Card>
       <CardHeader className="p-4 pb-2">
         <CardTitle className="text-base">{i18next.t("agent:Usage")}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 p-4 pt-0">
+        {spent && hasUsageTrend(spent) ? (
+          <AgentUsageTrend
+            stat={spent}
+            hints={{
+              tokens: i18next.t("agent:Read from the agent's own logs"),
+              requests: i18next.t("agent:Read from the agent's own logs"),
+              cost: i18next.t("agent:Read from the agent's own logs"),
+            }}
+          />
+        ) : null}
+
         <div className="grid grid-cols-3 gap-2">
           <div>
             <div className="text-xs text-muted-foreground">{i18next.t("llm:Requests")}</div>
@@ -264,6 +284,7 @@ export default function AgentDetailPage({account}: {account: Account}) {
   const [providers, setProviders] = React.useState<Provider[]>([]);
   const [health, setHealth] = React.useState<ProviderHealth[]>([]);
   const [stats, setStats] = React.useState<LlmRecordStats | null>(null);
+  const [usage, setUsage] = React.useState<AgentUsage>();
 
   const agentId = params.agentId ?? "";
   const path = searchParams.get("path") ?? "";
@@ -303,8 +324,15 @@ export default function AgentDetailPage({account}: {account: Account}) {
     LlmRecordBackend.getLlmRecordStats({agent: agentId})
       .then(res => setStats(res.status === "ok" ? (res.data ?? null) : null))
       .catch(() => setStats(null));
+
+    // What the agent wrote down itself, which counts the requests that never
+    // came through Gateway. Read once: walking the transcripts is not cheap.
+    AgentBackend.getAgentUsage(usageAgentId(agentId))
+      .then(res => setUsage(res.status === "ok" ? (res.data ?? undefined) : undefined))
+      .catch(() => undefined);
   }, [isAdmin, agentId]);
 
+  const spent = agent ? usageOf(usage, agent) : undefined;
   const monitorId = agent ? monitorAgentId(agent.agentId) : "";
   const watching = Boolean(agent?.patched);
   const {sessions} = useAgentSessions(isAdmin && watching, monitorId, 5000);
@@ -496,7 +524,7 @@ export default function AgentDetailPage({account}: {account: Account}) {
           onWrite={restore => writeProvider(agent, restore)}
         />
 
-        <UsageCard stats={stats} />
+        <UsageCard stats={stats} spent={spent} />
 
         <Card>
           <CardHeader className="p-4 pb-2">

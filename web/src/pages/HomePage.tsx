@@ -14,7 +14,7 @@
 
 import * as React from "react";
 import {Link} from "react-router-dom";
-import {Bot, Container, Plus, RefreshCw, Table2} from "lucide-react";
+import {Bot, Container, ListChecks, MoreHorizontal, Plus, RefreshCw, Table2} from "lucide-react";
 import i18next from "i18next";
 
 import * as AgentBackend from "@/backend/AgentBackend";
@@ -23,11 +23,11 @@ import * as ProviderBackend from "@/backend/ProviderBackend";
 import * as Setting from "@/Setting";
 import {AgentCatalog} from "@/components/AgentCatalog";
 import {CcSwitchBanner} from "@/components/CcSwitchBanner";
-import {AuthenticityOverview} from "@/components/AuthenticityOverview";
-import {AgentSigninDialog} from "@/components/AgentAccounts";
 import {AgentGridCard} from "@/components/AgentGridCard";
-import {OnboardingButton, OnboardingChecklist, useOnboarding} from "@/components/OnboardingChecklist";
+import {HomeSummary} from "@/components/HomeSummary";
+import {OnboardingChecklist, useOnboarding} from "@/components/OnboardingChecklist";
 import {EmptyState, ErrorState} from "@/components/shared/empty-state";
+import {Fold} from "@/components/shared/fold";
 import {Loading} from "@/components/shared/loading";
 import {UnauthorizedResult} from "@/components/shared/misc";
 import {PageContainer, PageHeader} from "@/components/shared/page-header";
@@ -35,24 +35,23 @@ import {MessageAlert} from "@/components/ui/alert";
 import {Button} from "@/components/ui/button";
 import {Card} from "@/components/ui/card";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   agentKey,
+  agentSpend,
   runtimeOf,
-  useAgentAccounts,
   useAgentInstall,
   useAgentInstances,
   useAgents,
   useAgentUpdates,
   updateOf,
-  usageOf,
+  type AgentSpend,
 } from "@/lib/agents";
-import type {
-  Account,
-  AgentUsage,
-  LlmAgentStat,
-  Provider,
-  ProviderHealth,
-  ProviderQuota,
-} from "@/types";
+import type {Agent, Account, AgentUsage, LlmAgentStat, Provider, ProviderHealth} from "@/types";
 
 /** How often the numbers on the cards are read again. */
 const refreshMs = 10000;
@@ -64,12 +63,17 @@ const refreshMs = 10000;
  */
 const usageRefreshMs = 60000;
 
+/** Whether this installation is worth a card before anyone asks for one. */
+function inUse(agent: Agent, spend: AgentSpend, running: boolean) {
+  return running || agent.provider !== "" || spend.requests > 0;
+}
+
 /**
- * The home screen: one card per agent installed on this machine. Each card
- * carries what that agent is on, what it has spent there and whether it is
- * running, and the provider box switches it over in one click — the routing is
- * stored and, where Gateway writes the agent's configuration file, that file is
- * rewritten with it.
+ * The home screen. It answers two questions and leaves the rest to the pages
+ * below it: what did this machine spend, and what is each agent on. Everything
+ * an agent carries beyond that - its path, its account, its extra copies, its
+ * plan balance - is a click away on its own page, because eighteen cards saying
+ * all of it at once is a page that gets scrolled past rather than read.
  */
 export default function HomePage({account}: {account: Account}) {
   const isAdmin = Setting.isAdminUser(account);
@@ -98,10 +102,8 @@ export default function HomePage({account}: {account: Account}) {
   // Every agent's extra copies in one listing, so a page of cards costs one
   // request rather than one per card.
   const instances = useAgentInstances("", isAdmin);
-  const accounts = useAgentAccounts(agents, isAdmin);
   const [providers, setProviders] = React.useState<Provider[]>([]);
   const [health, setHealth] = React.useState<ProviderHealth[]>([]);
-  const [quotas, setQuotas] = React.useState<ProviderQuota[]>([]);
   const [stats, setStats] = React.useState<LlmAgentStat[]>([]);
   const [usage, setUsage] = React.useState<AgentUsage>();
   // Nothing is recorded until it is asked for, and until it is a zero on a card
@@ -128,16 +130,6 @@ export default function HomePage({account}: {account: Account}) {
       })
       .catch(failure => setProviderError(failure.message || String(failure)))
       .then(() => setLoaded(true));
-
-    // What is already known paints at once; the refresh then asks only the
-    // vendors whose answer has gone stale, so a page view costs at most one
-    // request per provider every ten minutes.
-    ProviderBackend.getProviderQuotas()
-      .then(res => setQuotas(res.status === "ok" ? (res.data ?? []) : []))
-      .catch(() => undefined)
-      .then(() => ProviderBackend.refreshProviderQuotas("", false))
-      .then(res => setQuotas(res?.status === "ok" ? (res.data ?? []) : []))
-      .catch(() => undefined);
   }, [isAdmin, account.name]);
 
   React.useEffect(() => {
@@ -197,6 +189,28 @@ export default function HomePage({account}: {account: Account}) {
   // back to whoever closed it.
   const onboarding = useOnboarding({providers: providers, agents: agents, stats: stats});
 
+  // One reading of each agent, shared by the cards, the strip above them and the
+  // split below: the totals cannot disagree with the cards they add up.
+  const rows = agents
+    .map(agent => {
+      const status = runtimeOf(runtime, agent);
+      const spend = agentSpend(agent, usage, stats);
+      return {agent: agent, status: status, spend: spend, using: inUse(agent, spend, status?.running === true)};
+    })
+    // Busiest first, and whatever is running before whatever is not: a card is
+    // worth its place by what it is doing, not by where it was installed.
+    .sort((left, right) => {
+      const run = Number(right.status?.running ?? false) - Number(left.status?.running ?? false);
+      return run !== 0 ? run : right.spend.cost - left.spend.cost || right.spend.requests - left.spend.requests;
+    });
+  const using = rows.filter(row => row.using);
+  const idle = rows.filter(row => !row.using);
+  const running = rows.filter(row => row.status?.running).length;
+  const total = rows.reduce(
+    (sum, row) => ({requests: sum.requests + row.spend.requests, cost: sum.cost + row.spend.cost}),
+    {requests: 0, cost: 0},
+  );
+
   if (!isAdmin) {
     return <UnauthorizedResult />;
   }
@@ -215,6 +229,31 @@ export default function HomePage({account}: {account: Account}) {
     </Button>
   );
 
+  const cards = (rendered: typeof rows) => (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {rendered.map(row => (
+        <AgentGridCard
+          key={agentKey(row.agent)}
+          agent={row.agent}
+          agents={agents}
+          providers={providers}
+          health={health}
+          spend={row.spend}
+          status={row.status}
+          update={updateOf(updates.updates, row.agent)}
+          instances={instances}
+          recording={recording}
+          busy={busyKey === agentKey(row.agent)}
+          runBusy={runBusyKey === agentKey(row.agent)}
+          onEnable={providerId => activateProvider(row.agent, providerId)}
+          onLocated={() => scan(true)}
+          onToggleRunning={toggleRunning}
+          onTogglePatch={() => togglePatch(row.agent)}
+        />
+      ))}
+    </div>
+  );
+
   return (
     <PageContainer>
       <PageHeader
@@ -222,13 +261,27 @@ export default function HomePage({account}: {account: Account}) {
         description={account.hostname}
         actions={
           <>
-            {loaded && !onboarding.open ? <OnboardingButton onboarding={onboarding} /> : null}
-            <Button asChild variant="ghost">
-              <Link to="/agents">
-                <Table2 />
-                {i18next.t("agent:Advanced view")}
-              </Link>
-            </Button>
+            {/* Two controls, not four: the rescan is the one anybody presses,
+                and the rest are places rather than actions. */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label={i18next.t("general:More")}>
+                  <MoreHorizontal />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link to="/agents">
+                    <Table2 />
+                    {i18next.t("agent:Advanced view")}
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={onboarding.reopen}>
+                  <ListChecks />
+                  {i18next.t("agent:Getting started")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             {rescan}
           </>
         }
@@ -239,6 +292,19 @@ export default function HomePage({account}: {account: Account}) {
       {/* Somebody arriving from CC Switch has all of this set up already, and
           the import page is the first thing they want rather than a form. */}
       <CcSwitchBanner />
+
+      {/* What the machine adds up to, including whether the keys behind it are
+          what they were sold as. Every figure here is otherwise only reachable
+          by reading every card below. */}
+      {scanned && agents.length > 0 ? (
+        <HomeSummary
+          total={total}
+          agents={agents.length}
+          running={running}
+          providers={providers}
+          loaded={usage !== undefined}
+        />
+      ) : null}
 
       {/* With no agents to show, the failure is the whole page and is rendered
           below instead; here it sits above the cards that are still on screen. */}
@@ -271,11 +337,6 @@ export default function HomePage({account}: {account: Account}) {
         />
       ) : null}
 
-      {/* Whether the keys behind these agents reach what they are sold as. It
-          is measured without being asked for, so it belongs above the fold
-          rather than behind a button on another page. */}
-      {providers.length > 0 ? <AuthenticityOverview providers={providers} /> : null}
-
       {!scanned ? (
         <Loading tip={i18next.t("agent:Scan")} />
       ) : error !== "" && agents.length === 0 ? (
@@ -298,38 +359,31 @@ export default function HomePage({account}: {account: Account}) {
           />
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {agents.map(agent => (
-            <AgentGridCard
-              key={agentKey(agent)}
-              agent={agent}
-              agents={agents}
-              providers={providers}
-              health={health}
-              quota={quotas.find(item => item.provider === agent.provider)}
-              stats={stats.find(item => item.agent === agent.agentId)}
-              usage={usageOf(usage, agent)}
-              status={runtimeOf(runtime, agent)}
-              update={updateOf(updates.updates, agent)}
-              instances={instances}
-              accounts={accounts}
-              recording={recording}
-              busy={busyKey === agentKey(agent)}
-              runBusy={runBusyKey === agentKey(agent)}
-              onEnable={providerId => activateProvider(agent, providerId)}
-              onLocated={() => scan(true)}
-              onToggleRunning={toggleRunning}
-              onTogglePatch={() => togglePatch(agent)}
-            />
-          ))}
-        </div>
+        <>
+          {/* Everything bound, running or spending. On a machine where nothing
+              is any of those the split has nothing to hide, so it is skipped. */}
+          {cards(using.length > 0 ? using : rows)}
+
+          {using.length > 0 && idle.length > 0 ? (
+            <Fold
+              title={i18next
+                .t("agent:{count} agents not in use")
+                .replace("{count}", String(idle.length))}
+            >
+              {cards(idle)}
+            </Fold>
+          ) : null}
+        </>
       )}
 
-      {/* One sign-in runs at a time, so the whole grid shares one dialog. */}
-      <AgentSigninDialog controls={accounts} />
-
       {/* What is not here yet, so an empty machine has somewhere to go. */}
-      <AgentCatalog agents={agents} enabled={scanned} installer={installer} onLocated={() => scan(true)} />
+      <AgentCatalog
+        agents={agents}
+        enabled={scanned}
+        defaultOpen={agents.length === 0}
+        installer={installer}
+        onLocated={() => scan(true)}
+      />
     </PageContainer>
   );
 }

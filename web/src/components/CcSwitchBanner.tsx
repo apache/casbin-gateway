@@ -14,11 +14,10 @@
 
 import * as React from "react";
 import {Link} from "react-router-dom";
-import {ArrowDownToLine} from "lucide-react";
+import {ArrowDownToLine, X} from "lucide-react";
 import i18next from "i18next";
 
 import * as CcSwitchBackend from "@/backend/CcSwitchBackend";
-import {MessageAlert} from "@/components/ui/alert";
 import {Button} from "@/components/ui/button";
 import type {CcSwitchImport} from "@/types";
 
@@ -90,40 +89,33 @@ export function CcSwitchBanner() {
     return null;
   }
 
+  // One row rather than a titled alert: the button says what happens, so the
+  // sentence that used to say it as well was a line of reading for nothing.
   return (
-    <MessageAlert
-      variant="info"
-      title={i18next.t("link:CC Switch is installed here")}
-      // Two lines rather than one sentence: the counts read as a list, and
-      // joining them onto the hint would need a separator that is a space in
-      // English and nothing at all in Chinese.
-      description={
-        <>
-          <span className="block">{i18next.t("link:CC Switch is installed here hint")}</span>
-          <span className="block font-medium">{summary(found)}</span>
-        </>
-      }
-      action={
-        <div className="flex flex-wrap gap-2">
-          <Button asChild size="sm">
-            <Link to="/import">
-              <ArrowDownToLine />
-              {i18next.t("provider:Bring it all over")}
-            </Link>
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={() => {
-              writeDismissed();
-              setDismissed(true);
-            }}
-          >
-            {i18next.t("general:Dismiss")}
-          </Button>
-        </div>
-      }
-    />
+    <div className="bg-card flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-4 py-2.5">
+      <ArrowDownToLine className="text-info size-4 shrink-0" />
+      <span className="min-w-0 truncate text-sm font-medium">
+        {i18next.t("link:CC Switch is installed here")}
+      </span>
+      <span className="text-muted-foreground min-w-0 truncate text-xs">{summary(found)}</span>
+
+      <div className="ml-auto flex shrink-0 items-center gap-1">
+        <Button asChild size="sm">
+          <Link to="/import">{i18next.t("provider:Bring it all over")}</Link>
+        </Button>
+        <Button
+          type="button"
+          size="icon-sm"
+          variant="ghost"
+          aria-label={i18next.t("general:Dismiss")}
+          onClick={() => {
+            writeDismissed();
+            setDismissed(true);
+          }}
+        >
+          <X />
+        </Button>
+      </div>
+    </div>
   );
 }

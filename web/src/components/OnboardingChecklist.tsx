@@ -118,16 +118,6 @@ export function useOnboarding({
   };
 }
 
-/** The entry that brings the card back, for whoever closed it. */
-export function OnboardingButton({onboarding}: {onboarding: Onboarding}) {
-  return (
-    <Button variant="ghost" onClick={onboarding.reopen}>
-      <ListChecks />
-      {i18next.t("agent:Getting started")}
-    </Button>
-  );
-}
-
 export function OnboardingChecklist({onboarding}: {onboarding: Onboarding}) {
   const steps = onboarding.steps;
   const doneCount = steps.filter(step => step.done).length;

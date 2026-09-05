@@ -30,6 +30,7 @@ import type {
   AgentUpdate,
   AgentUsage,
   AgentUsageStat,
+  LlmAgentStat,
   Provider,
   SavedAccount,
   SavedAccounts,
@@ -779,17 +780,57 @@ export function useAgentSessions(enabled = true, agent = "", refreshMs = 0) {
 }
 
 /**
- * Transcripts are written per tool rather than per installation: every Codex
- * front end shares one directory, so all of them read the same usage. That is
- * also the limit of what the files can tell apart.
+ * Transcripts are written per tool rather than per installation, and the Codex
+ * front ends share one directory: the reader tells the desktop app apart from
+ * the CLI by the originator each session reports, and keys them the way
+ * agentmonitor spells them. The VS Code extension is counted as the CLI, which
+ * is the one front end that keeps no id of its own.
  */
 export function usageAgentId(agentId: string) {
-  return agentId.startsWith("codex") ? "codex-cli" : agentId;
+  return agentId === "codex_vscode" || agentId === "codex-vscode" ? "codex-cli" : agentId;
 }
 
 /** What one installation spent, out of the totals read off the transcripts. */
 export function usageOf(usage: AgentUsage | undefined, agent: Agent): AgentUsageStat | undefined {
   return usage?.agents.find(item => item.name === usageAgentId(agent.agentId));
+}
+
+/** What one agent spent, and which of the two accounts it was read from. */
+export interface AgentSpend {
+  requests: number;
+  tokens: number;
+  cost: number;
+  /** The transcript this was read from, absent when it had nothing to say. */
+  own?: AgentUsageStat;
+  relayed?: LlmAgentStat;
+  lastModel: string;
+  lastTime: string;
+}
+
+/**
+ * What one agent spent. An agent's own transcript accounts for every request it
+ * made, the ones that never came near Gateway included, so it wins wherever it
+ * has anything to say; the relayed totals answer for the agents that keep no
+ * transcript. One rule, so a card and the strip above it never disagree.
+ */
+export function agentSpend(
+  agent: Agent,
+  usage: AgentUsage | undefined,
+  stats: LlmAgentStat[],
+): AgentSpend {
+  const own = usageOf(usage, agent);
+  const relayed = stats.find(item => item.agent === agent.agentId);
+  const spent = own && own.requests > 0 ? own : undefined;
+
+  return {
+    requests: spent?.requests ?? relayed?.requests ?? 0,
+    tokens: spent?.totalTokens ?? relayed?.tokens ?? 0,
+    cost: spent?.cost ?? relayed?.cost ?? 0,
+    own: spent,
+    relayed: relayed,
+    lastModel: spent?.lastModel || relayed?.lastModel || "",
+    lastTime: spent?.lastTime || relayed?.lastTime || "",
+  };
 }
 
 /** The badge colour every record table paints an outcome with. */

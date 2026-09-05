@@ -108,24 +108,9 @@ function ProviderScore({
   );
 }
 
-/**
- * Whether the APIs on this machine are what they are sold as, in one card. It
- * is measured without being asked for: every provider is probed when it is
- * added and again once its report goes stale, so this says something before
- * anyone thinks to check.
- */
-export function AuthenticityOverview({
-  providers,
-  showLink = true,
-  className,
-}: {
-  providers: Provider[];
-  /** False on the page this links to, where the link would point at itself. */
-  showLink?: boolean;
-  className?: string;
-}) {
+/** The scores as they stand, re-read while the page is open. */
+export function useProviderProbes() {
   const [probes, setProbes] = React.useState<ProviderProbe[]>([]);
-  const [cases, setCases] = React.useState<ProbeCase[]>([]);
   const [mode, setMode] = React.useState<ProviderProbeMode>("auto");
   const [loaded, setLoaded] = React.useState(false);
 
@@ -148,14 +133,15 @@ export function AuthenticityOverview({
     return () => clearInterval(interval);
   }, []);
 
-  // Read once: the suite names the cases a row failed, and it does not change
-  // while a page is open.
-  React.useEffect(() => {
-    ProbeCaseBackend.getProbeCases()
-      .then(res => setCases(res.status === "ok" ? (res.data ?? []) : []))
-      .catch(() => undefined);
-  }, []);
+  return {probes: probes, mode: mode, loaded: loaded};
+}
 
+/**
+ * The scores of the providers in use, worst first, and what they add up to. The
+ * headline grade is the worst one held rather than the average: a machine with
+ * four honest providers and one that is not is not four fifths fine.
+ */
+export function authenticityOf(providers: Provider[], probes: ProviderProbe[]) {
   const configured = providers.filter(provider => provider.status !== "disabled");
   const byProvider = new Map(probes.map(probe => [probe.provider, probe]));
   const scored = configured
@@ -166,13 +152,45 @@ export function AuthenticityOverview({
       return score(left) - score(right);
     });
 
-  const summary = summarizeAuthenticity(
-    scored.filter(entry => entry.probe).map(entry => entry.probe as ProviderProbe),
-    configured.length,
-  );
-  // The headline grade is the worst one held, not the average: a machine with
-  // four honest providers and one that is not is not four fifths fine.
-  const worst = scored.find(entry => entry.probe?.ok && entry.probe.grade !== "unknown")?.probe;
+  return {
+    configured: configured,
+    scored: scored,
+    summary: summarizeAuthenticity(
+      scored.filter(entry => entry.probe).map(entry => entry.probe as ProviderProbe),
+      configured.length,
+    ),
+    worst: scored.find(entry => entry.probe?.ok && entry.probe.grade !== "unknown")?.probe,
+  };
+}
+
+/**
+ * Whether the APIs on this machine are what they are sold as, in one card. It
+ * is measured without being asked for: every provider is probed when it is
+ * added and again once its report goes stale, so this says something before
+ * anyone thinks to check.
+ */
+export function AuthenticityOverview({
+  providers,
+  showLink = true,
+  className,
+}: {
+  providers: Provider[];
+  /** False on the page this links to, where the link would point at itself. */
+  showLink?: boolean;
+  className?: string;
+}) {
+  const [cases, setCases] = React.useState<ProbeCase[]>([]);
+  const {probes, mode, loaded} = useProviderProbes();
+
+  // Read once: the suite names the cases a row failed, and it does not change
+  // while a page is open.
+  React.useEffect(() => {
+    ProbeCaseBackend.getProbeCases()
+      .then(res => setCases(res.status === "ok" ? (res.data ?? []) : []))
+      .catch(() => undefined);
+  }, []);
+
+  const {configured, scored, summary, worst} = authenticityOf(providers, probes);
   const style = gradeStyleOf(worst?.grade);
 
   if (configured.length === 0) {

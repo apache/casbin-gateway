@@ -374,8 +374,11 @@
     "opencode config hint": "opencode不从环境变量读取base URL：端点是~/.config/opencode/opencode.json里的一个\"provider\"条目，用@ai-sdk/openai-compatible加载，再用\"model\": \"<provider>/<model>\"选中它。",
     "switches": "个开关",
     "updates available": "个可更新",
+    "{count} agents not in use": "{count}个Agent未在使用",
+    "{count} agents not installed": "{count}个Agent未安装",
     "{count} from transcripts": "{count}个来自会话记录",
-    "{count} messages": "{count}条消息"
+    "{count} messages": "{count}条消息",
+    "{count} running": "{count}个在运行"
   },
   "agentConfig": {
     "1 file": "1个文件",
@@ -1022,6 +1025,7 @@
     "Loading": "加载中...",
     "Logged in successfully": "登录成功",
     "Login Error": "登录失败",
+    "More": "更多",
     "Name": "名称",
     "Name cannot be empty": "名称不能为空",
     "Neutral": "中性灰",
@@ -1222,7 +1226,8 @@
     "written": "写入",
     "{count} new records": "{count}条新记录",
     "{count} of these requests have no list price": "其中{count}个请求没有对应的价目",
-    "{count} records have no price": "{count}条记录没有价格"
+    "{count} records have no price": "{count}条记录没有价格",
+    "{count} requests": "{count}次请求"
   },
   "provider": {
     "API Key": "API密钥",

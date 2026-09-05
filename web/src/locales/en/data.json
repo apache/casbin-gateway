@@ -374,8 +374,11 @@
     "opencode config hint": "opencode reads no base URL from the environment: the endpoint is a \"provider\" entry in ~/.config/opencode/opencode.json, loaded through @ai-sdk/openai-compatible and selected with \"model\": \"<provider>/<model>\".",
     "switches": "switches",
     "updates available": "updates available",
+    "{count} agents not in use": "{count} agents not in use",
+    "{count} agents not installed": "{count} agents not installed",
     "{count} from transcripts": "{count} from transcripts",
-    "{count} messages": "{count} messages"
+    "{count} messages": "{count} messages",
+    "{count} running": "{count} running"
   },
   "agentConfig": {
     "1 file": "1 file",
@@ -953,6 +956,7 @@
     "Loading": "Loading...",
     "Logged in successfully": "Logged in successfully",
     "Login Error": "Login Error",
+    "More": "More",
     "Name": "Name",
     "Name cannot be empty": "Name cannot be empty",
     "Neutral": "Neutral",
@@ -1153,7 +1157,8 @@
     "written": "written",
     "{count} new records": "{count} new records",
     "{count} of these requests have no list price": "{count} of these requests have no list price",
-    "{count} records have no price": "{count} records have no price"
+    "{count} records have no price": "{count} records have no price",
+    "{count} requests": "{count} requests"
   },
   "provider": {
     "API Key": "API Key",
