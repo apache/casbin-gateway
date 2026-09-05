@@ -83,7 +83,7 @@ func runProbeCases(provider *Provider, model string, probe *ProviderProbe, cases
 		}
 		found := headersPresent(wanted, headers)
 		probe.VendorHeaders = mergeStrings(probe.VendorHeaders, found)
-		probe.addCheck(probeVendorCheck(vendorCase, found))
+		probe.addCheck(probeVendorCheck(vendorCase, wanted, found))
 	}
 
 	// The questions that read the answer rather than the envelope. Each sends
@@ -142,6 +142,40 @@ func checkOf(probeCase *ProbeCase, level string) ProbeCheck {
 		Level:  level,
 		Facts:  []string{},
 	}
+}
+
+// evidence keeps what a finding was drawn from on the check itself: the request
+// that went out, the answer that came back, and what a passing answer would
+// have been. A verdict nobody can see the answer behind is only an opinion.
+func (check *ProbeCheck) evidence(sent string, got string, want string) {
+	check.Sent = probeEvidence(sent)
+	check.Got = probeEvidence(got)
+	check.Want = probeEvidence(want)
+}
+
+func probeEvidence(text string) string {
+	return auditutil.BoundString(strings.TrimSpace(text), probeEvidenceChars)
+}
+
+// probeSentBody is the request as it went out. It is what makes a finding
+// reproducible: the answer beside it was the answer to exactly this.
+func probeSentBody(body map[string]any) string {
+	written, err := json.MarshalIndent(body, "", "  ")
+	if err != nil {
+		return ""
+	}
+	return probeEvidence(string(written))
+}
+
+// probeLines writes the "field: value" list the long-prompt cases are described
+// by, where dumping the request itself would be nine thousand characters of
+// filler.
+func probeLines(pairs ...string) string {
+	written := []string{}
+	for index := 0; index+1 < len(pairs); index += 2 {
+		written = append(written, pairs[index]+": "+pairs[index+1])
+	}
+	return strings.Join(written, "\n")
 }
 
 func mergeStrings(into []string, added []string) []string {
@@ -298,7 +332,8 @@ func probeToolCase(
 	opening bool,
 ) (*probeBody, http.Header) {
 	upstream := ProviderApiFamily(provider)
-	answer, err := sendProbe(provider, probeToolBody(upstream, model, probeCase), false)
+	body := probeToolBody(upstream, model, probeCase)
+	answer, err := sendProbe(provider, body, false)
 	if err != nil || !answer.ok() {
 		reason := ""
 		if err != nil {
@@ -310,7 +345,9 @@ func probeToolCase(
 			probe.Error = reason
 			return nil, nil
 		}
-		probe.addCheck(checkOf(probeCase, LlmAuditUnknown))
+		unanswered := checkOf(probeCase, LlmAuditUnknown)
+		unanswered.evidence(probeSentBody(body), reason, probeToolWant(probeCase))
+		probe.addCheck(unanswered)
 		return nil, nil
 	}
 
@@ -320,12 +357,14 @@ func probeToolCase(
 			probe.Error = "the upstream did not answer with a completion this API defines"
 			return nil, nil
 		}
-		probe.addCheck(checkOf(probeCase, LlmAuditUnknown))
+		unreadable := checkOf(probeCase, LlmAuditUnknown)
+		unreadable.evidence(probeSentBody(body), string(answer.body), probeToolWant(probeCase))
+		probe.addCheck(unreadable)
 		return nil, nil
 	}
 
 	probe.addUsage(parsed.Usage)
-	probe.addCheck(probeToolsCheck(probeCase, upstream, &parsed))
+	probe.addCheck(probeToolsCheck(probeCase, upstream, body, answer.body, &parsed))
 	return &parsed, answer.header
 }
 
@@ -376,9 +415,14 @@ const probeIdentityUnverified = "unverified"
 // there is half credit and says so.
 func probeIdentityCheck(probeCase *ProbeCase, provider *Provider, asked string, answered string) ProbeCheck {
 	check := checkOf(probeCase, LlmAuditUnknown)
+	// This case sends nothing of its own: it reads the model field off the
+	// opening call, so the request side of the evidence stays empty.
+	want := fmt.Sprintf("%q: %q", "model", asked)
 	if strings.TrimSpace(answered) == "" {
+		check.evidence("", "", want)
 		return check
 	}
+	check.evidence("", fmt.Sprintf("%q: %q", "model", answered), want)
 	check.Facts = []string{answered}
 	if sameModelName(asked, answered) {
 		if probeVendorOfProvider(provider) == nil {
@@ -478,7 +522,7 @@ func headersPresent(wanted []string, header http.Header) []string {
 // probeVendorCheck never reaches "alert": a relay that strips headers is being
 // tidy, not necessarily dishonest. It is a corroborating signal, and the page
 // words it as one.
-func probeVendorCheck(probeCase *ProbeCase, found []string) ProbeCheck {
+func probeVendorCheck(probeCase *ProbeCase, wanted []string, found []string) ProbeCheck {
 	check := checkOf(probeCase, LlmAuditWarn)
 	check.Facts = found
 	check.Value = float64(len(found))
@@ -487,13 +531,21 @@ func probeVendorCheck(probeCase *ProbeCase, found []string) ProbeCheck {
 	if len(found) >= minimum {
 		check.Level = LlmAuditOk
 	}
+	check.evidence("", strings.Join(found, "\n"),
+		fmt.Sprintf("%d+ of:\n%s", minimum, strings.Join(wanted, "\n")))
 	return check
 }
 
 // probeToolsCheck reads the forced call back. A model that cannot fill the
 // schema it was given is not the frontier model it was sold as, whatever the
 // response says its name is.
-func probeToolsCheck(probeCase *ProbeCase, upstream string, parsed *probeBody) ProbeCheck {
+func probeToolsCheck(
+	probeCase *ProbeCase,
+	upstream string,
+	body map[string]any,
+	raw []byte,
+	parsed *probeBody,
+) ProbeCheck {
 	check := checkOf(probeCase, LlmAuditAlert)
 	name := probeCaseToolName(probeCase)
 
@@ -511,6 +563,10 @@ func probeToolsCheck(probeCase *ProbeCase, upstream string, parsed *probeBody) P
 			}
 		}
 	}
+
+	// A call that never came back leaves the whole answer as the evidence: what
+	// the model wrote instead is the finding.
+	check.evidence(probeSentBody(body), firstString(arguments, string(raw)), probeToolWant(probeCase))
 
 	if arguments == "" {
 		return check
@@ -531,6 +587,46 @@ func probeToolsCheck(probeCase *ProbeCase, upstream string, parsed *probeBody) P
 
 	check.Level = LlmAuditOk
 	return check
+}
+
+// probeToolWant is the call a passing answer makes: the tool that was forced
+// and every field its schema requires, written as the paths a reader can look
+// for in the arguments beside it.
+func probeToolWant(probeCase *ProbeCase) string {
+	paths := schemaPaths(probeCaseSchema(probeCase), "")
+	written := []string{probeCaseToolName(probeCase)}
+	for _, path := range paths {
+		written = append(written, "  "+path)
+	}
+	return strings.Join(written, "\n")
+}
+
+// schemaPaths is what a schema requires, flattened: "station.id" for a nested
+// object, "samples[].celsius" for the objects in an array.
+func schemaPaths(schema map[string]any, prefix string) []string {
+	paths := []string{}
+	properties, _ := schema["properties"].(map[string]any)
+	for _, name := range schemaRequired(schema) {
+		path := name
+		if prefix != "" {
+			path = prefix + "." + name
+		}
+		property, _ := properties[name].(map[string]any)
+		switch schemaType(property) {
+		case "object":
+			paths = append(paths, schemaPaths(property, path)...)
+		case "array":
+			item, _ := property["items"].(map[string]any)
+			if len(schemaRequired(item)) > 0 {
+				paths = append(paths, schemaPaths(item, path+"[]")...)
+				continue
+			}
+			paths = append(paths, path+"[]")
+		default:
+			paths = append(paths, path)
+		}
+	}
+	return paths
 }
 
 // schemaFilled reports whether a value carries everything the schema requires,
@@ -627,9 +723,18 @@ func probeStreamBody(upstream string, model string, probeCase *ProbeCase) map[st
 
 func probeStreamShape(provider *Provider, model string, probe *ProviderProbe, probeCase *ProbeCase) {
 	upstream := ProviderApiFamily(provider)
-	answer, err := sendProbe(provider, probeStreamBody(upstream, model, probeCase), true)
+	body := probeStreamBody(upstream, model, probeCase)
+	answer, err := sendProbe(provider, body, true)
 	if err != nil || !answer.ok() {
-		probe.addCheck(checkOf(probeCase, LlmAuditUnknown))
+		unanswered := checkOf(probeCase, LlmAuditUnknown)
+		reason := ""
+		if err != nil {
+			reason = auditutil.BoundString(err.Error(), probeErrorChars)
+		} else {
+			reason = answer.failure()
+		}
+		unanswered.evidence(probeSentBody(body), reason, "")
+		probe.addCheck(unanswered)
 		return
 	}
 
@@ -638,13 +743,32 @@ func probeStreamShape(provider *Provider, model string, probe *ProviderProbe, pr
 	}
 	probe.Requests++
 	if upstream == ProtocolAnthropic {
-		probe.addCheck(probeAnthropicStreamCheck(probeCase, answer))
+		probe.addCheck(probeAnthropicStreamCheck(probeCase, body, answer))
 		return
 	}
-	probe.addCheck(probeOpenAiStreamCheck(probeCase, answer))
+	probe.addCheck(probeOpenAiStreamCheck(probeCase, body, answer))
 }
 
-func probeAnthropicStreamCheck(probeCase *ProbeCase, answer *probeAnswer) ProbeCheck {
+// probeEventList is the stream as it arrived, with a run of the same event
+// written once and counted: a hundred deltas say nothing a count does not.
+func probeEventList(events []string) string {
+	written := []string{}
+	for index := 0; index < len(events); {
+		run := 1
+		for index+run < len(events) && events[index+run] == events[index] {
+			run++
+		}
+		if run > 1 {
+			written = append(written, fmt.Sprintf("%s × %d", events[index], run))
+		} else {
+			written = append(written, events[index])
+		}
+		index += run
+	}
+	return strings.Join(written, "\n")
+}
+
+func probeAnthropicStreamCheck(probeCase *ProbeCase, body map[string]any, answer *probeAnswer) ProbeCheck {
 	seen := map[string]bool{}
 	for _, name := range answer.events {
 		seen[name] = true
@@ -664,6 +788,7 @@ func probeAnthropicStreamCheck(probeCase *ProbeCase, answer *probeAnswer) ProbeC
 	check := checkOf(probeCase, LlmAuditOk)
 	check.Facts = missing
 	check.Value = float64(len(missing))
+	check.evidence(probeSentBody(body), probeEventList(answer.events), strings.Join(expected, "\n"))
 	switch {
 	case !seen["message_start"] || !seen["message_delta"]:
 		check.Level = LlmAuditAlert
@@ -699,7 +824,7 @@ func probeStreamOpeningInput(answer *probeAnswer) int {
 	return 0
 }
 
-func probeOpenAiStreamCheck(probeCase *ProbeCase, answer *probeAnswer) ProbeCheck {
+func probeOpenAiStreamCheck(probeCase *ProbeCase, body map[string]any, answer *probeAnswer) ProbeCheck {
 	chunks, finished, done, usage := 0, false, false, false
 	for _, payload := range answer.payloads {
 		if strings.TrimSpace(string(payload)) == "[DONE]" {
@@ -735,9 +860,22 @@ func probeOpenAiStreamCheck(probeCase *ProbeCase, answer *probeAnswer) ProbeChec
 		missing = append(missing, "[DONE]")
 	}
 
+	arrived := []string{fmt.Sprintf("chat.completion.chunk × %d", chunks)}
+	if finished {
+		arrived = append(arrived, "finish_reason")
+	}
+	if done {
+		arrived = append(arrived, "[DONE]")
+	}
+	if usage {
+		arrived = append(arrived, "usage")
+	}
+
 	check := checkOf(probeCase, LlmAuditOk)
 	check.Facts = missing
 	check.Value = float64(len(missing))
+	check.evidence(probeSentBody(body), strings.Join(arrived, "\n"),
+		"chat.completion.chunk\nfinish_reason\n[DONE]\nusage")
 	if len(missing) > 0 {
 		check.Level = LlmAuditAlert
 		return check
@@ -823,7 +961,10 @@ type probeCachePair struct {
 	// sentChars is how much text went out, which is what the billing case
 	// compares the billed input against.
 	sentChars int
-	ok        bool
+	// sent describes the pair rather than quoting it: the request is nine
+	// thousand characters of filler, and none of them are worth reading.
+	sent string
+	ok   bool
 }
 
 // probeCacheAndBilling sends each cache case's pair. The billing cases ride on
@@ -870,21 +1011,44 @@ func probeCachePairOf(
 		gap = time.Duration(probeCase.Params.GapMs) * time.Millisecond
 	}
 	body := probeCacheBody(upstream, model, filler, prompt, limit)
+	sent := probeLines(
+		"model", model,
+		"cached prefix", fmt.Sprintf("%d chars", len(filler)),
+		"prompt", prompt,
+		"requests", fmt.Sprintf("2 × identical, %d ms apart", gap.Milliseconds()),
+	)
 
 	first, err := sendProbeUsage(provider, body, probe)
 	if err != nil {
-		probe.addCheck(checkOf(probeCase, LlmAuditUnknown))
+		unanswered := checkOf(probeCase, LlmAuditUnknown)
+		unanswered.evidence(sent, auditutil.BoundString(err.Error(), probeErrorChars), probeCacheWant)
+		probe.addCheck(unanswered)
 		return probeCachePair{}
 	}
 	time.Sleep(gap)
 	second, err := sendProbeUsage(provider, body, probe)
 	if err != nil {
-		probe.addCheck(checkOf(probeCase, LlmAuditUnknown))
+		unanswered := checkOf(probeCase, LlmAuditUnknown)
+		unanswered.evidence(sent, auditutil.BoundString(err.Error(), probeErrorChars), probeCacheWant)
+		probe.addCheck(unanswered)
 		return probeCachePair{}
 	}
 
-	probe.addCheck(probeCacheCheck(probeCase, upstream, first, second))
-	return probeCachePair{first: first, second: second, sentChars: len(filler) + len(prompt), ok: true}
+	probe.addCheck(probeCacheCheck(probeCase, upstream, sent, first, second))
+	return probeCachePair{
+		first:     first,
+		second:    second,
+		sentChars: len(filler) + len(prompt),
+		sent:      sent,
+		ok:        true,
+	}
+}
+
+// probeUsageLine is what one of the pair reported, in the three counters the
+// cache and billing cases are decided from.
+func probeUsageLine(label string, usage probeUsage) string {
+	return fmt.Sprintf("%s: write %d, read %d, input %d",
+		label, usage.written(), usage.cached(), usage.billedInput())
 }
 
 // sendProbeUsage sends one of the pair and returns what it reported.
@@ -905,10 +1069,21 @@ func sendProbeUsage(provider *Provider, body map[string]any, probe *ProviderProb
 	return parsed.Usage, nil
 }
 
-func probeCacheCheck(probeCase *ProbeCase, upstream string, first probeUsage, second probeUsage) ProbeCheck {
+// probeCacheWant is a passing pair: the second request reads back what the
+// first one wrote, whichever counter the vendor spells it in.
+const probeCacheWant = "1st: write > 0\n2nd: read > 0"
+
+func probeCacheCheck(
+	probeCase *ProbeCase,
+	upstream string,
+	sent string,
+	first probeUsage,
+	second probeUsage,
+) ProbeCheck {
 	check := checkOf(probeCase, LlmAuditUnknown)
 	check.Value = float64(second.cached())
 	check.Facts = []string{strconv.Itoa(first.written()), strconv.Itoa(second.cached())}
+	check.evidence(sent, probeUsageLine("1st", first)+"\n"+probeUsageLine("2nd", second), probeCacheWant)
 
 	switch {
 	case second.cached() > 0:
@@ -938,13 +1113,25 @@ func probeBillingEstimate(pair probeCachePair) int {
 func probeBillingCheck(probeCase *ProbeCase, pair probeCachePair) ProbeCheck {
 	billed, again := pair.first.billedInput(), pair.second.billedInput()
 	check := checkOf(probeCase, LlmAuditUnknown)
+
+	tolerance := firstFloat(probeCase.Params.DriftTolerance, 0.02)
+	warnHigh := firstFloat(probeCase.Params.WarnHigh, 1.5)
+	warnLow := firstFloat(probeCase.Params.WarnLow, 0.7)
+	check.evidence(
+		pair.sent,
+		probeLines(
+			"1st input", strconv.Itoa(billed),
+			"2nd input", strconv.Itoa(again),
+			"sent", fmt.Sprintf("≈ %d tokens", probeBillingEstimate(pair)),
+		),
+		fmt.Sprintf("1st input = 2nd input (± %.0f%%)\n%.2fx – %.2fx of sent", tolerance*100, warnLow, warnHigh),
+	)
 	if billed == 0 {
 		return check
 	}
 
 	// The two requests were byte-identical, so the counts have to be too. This
 	// part needs no tokenizer and no assumption.
-	tolerance := firstFloat(probeCase.Params.DriftTolerance, 0.02)
 	drift := math.Abs(float64(billed-again)) / float64(billed)
 	if drift > tolerance {
 		check.Level = LlmAuditAlert
@@ -961,9 +1148,7 @@ func probeBillingCheck(probeCase *ProbeCase, pair probeCachePair) ProbeCheck {
 	check.Value = float64(billed) / float64(estimate)
 	check.Facts = []string{"estimate", strconv.Itoa(billed), strconv.Itoa(estimate)}
 
-	warnHigh := firstFloat(probeCase.Params.WarnHigh, 1.5)
 	alertHigh := firstFloat(probeCase.Params.AlertHigh, 2.5)
-	warnLow := firstFloat(probeCase.Params.WarnLow, 0.7)
 	alertLow := firstFloat(probeCase.Params.AlertLow, 0.4)
 	switch {
 	case check.Value >= alertHigh || check.Value <= alertLow:

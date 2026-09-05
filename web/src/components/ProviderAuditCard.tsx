@@ -14,15 +14,23 @@
 
 import * as React from "react";
 import {Link} from "react-router-dom";
-import {Stethoscope} from "lucide-react";
+import {FileSearch, Stethoscope} from "lucide-react";
 import i18next from "i18next";
 
 import * as Setting from "@/Setting";
 import {GradeScaleTip, ScoreDial} from "@/components/AuthenticityScore";
 import {ProviderIcon} from "@/components/ProviderIcon";
+import {CodeBlock} from "@/components/shared/misc";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {SimpleTooltip} from "@/components/ui/tooltip";
 import {cn} from "@/lib/utils";
 import {checkQuestion, checkTitle, gradeStyleOf, probeFindings} from "@/lib/authenticity";
@@ -85,6 +93,7 @@ function CheckTile({
   detail,
   level,
   weight,
+  footer,
 }: {
   title: React.ReactNode;
   /** What was asked. An answer read without its question explains nothing. */
@@ -96,6 +105,8 @@ function CheckTile({
   level: LlmAuditLevel;
   /** What this case was worth in the score, where it counted towards one. */
   weight?: number;
+  /** Kept under the detail, which is where the evidence is opened from. */
+  footer?: React.ReactNode;
 }) {
   const style = levelStyles[level] ?? levelStyles.unknown;
 
@@ -126,7 +137,78 @@ function CheckTile({
       ) : null}
       <span className={cn("text-lg font-semibold tabular-nums", style.value)}>{value}</span>
       <span className="text-muted-foreground text-xs leading-snug">{detail}</span>
+      {footer}
     </div>
+  );
+}
+
+/** One block of the evidence, left out entirely where there is none. */
+function EvidenceBlock({label, value}: {label: string; value: string}) {
+  if (!value) {
+    return null;
+  }
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-muted-foreground text-xs font-medium">{label}</span>
+      {/* The copy button floats over the first line, which a short answer
+          otherwise runs into. */}
+      <CodeBlock copyable maxHeight="16rem" className="[&_pre]:pr-10">
+        {value}
+      </CodeBlock>
+    </div>
+  );
+}
+
+/**
+ * What the case actually asked and what actually came back. The tile is a
+ * verdict and this is what it was drawn from, which is the part worth sending
+ * to whoever sold the key: a level nobody can see the answer behind is an
+ * opinion rather than a finding.
+ */
+function ProbeEvidence({
+  check,
+  title,
+  question,
+  detail,
+}: {
+  check: ProbeCheck;
+  title: React.ReactNode;
+  question?: string;
+  detail: React.ReactNode;
+}) {
+  const [open, setOpen] = React.useState(false);
+
+  if (!check.got && !check.want && !check.sent) {
+    return null;
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="text-muted-foreground hover:text-foreground mt-0.5 flex w-fit items-center gap-1 text-xs transition-colors"
+      >
+        <FileSearch className="size-3" />
+        {i18next.t("audit:See what came back")}
+      </button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-h-[85vh] gap-3 sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{title}</DialogTitle>
+            <DialogDescription>{question || i18next.t("audit:Evidence detail")}</DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-3 overflow-y-auto">
+            <p className="text-xs leading-relaxed">{detail}</p>
+            <EvidenceBlock label={i18next.t("audit:What came back")} value={check.got} />
+            <EvidenceBlock label={i18next.t("audit:What a pass looks like")} value={check.want} />
+            <EvidenceBlock label={i18next.t("audit:What was sent")} value={check.sent} />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -458,18 +540,26 @@ function ProbeSection({
         <>
           <ScoreHeadline probe={probe} />
           <div className="grid grid-cols-2 gap-2 md:grid-cols-3 2xl:grid-cols-6">
-            {checks.map((check, index) => (
-              <CheckTile
-                key={`${check.case}-${check.key}-${index}`}
-                title={check.case ? checkTitle(check, cases) : probeTitle(check.key)}
-                question={checkQuestion(check, cases)}
-                caseName={check.case}
-                value={probeValue(check)}
-                detail={probeDetail(check, probe)}
-                level={check.level}
-                weight={check.weight}
-              />
-            ))}
+            {checks.map((check, index) => {
+              const title = check.case ? checkTitle(check, cases) : probeTitle(check.key);
+              const question = checkQuestion(check, cases);
+              const detail = probeDetail(check, probe);
+              return (
+                <CheckTile
+                  key={`${check.case}-${check.key}-${index}`}
+                  title={title}
+                  question={question}
+                  caseName={check.case}
+                  value={probeValue(check)}
+                  detail={detail}
+                  level={check.level}
+                  weight={check.weight}
+                  footer={
+                    <ProbeEvidence check={check} title={title} question={question} detail={detail} />
+                  }
+                />
+              );
+            })}
           </div>
           {probe.ttftMs > 0 ? (
             <p className="text-muted-foreground text-xs">

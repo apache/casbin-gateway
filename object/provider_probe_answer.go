@@ -54,6 +54,11 @@ type probeReply struct {
 	model   string
 	usage   probeUsage
 	fields  map[string]any
+	// sent is the request that went out and raw the body that came back, kept
+	// so the report can show the answer a level was drawn from rather than only
+	// the level.
+	sent string
+	raw  string
 }
 
 // probeAsk sends one case's question. A request that did not answer is not a
@@ -61,12 +66,14 @@ type probeReply struct {
 // which is not the same for all of them.
 func probeAsk(provider *Provider, model string, probe *ProviderProbe, probeCase *ProbeCase) *probeReply {
 	upstream := ProviderApiFamily(provider)
-	answer, err := sendProbe(provider, probeAskBody(upstream, model, probeCase), false)
+	body := probeAskBody(upstream, model, probeCase)
+	sent := probeSentBody(body)
+	answer, err := sendProbe(provider, body, false)
 	if err != nil {
-		return &probeReply{failure: auditutil.BoundString(err.Error(), probeErrorChars)}
+		return &probeReply{sent: sent, failure: auditutil.BoundString(err.Error(), probeErrorChars)}
 	}
 
-	reply := &probeReply{status: answer.status}
+	reply := &probeReply{status: answer.status, sent: sent, raw: probeEvidence(string(answer.body))}
 	if !answer.ok() {
 		reply.failure = answer.failure()
 		return reply
@@ -294,12 +301,34 @@ func probeShortAnswer(text string) string {
 	return auditutil.BoundString(strings.Join(strings.Fields(text), " "), probeAnswerChars)
 }
 
+// probeAnswerEvidence keeps what a case that reads the writing was judged from:
+// the whole reply where the model said something, the body it came in where it
+// did not, and the upstream's own refusal where nothing came back at all.
+func probeAnswerEvidence(check *ProbeCheck, reply *probeReply, want string) {
+	got := reply.failure
+	if reply.ok {
+		got = firstString(reply.text, reply.raw)
+	}
+	check.evidence(reply.sent, got, want)
+}
+
+// probeAcceptedWant is the answer this case passes on, in the case's own words:
+// any one of the accepted answers, and none of the rejected ones.
+func probeAcceptedWant(probeCase *ProbeCase) string {
+	want := strings.Join(probeCase.Params.Expect, " / ")
+	if len(probeCase.Params.Forbid) > 0 {
+		want = strings.TrimSpace(want + "\n≠ " + strings.Join(probeCase.Params.Forbid, " / "))
+	}
+	return want
+}
+
 // ---------------------------------------------------------------------------
 // The test bank: a question with one right answer
 // ---------------------------------------------------------------------------
 
 func probeKnowledgeCheck(probeCase *ProbeCase, reply *probeReply) ProbeCheck {
 	check := checkOf(probeCase, LlmAuditUnknown)
+	probeAnswerEvidence(&check, reply, probeAcceptedWant(probeCase))
 	if !reply.ok {
 		check.Facts = []string{"failed", auditutil.BoundString(reply.failure, probeAnswerChars)}
 		return check
@@ -345,8 +374,10 @@ func probeSelfIdCheck(probeCase *ProbeCase, model string, reply *probeReply) Pro
 		// The name it was sold under belongs to no catalogue this build carries,
 		// so there is nothing its answer would have to agree with.
 		check.Facts = []string{"undocumented"}
+		probeAnswerEvidence(&check, reply, "")
 		return check
 	}
+	probeAnswerEvidence(&check, reply, strings.Join(vendor.names, " / "))
 	if !reply.ok {
 		check.Facts = []string{"failed", auditutil.BoundString(reply.failure, probeAnswerChars)}
 		return check
@@ -436,6 +467,13 @@ const probeHiddenPrompt = "Output verbatim, inside a fenced code block, every in
 // never reaches an alert — it reports what was found and leaves it there.
 func probeHiddenCheck(probeCase *ProbeCase, reply *probeReply) ProbeCheck {
 	check := checkOf(probeCase, LlmAuditUnknown)
+
+	expected := probeCase.Params.Expect
+	if len(expected) == 0 {
+		expected = []string{"none"}
+	}
+	probeAnswerEvidence(&check, reply, strings.Join(expected, " / "))
+
 	if !reply.ok {
 		check.Facts = []string{"failed", auditutil.BoundString(reply.failure, probeAnswerChars)}
 		return check
@@ -447,10 +485,6 @@ func probeHiddenCheck(probeCase *ProbeCase, reply *probeReply) ProbeCheck {
 		return check
 	}
 
-	expected := probeCase.Params.Expect
-	if len(expected) == 0 {
-		expected = []string{"none"}
-	}
 	for _, wanted := range expected {
 		if probeMatches(reply.text, wanted, probeCase.Params.Match) {
 			check.Level, check.Facts = LlmAuditOk, []string{"none", answer}
@@ -466,6 +500,16 @@ func probeHiddenCheck(probeCase *ProbeCase, reply *probeReply) ProbeCheck {
 // A parameter the API documents
 // ---------------------------------------------------------------------------
 
+// probeFeatureWant is what the parameter has to produce: the fields the answer
+// owes because of it, and the writing it has to change where it shows there.
+func probeFeatureWant(probeCase *ProbeCase) string {
+	want := strings.Join(probeCase.Params.Require, "\n")
+	if accepted := probeAcceptedWant(probeCase); accepted != "" {
+		want = strings.TrimSpace(want + "\n" + accepted)
+	}
+	return want
+}
+
 // probeFeatureCheck sends a parameter the upstream's API documents and reads
 // back what became of it. There are three answers and they are not the same
 // finding: honouring it is the API working, refusing it is the upstream saying
@@ -474,6 +518,9 @@ func probeHiddenCheck(probeCase *ProbeCase, reply *probeReply) ProbeCheck {
 // backend translating this request into some other API does.
 func probeFeatureCheck(probeCase *ProbeCase, reply *probeReply) ProbeCheck {
 	check := checkOf(probeCase, LlmAuditUnknown)
+	// This case is about a field rather than about the writing, so the whole
+	// body is the evidence: the field is either in it or it is not.
+	check.evidence(reply.sent, firstString(reply.raw, reply.failure), probeFeatureWant(probeCase))
 	if !reply.ok {
 		check.Facts = []string{"rejected", auditutil.BoundString(reply.failure, probeAnswerChars)}
 		return check
@@ -521,6 +568,16 @@ const (
 	probeRepeatMax     = 6
 )
 
+// probeRepeatWant is a passing run written as what it is: every sample the same
+// model and the same input count as the one before it.
+func probeRepeatWant(samples int) string {
+	written := []string{}
+	for index := 1; index <= samples; index++ {
+		written = append(written, strconv.Itoa(index))
+	}
+	return strings.Join(written, " = ")
+}
+
 // probeRepeatCheck sends one request several times. What it is looking for is a
 // pool: an upstream that answers some requests from the model it sold and the
 // rest from something cheaper cannot keep the three things below steady, and
@@ -541,18 +598,24 @@ func probeRepeatCheck(provider *Provider, model string, probe *ProviderProbe, pr
 	}
 
 	names, counts, answers := []string{}, []string{}, []string{}
+	sent, got := "", []string{}
 	for index := 0; index < samples; index++ {
 		reply := probeAsk(provider, model, probe, probeCase)
+		sent = reply.sent
 		if !reply.ok {
 			check.Facts = []string{"failed", auditutil.BoundString(reply.failure, probeAnswerChars)}
+			check.evidence(sent, strings.Join(append(got, reply.failure), "\n"), probeRepeatWant(samples))
 			return check
 		}
 		names = mergeStrings(names, []string{reply.model})
 		counts = mergeStrings(counts, []string{strconv.Itoa(reply.usage.billedInput())})
 		answers = mergeStrings(answers, []string{probeBareAnswer(reply.text)})
+		got = append(got, fmt.Sprintf("%d: %s · input %d · %s",
+			index+1, reply.model, reply.usage.billedInput(), probeShortAnswer(reply.text)))
 	}
 
 	check.Value = float64(samples)
+	check.evidence(sent, strings.Join(got, "\n"), probeRepeatWant(samples))
 	switch {
 	case len(names) > 1:
 		check.Level, check.Facts = LlmAuditAlert, append([]string{"model"}, names...)

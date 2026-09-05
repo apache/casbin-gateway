@@ -101,6 +101,15 @@ type ProbeCheck struct {
 	Facts []string `json:"facts"`
 	// Value is the number the level was decided from, where there is one.
 	Value float64 `json:"value"`
+
+	// Sent is the request this case made, Got the answer it was judged from,
+	// and Want what a passing answer would have looked like. The level is an
+	// argument and these are what it can be argued against, which is why they
+	// are kept on the row rather than recomputed from a case that may since
+	// have been edited or deleted.
+	Sent string `json:"sent"`
+	Got  string `json:"got"`
+	Want string `json:"want"`
 }
 
 // ProviderProbe is one run of the suite against one provider.

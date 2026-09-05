@@ -651,6 +651,7 @@
     "Dropped": "Dropped",
     "Echoed": "Echoed",
     "Edit test case": "Edit test case",
+    "Evidence detail": "The request this case made, the answer it was judged from, and what a passing answer would have looked like.",
     "Every model has a rate": "Every model this provider served has a published rate.",
     "Expected events": "Expected events",
     "Expected events hint": "The event names this API documents. Anything missing is the finding.",
@@ -775,6 +776,7 @@
     "Second request after": "Second request after",
     "See how this is judged": "See what this case asks and how the answer is judged",
     "See the evidence": "See the evidence",
+    "See what came back": "See what came back",
     "Self match": "It says it is {vendor}'s: {answer}",
     "Self other": "Sold as a model of {vendor}, it says it is {other}'s: {answer}",
     "Self silent": "It never names {vendor}, and never names anyone else either: {answer}",
@@ -818,8 +820,11 @@
     "Warn outside": "Warn outside",
     "Weight": "Weight",
     "Weight hint": "What this case is worth in the score, relative to the other cases measured on the same run.",
+    "What a pass looks like": "What a passing answer looks like",
+    "What came back": "What came back",
     "What this cannot tell you": "These are the upstream's own numbers. They show what it reported, not what it ran.",
     "What this sends": "What this sends",
+    "What was sent": "What was sent",
     "Wrong": "Wrong"
   },
   "connector": {

@@ -781,6 +781,12 @@ export interface ProbeCheck {
   level: LlmAuditLevel;
   facts: string[];
   value: number;
+  /** The evidence the level was drawn from: the request this case made, the
+   * answer it was judged from, and what a passing answer would have been.
+   * Empty on a report stored before they were kept. */
+  sent: string;
+  got: string;
+  want: string;
 }
 
 /** How far an upstream got through the suite, as a letter. */

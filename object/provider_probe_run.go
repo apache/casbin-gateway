@@ -38,6 +38,9 @@ const (
 	probeMaxBody = 1 << 20
 	// probeErrorChars is how much of an upstream failure is kept on the report.
 	probeErrorChars = 400
+	// probeEvidenceChars bounds the request and the answer kept on each check.
+	// A probe asks for a few tokens, so this holds a whole short answer.
+	probeEvidenceChars = 1500
 )
 
 // The answer lengths asked for. They are small on purpose: what is being
