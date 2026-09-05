@@ -1468,6 +1468,8 @@ export interface UpdateStatus {
   error: string;
   /** The failure was reaching GitHub, which a proxy can fix. */
   network: boolean;
+  /** The new version could not start, so the one it replaced is running. */
+  rolledBack: boolean;
 }
 
 export interface VersionInfo {

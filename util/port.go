@@ -16,6 +16,7 @@ package util
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -40,6 +41,14 @@ const (
 	// to be told not to try; the systemd unit the installer writes says so. The
 	// value is the conventional sysexits.h EX_CONFIG.
 	ExitCodeFatalConfig = 78
+	// portClaimTimeout bounds the wait for a busy port. It is long enough for
+	// the Gateway being replaced to finish going away, and short enough that a
+	// port held by another program is reported rather than waited out.
+	portClaimTimeout = 20 * time.Second
+	// portStopInterval is how often the holder is looked up again while
+	// waiting, which costs a netstat each time.
+	portStopInterval  = 2 * time.Second
+	portClaimInterval = 250 * time.Millisecond
 )
 
 // ListenTcp binds a TCP listener on all interfaces for the given port. Callers
@@ -70,6 +79,50 @@ func CheckPortAvailableOn(addr string, port int) error {
 	}
 
 	return listener.Close()
+}
+
+// ClaimPort makes the port this process's to bind: a previous Gateway still
+// holding it is stopped, and a port that is busy for any other reason is waited
+// on rather than given up on at the first try.
+//
+// The wait is what a restart needs. A Gateway that restarts into an update
+// starts while the one it replaces is still going, and the socket that one was
+// listening on outlives it by a moment - long enough that netstat already
+// reports no listener while the bind still fails.
+func ClaimPort(addr string, port int) error {
+	deadline := time.Now().Add(portClaimTimeout)
+	waiting := false
+	// The zero time is in the past, so the holder is looked up before anything
+	// is waited on.
+	var nextStop time.Time
+
+	for {
+		if time.Now().After(nextStop) {
+			// A port held by something that is not Gateway belongs to that
+			// program, and no amount of waiting changes that.
+			if err := StopOldInstance(port); err != nil {
+				var foreign *ForeignPortError
+				if errors.As(err, &foreign) {
+					return err
+				}
+			}
+			nextStop = time.Now().Add(portStopInterval)
+		}
+
+		err := CheckPortAvailableOn(addr, port)
+		if err == nil {
+			return nil
+		}
+		if time.Now().After(deadline) {
+			return err
+		}
+
+		if !waiting {
+			waiting = true
+			fmt.Printf("Casbin Gateway: port %d is still busy, waiting for it to be released\n", port)
+		}
+		time.Sleep(portClaimInterval)
+	}
 }
 
 // FatalListenError explains a failed bind in plain language and stops the

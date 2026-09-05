@@ -71,10 +71,11 @@ func main() {
 		return
 	}
 
-	// The executable an earlier update replaced is only removable once nothing
-	// is running from it, which is now.
-	version.CleanupBackup()
+	// An update that restarted into this process left the version it replaced
+	// on disk, and this is where that is either finished with or put back.
 	version.Configure(daemonLogPath)
+	version.BeginStartup()
+	defer version.RollBackOnPanic()
 
 	// A URL scheme is only Gateway while it waits for one link. A Gateway that
 	// did not get to hand one over left the scheme registered to itself, and
@@ -157,26 +158,26 @@ func main() {
 	addr := conf.GetHttpAddr()
 
 	// A previous Gateway still holding the management port would keep this one
-	// from starting, so it is stopped first.
-	err := util.StopOldInstance(port)
-	if err != nil {
-		// A port held by something that is not Gateway stays with it; the bind
-		// below reports the conflict in full, so a failed kill only needs a note.
+	// from starting, so it is stopped first - and the port it held stays busy
+	// for a moment after it goes, which a restart into an update runs straight
+	// into. beego.Run() would report that as a stack trace, so the port is
+	// claimed here to explain it in one line instead.
+	if err := util.ClaimPort(addr, port); err != nil {
+		// Being the version an update just installed and not being able to
+		// serve is what a rollback is for: the machine keeps a Gateway. A port
+		// held by another program is not that, and putting the previous version
+		// back would take the update away without freeing anything.
 		var foreign *util.ForeignPortError
-		if !errors.As(err, &foreign) {
-			fmt.Printf("Casbin Gateway: could not free port %d: %v\n", port, err)
+		if !errors.As(err, &foreign) && version.RollBackFailedStart(err.Error()) {
+			return
 		}
-	}
-
-	service.PrintStartupSummary()
-
-	// beego.Run() binds the management port itself and reports a conflict as a
-	// stack trace, so the port is probed here first to explain it in one line.
-	// The gap between probe and bind is unavoidable but harmless: losing the
-	// race just puts us back to beego's own error.
-	if err := util.CheckPortAvailableOn(addr, port); err != nil {
 		util.FatalListenError(port, `change "httpport" in conf/app.conf`, err)
 	}
+
+	// Nothing is left to roll back to from here: this version has the port.
+	version.FinishStartup()
+
+	service.PrintStartupSummary()
 
 	// The agent endpoint of a sandboxed agent names this host's own address, and
 	// the configuration naming it outlives this process.

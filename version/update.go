@@ -57,6 +57,9 @@ type Status struct {
 	Error      string `json:"error"`
 	// Network means the failure was reaching GitHub, which a proxy can fix.
 	Network bool `json:"network"`
+	// RolledBack means the version this update installed could not start and
+	// the one it replaced is what is running now.
+	RolledBack bool `json:"rolledBack"`
 }
 
 // stagingDir holds the download and the unpacked executable. It sits next to
@@ -340,9 +343,15 @@ func restart(executable string) error {
 
 	statusLock.Lock()
 	daemonLog := logPath
+	target := status.Target
 	statusLock.Unlock()
 
+	// What the new version needs to know about the one it replaced, which it
+	// puts back if it cannot serve.
+	noteRestart(executable, target)
+
 	if _, err := util.StartDetached(executable, workingDir, daemonLog); err != nil {
+		forgetRestart(executable)
 		return fmt.Errorf("the new executable is installed but did not start: %w", err)
 	}
 
@@ -357,10 +366,10 @@ func restart(executable string) error {
 	return nil
 }
 
-// CleanupBackup removes what an update left behind. It runs at startup and
-// keeps trying in the background for as long as the process it replaced takes
-// to go away, rather than leaving a second copy of the executable on disk until
-// the next restart.
+// CleanupBackup removes what an update left behind, once there is nothing left
+// to roll back to. It keeps trying in the background for as long as the process
+// it replaced takes to go away, rather than leaving a second copy of the
+// executable on disk until the next restart.
 func CleanupBackup() {
 	executable, err := executablePath()
 	if err != nil {
@@ -369,8 +378,11 @@ func CleanupBackup() {
 
 	_ = os.RemoveAll(filepath.Join(filepath.Dir(executable), stagingDir))
 
+	launcher := filepath.Join(filepath.Dir(executable), desktopLauncherName())
 	removeWhenUnlocked(executable + backupSuffix)
-	removeWhenUnlocked(filepath.Join(filepath.Dir(executable), desktopLauncherName()+backupSuffix))
+	removeWhenUnlocked(executable + failedSuffix)
+	removeWhenUnlocked(launcher + backupSuffix)
+	removeWhenUnlocked(launcher + failedSuffix)
 }
 
 // removeWhenUnlocked deletes a replaced executable once nothing runs from it,

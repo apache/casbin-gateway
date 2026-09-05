@@ -94,6 +94,19 @@ function blockedHint(blocked: string) {
   }
 }
 
+/**
+ * What a failed update says. A rollback is the one failure the reader has
+ * something to take from: the Gateway in front of them is the version it went
+ * back to, and the rest of the line is why the new one did not run.
+ */
+function failureText(status: UpdateStatus) {
+  if (!status.rolledBack) {
+    return status.error;
+  }
+
+  return `${i18next.t("general:The new version did not start, so the previous one was put back")}: ${status.error}`;
+}
+
 function stageLabel(status: UpdateStatus | null, phase: Phase) {
   if (phase === "waiting") {
     return i18next.t("general:Restarting into the new version");
@@ -204,7 +217,7 @@ export function VersionPanel({
           }
           setStatus(res.data);
           if (res.data.stage === "failed") {
-            setFailure(res.data.error);
+            setFailure(failureText(res.data));
             setFailureNetwork(res.data.network);
             setPhase("idle");
           } else if (res.data.stage === "restarting") {
@@ -247,23 +260,29 @@ export function VersionPanel({
 
       MiscBackend.getUpdateStatus()
         .then(res => {
-          if (stopped || res.status !== "ok" || !res.data) {
+          if (stopped) {
             return;
           }
-          if (res.data.stage === "failed") {
-            stopped = true;
-            window.clearInterval(timer);
-            setFailure(res.data.error);
-            setFailureNetwork(res.data.network);
-            setPhase("idle");
-            return;
+          if (res.status === "ok" && res.data) {
+            // Still the Gateway being replaced: it answers until it goes.
+            if (res.data.stage !== "idle" && res.data.stage !== "failed") {
+              return;
+            }
+            if (res.data.stage === "failed") {
+              stopped = true;
+              window.clearInterval(timer);
+              setFailure(failureText(res.data));
+              setFailureNetwork(res.data.network);
+              setPhase("idle");
+              return;
+            }
           }
-          if (res.data.stage === "idle") {
-            stopped = true;
-            window.clearInterval(timer);
-            setPhase("done");
-            window.setTimeout(() => window.location.reload(), 1200);
-          }
+          // An answer that is not a status at all — a session this Gateway does
+          // not know, say — is still the restarted one answering.
+          stopped = true;
+          window.clearInterval(timer);
+          setPhase("done");
+          window.setTimeout(() => window.location.reload(), 1200);
         })
         // The gap where nothing answers is the restart itself.
         .catch(() => undefined);

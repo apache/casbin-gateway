@@ -990,6 +990,7 @@
     "Sure to delete {name} ?": "Sure to delete {name} ?",
     "Terminal": "Terminal",
     "The new version did not start, check the Gateway log": "The new version did not start, check the Gateway log",
+    "The new version did not start, so the previous one was put back": "The new version did not start, so the previous one was put back",
     "This Gateway cannot find its own executable, so the update has to be done by hand": "This Gateway cannot find its own executable, so the update has to be done by hand",
     "This executable sits where it cannot be replaced, so the update has to be done by hand": "This executable sits where it cannot be replaced, so the update has to be done by hand",
     "This is a read-only demo site!": "This is a read-only demo site!",

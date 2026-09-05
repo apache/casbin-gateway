@@ -1059,6 +1059,7 @@
     "Sure to delete {name} ?": "确定删除{name}？",
     "Terminal": "终端",
     "The new version did not start, check the Gateway log": "新版本没有启动，请查看Gateway日志",
+    "The new version did not start, so the previous one was put back": "新版本没有启动，已回退到原来的版本",
     "This Gateway cannot find its own executable, so the update has to be done by hand": "Gateway找不到自己的可执行文件，无法替换，需要手动升级",
     "This executable sits where it cannot be replaced, so the update has to be done by hand": "当前可执行文件所在目录不可写，无法被替换，需要手动升级",
     "This is a read-only demo site!": "这是一个只读演示站点！",
