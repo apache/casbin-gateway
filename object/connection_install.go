@@ -22,6 +22,7 @@ import (
 	"github.com/apache/casbin-gateway/agentpatch"
 	"github.com/apache/casbin-gateway/connector"
 	"github.com/apache/casbin-gateway/mcpproxy"
+	"github.com/apache/casbin-gateway/util"
 )
 
 // InstallConnection writes one connection's MCP server into each agent in
@@ -259,4 +260,49 @@ func EnsureConnectionsCurrent() error {
 		}
 	}
 	return failed
+}
+
+// TestConnection starts one connection's server, asks what it offers, and
+// remembers the answer. It is the only way to find out whether a credential
+// actually works before an agent tries to use it, and the tool list it brings
+// back is what the permission switches are built from.
+func TestConnection(owner string, name string) (*mcpproxy.ProbeResult, error) {
+	connection, err := GetConnection(owner, name)
+	if err != nil {
+		return nil, err
+	}
+	if connection == nil {
+		return nil, fmt.Errorf("%q is not connected", name)
+	}
+
+	// ResolveConnection renews a grant that is about to expire, so a test says
+	// whether the connection works now rather than whether it worked once.
+	rendered, err := ResolveConnection(owner, name)
+	if err != nil {
+		return nil, recordProbe(connection, nil, err)
+	}
+
+	result, err := mcpproxy.Probe(*rendered, mcpproxy.ProbeTimeout)
+	if err != nil {
+		return nil, recordProbe(connection, nil, err)
+	}
+	return result, recordProbe(connection, result, nil)
+}
+
+// recordProbe stores what the last test found, failure included, and returns
+// the failure so the caller reports one error rather than two.
+func recordProbe(connection *Connection, result *mcpproxy.ProbeResult, failure error) error {
+	connection.ProbedTime = util.GetCurrentTime()
+	if failure != nil {
+		connection.ProbeError = failure.Error()
+	} else {
+		connection.ProbeError = ""
+		connection.ServerName = result.ServerName
+		connection.Tools = result.Tools
+	}
+
+	if err := saveWithoutRendering(connection); err != nil && failure == nil {
+		return err
+	}
+	return failure
 }

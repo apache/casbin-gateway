@@ -115,6 +115,7 @@ func initAPI() {
 	beego.Router("/api/resolve-connection", &controllers.ApiController{}, "POST:ResolveConnection")
 	beego.Router("/api/get-connector-redirect-uri", &controllers.ApiController{}, "GET:GetConnectorRedirectUri")
 	beego.Router("/api/start-connector-auth", &controllers.ApiController{}, "POST:StartConnectorAuth")
+	beego.Router("/api/test-connection", &controllers.ApiController{}, "POST:TestConnection")
 	// Opened by the vendor's redirect rather than by the UI, so it is reached
 	// without a session: what proves the caller is the unguessable state it
 	// carries, which is the whole point of that parameter.

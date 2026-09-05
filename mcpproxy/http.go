@@ -55,6 +55,12 @@ func (u *httpUpstream) Start(emit func([]byte) error) error {
 
 func (u *httpUpstream) Close() error { return nil }
 
+// A remote server has no end of its own to notice: a request either answers or
+// fails, and there is nothing in between to wait on.
+func (u *httpUpstream) Ended() <-chan struct{} { return nil }
+
+func (u *httpUpstream) Diagnostics() string { return "" }
+
 func (u *httpUpstream) Send(line []byte) error {
 	request, err := http.NewRequest(http.MethodPost, u.resolved.Url, bytes.NewReader(line))
 	if err != nil {

@@ -28,6 +28,7 @@ import (
 	"github.com/apache/casbin-gateway/agent"
 	"github.com/apache/casbin-gateway/agentconfig"
 	"github.com/apache/casbin-gateway/connector"
+	"github.com/apache/casbin-gateway/mcpproxy"
 	"github.com/apache/casbin-gateway/object"
 )
 
@@ -40,6 +41,12 @@ type ConnectorEntry struct {
 	// Authorized reports that an oauth2 connector has a grant, which is what
 	// the dialog needs to tell "fill in the application" from "go and approve".
 	Authorized bool `json:"authorized"`
+	// What the last test found: the server's own name, the tools it offers, and
+	// why the test failed when it did.
+	ServerName string               `json:"serverName,omitempty"`
+	Tools      []mcpproxy.ProbeTool `json:"tools,omitempty"`
+	ProbedTime string               `json:"probedTime,omitempty"`
+	ProbeError string               `json:"probeError,omitempty"`
 }
 
 // ConnectorTarget is one agent on this machine a connection can be installed
@@ -83,6 +90,10 @@ func (c *ApiController) GetConnectors() {
 			entry.Connected = true
 			entry.Agents = connection.Agents
 			entry.Authorized = connection.Credentials[connector.KeyAccessToken] != ""
+			entry.ServerName = connection.ServerName
+			entry.Tools = connection.Tools
+			entry.ProbedTime = connection.ProbedTime
+			entry.ProbeError = connection.ProbeError
 		}
 		entries = append(entries, entry)
 	}
@@ -345,4 +356,29 @@ func (c *ApiController) GetConnectorRedirectUri() {
 		return
 	}
 	c.ResponseOk(redirect)
+}
+
+// TestConnection starts this connection's server and reports what it offers. It
+// is slow by nature - a server installed from npm is downloaded the first time
+// it runs - so the caller is expected to show that it is working.
+func (c *ApiController) TestConnection() {
+	if c.RequireAdmin() {
+		return
+	}
+
+	var form struct {
+		Owner string `json:"owner"`
+		Name  string `json:"name"`
+	}
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &form); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	result, err := object.TestConnection(form.Owner, form.Name)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(result)
 }

@@ -20,6 +20,7 @@ import (
 	"sort"
 
 	"github.com/apache/casbin-gateway/connector"
+	"github.com/apache/casbin-gateway/mcpproxy"
 	"github.com/apache/casbin-gateway/util"
 	"github.com/xorm-io/core"
 )
@@ -52,6 +53,16 @@ type Connection struct {
 	// written again rather than failing silently in each agent.
 	Endpoint   string `xorm:"varchar(255)" json:"endpoint"`
 	Executable string `xorm:"varchar(500)" json:"executable"`
+
+	// What the server said about itself the last time it was tested. Tools is
+	// what turns one switch for the whole connection into one per tool, so a
+	// connection nobody has tested is governed more coarsely than one that has.
+	ServerName string               `xorm:"varchar(200)" json:"serverName"`
+	Tools      []mcpproxy.ProbeTool `xorm:"mediumtext json" json:"tools"`
+	ProbedTime string               `xorm:"varchar(100)" json:"probedTime"`
+	// ProbeError is why the last test failed, empty when it worked. It is kept
+	// so the page can say what is wrong without testing again.
+	ProbeError string `xorm:"varchar(1000)" json:"probeError"`
 }
 
 func (connection *Connection) GetId() string {

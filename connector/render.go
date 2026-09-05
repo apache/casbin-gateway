@@ -81,14 +81,26 @@ func (c Connector) Render(credentials map[string]string) (Rendered, error) {
 		return Rendered{}, fmt.Errorf("this connection has not been authorized yet")
 	}
 
+	// A field the operator was not obliged to fill in renders as nothing rather
+	// than as a failure: an optional API key left blank is a connector running
+	// without one, which is what "optional" was supposed to mean.
+	optional := map[string]bool{}
+	for _, field := range c.Auth.Fields {
+		if !field.Required {
+			optional[field.Key] = true
+		}
+	}
+	for _, key := range ReservedKeys {
+		optional[key] = true
+	}
+
 	fill := func(value string) (string, error) {
 		var missing string
 		filled := placeholder.ReplaceAllStringFunc(value, func(match string) string {
 			name := placeholder.FindStringSubmatch(match)[1]
-			found, ok := credentials[name]
-			if !ok || found == "" {
+			found := credentials[name]
+			if found == "" && !optional[name] {
 				missing = name
-				return ""
 			}
 			return found
 		})
@@ -122,17 +134,26 @@ func (c Connector) Render(credentials map[string]string) (Rendered, error) {
 	return rendered, nil
 }
 
+// fillMap renders an environment or header map, dropping any entry that came
+// out empty. An optional credential nobody supplied is better left unset than
+// passed as a blank value a server would try to authenticate with.
 func fillMap(values map[string]string, fill func(string) (string, error)) (map[string]string, error) {
 	if len(values) == 0 {
 		return nil, nil
 	}
-	filled := make(map[string]string, len(values))
+	filled := map[string]string{}
 	for key, value := range values {
 		found, err := fill(value)
 		if err != nil {
 			return nil, err
 		}
+		if strings.TrimSpace(found) == "" {
+			continue
+		}
 		filled[key] = found
+	}
+	if len(filled) == 0 {
+		return nil, nil
 	}
 	return filled, nil
 }

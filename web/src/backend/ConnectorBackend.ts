@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import {query, request} from "@/backend/request";
-import type {AgentConfigPlanItem, ConnectRequest, ConnectorCatalog} from "@/types";
+import type {AgentConfigPlanItem, ConnectRequest, ConnectorCatalog, ConnectorProbeResult} from "@/types";
 
 /** The catalog, what is connected here, and the agents it can be written into. */
 export function getConnectors(owner: string) {
@@ -56,4 +56,12 @@ export function startConnectorAuth(owner: string, name: string, credentials: Rec
     name: name,
     credentials: credentials,
   });
+}
+
+/**
+ * Starts this connection's server and asks what it offers. Slow the first time
+ * a server is installed from npm, so callers should show that it is working.
+ */
+export function testConnection(owner: string, name: string) {
+  return request<ConnectorProbeResult>("/api/test-connection", "POST", {owner: owner, name: name});
 }

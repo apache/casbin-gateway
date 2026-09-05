@@ -27,7 +27,7 @@ import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
 import {Input} from "@/components/ui/input";
 import {cn} from "@/lib/utils";
-import type {Account, ConnectorCatalog, ConnectorEntry, ConnectorTarget} from "@/types";
+import type {Account, ConnectorCatalog, ConnectorEntry, ConnectorTarget, ConnectorTool} from "@/types";
 
 const CREDENTIAL_MASK = "***";
 
@@ -175,10 +175,16 @@ function ConnectorCard({entry, onConnect}: {entry: ConnectorEntry; onConnect: ()
             {entry.connected ? (
               <Badge variant="secondary">
                 {entry.agents.length > 0
-                  ? i18next.t("connector:Connected in {count}").replace("{count}", `${entry.agents.length}`)
+                  ? i18next.t("connector:Connected in", {count: entry.agents.length})
                   : i18next.t("connector:Connected")}
               </Badge>
             ) : null}
+            {entry.tools && entry.tools.length > 0 ? (
+              <Badge variant="outline">
+                {i18next.t("connector:Tool count", {count: entry.tools.length})}
+              </Badge>
+            ) : null}
+            {entry.probeError ? <Badge variant="destructive">{i18next.t("connector:Test failed")}</Badge> : null}
             {entry.paid ? <Badge variant="outline">{i18next.t("connector:Billed by vendor")}</Badge> : null}
             {entry.unverified ? <Badge variant="outline">{i18next.t("connector:Unverified")}</Badge> : null}
           </div>
@@ -291,6 +297,28 @@ function ConnectDialog({
   const missing =
     fields.some(field => field.required && (credentials[field.key] ?? "").trim() === "") || (isOauth && !authorized);
 
+  const [testing, setTesting] = React.useState(false);
+  const [probe, setProbe] = React.useState<{tools?: ConnectorTool[]; server?: string; error?: string}>({
+    tools: entry.tools,
+    server: entry.serverName,
+    error: entry.probeError,
+  });
+
+  const test = () => {
+    setTesting(true);
+    setProbe({});
+    ConnectorBackend.testConnection(account.name, entry.id)
+      .then(response => {
+        if (response.status === "ok" && response.data) {
+          setProbe({tools: response.data.tools, server: response.data.serverName});
+        } else {
+          setProbe({error: response.msg ?? ""});
+        }
+      })
+      .catch(error => setProbe({error: error.message}))
+      .finally(() => setTesting(false));
+  };
+
   const submit = () => {
     setSubmitting(true);
     ConnectorBackend.connect({owner: account.name, name: entry.id, credentials: credentials, agents: agents})
@@ -401,6 +429,37 @@ function ConnectDialog({
                   : i18next.t("connector:Not authorized")}
             </span>
           </div>
+        </Field>
+      ) : null}
+
+      {entry.connected ? (
+        <Field label={i18next.t("connector:Test")} hint={i18next.t("connector:Test hint")}>
+          <div className="flex items-start gap-3">
+            <Button type="button" variant="outline" onClick={test} disabled={testing}>
+              {testing ? i18next.t("connector:Testing") : i18next.t("connector:Run test")}
+            </Button>
+            <div className="min-w-0 flex-1 pt-1.5 text-sm">
+              {probe.error ? (
+                <span className="text-destructive break-words">{probe.error}</span>
+              ) : probe.tools ? (
+                <span className="text-muted-foreground">
+                  {i18next
+                    .t("connector:Test result")
+                    .replace("{server}", probe.server || entry.server.name)
+                    .replace("{count}", `${probe.tools.length}`)}
+                </span>
+              ) : null}
+            </div>
+          </div>
+          {probe.tools && probe.tools.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {probe.tools.map(tool => (
+                <code key={tool.name} className="bg-muted rounded px-1.5 py-0.5 text-xs" title={tool.description}>
+                  {tool.name}
+                </code>
+              ))}
+            </div>
+          ) : null}
         </Field>
       ) : null}
 

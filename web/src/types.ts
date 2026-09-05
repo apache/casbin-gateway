@@ -1540,6 +1540,23 @@ export interface ConnectorEntry {
   agents: string[];
   /** An oauth2 connector that has a grant, rather than only a client app. */
   authorized: boolean;
+  /** What the last test found. Absent until the connection has been tested. */
+  serverName?: string;
+  tools?: ConnectorTool[];
+  probedTime?: string;
+  probeError?: string;
+}
+
+/** One tool a connection's server offers, as its last test reported it. */
+export interface ConnectorTool {
+  name: string;
+  description?: string;
+}
+
+export interface ConnectorProbeResult {
+  serverName: string;
+  serverVersion: string;
+  tools: ConnectorTool[];
 }
 
 /** An agent on this machine a connection can be installed into. */
