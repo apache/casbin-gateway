@@ -1,0 +1,64 @@
+{
+  "id": "email",
+  "displayName": "Email",
+  "category": "mail",
+  "icon": "gnome.org",
+  "description": "Reads and sends mail over IMAP and SMTP, so it works with Gmail, Outlook, QQ, 163 and anything self-hosted without registering an application anywhere.",
+  "docsUrl": "https://github.com/Cactusinhand/mcp_server_email",
+  "auth": {
+    "kind": "token",
+    "fields": [
+      {
+        "key": "address",
+        "label": "Email address",
+        "placeholder": "you@example.com",
+        "required": true
+      },
+      {
+        "key": "password",
+        "label": "App password",
+        "help": "Not the password you sign in with: create an app password in your mail account's security settings.",
+        "secret": true,
+        "required": true
+      },
+      {
+        "key": "imapHost",
+        "label": "IMAP host",
+        "placeholder": "imap.example.com",
+        "help": "Only needed when the address alone is not enough to find the server."
+      },
+      {
+        "key": "imapPort",
+        "label": "IMAP port",
+        "placeholder": "993"
+      },
+      {
+        "key": "smtpHost",
+        "label": "SMTP host",
+        "placeholder": "smtp.example.com"
+      },
+      {
+        "key": "smtpPort",
+        "label": "SMTP port",
+        "placeholder": "465"
+      }
+    ]
+  },
+  "server": {
+    "name": "email",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "email-mcp-server"
+    ],
+    "env": {
+      "EMAIL_ADDRESS": "${address}",
+      "EMAIL_PASSWORD": "${password}",
+      "IMAP_HOST": "${imapHost}",
+      "IMAP_PORT": "${imapPort}",
+      "SMTP_HOST": "${smtpHost}",
+      "SMTP_PORT": "${smtpPort}"
+    }
+  }
+}

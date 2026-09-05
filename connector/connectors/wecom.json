@@ -1,0 +1,33 @@
+{
+  "id": "wecom",
+  "displayName": "WeCom robot",
+  "category": "office",
+  "icon": "work.weixin.qq.com",
+  "description": "Posts messages into a WeCom group through its own robot webhook: a build result, an alert, a summary at the end of a run.",
+  "docsUrl": "https://github.com/gwoo1225/wecom-mcp",
+  "auth": {
+    "kind": "token",
+    "fields": [
+      {
+        "key": "webhookUrl",
+        "label": "Robot webhook URL",
+        "placeholder": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=...",
+        "help": "Add a group robot in WeCom and copy the address it gives you.",
+        "secret": true,
+        "required": true
+      }
+    ]
+  },
+  "server": {
+    "name": "wecom",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "wecom-mcp"
+    ],
+    "env": {
+      "WECOM_WEBHOOK_URL": "${webhookUrl}"
+    }
+  }
+}

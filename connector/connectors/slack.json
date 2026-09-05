@@ -1,0 +1,36 @@
+{
+  "id": "slack",
+  "displayName": "Slack",
+  "category": "office",
+  "icon": "slack.com",
+  "description": "Read channels and threads, search the history and post messages in a Slack workspace.",
+  "docsUrl": "https://github.com/korotovsky/slack-mcp-server",
+  "auth": {
+    "kind": "token",
+    "fields": [
+      {
+        "key": "token",
+        "label": "User OAuth token",
+        "placeholder": "xoxp-...",
+        "help": "From a Slack app installed in the workspace, under OAuth & Permissions.",
+        "secret": true,
+        "required": true
+      }
+    ],
+    "registerUrl": "https://api.slack.com/apps"
+  },
+  "server": {
+    "name": "slack",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "slack-mcp-server@latest",
+      "--transport",
+      "stdio"
+    ],
+    "env": {
+      "SLACK_MCP_XOXP_TOKEN": "${token}"
+    }
+  }
+}

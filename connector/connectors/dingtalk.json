@@ -1,0 +1,40 @@
+{
+  "id": "dingtalk",
+  "displayName": "DingTalk",
+  "category": "office",
+  "icon": "dingtalk.com",
+  "description": "Reads the contact directory and calendars of a DingTalk organisation through your own self-built application.",
+  "docsUrl": "https://github.com/wangyanmao/dingtalk-mcp",
+  "auth": {
+    "kind": "token",
+    "fields": [
+      {
+        "key": "clientId",
+        "label": "AppKey",
+        "help": "From your self-built app on the DingTalk open platform, where it is also called the Client ID.",
+        "required": true
+      },
+      {
+        "key": "clientSecret",
+        "label": "AppSecret",
+        "secret": true,
+        "required": true
+      }
+    ],
+    "registerUrl": "https://open-dev.dingtalk.com/"
+  },
+  "server": {
+    "name": "dingtalk",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "dingtalk-mcp"
+    ],
+    "env": {
+      "DINGTALK_Client_ID": "${clientId}",
+      "DINGTALK_Client_Secret": "${clientSecret}",
+      "ACTIVE_PROFILES": "dingtalk-contacts,dingtalk-calendar"
+    }
+  }
+}

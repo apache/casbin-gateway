@@ -1,0 +1,47 @@
+{
+  "id": "feishu-oauth",
+  "displayName": "Lark (sign-in)",
+  "category": "office",
+  "icon": "feishu.cn",
+  "description": "The same Lark access, granted by signing in rather than by handing over the application secret. What the agent may reach is what you may reach, not everything the app was approved for.",
+  "docsUrl": "https://open.feishu.cn/document/authentication-management/access-token/get-user-access-token",
+  "auth": {
+    "kind": "oauth2",
+    "fields": [
+      {
+        "key": "clientId",
+        "label": "App ID",
+        "placeholder": "cli_...",
+        "help": "From your own self-built app on the Lark open platform.",
+        "required": true
+      },
+      {
+        "key": "clientSecret",
+        "label": "App secret",
+        "secret": true,
+        "required": true
+      }
+    ],
+    "authorizeUrl": "https://open.feishu.cn/open-apis/authen/v1/authorize",
+    "tokenUrl": "https://open.feishu.cn/open-apis/authen/v2/oauth/token",
+    "registerUrl": "https://open.feishu.cn/app"
+  },
+  "server": {
+    "name": "feishu-oauth",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@larksuiteoapi/lark-mcp",
+      "mcp",
+      "-a",
+      "${clientId}",
+      "-s",
+      "${clientSecret}",
+      "-u",
+      "${accessToken}",
+      "--token-mode",
+      "user_access_token"
+    ]
+  }
+}

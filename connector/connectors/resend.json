@@ -1,0 +1,40 @@
+{
+  "id": "resend",
+  "displayName": "Resend",
+  "category": "mail",
+  "icon": "resend.com",
+  "description": "Sends mail through Resend: a report at the end of a run, an alert, anything an agent should put in somebody's inbox rather than in a log.",
+  "docsUrl": "https://resend.com/docs/mcp-server",
+  "auth": {
+    "kind": "token",
+    "fields": [
+      {
+        "key": "apiKey",
+        "label": "API key",
+        "placeholder": "re_...",
+        "secret": true,
+        "required": true
+      },
+      {
+        "key": "sender",
+        "label": "Sender address",
+        "placeholder": "onboarding@resend.dev",
+        "help": "A verified address on your Resend account. Leave it blank to name one per message."
+      }
+    ],
+    "registerUrl": "https://resend.com/api-keys"
+  },
+  "server": {
+    "name": "resend",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "resend-mcp"
+    ],
+    "env": {
+      "RESEND_API_KEY": "${apiKey}",
+      "SENDER_EMAIL_ADDRESS": "${sender}"
+    }
+  }
+}
