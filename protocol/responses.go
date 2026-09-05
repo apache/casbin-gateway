@@ -13,9 +13,8 @@
 // limitations under the License.
 
 // This file speaks the OpenAI Responses API, the only wire format recent Codex
-// versions know. It is a client format only: the gateway reads requests in it
-// and writes answers back in it, but no provider type serves it, so a request
-// that arrives here is always translated for whichever upstream answers it.
+// versions know. It works both ways: as a client format, and as the upstream of
+// a provider that answers on /responses rather than on chat completions.
 
 package protocol
 
@@ -35,6 +34,8 @@ func init() {
 }
 
 func (responsesCodec) Name() string { return Responses }
+
+func (responsesCodec) Endpoint() string { return "/responses" }
 
 // ---------------------------------------------------------------------------
 // Request
@@ -430,11 +431,7 @@ func (answer *responsesAnswer) response(status string, output []any) map[string]
 		"status": status, "model": answer.model, "output": output,
 	}
 	if !answer.usage.IsZero() {
-		response["usage"] = map[string]any{
-			"input_tokens":  answer.usage.InputTokens,
-			"output_tokens": answer.usage.OutputTokens,
-			"total_tokens":  answer.usage.InputTokens + answer.usage.OutputTokens,
-		}
+		response["usage"] = responsesUsageOf(answer.usage)
 	}
 	if answer.failure != nil {
 		response["error"] = map[string]any{
@@ -618,4 +615,371 @@ func (writer *responsesWriter) Close() {
 
 func (responsesCodec) EncodeError(kind string, message string) []byte {
 	return openAiCodec{}.EncodeError(kind, message)
+}
+
+// ---------------------------------------------------------------------------
+// Upstream
+// ---------------------------------------------------------------------------
+
+// responsesBody is the request written for an upstream serving this API. store
+// is false because the gateway never sends a previous_response_id, so a copy
+// kept upstream would never be read.
+type responsesBody struct {
+	Model             string          `json:"model"`
+	Stream            bool            `json:"stream,omitempty"`
+	Store             bool            `json:"store"`
+	Instructions      string          `json:"instructions,omitempty"`
+	Input             []any           `json:"input"`
+	Tools             []responsesTool `json:"tools,omitempty"`
+	ToolChoice        json.RawMessage `json:"tool_choice,omitempty"`
+	ParallelToolCalls *bool           `json:"parallel_tool_calls,omitempty"`
+	Temperature       *float64        `json:"temperature,omitempty"`
+	TopP              *float64        `json:"top_p,omitempty"`
+	MaxOutputTokens   *int            `json:"max_output_tokens,omitempty"`
+	Text              json.RawMessage `json:"text,omitempty"`
+	Reasoning         json.RawMessage `json:"reasoning,omitempty"`
+}
+
+func (responsesCodec) EncodeRequest(request *Request) ([]byte, error) {
+	body := responsesBody{
+		Model:             request.Model,
+		Stream:            request.Stream,
+		Instructions:      strings.Join(request.System, "\n\n"),
+		Input:             []any{},
+		ParallelToolCalls: request.ParallelToolCalls,
+		Temperature:       request.Temperature,
+		TopP:              request.TopP,
+		MaxOutputTokens:   request.MaxTokens,
+	}
+	for _, message := range request.Messages {
+		body.Input = append(body.Input, responsesInputOf(message)...)
+	}
+	if len(body.Input) == 0 {
+		return nil, errors.New("the request carries no message")
+	}
+
+	for _, tool := range request.Tools {
+		parameters := tool.Parameters
+		if len(parameters) == 0 {
+			parameters = rawValue(map[string]any{"type": "object", "properties": map[string]any{}})
+		}
+		body.Tools = append(body.Tools, responsesTool{
+			Type: "function", Name: tool.Name, Description: tool.Description, Parameters: parameters,
+		})
+	}
+	if choice := request.ToolChoice; choice != nil {
+		switch choice.Mode {
+		case ChoiceTool:
+			body.ToolChoice = rawValue(map[string]any{"type": "function", "name": choice.Name})
+		case ChoiceAuto, ChoiceNone, ChoiceRequired:
+			body.ToolChoice = rawString(choice.Mode)
+		}
+	}
+	if format := request.Format; format != nil && format.Kind != "" {
+		// This API keeps the name and the schema beside the type rather than
+		// one level down, as chat completions does.
+		written := map[string]any{"type": format.Kind}
+		if format.Kind == "json_schema" {
+			written["name"] = emptyAs(format.Name, "response")
+			written["schema"] = format.Schema
+			if format.Strict != nil {
+				written["strict"] = *format.Strict
+			}
+		}
+		body.Text = rawValue(map[string]any{"format": written})
+	}
+	if effort := request.Reasoning.EffortOf(); effort != "" {
+		body.Reasoning = rawValue(map[string]any{"effort": effort})
+	}
+	return json.Marshal(body)
+}
+
+// responsesInputOf writes one canonical message out. A tool call and a tool
+// result are items of their own here rather than content of a message, so a
+// message carrying either turns into several.
+func responsesInputOf(message Message) []any {
+	items := []any{}
+	parts := []any{}
+	partType := "input_text"
+	if message.Role == RoleAssistant {
+		partType = "output_text"
+	}
+
+	flush := func() {
+		if len(parts) == 0 {
+			return
+		}
+		items = append(items, map[string]any{
+			"type": "message", "role": message.Role, "content": parts,
+		})
+		parts = []any{}
+	}
+
+	for _, content := range message.Content {
+		switch content.Kind {
+		case KindText:
+			if content.Text == "" {
+				continue
+			}
+			parts = append(parts, map[string]any{"type": partType, "text": content.Text})
+		case KindImage:
+			if content.Image == nil {
+				continue
+			}
+			parts = append(parts, map[string]any{"type": "input_image", "image_url": content.Image.Link()})
+		case KindToolUse:
+			if content.ToolUse == nil {
+				continue
+			}
+			flush()
+			items = append(items, map[string]any{
+				"type": "function_call", "call_id": content.ToolUse.Id,
+				"name": content.ToolUse.Name, "arguments": emptyAsObject(content.ToolUse.Arguments),
+			})
+		case KindToolResult:
+			if content.ToolResult == nil {
+				continue
+			}
+			flush()
+			items = append(items, map[string]any{
+				"type": "function_call_output", "call_id": content.ToolResult.Id,
+				"output": content.ToolResult.Text,
+			})
+		}
+		// A thinking block is left out: this API only takes back reasoning
+		// items of its own, which carry an id no other upstream signed.
+	}
+
+	flush()
+	return items
+}
+
+type responsesResult struct {
+	Id                string                `json:"id"`
+	Model             string                `json:"model"`
+	Status            string                `json:"status"`
+	Output            []responsesOutputItem `json:"output"`
+	Usage             *responsesUsage       `json:"usage"`
+	IncompleteDetails *struct {
+		Reason string `json:"reason"`
+	} `json:"incomplete_details"`
+	Error *responsesFailure `json:"error"`
+}
+
+type responsesFailure struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
+func (failure *responsesFailure) canonical() *Failure {
+	if failure == nil || failure.Message == "" {
+		return nil
+	}
+	return &Failure{Kind: emptyAs(failure.Code, "server_error"), Message: failure.Message}
+}
+
+// responsesOutputItem is one item of the output list: the assistant message,
+// the reasoning, or one function call.
+type responsesOutputItem struct {
+	Type      string                `json:"type"`
+	Role      string                `json:"role"`
+	Content   []responsesOutputPart `json:"content"`
+	Summary   []responsesOutputPart `json:"summary"`
+	Id        string                `json:"id"`
+	CallId    string                `json:"call_id"`
+	Name      string                `json:"name"`
+	Arguments string                `json:"arguments"`
+}
+
+type responsesOutputPart struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
+}
+
+type responsesUsage struct {
+	InputTokens        int `json:"input_tokens"`
+	OutputTokens       int `json:"output_tokens"`
+	TotalTokens        int `json:"total_tokens"`
+	InputTokensDetails *struct {
+		CachedTokens int `json:"cached_tokens"`
+	} `json:"input_tokens_details"`
+	OutputTokensDetails *struct {
+		ReasoningTokens int `json:"reasoning_tokens"`
+	} `json:"output_tokens_details"`
+}
+
+func (usage *responsesUsage) canonical() Usage {
+	canonical := Usage{InputTokens: usage.InputTokens, OutputTokens: usage.OutputTokens}
+	if usage.InputTokensDetails != nil {
+		canonical.CacheReadTokens = usage.InputTokensDetails.CachedTokens
+	}
+	if usage.OutputTokensDetails != nil {
+		canonical.ReasoningTokens = usage.OutputTokensDetails.ReasoningTokens
+	}
+	return canonical
+}
+
+// responsesUsageOf writes the counters back out. This format counts the cached
+// part inside the input total, which is where the canonical form keeps it too.
+func responsesUsageOf(usage Usage) map[string]any {
+	input := usage.InputTokens + usage.CacheWriteTokens
+	written := map[string]any{
+		"input_tokens":  input,
+		"output_tokens": usage.OutputTokens,
+		"total_tokens":  input + usage.OutputTokens,
+	}
+	if usage.CacheReadTokens > 0 {
+		written["input_tokens_details"] = map[string]any{"cached_tokens": usage.CacheReadTokens}
+	}
+	if usage.ReasoningTokens > 0 {
+		written["output_tokens_details"] = map[string]any{"reasoning_tokens": usage.ReasoningTokens}
+	}
+	return written
+}
+
+func (responsesCodec) DecodeResponse(raw []byte) (*Response, error) {
+	var body responsesResult
+	if err := json.Unmarshal(raw, &body); err != nil {
+		return nil, errors.New("the upstream answered with an unreadable body")
+	}
+
+	response := &Response{Id: body.Id, Model: body.Model, StopReason: StopEnd}
+	if body.Usage != nil {
+		response.Usage = body.Usage.canonical()
+	}
+	response.Failure = body.Error.canonical()
+
+	for _, item := range body.Output {
+		switch item.Type {
+		case "message":
+			for _, part := range item.Content {
+				if part.Text != "" {
+					response.Content = append(response.Content, Content{Kind: KindText, Text: part.Text})
+				}
+			}
+		case "reasoning":
+			// A model that hides its reasoning sends only the summary.
+			for _, part := range append(append([]responsesOutputPart{}, item.Content...), item.Summary...) {
+				if part.Text != "" {
+					response.Content = append(response.Content, Content{Kind: KindThinking, Text: part.Text})
+				}
+			}
+		case "function_call":
+			response.StopReason = StopToolUse
+			response.Content = append(response.Content, Content{Kind: KindToolUse, ToolUse: &ToolUse{
+				Id: emptyAs(item.CallId, item.Id), Name: item.Name, Arguments: emptyAsObject(item.Arguments),
+			}})
+		}
+	}
+	if body.Status == "incomplete" && body.IncompleteDetails != nil &&
+		body.IncompleteDetails.Reason == "max_output_tokens" {
+		response.StopReason = StopMaxTokens
+	}
+	return response, nil
+}
+
+// responsesEvent is one event of this API's stream, which names itself in its
+// own payload.
+type responsesEvent struct {
+	Type        string               `json:"type"`
+	Delta       string               `json:"delta"`
+	OutputIndex int                  `json:"output_index"`
+	Item        *responsesOutputItem `json:"item"`
+	Response    *responsesResult     `json:"response"`
+	Error       *responsesFailure    `json:"error"`
+}
+
+func (responsesCodec) DecodeStream(reader io.Reader, fn func(Event) bool) error {
+	stop := ""
+	usage := Usage{}
+	model := ""
+	running := true
+	// A call's output index is what its argument deltas name it by, so it is
+	// the call's index too.
+	opened := map[int]bool{}
+
+	err := forEachEvent(reader, func(data []byte) bool {
+		var event responsesEvent
+		if err := json.Unmarshal(data, &event); err != nil {
+			return true
+		}
+		if event.Response != nil && event.Response.Model != "" {
+			model = event.Response.Model
+		}
+
+		switch event.Type {
+		case "response.output_text.delta":
+			if event.Delta != "" {
+				running = fn(Event{Kind: EventText, Text: event.Delta, Model: model})
+			}
+
+		case "response.reasoning_summary_text.delta", "response.reasoning_text.delta":
+			if event.Delta != "" {
+				running = fn(Event{Kind: EventThinking, Text: event.Delta, Model: model})
+			}
+
+		case "response.output_item.added":
+			// A call's name and id arrive here once; only its arguments stream.
+			if event.Item == nil || event.Item.Type != "function_call" {
+				return true
+			}
+			opened[event.OutputIndex] = true
+			stop = StopToolUse
+			running = fn(Event{Kind: EventToolUse, Model: model, Tool: &ToolDelta{
+				Index: event.OutputIndex,
+				Id:    emptyAs(event.Item.CallId, event.Item.Id),
+				Name:  event.Item.Name,
+			}})
+
+		case "response.function_call_arguments.delta":
+			if event.Delta == "" {
+				return true
+			}
+			running = fn(Event{Kind: EventToolUse, Model: model, Tool: &ToolDelta{
+				Index: event.OutputIndex, Arguments: event.Delta,
+			}})
+
+		case "response.output_item.done":
+			// An upstream that sent no delta reports the call only here.
+			if event.Item == nil || event.Item.Type != "function_call" || opened[event.OutputIndex] {
+				return true
+			}
+			opened[event.OutputIndex] = true
+			stop = StopToolUse
+			running = fn(Event{Kind: EventToolUse, Model: model, Tool: &ToolDelta{
+				Index:     event.OutputIndex,
+				Id:        emptyAs(event.Item.CallId, event.Item.Id),
+				Name:      event.Item.Name,
+				Arguments: event.Item.Arguments,
+			}})
+
+		case "response.completed", "response.incomplete":
+			if event.Response == nil {
+				return true
+			}
+			if event.Response.Usage != nil {
+				usage = event.Response.Usage.canonical()
+			}
+			if event.Response.IncompleteDetails != nil &&
+				event.Response.IncompleteDetails.Reason == "max_output_tokens" {
+				stop = StopMaxTokens
+			}
+
+		case "response.failed", "error":
+			failure := event.Error.canonical()
+			if failure == nil && event.Response != nil {
+				failure = event.Response.Error.canonical()
+			}
+			if failure == nil {
+				failure = &Failure{Kind: "server_error", Message: "the upstream stream failed"}
+			}
+			running = fn(Event{Kind: EventFailure, Failure: failure})
+		}
+		return running
+	})
+
+	if running {
+		fn(Event{Kind: EventDone, StopReason: emptyAs(stop, StopEnd), Usage: &usage})
+	}
+	return err
 }

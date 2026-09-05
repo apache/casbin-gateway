@@ -203,6 +203,7 @@ func UsesClientAuth(provider *Provider) bool {
 const (
 	ProtocolOpenAi    = protocol.OpenAi
 	ProtocolAnthropic = protocol.Anthropic
+	ProtocolResponses = protocol.Responses
 )
 
 // IsProviderTypeSupported reports whether the gateway can talk to the provider's
@@ -211,21 +212,34 @@ func IsProviderTypeSupported(provider *Provider) bool {
 	return containsString(providerTypes, provider.Type)
 }
 
-// ProviderProtocol is the wire format a provider's upstream speaks. Everything
-// that is not Anthropic is reached with an OpenAI-formatted request.
+// ProviderProtocol is the wire format a provider's upstream is talked to in.
+// The provider names it when its upstream serves more than its type implies;
+// otherwise everything that is not Anthropic is sent an OpenAI request.
 func ProviderProtocol(provider *Provider) string {
+	if protocol.IsUpstream(provider.Protocol) {
+		return provider.Protocol
+	}
 	if provider.Type == "anthropic" {
 		return ProtocolAnthropic
 	}
 	return ProtocolOpenAi
 }
 
+// ProviderApiFamily is the family a provider's base URL belongs to, which is
+// what an agent configuration is written against: an agent pointed straight at
+// a Responses provider still writes an OpenAI base URL.
+func ProviderApiFamily(provider *Provider) string {
+	if spoken := ProviderProtocol(provider); spoken != ProtocolResponses {
+		return spoken
+	}
+	return ProtocolOpenAi
+}
+
 // ServesResponsesApi reports whether the provider's own upstream answers on the
-// OpenAI Responses API. Only OpenAI itself does; the OpenAI-compatible vendors
-// stop at chat completions, which the gateway translates for the clients that
-// speak nothing else.
+// OpenAI Responses API. The other vendors stop at chat completions, which the
+// gateway translates for the clients that speak nothing else.
 func ServesResponsesApi(provider *Provider) bool {
-	return provider.Type == "openai"
+	return provider.Type == "openai" || ProviderProtocol(provider) == ProtocolResponses
 }
 
 func containsString(values []string, value string) bool {
@@ -247,6 +261,9 @@ type Provider struct {
 	DisplayName string `xorm:"varchar(100)" json:"displayName"`
 	Type        string `xorm:"varchar(100)" json:"type"`
 	BaseUrl     string `xorm:"varchar(255)" json:"baseUrl"`
+	// Protocol is the wire format the upstream is talked to in, when it is not
+	// the one Type implies.
+	Protocol string `xorm:"varchar(100)" json:"protocol"`
 	// ApiKey holds base64 ciphertext, not the bare key, when
 	// "apiKeyEncryptionKey" is set in app.conf, hence the wider column.
 	ApiKey string `xorm:"varchar(1000)" json:"apiKey"`
@@ -357,6 +374,9 @@ func validateProvider(provider *Provider) error {
 
 	if !containsString(providerTypes, provider.Type) {
 		return fmt.Errorf("invalid provider type: %s", provider.Type)
+	}
+	if provider.Protocol != "" && !protocol.IsUpstream(provider.Protocol) {
+		return fmt.Errorf("the gateway cannot speak the %s API to a provider", provider.Protocol)
 	}
 	if !containsString(providerStatuses, provider.Status) {
 		return fmt.Errorf("invalid provider status: %s", provider.Status)

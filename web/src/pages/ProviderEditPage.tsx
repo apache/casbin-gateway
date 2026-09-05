@@ -30,7 +30,7 @@ import {CodeText, ResultScreen} from "@/components/shared/misc";
 import {NumberInput} from "@/components/shared/number-input";
 import {PageContainer, PageHeader, Section} from "@/components/shared/page-header";
 import {PasswordInput} from "@/components/shared/password-input";
-import {baseUrlOptions, providerTypeOptions} from "@/components/shared/brand-options";
+import {baseUrlOptions, providerTypeOptions, wireApiOptions} from "@/components/shared/brand-options";
 import {SearchSelect, SimpleSelect} from "@/components/shared/simple-select";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
@@ -39,9 +39,11 @@ import {
   authClient,
   baseUrlPlaceholder,
   providerProtocol,
+  providerWireApi,
   gatewayBaseUrl,
   localShell,
   usesClientAuth,
+  wireApiEndpoint,
 } from "@/lib/providers";
 import type {Provider, QuotaConfig} from "@/types";
 
@@ -97,11 +99,13 @@ function buildAnthropicUrl(baseUrl: string, endpoint: string) {
   return url.toString();
 }
 
-/** The upstream URL requests to a provider of this type end up at. */
-function buildUpstreamUrl(baseUrl: string, type: string) {
-  return providerProtocol(type) === "anthropic"
-    ? buildAnthropicUrl(baseUrl, "/v1/messages")
-    : buildOpenAiUrl(baseUrl, "/chat/completions");
+/** The upstream URL requests to this provider end up at. */
+function buildUpstreamUrl(provider: Provider) {
+  const wireApi = providerWireApi(provider);
+  const endpoint = wireApiEndpoint(wireApi);
+  return wireApi === "anthropic"
+    ? buildAnthropicUrl(provider.baseUrl, endpoint)
+    : buildOpenAiUrl(provider.baseUrl, endpoint);
 }
 
 export default function ProviderEditPage() {
@@ -164,7 +168,7 @@ export default function ProviderEditPage() {
     );
   }
 
-  const upstreamUrl = buildUpstreamUrl(provider.baseUrl, provider.type);
+  const upstreamUrl = buildUpstreamUrl(provider);
 
   return (
     <PageContainer>
@@ -215,6 +219,13 @@ export default function ProviderEditPage() {
             placeholder={baseUrlPlaceholder(provider.type)}
             options={baseUrlOptions(provider.type)}
             onChange={value => setField("baseUrl", value)}
+          />
+        </Field>
+        <Field label={i18next.t("provider:Upstream API")} hint={i18next.t("provider:Upstream API hint")}>
+          <SimpleSelect
+            value={provider.protocol ?? ""}
+            onChange={value => setField("protocol", value)}
+            options={wireApiOptions(i18next.t("provider:From the type"))}
           />
         </Field>
         <Field

@@ -20,18 +20,41 @@ export function providerIdOf(provider: Pick<Provider, "owner" | "name">) {
   return `${provider.owner}/${provider.name}`;
 }
 
-/** Mirrors object.ProviderProtocol on the server. */
+/** Mirrors object.ProviderApiFamily: the family a provider's base URL belongs to. */
 export function providerProtocol(type: string) {
   return type === "anthropic" ? "anthropic" : "openai";
+}
+
+/** The wire formats the gateway can talk to an upstream in. */
+export const wireApis = ["openai", "responses", "anthropic"] as const;
+
+/** Mirrors object.ProviderProtocol: the API the gateway posts to. */
+export function providerWireApi(provider: {type?: string; protocol?: string} | undefined) {
+  const named = provider?.protocol ?? "";
+  return wireApis.includes(named as (typeof wireApis)[number])
+    ? named
+    : providerProtocol(provider?.type ?? "");
+}
+
+/** The path one wire format is appended to the base URL as. */
+export function wireApiEndpoint(wireApi: string) {
+  switch (wireApi) {
+  case "anthropic":
+    return "/v1/messages";
+  case "responses":
+    return "/responses";
+  default:
+    return "/chat/completions";
+  }
 }
 
 /** Mirrors object.ProviderAuthProvider and object.ProviderAuthClient on the server. */
 export const authProvider = "provider";
 export const authClient = "client";
 
-/** Mirrors object.ServesResponsesApi: only OpenAI itself serves that API. */
-export function servesResponsesApi(provider: {type?: string} | undefined) {
-  return provider?.type === "openai";
+/** Mirrors object.ServesResponsesApi: OpenAI itself, and anything pointed at it. */
+export function servesResponsesApi(provider: {type?: string; protocol?: string} | undefined) {
+  return provider?.type === "openai" || providerWireApi(provider) === "responses";
 }
 
 /** Mirrors object.UsesClientAuth: whose credentials reach the upstream. */

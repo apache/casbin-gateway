@@ -106,11 +106,12 @@ func (route *proxyRoute) recordUsage(tail []byte) {
 	record.CacheWriteTokens = usage.CacheWriteTokens
 	record.CacheReadTokens = higher(usage.CacheReadInputTokens, usage.CachedTokens)
 
-	// OpenAI counts cached input inside prompt_tokens, Anthropic reports it
-	// beside input_tokens. Taking it out where it is included leaves the four
-	// counters disjoint, so each can be priced at its own rate.
+	// OpenAI counts cached input inside its prompt total, Anthropic reports it
+	// beside one. Only the OpenAI spellings fill CachedTokens, so taking it out
+	// where that is set leaves the four counters disjoint, each priced at its
+	// own rate.
 	record.PromptTokens = higher(usage.PromptTokens, usage.InputTokens)
-	if usage.PromptTokens > 0 && usage.CachedTokens > 0 {
+	if usage.CachedTokens > 0 {
 		record.PromptTokens = higher(record.PromptTokens-usage.CachedTokens, 0)
 	}
 
@@ -171,6 +172,13 @@ type llmUsage struct {
 	CompletionTokensDetails struct {
 		ReasoningTokens int `json:"reasoning_tokens"`
 	} `json:"completion_tokens_details"`
+	// The Responses API spells the same two details.
+	InputTokensDetails struct {
+		CachedTokens int `json:"cached_tokens"`
+	} `json:"input_tokens_details"`
+	OutputTokensDetails struct {
+		ReasoningTokens int `json:"reasoning_tokens"`
+	} `json:"output_tokens_details"`
 
 	// Flattened out of the detail objects above by normalize.
 	CachedTokens    int `json:"-"`
@@ -179,8 +187,8 @@ type llmUsage struct {
 
 // normalize lifts the nested counters up onto one flat set of fields.
 func (usage *llmUsage) normalize() {
-	usage.CachedTokens = usage.PromptTokensDetails.CachedTokens
-	usage.ReasoningTokens = usage.CompletionTokensDetails.ReasoningTokens
+	usage.CachedTokens = higher(usage.PromptTokensDetails.CachedTokens, usage.InputTokensDetails.CachedTokens)
+	usage.ReasoningTokens = higher(usage.CompletionTokensDetails.ReasoningTokens, usage.OutputTokensDetails.ReasoningTokens)
 	if usage.CacheWriteTokens == 0 {
 		usage.CacheWriteTokens = usage.CacheCreation.Ephemeral5m + usage.CacheCreation.Ephemeral1h
 	}

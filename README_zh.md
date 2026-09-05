@@ -259,6 +259,8 @@ export ANTHROPIC_AUTH_TOKEN="cg-..."
 
 同一个 base URL 会按 Agent 说的那套 API 应答：OpenAI 客户端走 `/chat/completions`，Anthropic 客户端走 `/v1/messages`，Codex 走 `/responses` —— 它去掉了 chat completions 这套线格式，只剩这一种，Gemini CLI 走 `/v1beta/models/<model>:generateContent` —— 它只会说 Google 自己那套 API。Provider 用的是哪套 API 不必与之相同：Gateway 会在这四套之间双向转换，流式回复也一样，所以 Codex 能跑在 DeepSeek、Kimi、Qwen 上，Claude Code 同样能跑在它们上面。如果 Provider 正好就说请求进来的那套 API，就原样转发，一个字节都不改。唯一由 Gateway 自己应答的是 Anthropic 和 Gemini 客户端每轮之前问的 token 数：绑定的 Provider 没有对应接口时，由 Gateway 估算。
 
+往上游发哪套接口由Provider自己定：**上游接口**默认按Provider类型推断，也可以设成Responses——OpenAI自己就服务这套，一部分中转站在`/responses`上算缓存也比在`/chat/completions`上准。这时Codex的请求两头都是Responses，原样透传，缓存计数一并保留。
+
 ### 没有 API Key：沿用 Agent 已有的登录
 
 用 ChatGPT 或 Claude 订阅登录的 Agent 根本没有 API Key 可填。把 Provider 的**认证方式**设成**调用方自己的登录**，它就不需要 Key：base URL 指向厂商，每个请求都带着 Agent 自己发来的凭据转发上游，Agent 继续用它已有的登录。**Models** 留空，这个 Provider 就接受任何模型名。

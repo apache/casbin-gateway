@@ -60,7 +60,7 @@ type probeReply struct {
 // finding here: the engines below decide what an unanswered question means,
 // which is not the same for all of them.
 func probeAsk(provider *Provider, model string, probe *ProviderProbe, probeCase *ProbeCase) *probeReply {
-	upstream := ProviderProtocol(provider)
+	upstream := ProviderApiFamily(provider)
 	answer, err := sendProbe(provider, probeAskBody(upstream, model, probeCase), false)
 	if err != nil {
 		return &probeReply{failure: auditutil.BoundString(err.Error(), probeErrorChars)}

@@ -54,6 +54,17 @@ export const protocolOptions: SelectOption[] = [
   vendorOption("anthropic", "Anthropic", "anthropic.com"),
 ];
 
+/** The Upstream API field of both provider forms, each API under the mark of
+ * the vendor that defined it. */
+export function wireApiOptions(fromType: string): SelectOption[] {
+  return [
+    brandOption("", fromType, <Settings2 className="size-4 opacity-50" />),
+    vendorOption("openai", "Chat Completions", "openai.com"),
+    vendorOption("responses", "Responses", "openai.com"),
+    vendorOption("anthropic", "Messages", "anthropic.com"),
+  ];
+}
+
 /** The Type field of both provider forms: two vendors and everything else. */
 export const providerTypeOptions: SelectOption[] = [
   ...protocolOptions,

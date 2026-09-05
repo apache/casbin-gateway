@@ -61,6 +61,8 @@ export interface Provider {
   models: string[];
   priority: number;
   baseUrl: string;
+  /** The wire format the upstream is talked to in, empty for the one the type implies. */
+  protocol?: string;
   apiKey: string;
   authMode: string;
   /** A site the vendor's icon is taken from, or an image URL. Empty derives it

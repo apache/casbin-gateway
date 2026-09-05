@@ -129,7 +129,7 @@ func checkAgentProtocol(agentId string, mode string, providerIds []string) error
 		if provider == nil {
 			continue
 		}
-		if spoken := object.ProviderProtocol(provider); spoken != spokenByAgent {
+		if spoken := object.ProviderApiFamily(provider); spoken != spokenByAgent {
 			return fmt.Errorf("%s speaks the %s API, but provider %s speaks %s: bind a provider that speaks %s, or route this agent through the gateway",
 				agentId, spokenByAgent, id, spoken, spokenByAgent)
 		}
@@ -157,7 +157,7 @@ func agentEndpoint(agentId string) (agentprovider.Endpoint, error) {
 	}
 
 	endpoint.Provider = provider.GetId()
-	endpoint.Protocol = object.ProviderProtocol(provider)
+	endpoint.Protocol = object.ProviderApiFamily(provider)
 	if len(provider.Models) > 0 {
 		endpoint.Model = provider.Models[0]
 		endpoint.Models = provider.Models

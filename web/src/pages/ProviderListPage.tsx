@@ -39,7 +39,7 @@ import {ErrorState} from "@/components/shared/empty-state";
 import {Field, FormDialog} from "@/components/shared/form-dialog";
 import {PageContainer, PageHeader} from "@/components/shared/page-header";
 import {PasswordInput} from "@/components/shared/password-input";
-import {baseUrlOptions, providerTypeOptions} from "@/components/shared/brand-options";
+import {baseUrlOptions, providerTypeOptions, wireApiOptions} from "@/components/shared/brand-options";
 import {SearchSelect, SimpleSelect} from "@/components/shared/simple-select";
 import {MessageAlert} from "@/components/ui/alert";
 import {Badge} from "@/components/ui/badge";
@@ -685,6 +685,13 @@ export default function ProviderListPage({account}: {account: Account}) {
                   />
                 </Field>
               )}
+              <Field label={i18next.t("provider:Upstream API")} hint={i18next.t("provider:Upstream API hint")}>
+                <SimpleSelect
+                  value={form.protocol ?? ""}
+                  onChange={value => setFormField("protocol", value)}
+                  options={wireApiOptions(i18next.t("provider:From the type"))}
+                />
+              </Field>
               <Field
                 label={i18next.t("provider:Authentication")}
                 hint={usesClientAuth(form) ? i18next.t("provider:Client auth hint") : undefined}

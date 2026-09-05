@@ -72,7 +72,7 @@ func runProviderProbe(provider *Provider, trigger string) *ProviderProbe {
 	}
 	probe.Model = model
 
-	cases := probeCasesFor(ProviderProtocol(provider), model)
+	cases := probeCasesFor(ProviderApiFamily(provider), model)
 	if len(cases) == 0 {
 		probe.Error = "no test case is enabled for this upstream API"
 		return probe
@@ -171,7 +171,7 @@ func sendProbe(provider *Provider, body map[string]any, stream bool) (*probeAnsw
 }
 
 func postProbe(provider *Provider, body map[string]any, stream bool) (*probeAnswer, error) {
-	upstream := ProviderProtocol(provider)
+	upstream := ProviderApiFamily(provider)
 	endpoint := "/chat/completions"
 	if upstream == ProtocolAnthropic {
 		endpoint = "/v1/messages"

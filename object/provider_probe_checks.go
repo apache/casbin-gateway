@@ -297,7 +297,7 @@ func probeToolCase(
 	probeCase *ProbeCase,
 	opening bool,
 ) (*probeBody, http.Header) {
-	upstream := ProviderProtocol(provider)
+	upstream := ProviderApiFamily(provider)
 	answer, err := sendProbe(provider, probeToolBody(upstream, model, probeCase), false)
 	if err != nil || !answer.ok() {
 		reason := ""
@@ -626,7 +626,7 @@ func probeStreamBody(upstream string, model string, probeCase *ProbeCase) map[st
 }
 
 func probeStreamShape(provider *Provider, model string, probe *ProviderProbe, probeCase *ProbeCase) {
-	upstream := ProviderProtocol(provider)
+	upstream := ProviderApiFamily(provider)
 	answer, err := sendProbe(provider, probeStreamBody(upstream, model, probeCase), true)
 	if err != nil || !answer.ok() {
 		probe.addCheck(checkOf(probeCase, LlmAuditUnknown))
@@ -861,7 +861,7 @@ func probeCachePairOf(
 	probe *ProviderProbe,
 	probeCase *ProbeCase,
 ) probeCachePair {
-	upstream := ProviderProtocol(provider)
+	upstream := ProviderApiFamily(provider)
 	filler := probeFiller(probeCase.Params.FillerChars)
 	prompt := firstString(probeCase.Params.Prompt, probeCachePrompt)
 	limit := firstInt(probeCase.Params.MaxTokens, probeCacheMaxTokens)

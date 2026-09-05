@@ -29,8 +29,8 @@ import (
 const (
 	OpenAi    = "openai"
 	Anthropic = "anthropic"
-	// Responses is the OpenAI Responses API, which recent Codex versions speak.
-	// No provider type serves it, so it is a client format only.
+	// Responses is the OpenAI Responses API, which recent Codex versions speak
+	// and which OpenAI itself and some relays serve upstream.
 	Responses = "responses"
 	// Gemini is Google's generateContent API, which the Gemini CLI speaks. Like
 	// Responses it is a client format only: a Gemini provider is reached through
@@ -92,6 +92,12 @@ func register(codec Codec) {
 // Of is the codec for a client format, nil for one the gateway does not speak.
 func Of(name string) Codec {
 	return codecs[name]
+}
+
+// IsUpstream reports whether a provider can be talked to in this format.
+func IsUpstream(name string) bool {
+	_, ok := upstreams[name]
+	return ok
 }
 
 // UpstreamOf is the codec for a provider format.

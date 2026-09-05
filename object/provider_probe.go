@@ -447,7 +447,7 @@ func newProviderProbe(provider *Provider, trigger string) *ProviderProbe {
 		Provider:      provider.GetId(),
 		CreatedTime:   util.GetCurrentTime(),
 		Trigger:       trigger,
-		Protocol:      ProviderProtocol(provider),
+		Protocol:      ProviderApiFamily(provider),
 		VendorHeaders: []string{},
 		Checks:        []ProbeCheck{},
 	}
