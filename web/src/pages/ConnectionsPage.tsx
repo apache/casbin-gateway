@@ -324,8 +324,9 @@ function ConnectDialog({
     ConnectorBackend.connect({owner: account.name, name: entry.id, credentials: credentials, agents: agents})
       .then(response => {
         if (response.status === "ok") {
-          Setting.showMessage("success", i18next.t("connector:Connected"));
+          Setting.showMessage("success", i18next.t("connector:Testing in background"));
           onDone();
+          window.setTimeout(onDone, 12000);
         } else {
           Setting.showMessage("error", response.msg ?? "");
         }
@@ -439,6 +440,9 @@ function ConnectDialog({
               {testing ? i18next.t("connector:Testing") : i18next.t("connector:Run test")}
             </Button>
             <div className="min-w-0 flex-1 pt-1.5 text-sm">
+              {!testing && !probe.error && !probe.tools ? (
+                <span className="text-muted-foreground">{i18next.t("connector:Never tested")}</span>
+              ) : null}
               {probe.error ? (
                 <span className="text-destructive break-words">{probe.error}</span>
               ) : probe.tools ? (
@@ -447,6 +451,11 @@ function ConnectDialog({
                     .t("connector:Test result")
                     .replace("{server}", probe.server || entry.server.name)
                     .replace("{count}", `${probe.tools.length}`)}
+                </span>
+              ) : null}
+              {!testing && entry.probedTime && !probe.error ? (
+                <span className="text-muted-foreground ml-2 text-xs">
+                  {i18next.t("connector:Last tested").replace("{time}", new Date(entry.probedTime).toLocaleString())}
                 </span>
               ) : null}
             </div>

@@ -30,6 +30,7 @@ import (
 	"github.com/apache/casbin-gateway/connector"
 	"github.com/apache/casbin-gateway/mcpproxy"
 	"github.com/apache/casbin-gateway/object"
+	"github.com/beego/beego"
 )
 
 // ConnectorEntry is one catalog card: the connector itself, plus whether this
@@ -198,6 +199,17 @@ func (c *ApiController) Connect() {
 		c.ResponseError(err.Error())
 		return
 	}
+
+	// Testing here rather than waiting to be asked is what gives a connection
+	// its per-tool switches from the moment it is made. It runs beside the
+	// answer because installing a server from npm takes longer than anybody
+	// would wait on this button, and its result is read from the row later.
+	go func(owner string, name string) {
+		if _, err := object.TestConnection(owner, name); err != nil {
+			beego.Error("testing connection", name, "after connecting failed:", err)
+		}
+	}(form.Owner, form.Name)
+
 	c.ResponseOk(planned)
 }
 

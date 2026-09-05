@@ -22,6 +22,7 @@ import type {ImportChange, ImportReport, Snapshot, SnapshotCounts, SnapshotScope
 /** The sections a snapshot is made of, in the order they are worth reading. */
 export const SNAPSHOT_SECTIONS = [
   {key: "providers", label: "setting:Providers"},
+  {key: "connections", label: "connector:Connections"},
   {key: "agents", label: "setting:Agent routing"},
   {key: "probeCases", label: "setting:Probe cases"},
   {key: "llmPrices", label: "setting:Model prices"},
@@ -32,6 +33,7 @@ export type SnapshotSection = (typeof SNAPSHOT_SECTIONS)[number]["key"];
 
 export const FULL_SCOPE: SnapshotScope = {
   providers: true,
+  connections: true,
   agents: true,
   probeCases: true,
   llmPrices: true,
@@ -124,6 +126,7 @@ export function countsOf(snapshot: Snapshot | null): SnapshotCounts {
   const length = (section: string) => (snapshot?.[section] as unknown[] | undefined)?.length ?? 0;
   return {
     providers: length("providers"),
+    connections: length("connections"),
     agents: length("agents"),
     agentInstances: length("agentInstances"),
     probeCases: length("probeCases"),

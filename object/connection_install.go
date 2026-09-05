@@ -65,7 +65,8 @@ func InstallConnection(connection *Connection, agentIds []string) ([]*agentconfi
 		planned = append(planned, items...)
 	}
 
-	planned = append(planned, removeFrom(connection, found.Server.Name, dropped(connection.Agents, agentIds))...)
+	letGo := dropped(connection.Agents, agentIds)
+	planned = append(planned, removeFrom(connection, found.Server.Name, letGo)...)
 
 	connection.Agents = installed(planned, agentIds)
 	// Remembering which Gateway the entries name is what lets a later start
@@ -79,6 +80,7 @@ func InstallConnection(connection *Connection, agentIds []string) ([]*agentconfi
 	if err := SaveConnection(connection); err != nil {
 		return nil, err
 	}
+	revokeUnusedTokens(connection.Owner, letGo)
 	return planned, nil
 }
 
@@ -139,7 +141,39 @@ func UninstallConnection(owner string, name string) ([]*agentconfig.PlanItem, er
 	if err := DeleteConnection(owner, name); err != nil {
 		return nil, err
 	}
+	revokeUnusedTokens(owner, connection.Agents)
 	return planned, nil
+}
+
+// revokeUnusedTokens gives back the loopback credential of every agent this
+// owner no longer reaches any connection from. The credential is issued per
+// agent rather than per connection, so it can only go when the last connection
+// in that agent does; leaving it would be a live token nothing holds.
+//
+// It is not the credential an agent's monitoring uses: that one is issued
+// against the installation's path, and this one against no path at all, so they
+// are separate entries and revoking here leaves monitoring alone.
+func revokeUnusedTokens(owner string, agentIds []string) {
+	if len(agentIds) == 0 {
+		return
+	}
+	connections, err := GetConnections(owner)
+	if err != nil {
+		return
+	}
+
+	remaining := map[string]bool{}
+	for _, connection := range connections {
+		for _, agentId := range connection.Agents {
+			remaining[agentId] = true
+		}
+	}
+	for _, agentId := range agentIds {
+		if remaining[agentId] {
+			continue
+		}
+		_ = agentpatch.RevokeIngestToken(agentpatch.Target{AgentId: agentId, Owner: owner})
+	}
 }
 
 // ResolveConnection is what the proxy asks for when an agent starts it: the

@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/apache/casbin-gateway/connector"
 	"github.com/apache/casbin-gateway/util"
 	"github.com/apache/casbin-gateway/version"
 )
@@ -30,11 +31,12 @@ const SnapshotVersion = 1
 // The sections a snapshot is made of. They are named rather than positional
 // because a snapshot is often taken, and restored, one section at a time.
 const (
-	SectionProviders  = "providers"
-	SectionAgents     = "agents"
-	SectionProbeCases = "probeCases"
-	SectionLlmPrices  = "llmPrices"
-	SectionSetting    = "setting"
+	SectionProviders   = "providers"
+	SectionConnections = "connections"
+	SectionAgents      = "agents"
+	SectionProbeCases  = "probeCases"
+	SectionLlmPrices   = "llmPrices"
+	SectionSetting     = "setting"
 )
 
 // How an import treats a row that is already there.
@@ -62,12 +64,17 @@ const (
 // SnapshotScope is which sections a snapshot carries, and whether the
 // credentials inside them come with it.
 type SnapshotScope struct {
-	Providers  bool `json:"providers"`
-	Agents     bool `json:"agents"`
-	ProbeCases bool `json:"probeCases"`
-	LlmPrices  bool `json:"llmPrices"`
-	Setting    bool `json:"setting"`
-	// Secrets carries the provider API keys and the secret half of the settings.
+	Providers bool `json:"providers"`
+	// Connections are the applications this machine is connected to. They are
+	// their own section rather than part of the agents, because a connection
+	// belongs to the account and only names the agents it was written into.
+	Connections bool `json:"connections"`
+	Agents      bool `json:"agents"`
+	ProbeCases  bool `json:"probeCases"`
+	LlmPrices   bool `json:"llmPrices"`
+	Setting     bool `json:"setting"`
+	// Secrets carries the provider API keys, the credentials of every
+	// connection, and the secret half of the settings.
 	// A snapshot without them describes a configuration that cannot yet serve
 	// traffic: every key has to be typed again on the machine it lands on.
 	Secrets bool `json:"secrets"`
@@ -76,11 +83,15 @@ type SnapshotScope struct {
 // FullScope is everything, which is what a backup takes: a backup that leaves
 // the keys out is not one anybody can restore from.
 func FullScope() SnapshotScope {
-	return SnapshotScope{Providers: true, Agents: true, ProbeCases: true, LlmPrices: true, Setting: true, Secrets: true}
+	return SnapshotScope{
+		Providers: true, Connections: true, Agents: true,
+		ProbeCases: true, LlmPrices: true, Setting: true, Secrets: true,
+	}
 }
 
 func (scope SnapshotScope) isEmpty() bool {
-	return !scope.Providers && !scope.Agents && !scope.ProbeCases && !scope.LlmPrices && !scope.Setting
+	return !scope.Providers && !scope.Connections && !scope.Agents &&
+		!scope.ProbeCases && !scope.LlmPrices && !scope.Setting
 }
 
 // Snapshot is the whole document, and the file an export downloads. It holds
@@ -101,6 +112,7 @@ type Snapshot struct {
 	Setting *Setting      `json:"setting,omitempty"`
 
 	Providers      []*Provider      `json:"providers,omitempty"`
+	Connections    []*Connection    `json:"connections,omitempty"`
 	Agents         []*Agent         `json:"agents,omitempty"`
 	AgentInstances []*AgentInstance `json:"agentInstances,omitempty"`
 	// AgentPermissions travel with the agents: what an agent is allowed to ask
@@ -114,6 +126,7 @@ type Snapshot struct {
 // without reading the whole file back to the browser.
 type SnapshotCounts struct {
 	Providers      int `json:"providers"`
+	Connections    int `json:"connections"`
 	Agents         int `json:"agents"`
 	AgentInstances int `json:"agentInstances"`
 	ProbeCases     int `json:"probeCases"`
@@ -124,6 +137,7 @@ type SnapshotCounts struct {
 func (snapshot *Snapshot) Counts() SnapshotCounts {
 	counts := SnapshotCounts{
 		Providers:      len(snapshot.Providers),
+		Connections:    len(snapshot.Connections),
 		Agents:         len(snapshot.Agents),
 		AgentInstances: len(snapshot.AgentInstances),
 		ProbeCases:     len(snapshot.ProbeCases),
@@ -201,6 +215,14 @@ func BuildSnapshot(scope SnapshotScope, reason string) (*Snapshot, error) {
 		snapshot.Providers = providers
 	}
 
+	if scope.Connections {
+		connections, err := getAllConnections()
+		if err != nil {
+			return nil, err
+		}
+		snapshot.Connections = connections
+	}
+
 	if scope.Agents {
 		agents, err := GetAgents()
 		if err != nil {
@@ -269,6 +291,16 @@ func redactSnapshot(snapshot *Snapshot) {
 		}
 	}
 
+	for _, connection := range snapshot.Connections {
+		found, ok := connector.Get(connection.Name)
+		if !ok {
+			continue
+		}
+		for _, key := range found.SecretKeys() {
+			delete(connection.Credentials, key)
+		}
+	}
+
 	if snapshot.Setting != nil {
 		snapshot.Setting.ApiKeyEncryptionKey = ""
 		snapshot.Setting.ClientSecret = ""
@@ -309,6 +341,12 @@ func ImportSnapshot(snapshot *Snapshot, scope SnapshotScope, mode string, dryRun
 	// arrives with its provider in the same snapshot resolves on the first pass.
 	if scope.Agents && snapshot.Scope.Agents {
 		if err := importAgents(snapshot, mode, dryRun, report); err != nil {
+			return nil, err
+		}
+	}
+	// Connections name the agents they were written into, so they follow them.
+	if scope.Connections && snapshot.Scope.Connections {
+		if err := importConnections(snapshot, mode, dryRun, report); err != nil {
 			return nil, err
 		}
 	}
@@ -407,6 +445,114 @@ func importProviders(snapshot *Snapshot, mode string, dryRun bool, report *Impor
 		report.record(SectionProviders, id, ChangeDelete, "")
 	}
 	return nil
+}
+
+// importConnections writes the connections a snapshot carries. Nothing is
+// written into an agent's own configuration here: the row keeps the agents it
+// names but forgets which Gateway wrote it, so EnsureConnectionsCurrent puts the
+// entries in with this machine's port and executable the next time the agents
+// are listed. That is also what makes a snapshot restorable onto a machine
+// whose Gateway lives somewhere else entirely.
+func importConnections(snapshot *Snapshot, mode string, dryRun bool, report *ImportReport) error {
+	stored, err := getAllConnections()
+	if err != nil {
+		return err
+	}
+
+	existing := map[string]*Connection{}
+	for _, connection := range stored {
+		existing[connection.GetId()] = connection
+	}
+
+	named := map[string]bool{}
+	for _, incoming := range snapshot.Connections {
+		connection := *incoming
+		id := connection.GetId()
+		named[id] = true
+
+		current, found := existing[id]
+		if found && mode == ImportMerge {
+			report.record(SectionConnections, id, ChangeSkip, "this application is already connected here")
+			continue
+		}
+		if _, known := connector.Get(connection.Name); !known {
+			report.record(SectionConnections, id, ChangeSkip, "this Gateway has no connector by that name")
+			continue
+		}
+
+		change := ChangeAdd
+		if found {
+			change = ChangeUpdate
+		}
+		if dryRun {
+			report.record(SectionConnections, id, change, credentiallessDetail(&connection))
+			continue
+		}
+
+		connection.Credentials = keptCredentials(&connection, current)
+		// The entries are written again from here, not carried over from
+		// wherever this snapshot was taken.
+		connection.Endpoint, connection.Executable = "", ""
+		detail := credentiallessDetail(&connection)
+		if err := saveWithoutRendering(&connection); err != nil {
+			report.record(SectionConnections, id, ChangeFail, err.Error())
+			continue
+		}
+		report.record(SectionConnections, id, change, detail)
+	}
+
+	if mode != ImportReplace {
+		return nil
+	}
+
+	for _, connection := range stored {
+		id := connection.GetId()
+		if named[id] {
+			continue
+		}
+		if dryRun {
+			report.record(SectionConnections, id, ChangeDelete, "")
+			continue
+		}
+		if _, err := UninstallConnection(connection.Owner, connection.Name); err != nil {
+			report.record(SectionConnections, id, ChangeFail, err.Error())
+			continue
+		}
+		report.record(SectionConnections, id, ChangeDelete, "")
+	}
+	return nil
+}
+
+// keptCredentials layers what the snapshot carries over what is already stored.
+// A snapshot taken without secrets carries none, and that means "leave them
+// alone" rather than "clear them", the same way an empty provider key does.
+func keptCredentials(incoming *Connection, current *Connection) map[string]string {
+	credentials := map[string]string{}
+	if current != nil {
+		for key, value := range current.Credentials {
+			credentials[key] = value
+		}
+	}
+	for key, value := range incoming.Credentials {
+		if value == "" {
+			continue
+		}
+		credentials[key] = value
+	}
+	return credentials
+}
+
+// credentiallessDetail marks a connection that arrives unusable, which is the
+// one thing somebody has to finish by hand after importing a redacted snapshot.
+func credentiallessDetail(connection *Connection) string {
+	found, ok := connector.Get(connection.Name)
+	if !ok {
+		return ""
+	}
+	if _, err := found.Render(connection.Credentials); err != nil {
+		return "the snapshot carries no credentials for it"
+	}
+	return ""
 }
 
 // keylessDetail marks a provider that arrives with no key, which is the one

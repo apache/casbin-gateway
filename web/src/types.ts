@@ -944,6 +944,7 @@ export type BackupMode = "auto" | "off";
  *  come with it. */
 export interface SnapshotScope {
   providers: boolean;
+  connections: boolean;
   agents: boolean;
   probeCases: boolean;
   llmPrices: boolean;
@@ -953,6 +954,7 @@ export interface SnapshotScope {
 
 export interface SnapshotCounts {
   providers: number;
+  connections: number;
   agents: number;
   agentInstances: number;
   probeCases: number;
