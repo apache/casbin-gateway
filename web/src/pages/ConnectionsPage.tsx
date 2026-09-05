@@ -14,7 +14,7 @@
 
 import * as React from "react";
 import {useSearchParams} from "react-router-dom";
-import {ExternalLink, Plug} from "lucide-react";
+import {ExternalLink, Plug, Search, TriangleAlert} from "lucide-react";
 import i18next from "i18next";
 
 import * as Setting from "@/Setting";
@@ -29,7 +29,14 @@ import {Card, CardContent} from "@/components/ui/card";
 import {Input} from "@/components/ui/input";
 import {connectorText as text} from "@/lib/connectors";
 import {cn} from "@/lib/utils";
-import type {Account, ConnectorCatalog, ConnectorEntry, ConnectorTarget, ConnectorTool} from "@/types";
+import type {
+  Account,
+  ConnectorCatalog,
+  ConnectorEntry,
+  ConnectorTarget,
+  ConnectorTool,
+  OrphanConnection,
+} from "@/types";
 
 const CREDENTIAL_MASK = "***";
 
@@ -59,6 +66,7 @@ export default function ConnectionsPage({account}: {account: Account}) {
   const [catalog, setCatalog] = React.useState<ConnectorCatalog | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [category, setCategory] = React.useState("");
+  const [query, setQuery] = React.useState("");
   const [editing, setEditing] = React.useState<ConnectorEntry | null>(null);
   // An "add this to Gateway" link lands here naming one application, and what
   // it asks for is this dialog rather than anything written on its behalf.
@@ -106,8 +114,22 @@ export default function ConnectionsPage({account}: {account: Account}) {
   }
 
   const connectors = catalog?.connectors ?? [];
-  const shown = category === "" ? connectors : connectors.filter(entry => entry.category === category);
   const categories = (catalog?.categories ?? []).filter(name => connectors.some(entry => entry.category === name));
+  // The search reads the wording actually on the card, so what somebody types
+  // after seeing it finds it again whichever language the page is in.
+  const needle = query.trim().toLowerCase();
+  const shown = connectors.filter(entry => {
+    if (category !== "" && entry.category !== category) {
+      return false;
+    }
+    if (needle === "") {
+      return true;
+    }
+    return [entry.id, text(entry.displayName), text(entry.description)]
+      .join(" ")
+      .toLowerCase()
+      .includes(needle);
+  });
 
   return (
     <PageContainer>
@@ -121,12 +143,33 @@ export default function ConnectionsPage({account}: {account: Account}) {
         {categories.map(name => (
           <FilterChip key={name} active={category === name} onClick={() => setCategory(name)}>
             {i18next.t(categoryLabels[name] ?? name)}
+            <span className="text-muted-foreground ml-1.5 text-xs">
+              {connectors.filter(entry => entry.category === name).length}
+            </span>
           </FilterChip>
         ))}
+
+        <div className="relative ml-auto w-full sm:w-56">
+          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+          <Input
+            value={query}
+            onChange={event => setQuery(event.target.value)}
+            placeholder={i18next.t("connector:Search applications")}
+            className="h-9 pl-8"
+          />
+        </div>
       </div>
+
+      {(catalog?.orphans ?? []).map(orphan => (
+        <OrphanRow key={orphan.name} account={account} orphan={orphan} onDone={reload} />
+      ))}
 
       {loading && connectors.length === 0 ? (
         <p className="text-muted-foreground text-sm">{i18next.t("general:Loading")}</p>
+      ) : shown.length === 0 ? (
+        <p className="text-muted-foreground text-sm">
+          {i18next.t("connector:Nothing matches").replace("{query}", query.trim())}
+        </p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           {shown.map(entry => (
@@ -148,6 +191,55 @@ export default function ConnectionsPage({account}: {account: Account}) {
         />
       ) : null}
     </PageContainer>
+  );
+}
+
+/**
+ * A connection whose connector went away with a release. It is not a card: there
+ * is nothing to fill in and nothing to test, only an entry still sitting in some
+ * agents and a credential still stored here, both of which disconnecting undoes.
+ */
+function OrphanRow({
+  account,
+  orphan,
+  onDone,
+}: {
+  account: Account;
+  orphan: OrphanConnection;
+  onDone: () => void;
+}) {
+  const [busy, setBusy] = React.useState(false);
+
+  const remove = () => {
+    setBusy(true);
+    ConnectorBackend.disconnect(account.name, orphan.name)
+      .then(response => {
+        if (response.status === "ok") {
+          Setting.showMessage("success", i18next.t("connector:Disconnected"));
+          onDone();
+        } else {
+          Setting.showMessage("error", response.msg ?? "");
+        }
+      })
+      .catch(error => Setting.showMessage("error", error.message))
+      .finally(() => setBusy(false));
+  };
+
+  return (
+    <div className="border-destructive/40 bg-destructive/5 flex items-center gap-3 rounded-xl border p-4">
+      <TriangleAlert className="text-destructive size-5 shrink-0" />
+      <div className="min-w-0 flex-1 text-sm">
+        <div className="font-medium">
+          {i18next.t("connector:Orphan connection").replace("{name}", orphan.name)}
+        </div>
+        <p className="text-muted-foreground">
+          {i18next.t("connector:Orphan hint").replace("{count}", `${orphan.agents.length}`)}
+        </p>
+      </div>
+      <Button variant="outline" onClick={remove} disabled={busy}>
+        {i18next.t("connector:Disconnect")}
+      </Button>
+    </div>
   );
 }
 

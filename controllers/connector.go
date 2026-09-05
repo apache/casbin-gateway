@@ -64,6 +64,18 @@ type ConnectorCatalog struct {
 	Connectors []*ConnectorEntry  `json:"connectors"`
 	Categories []string           `json:"categories"`
 	Targets    []*ConnectorTarget `json:"targets"`
+	// Orphans are connections whose connector this build no longer has, after a
+	// release dropped one. There is no card to draw for them and nothing left to
+	// edit, but they are still written into agents, so the page has to be able
+	// to show them and take them away.
+	Orphans []*OrphanConnection `json:"orphans"`
+}
+
+// OrphanConnection is one of those, with only what it takes to say which it is
+// and undo it.
+type OrphanConnection struct {
+	Name   string   `json:"name"`
+	Agents []string `json:"agents"`
 }
 
 // GetConnectors lists the whole catalog with each entry's connection state, the
@@ -99,12 +111,24 @@ func (c *ApiController) GetConnectors() {
 		entries = append(entries, entry)
 	}
 
+	orphans := []*OrphanConnection{}
+	for _, connection := range connections {
+		if connection.Orphaned() {
+			orphans = append(orphans, &OrphanConnection{Name: connection.Name, Agents: connection.Agents})
+		}
+	}
+
 	targets, err := connectorTargets()
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
 	}
-	c.ResponseOk(&ConnectorCatalog{Connectors: entries, Categories: connector.Categories(), Targets: targets})
+	c.ResponseOk(&ConnectorCatalog{
+		Connectors: entries,
+		Categories: connector.Categories(),
+		Targets:    targets,
+		Orphans:    orphans,
+	})
 }
 
 // connectorTargets is every installation found on this machine whose MCP

@@ -69,6 +69,7 @@ func InstallConnection(connection *Connection, agentIds []string) ([]*agentconfi
 	planned = append(planned, removeFrom(connection, found.Server.Name, letGo)...)
 
 	connection.Agents = installed(planned, agentIds)
+	connection.EntryName = found.Server.Name
 	// Remembering which Gateway the entries name is what lets a later start
 	// notice that they are stale, see EnsureConnectionsCurrent.
 	if executable, err := agentpatch.GatewayExecutable(); err == nil {
@@ -132,12 +133,8 @@ func UninstallConnection(owner string, name string) ([]*agentconfig.PlanItem, er
 	if err != nil || connection == nil {
 		return nil, err
 	}
-	found, ok := connector.Get(name)
-	if !ok {
-		return nil, fmt.Errorf("no connector named %q", name)
-	}
 
-	planned := removeFrom(connection, found.Server.Name, connection.Agents)
+	planned := removeFrom(connection, entryNameOf(connection), connection.Agents)
 	if err := DeleteConnection(owner, name); err != nil {
 		return nil, err
 	}
@@ -289,6 +286,12 @@ func EnsureConnectionsCurrent() error {
 		if connection.Endpoint == gatewayUrl && connection.Executable == executable {
 			continue
 		}
+		// A connector this build no longer has cannot be written again: there
+		// is no server to write. Saying so once a listing would be noise, so it
+		// is left for the page to show as an orphan the operator can disconnect.
+		if connection.Orphaned() {
+			continue
+		}
 		if _, err := InstallConnection(connection, connection.Agents); err != nil {
 			failed = fmt.Errorf("connection %s: %w", connection.GetId(), err)
 		}
@@ -339,4 +342,18 @@ func recordProbe(connection *Connection, result *mcpproxy.ProbeResult, failure e
 		return err
 	}
 	return failure
+}
+
+// entryNameOf is what this connection is called inside an agent's own
+// configuration. Rows written before EntryName was recorded fall back to the
+// catalogue, and then to the connection's own name, which is what the entry was
+// called for every connector whose server is named after it.
+func entryNameOf(connection *Connection) string {
+	if connection.EntryName != "" {
+		return connection.EntryName
+	}
+	if found, ok := connector.Get(connection.Name); ok {
+		return found.Server.Name
+	}
+	return connection.Name
 }

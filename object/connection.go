@@ -47,6 +47,11 @@ type Connection struct {
 	Credentials map[string]string `xorm:"mediumtext json" json:"credentials"`
 	// Agents is every agent id this connection's MCP server was written into.
 	Agents []string `xorm:"mediumtext json" json:"agents"`
+	// EntryName is what the server is called inside those agents' own
+	// configuration files. It is kept here rather than looked up, because a
+	// connector dropped from the catalogue in a later release would otherwise
+	// leave a connection nobody can take back out of the agents it reached.
+	EntryName string `xorm:"varchar(200)" json:"entryName"`
 	// Endpoint and Executable are the Gateway the written entries name. A
 	// Gateway whose port changed, or that moved on disk, leaves every one of
 	// those entries starting a program that is not there or reporting to a port
@@ -121,22 +126,39 @@ func decryptConnection(connection *Connection) {
 // Masked is a copy safe to send to the browser: every secret field is replaced
 // by ApiKeyMask, so a stored credential never leaves this process.
 func (connection *Connection) Masked() *Connection {
-	found, ok := connector.Get(connection.Name)
-	if !ok {
-		return connection
-	}
-
 	masked := *connection
 	masked.Credentials = map[string]string{}
 	for key, value := range connection.Credentials {
 		masked.Credentials[key] = value
 	}
+
+	found, ok := connector.Get(connection.Name)
+	if !ok {
+		// Nothing left says which of these are secret, so every one of them is
+		// treated as one. A connector dropped from the catalogue must not be
+		// the thing that hands a stored credential to the browser.
+		for key, value := range masked.Credentials {
+			if value != "" {
+				masked.Credentials[key] = ApiKeyMask
+			}
+		}
+		return &masked
+	}
+
 	for _, key := range found.SecretKeys() {
 		if masked.Credentials[key] != "" {
 			masked.Credentials[key] = ApiKeyMask
 		}
 	}
 	return &masked
+}
+
+// Orphaned reports a connection whose connector this build no longer has. It
+// can still be disconnected, which is what EntryName is kept for; nothing else
+// can be done with it.
+func (connection *Connection) Orphaned() bool {
+	_, ok := connector.Get(connection.Name)
+	return !ok
 }
 
 func GetConnections(owner string) ([]*Connection, error) {

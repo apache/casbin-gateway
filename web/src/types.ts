@@ -1612,6 +1612,18 @@ export interface ConnectorCatalog {
   connectors: ConnectorEntry[];
   categories: string[];
   targets: ConnectorTarget[];
+  /** Connections whose connector this build no longer has. */
+  orphans: OrphanConnection[];
+}
+
+/**
+ * A connection left behind when a release dropped its connector. Nothing about
+ * it can be edited; it is shown so it can be taken back out of the agents it
+ * was written into.
+ */
+export interface OrphanConnection {
+  name: string;
+  agents: string[];
 }
 
 export interface ConnectRequest {
