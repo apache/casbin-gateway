@@ -938,6 +938,30 @@ export interface Setting {
   cloudSyncOptions: string;
 }
 
+/** One upstream the proxy test fetched. `restricted` marks the one a blocked
+ *  network cannot reach on its own, so reaching it says the proxy gets out. */
+export interface ProxyCheckTarget {
+  name: string;
+  url: string;
+  restricted?: boolean;
+  ok: boolean;
+  status?: number;
+  millis: number;
+  error?: string;
+}
+
+/** What one test of the outbound proxy found. */
+export interface ProxyCheck {
+  address: string;
+  dialed: boolean;
+  dialMillis: number;
+  dialError?: string;
+  exitIp?: string;
+  exitCountry?: string;
+  /** Absent when the proxy port itself did not answer. */
+  targets?: ProxyCheckTarget[];
+}
+
 export type BackupMode = "auto" | "off";
 
 /** Which sections a snapshot carries, and whether the credentials inside them

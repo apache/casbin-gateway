@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import {request} from "@/backend/request";
-import type {Setting} from "@/types";
+import type {ProxyCheck, Setting} from "@/types";
 
 export function getSetting() {
   return request<Setting>("/api/get-setting");
@@ -21,4 +21,9 @@ export function getSetting() {
 
 export function updateSetting(setting: Setting) {
   return request<Setting>("/api/update-setting", "POST", setting);
+}
+
+/** Tries the outbound proxy, the address as typed rather than as stored. */
+export function testOutboundProxy(address: string) {
+  return request<ProxyCheck>("/api/test-outbound-proxy", "POST", {address: address});
 }

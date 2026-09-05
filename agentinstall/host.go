@@ -43,7 +43,13 @@ func launcherOf(installation agent.Installation) string {
 // it, so it needs a shell rather than an argument list.
 func shellCommand(script string) (string, []string) {
 	if runtime.GOOS == "windows" {
-		program := lookup("powershell")
+		// PowerShell 7 first: Windows PowerShell reads no proxy from its
+		// environment, so a vendor script run under it would download direct
+		// however the Settings page is filled in.
+		program := lookup("pwsh")
+		if program == "" {
+			program = lookup("powershell")
+		}
 		if program == "" {
 			return "", nil
 		}

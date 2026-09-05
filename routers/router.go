@@ -43,6 +43,7 @@ func initAPI() {
 	beego.Router("/api/get-update-status", &controllers.ApiController{}, "GET:GetUpdateStatus")
 	beego.Router("/api/get-setting", &controllers.ApiController{}, "GET:GetSetting")
 	beego.Router("/api/update-setting", &controllers.ApiController{}, "POST:UpdateSetting")
+	beego.Router("/api/test-outbound-proxy", &controllers.ApiController{}, "POST:TestOutboundProxy")
 	beego.Router("/api/get-autostart", &controllers.ApiController{}, "GET:GetAutostart")
 	beego.Router("/api/update-autostart", &controllers.ApiController{}, "POST:UpdateAutostart")
 

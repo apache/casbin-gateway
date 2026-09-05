@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/apache/casbin-gateway/agent"
+	"github.com/apache/casbin-gateway/proxy"
 )
 
 const (
@@ -144,6 +145,9 @@ func run(started *job, plan Plan) {
 	// Nothing is attached to the input, so a manager that asks a question would
 	// hang until the timeout. These say to answer none.
 	cmd.Env = append(os.Environ(), "CI=1", "NO_COLOR=1", "npm_config_yes=true", "HOMEBREW_NO_AUTO_UPDATE=1")
+	// A manager downloads through its own network stack, not Gateway's, so the
+	// configured proxy has to be handed to it.
+	cmd.Env = append(cmd.Env, proxy.Env()...)
 	// An uninstaller with no silent switch, and the consent prompt Windows
 	// raises for a machine-wide change, both need to be on screen: hiding them
 	// would leave the job waiting on a dialog nobody can answer.

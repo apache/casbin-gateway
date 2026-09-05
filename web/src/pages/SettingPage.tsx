@@ -21,6 +21,7 @@ import * as Setting from "@/Setting";
 import {BackupPanel} from "@/components/settings/backup-panel";
 import {CloudSyncPanel} from "@/components/settings/cloud-sync-panel";
 import {ImportExportPanel} from "@/components/settings/import-export-panel";
+import {ProxyField} from "@/components/settings/proxy-field";
 import {StartupPanel} from "@/components/settings/startup-panel";
 import {Field} from "@/components/shared/form-dialog";
 import {Loading} from "@/components/shared/loading";
@@ -220,7 +221,7 @@ export default function SettingPage({account}: {account: Account}) {
       </Section>
 
       <Section id="network" columns={2} title={i18next.t("setting:Network")}>
-        {textField("httpProxy", i18next.t("setting:Outbound SOCKS5 proxy"), i18next.t("setting:Outbound SOCKS5 proxy hint"))}
+        <ProxyField value={setting.httpProxy} onChange={value => updateField("httpProxy", value)} />
         {textField("allowedHosts", i18next.t("setting:Allowed hosts"), i18next.t("setting:Allowed hosts hint"))}
         {textField("allowedOrigins", i18next.t("setting:Allowed origins"), i18next.t("setting:Allowed origins hint"))}
       </Section>

@@ -90,6 +90,34 @@ func (c *ApiController) UpdateSetting() {
 	c.ResponseOk(setting)
 }
 
+// TestOutboundProxy tries the outbound proxy and reports what answered through
+// it: whether its port is up, and whether the upstreams behind it are reachable.
+// The address in the request is tried as typed, so the Settings page can test a
+// value before saving it; an empty one tests the stored setting.
+func (c *ApiController) TestOutboundProxy() {
+	if c.RequireAdmin() {
+		return
+	}
+
+	var request struct {
+		Address string `json:"address"`
+	}
+	if len(c.Ctx.Input.RequestBody) > 0 {
+		if err := json.Unmarshal(c.Ctx.Input.RequestBody, &request); err != nil {
+			c.ResponseError(err.Error())
+			return
+		}
+	}
+
+	result, err := proxy.Check(request.Address)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	c.ResponseOk(result)
+}
+
 func validateSetting(setting *object.Setting) error {
 	switch setting.LlmRecordMode {
 	case conf.LlmRecordOff, conf.LlmRecordMetadata, conf.LlmRecordFull:

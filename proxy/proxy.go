@@ -113,25 +113,66 @@ func currentProxyUrl() *url.URL {
 	return proxyUrl
 }
 
-// parseProxyUrl reads a proxy address. A bare "host:port" means SOCKS5, which
-// is what the setting has always been taken to mean; "socks5://", "socks5h://",
-// "http://" and "https://" addresses are honoured as written, and may carry
-// credentials.
+// parseProxyUrl reads the httpProxy setting, reporting an address it cannot use
+// rather than failing the requests that would have gone through it.
 func parseProxyUrl(httpProxy string) *url.URL {
 	if httpProxy == "" {
 		return nil
 	}
 
-	if !strings.Contains(httpProxy, "://") {
-		httpProxy = "socks5://" + httpProxy
-	}
-
-	parsedUrl, err := url.Parse(httpProxy)
-	if err != nil || parsedUrl.Host == "" {
+	parsedUrl, err := parseProxyAddress(httpProxy)
+	if err != nil {
 		fmt.Printf("httpProxy is not a valid proxy address, outbound traffic is left unproxied: %s\n", httpProxy)
 		return nil
 	}
 
 	fmt.Printf("Proxy enabled for outbound traffic: %s\n", parsedUrl.Redacted())
 	return parsedUrl
+}
+
+// parseProxyAddress reads a proxy address. A bare "host:port" means SOCKS5,
+// which is what the setting has always been taken to mean; "socks5://",
+// "socks5h://", "http://" and "https://" addresses are honoured as written, and
+// may carry credentials.
+func parseProxyAddress(address string) (*url.URL, error) {
+	if !strings.Contains(address, "://") {
+		address = "socks5://" + address
+	}
+
+	parsedUrl, err := url.Parse(address)
+	if err != nil {
+		return nil, fmt.Errorf("%s is not a valid proxy address: %w", address, err)
+	}
+	if parsedUrl.Host == "" {
+		return nil, fmt.Errorf("%s is not a valid proxy address", address)
+	}
+
+	switch parsedUrl.Scheme {
+	case "socks5", "socks5h", "http", "https":
+	default:
+		return nil, fmt.Errorf("%s is not a proxy scheme Gateway can use", parsedUrl.Scheme)
+	}
+	return parsedUrl, nil
+}
+
+// Env is the proxy configuration a child process reads, for the package
+// managers and vendor install scripts Gateway runs: none of them share this
+// process's transport, so a proxy set here has to be handed to them. Empty when
+// no proxy is configured, which leaves a child whatever the environment already
+// gives it.
+//
+// Both spellings are set because tools disagree on which they read. winget is
+// the exception on Windows: it goes through the system proxy and ignores these.
+func Env() []string {
+	parsedUrl := currentProxyUrl()
+	if parsedUrl == nil {
+		return nil
+	}
+
+	address := parsedUrl.String()
+	return []string{
+		"HTTP_PROXY=" + address, "http_proxy=" + address,
+		"HTTPS_PROXY=" + address, "https_proxy=" + address,
+		"ALL_PROXY=" + address, "all_proxy=" + address,
+	}
 }
