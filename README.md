@@ -496,7 +496,7 @@ https://ai.casbin.com
 
 ## Documentation
 
-https://caswaf.org
+[User Manual](docs/user-manual/en/README.md) — every page of the UI, from installing Gateway to routing an agent through it.
 
 ## Contribute
 

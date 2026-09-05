@@ -490,7 +490,7 @@ https://ai.casbin.com
 
 ## 文档
 
-https://caswaf.org
+[用户手册](docs/user-manual/zh/README.md)——从安装Gateway到把Agent的流量接进来，界面上的每一页。
 
 ## 贡献
 
