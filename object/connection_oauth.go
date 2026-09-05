@@ -265,10 +265,6 @@ func exchange(found connector.Connector, credentials map[string]string, form url
 	if err != nil {
 		return nil, err
 	}
-	if response.StatusCode >= 400 {
-		return nil, fmt.Errorf("the token endpoint answered %s: %s", response.Status, summarize(body))
-	}
-
 	var granted struct {
 		AccessToken  string `json:"access_token"`
 		RefreshToken string `json:"refresh_token"`
@@ -276,12 +272,22 @@ func exchange(found connector.Connector, credentials map[string]string, form url
 		Error        string `json:"error"`
 		ErrorText    string `json:"error_description"`
 	}
-	if err := json.Unmarshal(body, &granted); err != nil {
-		return nil, fmt.Errorf("the token endpoint did not answer with JSON: %s", summarize(body))
+	readable := json.Unmarshal(body, &granted) == nil
+
+	// The body is read before the status, because the status is the less
+	// informative half of the answer: an error comes back with 200 more often
+	// than it should, and GitHub answers an application it does not know with
+	// 404 and nothing but {"error":"Not Found"}. Reporting the status first
+	// would send somebody looking at the URL when the client id is the problem.
+	if readable && granted.Error != "" {
+		return nil, fmt.Errorf("the token endpoint refused this application: %s %s",
+			granted.Error, granted.ErrorText)
 	}
-	// An error here comes back with 200 more often than it should.
-	if granted.Error != "" {
-		return nil, fmt.Errorf("%s: %s", granted.Error, granted.ErrorText)
+	if response.StatusCode >= 400 {
+		return nil, fmt.Errorf("the token endpoint answered %s: %s", response.Status, summarize(body))
+	}
+	if !readable {
+		return nil, fmt.Errorf("the token endpoint did not answer with JSON: %s", summarize(body))
 	}
 	if granted.AccessToken == "" {
 		return nil, fmt.Errorf("the token endpoint returned no access token")
