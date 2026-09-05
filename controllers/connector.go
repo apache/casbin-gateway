@@ -16,7 +16,12 @@ package controllers
 
 import (
 	"encoding/json"
+	"slices"
 	"sort"
+	"strings"
+
+	"github.com/apache/casbin-gateway/agentmonitor"
+	"github.com/apache/casbin-gateway/agentpatch"
 
 	"github.com/apache/casbin-gateway/agent"
 	"github.com/apache/casbin-gateway/agentconfig"
@@ -202,4 +207,54 @@ func (c *ApiController) Disconnect() {
 		return
 	}
 	c.ResponseOk(planned)
+}
+
+// ResolveConnection hands the proxy the server behind one connection, with its
+// credentials filled in. This is the one place a stored credential leaves
+// Gateway, so it is fenced the way tool checks are: a direct loopback request,
+// presenting the installation credential issued when the connection was
+// written, and only for the agent that credential names.
+func (c *ApiController) ResolveConnection() {
+	if _, ok := c.directLoopbackClient(); !ok {
+		c.ResponseError("resolving a connection is limited to direct loopback requests")
+		return
+	}
+	tokenAgentId, ok := agentpatch.ValidateIngestToken(c.Ctx.Input.Header(agentmonitor.IngestTokenHeader))
+	if !ok {
+		c.ResponseError("resolving a connection requires a valid installation token")
+		return
+	}
+
+	var form struct {
+		Owner string `json:"owner"`
+		Name  string `json:"name"`
+		Agent string `json:"agent"`
+	}
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &form); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if tokenAgentId != "" && !strings.EqualFold(form.Agent, tokenAgentId) {
+		c.ResponseError("agent does not match the installation this token was issued for")
+		return
+	}
+
+	// A connection this agent was never given is not one it may resolve, or one
+	// agent's token would open every connection on the machine.
+	connection, err := object.GetConnection(form.Owner, form.Name)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if connection == nil || !slices.Contains(connection.Agents, form.Agent) {
+		c.ResponseError("this connection is not installed in " + form.Agent)
+		return
+	}
+
+	rendered, err := object.ResolveConnection(form.Owner, form.Name)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(rendered)
 }

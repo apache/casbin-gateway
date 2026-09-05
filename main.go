@@ -27,6 +27,7 @@ import (
 	"github.com/apache/casbin-gateway/casdoor"
 	"github.com/apache/casbin-gateway/conf"
 	"github.com/apache/casbin-gateway/controllers"
+	"github.com/apache/casbin-gateway/mcpproxy"
 	"github.com/apache/casbin-gateway/mcpserver"
 	"github.com/apache/casbin-gateway/object"
 	"github.com/apache/casbin-gateway/proxy"
@@ -46,6 +47,7 @@ func main() {
 	// process. They must exit before Gateway initializes its own services.
 	agenthook.ServeIfInvoked()
 	mcpserver.ServeIfInvoked()
+	mcpproxy.ServeIfInvoked()
 
 	// A link in the URL scheme of an agent opens this executable while Gateway
 	// is routing one to a particular copy. It is a launch, not a service.

@@ -19,49 +19,96 @@ import (
 	"sort"
 
 	"github.com/apache/casbin-gateway/agentconfig"
+	"github.com/apache/casbin-gateway/agentpatch"
 	"github.com/apache/casbin-gateway/connector"
+	"github.com/apache/casbin-gateway/mcpproxy"
 )
 
 // InstallConnection writes one connection's MCP server into each agent in
 // agentIds and takes it out of every agent it was in before. One target's
 // failure is reported against that target and the rest still run, which is how
 // the rest of agentconfig behaves.
+//
+// What is written is not the server itself but Gateway standing in front of it,
+// so the third-party credential never reaches the agent's configuration file
+// and every call through it can be asked about.
 func InstallConnection(connection *Connection, agentIds []string) ([]*agentconfig.PlanItem, error) {
 	found, ok := connector.Get(connection.Name)
 	if !ok {
 		return nil, fmt.Errorf("no connector named %q", connection.Name)
 	}
-	rendered, err := found.Render(connection.Credentials)
-	if err != nil {
+	// Rendering here does not produce what is written; it is what refuses to
+	// install a connection whose credentials are incomplete.
+	if _, err := found.Render(connection.Credentials); err != nil {
 		return nil, err
 	}
 
 	planned := []*agentconfig.PlanItem{}
-	if len(agentIds) > 0 {
-		planned, err = agentconfig.AddMcp(agentconfig.McpRequest{
-			Owner:     connection.Owner,
-			To:        agentIds,
-			Name:      rendered.Name,
-			Transport: rendered.Transport,
-			Command:   rendered.Command,
-			Args:      rendered.Args,
-			Env:       rendered.Env,
-			Url:       rendered.Url,
-			Headers:   rendered.Headers,
-			Overwrite: true,
-		})
+	for _, agentId := range agentIds {
+		request, err := proxyRequest(connection, found, agentId)
 		if err != nil {
-			return nil, err
+			planned = append(planned, &agentconfig.PlanItem{
+				AgentId: agentId, Name: found.Server.Name, Action: "skip", Reason: err.Error(),
+			})
+			continue
 		}
+		// One agent at a time: each is given a credential of its own, so the
+		// entry written is not the same entry twice.
+		items, err := agentconfig.AddMcp(request)
+		if err != nil {
+			planned = append(planned, &agentconfig.PlanItem{
+				AgentId: agentId, Name: found.Server.Name, Action: "skip", Reason: err.Error(),
+			})
+			continue
+		}
+		planned = append(planned, items...)
 	}
 
-	planned = append(planned, removeFrom(connection, rendered.Name, dropped(connection.Agents, agentIds))...)
+	planned = append(planned, removeFrom(connection, found.Server.Name, dropped(connection.Agents, agentIds))...)
 
 	connection.Agents = installed(planned, agentIds)
 	if err := SaveConnection(connection); err != nil {
 		return nil, err
 	}
 	return planned, nil
+}
+
+// proxyRequest is the entry one agent gets: this executable, told which
+// connection to reach and how to reach Gateway.
+//
+// The token in it is Gateway's own, not the service's: it works from loopback
+// only, names one agent, and is revoked from here. The credential that would be
+// worth stealing stays in Gateway's database.
+func proxyRequest(connection *Connection, found connector.Connector, agentId string) (agentconfig.McpRequest, error) {
+	executable, err := agentpatch.GatewayExecutable()
+	if err != nil {
+		return agentconfig.McpRequest{}, err
+	}
+	gatewayUrl, err := agentpatch.GatewayBaseUrl()
+	if err != nil {
+		return agentconfig.McpRequest{}, err
+	}
+	token, err := agentpatch.IssueIngestToken(agentpatch.Target{AgentId: agentId, Owner: connection.Owner})
+	if err != nil {
+		return agentconfig.McpRequest{}, err
+	}
+
+	return agentconfig.McpRequest{
+		Owner:     connection.Owner,
+		To:        []string{agentId},
+		Name:      found.Server.Name,
+		Transport: agentconfig.TransportStdio,
+		Command:   executable,
+		Args: []string{
+			mcpproxy.Subcommand,
+			"--connection", connection.Name,
+			"--agent", agentId,
+			"--owner", connection.Owner,
+			"--gateway-url", gatewayUrl,
+			"--token", token,
+		},
+		Overwrite: true,
+	}, nil
 }
 
 // UninstallConnection takes the server out of every agent that has it and
@@ -81,6 +128,30 @@ func UninstallConnection(owner string, name string) ([]*agentconfig.PlanItem, er
 		return nil, err
 	}
 	return planned, nil
+}
+
+// ResolveConnection is what the proxy asks for when an agent starts it: the
+// server behind one connection, with its credentials filled in. It is answered
+// over loopback to a process this Gateway's own configuration launched, and the
+// result is never written to disk.
+func ResolveConnection(owner string, name string) (*connector.Rendered, error) {
+	connection, err := GetConnection(owner, name)
+	if err != nil {
+		return nil, err
+	}
+	if connection == nil {
+		return nil, fmt.Errorf("%q is not connected", name)
+	}
+	found, ok := connector.Get(name)
+	if !ok {
+		return nil, fmt.Errorf("no connector named %q", name)
+	}
+
+	rendered, err := found.Render(connection.Credentials)
+	if err != nil {
+		return nil, err
+	}
+	return &rendered, nil
 }
 
 // removeFrom deletes the server entry from each agent, reporting what happened

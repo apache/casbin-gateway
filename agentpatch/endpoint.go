@@ -50,3 +50,15 @@ func loopbackURL(path string) (string, error) {
 	}
 	return fmt.Sprintf("http://127.0.0.1:%d%s", number, path), nil
 }
+
+// GatewayExecutable is this Gateway's own program, which an agent is given as
+// the command to run for a proxied MCP connection.
+func GatewayExecutable() (string, error) {
+	return gatewayExecutable()
+}
+
+// GatewayBaseUrl is the loopback address of the Gateway on this machine, for a
+// child process that has to ask it something.
+func GatewayBaseUrl() (string, error) {
+	return loopbackURL("")
+}

@@ -112,6 +112,7 @@ func initAPI() {
 	beego.Router("/api/get-connection", &controllers.ApiController{}, "GET:GetConnection")
 	beego.Router("/api/connect", &controllers.ApiController{}, "POST:Connect")
 	beego.Router("/api/disconnect", &controllers.ApiController{}, "POST:Disconnect")
+	beego.Router("/api/resolve-connection", &controllers.ApiController{}, "POST:ResolveConnection")
 
 	// The desktop tray, which holds the local token instead of a session.
 	beego.Router("/api/get-tray-menu", &controllers.ApiController{}, "GET:GetTrayMenu")
