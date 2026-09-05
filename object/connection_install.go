@@ -158,6 +158,13 @@ func ResolveConnection(owner string, name string) (*connector.Rendered, error) {
 		return nil, fmt.Errorf("no connector named %q", name)
 	}
 
+	// A session is about to start on this credential, so this is the moment a
+	// grant near its end is worth renewing. Doing it here rather than on a timer
+	// means a connection nobody uses costs nothing.
+	if err := refreshIfNeeded(connection, found); err != nil {
+		return nil, err
+	}
+
 	rendered, err := found.Render(connection.Credentials)
 	if err != nil {
 		return nil, err

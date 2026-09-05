@@ -40,3 +40,20 @@ export function connect(body: ConnectRequest) {
 export function disconnect(owner: string, name: string) {
   return request<AgentConfigPlanItem[]>("/api/disconnect", "POST", {owner: owner, name: name});
 }
+
+/** The callback address the operator registers their application with. */
+export function getConnectorRedirectUri() {
+  return request<string>("/api/get-connector-redirect-uri");
+}
+
+/**
+ * Stores the client application and answers with the vendor address to send the
+ * operator to. Nothing is authorized until they come back through the callback.
+ */
+export function startConnectorAuth(owner: string, name: string, credentials: Record<string, string>) {
+  return request<string>("/api/start-connector-auth", "POST", {
+    owner: owner,
+    name: name,
+    credentials: credentials,
+  });
+}

@@ -17,6 +17,8 @@
 // service, how it is authenticated, and the MCP server that reaches it.
 package connector
 
+import "strings"
+
 // How a connection is authenticated.
 const (
 	// AuthNone is a server that needs no credential at all.
@@ -70,6 +72,36 @@ type Connector struct {
 	Server ServerSpec `json:"server"`
 }
 
+// The credential keys Gateway itself fills in once an authorization has been
+// granted. They are reserved: a connector's own fields may not use these names,
+// and a server template refers to them like any other value.
+const (
+	KeyAccessToken  = "accessToken"
+	KeyRefreshToken = "refreshToken"
+	// KeyExpiresAt is RFC3339, empty when the grant does not expire.
+	KeyExpiresAt = "expiresAt"
+)
+
+// The client application an oauth2 connector is authorized through. The
+// operator registers it on the vendor's own platform and fills these in, which
+// is what keeps the grant inside their tenant and no secret of ours in this
+// binary.
+const (
+	KeyClientId     = "clientId"
+	KeyClientSecret = "clientSecret"
+)
+
+// ReservedKeys is every credential Gateway writes rather than the operator.
+var ReservedKeys = []string{KeyAccessToken, KeyRefreshToken, KeyExpiresAt}
+
+// How the client credentials are presented when a code is exchanged. Most
+// services take them in the form body; some want HTTP Basic instead, and one
+// spelled the wrong way is refused with an error that names neither.
+const (
+	TokenAuthBody  = "body"
+	TokenAuthBasic = "basic"
+)
+
 // Auth is how one connector proves who it is.
 type Auth struct {
 	Kind string `json:"kind"`
@@ -82,6 +114,12 @@ type Auth struct {
 	TokenUrl     string            `json:"tokenUrl,omitempty"`
 	Scopes       []string          `json:"scopes,omitempty"`
 	ExtraParams  map[string]string `json:"extraParams,omitempty"`
+	// TokenAuth is how the client credentials reach the token endpoint, empty
+	// for the usual form body.
+	TokenAuth string `json:"tokenAuth,omitempty"`
+	// ScopeSeparator is what joins the scopes, empty for the space the
+	// specification asks for. A few services only accept commas.
+	ScopeSeparator string `json:"scopeSeparator,omitempty"`
 	// RegisterUrl is where the operator creates the application these
 	// credentials come from, linked from the connect dialog.
 	RegisterUrl string `json:"registerUrl,omitempty"`
@@ -114,8 +152,9 @@ type ServerSpec struct {
 // NeedsAuth reports whether connecting this one asks for anything.
 func (c Connector) NeedsAuth() bool { return c.Auth.Kind != AuthNone }
 
-// SecretKeys is every field of this connector whose value is never returned
-// once stored.
+// SecretKeys is every credential of this connector that is never returned once
+// stored: the secret fields the operator filled in, and every token Gateway
+// obtained on their behalf.
 func (c Connector) SecretKeys() []string {
 	keys := []string{}
 	for _, field := range c.Auth.Fields {
@@ -123,5 +162,17 @@ func (c Connector) SecretKeys() []string {
 			keys = append(keys, field.Key)
 		}
 	}
+	if c.Auth.Kind == AuthOauth2 {
+		keys = append(keys, KeyAccessToken, KeyRefreshToken)
+	}
 	return keys
+}
+
+// ScopeList is the scope parameter this connector asks for.
+func (c Connector) ScopeList() string {
+	separator := c.Auth.ScopeSeparator
+	if separator == "" {
+		separator = " "
+	}
+	return strings.Join(c.Auth.Scopes, separator)
 }

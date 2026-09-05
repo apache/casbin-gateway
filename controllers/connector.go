@@ -16,6 +16,8 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
+	"html"
 	"slices"
 	"sort"
 	"strings"
@@ -35,6 +37,9 @@ type ConnectorEntry struct {
 	connector.Connector
 	Connected bool     `json:"connected"`
 	Agents    []string `json:"agents"`
+	// Authorized reports that an oauth2 connector has a grant, which is what
+	// the dialog needs to tell "fill in the application" from "go and approve".
+	Authorized bool `json:"authorized"`
 }
 
 // ConnectorTarget is one agent on this machine a connection can be installed
@@ -77,6 +82,7 @@ func (c *ApiController) GetConnectors() {
 		if connection, ok := state[found.Id]; ok {
 			entry.Connected = true
 			entry.Agents = connection.Agents
+			entry.Authorized = connection.Credentials[connector.KeyAccessToken] != ""
 		}
 		entries = append(entries, entry)
 	}
@@ -257,4 +263,86 @@ func (c *ApiController) ResolveConnection() {
 		return
 	}
 	c.ResponseOk(rendered)
+}
+
+// StartConnectorAuth stores the client application the operator registered and
+// answers with the address to send them to. The browser goes there; the vendor
+// sends them back to ConnectorAuthCallback.
+func (c *ApiController) StartConnectorAuth() {
+	if c.RequireAdmin() {
+		return
+	}
+
+	var form struct {
+		Owner       string            `json:"owner"`
+		Name        string            `json:"name"`
+		Credentials map[string]string `json:"credentials"`
+	}
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &form); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	authorizeUrl, err := object.StartConnectorAuth(form.Owner, form.Name, form.Credentials)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(authorizeUrl)
+}
+
+// ConnectorAuthCallback is where the vendor sends the operator back. It is
+// opened by their browser rather than called by the UI, so it answers with a
+// page rather than JSON: a tab that says what happened and closes itself.
+func (c *ApiController) ConnectorAuthCallback() {
+	code := c.GetString("code")
+	state := c.GetString("state")
+	if failure := c.GetString("error"); failure != "" {
+		c.authCallbackPage(false, failure+" "+c.GetString("error_description"))
+		return
+	}
+	if code == "" || state == "" {
+		c.authCallbackPage(false, "the vendor sent no authorization code")
+		return
+	}
+
+	connection, err := object.CompleteConnectorAuth(state, code)
+	if err != nil {
+		c.authCallbackPage(false, err.Error())
+		return
+	}
+	c.authCallbackPage(true, connection.Name)
+}
+
+// authCallbackPage answers the browser tab the vendor redirected. It is plain
+// text in a minimal document on purpose: this tab is closed a moment later, and
+// what matters is that the operator can see which way it went.
+func (c *ApiController) authCallbackPage(ok bool, detail string) {
+	title := "Authorized"
+	if !ok {
+		title = "Authorization failed"
+	}
+
+	c.Ctx.Output.Header("Content-Type", "text/html; charset=utf-8")
+	body := fmt.Sprintf(`<!doctype html><meta charset="utf-8"><title>%s</title>
+<body style="font:14px system-ui;padding:3rem;text-align:center">
+<h2>%s</h2><p style="color:#666">%s</p>
+<p style="color:#999">You can close this tab and go back to Casbin Gateway.</p>`,
+		html.EscapeString(title), html.EscapeString(title), html.EscapeString(detail))
+	_ = c.Ctx.Output.Body([]byte(body))
+}
+
+// GetConnectorRedirectUri is the address the operator registers their
+// application with, shown in the dialog before they go and create one.
+func (c *ApiController) GetConnectorRedirectUri() {
+	if c.RequireAdmin() {
+		return
+	}
+
+	redirect, err := object.RedirectUri()
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(redirect)
 }

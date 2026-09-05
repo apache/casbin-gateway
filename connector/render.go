@@ -75,6 +75,11 @@ func (c Connector) Render(credentials map[string]string) (Rendered, error) {
 			return Rendered{}, fmt.Errorf("%s needs a value", field.Label)
 		}
 	}
+	// Saying what is missing is worth a case of its own: "no value for
+	// ${accessToken}" names a template, not the thing the operator has to do.
+	if c.Auth.Kind == AuthOauth2 && strings.TrimSpace(credentials[KeyAccessToken]) == "" {
+		return Rendered{}, fmt.Errorf("this connection has not been authorized yet")
+	}
 
 	fill := func(value string) (string, error) {
 		var missing string

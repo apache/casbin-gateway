@@ -1,0 +1,36 @@
+{
+  "id": "github-oauth",
+  "displayName": "GitHub (OAuth app)",
+  "category": "dev",
+  "icon": "github.com",
+  "description": "The same GitHub access, granted by signing in instead of pasting a token. The application is one you register yourself, so the grant and its audit trail stay in your own organisation.",
+  "docsUrl": "https://docs.github.com/en/apps/oauth-apps/building-oauth-apps",
+  "auth": {
+    "kind": "oauth2",
+    "fields": [
+      {
+        "key": "clientId",
+        "label": "Client ID",
+        "help": "From the OAuth app you register. Set its callback URL to the address shown above.",
+        "required": true
+      },
+      {
+        "key": "clientSecret",
+        "label": "Client secret",
+        "secret": true,
+        "required": true
+      }
+    ],
+    "authorizeUrl": "https://github.com/login/oauth/authorize",
+    "tokenUrl": "https://github.com/login/oauth/access_token",
+    "scopes": ["repo", "read:org"],
+    "scopeSeparator": ",",
+    "registerUrl": "https://github.com/settings/developers"
+  },
+  "server": {
+    "name": "github-oauth",
+    "transport": "http",
+    "url": "https://api.githubcopilot.com/mcp/",
+    "headers": {"Authorization": "Bearer ${accessToken}"}
+  }
+}

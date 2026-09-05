@@ -209,7 +209,14 @@ func SaveConnection(connection *Connection) error {
 		_, err = ormer.Engine.Insert(connection)
 		return err
 	}
-	_, err = ormer.Engine.ID(core.PK{connection.Owner, connection.Name}).AllCols().Update(connection)
+	return updateConnection(connection)
+}
+
+// updateConnection writes every column of an existing row. AllCols is what
+// makes a credential that was cleared actually clear, rather than xorm skipping
+// the empty value and leaving the old one in place.
+func updateConnection(connection *Connection) error {
+	_, err := ormer.Engine.ID(core.PK{connection.Owner, connection.Name}).AllCols().Update(connection)
 	return err
 }
 

@@ -1505,6 +1505,9 @@ export interface ConnectorAuth {
   authorizeUrl?: string;
   tokenUrl?: string;
   scopes?: string[];
+  scopeSeparator?: string;
+  /** How the client credentials reach the token endpoint. */
+  tokenAuth?: "body" | "basic";
   /** Where the operator creates the application these credentials come from. */
   registerUrl?: string;
 }
@@ -1535,6 +1538,8 @@ export interface ConnectorEntry {
   server: ConnectorServerSpec;
   connected: boolean;
   agents: string[];
+  /** An oauth2 connector that has a grant, rather than only a client app. */
+  authorized: boolean;
 }
 
 /** An agent on this machine a connection can be installed into. */

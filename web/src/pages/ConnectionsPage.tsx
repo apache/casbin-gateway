@@ -20,7 +20,7 @@ import * as Setting from "@/Setting";
 import * as ConnectorBackend from "@/backend/ConnectorBackend";
 import {AgentIcon} from "@/components/AgentIcon";
 import {Field, FormDialog} from "@/components/shared/form-dialog";
-import {UnauthorizedResult} from "@/components/shared/misc";
+import {CopyButton, UnauthorizedResult} from "@/components/shared/misc";
 import {PageContainer, PageHeader} from "@/components/shared/page-header";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
@@ -212,23 +212,84 @@ function ConnectDialog({
   onDone: () => void;
 }) {
   const fields = entry.auth.fields ?? [];
+  const isOauth = entry.auth.kind === "oauth2";
   const [credentials, setCredentials] = React.useState<Record<string, string>>({});
   const [agents, setAgents] = React.useState<string[]>(entry.agents);
   const [submitting, setSubmitting] = React.useState(false);
+  const [authorized, setAuthorized] = React.useState(entry.authorized);
+  const [awaiting, setAwaiting] = React.useState(false);
+  const [redirectUri, setRedirectUri] = React.useState("");
+
+  const load = React.useCallback(
+    () =>
+      ConnectorBackend.getConnection(account.name, entry.id).then(response => {
+        if (response.status === "ok" && response.data) {
+          setCredentials(response.data.credentials ?? {});
+          setAgents(response.data.agents ?? []);
+          return (response.data.credentials ?? {})["accessToken"] !== undefined;
+        }
+        return false;
+      }),
+    [account.name, entry.id],
+  );
 
   React.useEffect(() => {
-    if (!entry.connected) {
+    if (entry.connected) {
+      load();
+    }
+  }, [entry.connected, load]);
+
+  React.useEffect(() => {
+    if (!isOauth) {
       return;
     }
-    ConnectorBackend.getConnection(account.name, entry.id).then(response => {
-      if (response.status === "ok" && response.data) {
-        setCredentials(response.data.credentials ?? {});
-        setAgents(response.data.agents ?? []);
+    ConnectorBackend.getConnectorRedirectUri().then(response => {
+      if (response.status === "ok") {
+        setRedirectUri(response.data ?? "");
       }
     });
-  }, [account.name, entry.connected, entry.id]);
+  }, [isOauth]);
 
-  const missing = fields.some(field => field.required && (credentials[field.key] ?? "").trim() === "");
+  // Approving happens in another tab, and the vendor sends the operator back to
+  // Gateway rather than to this dialog, so the only way this form learns it
+  // worked is to keep asking until the grant is there.
+  React.useEffect(() => {
+    if (!awaiting) {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      load().then(granted => {
+        if (granted) {
+          setAuthorized(true);
+          setAwaiting(false);
+          Setting.showMessage("success", i18next.t("connector:Authorized"));
+        }
+      });
+    }, 2000);
+    const giveUp = window.setTimeout(() => setAwaiting(false), 3 * 60 * 1000);
+    return () => {
+      window.clearInterval(timer);
+      window.clearTimeout(giveUp);
+    };
+  }, [awaiting, load]);
+
+  const authorize = () => {
+    setSubmitting(true);
+    ConnectorBackend.startConnectorAuth(account.name, entry.id, credentials)
+      .then(response => {
+        if (response.status === "ok" && response.data) {
+          window.open(response.data, "_blank", "noopener");
+          setAwaiting(true);
+        } else {
+          Setting.showMessage("error", response.msg ?? "");
+        }
+      })
+      .catch(error => Setting.showMessage("error", error.message))
+      .finally(() => setSubmitting(false));
+  };
+
+  const missing =
+    fields.some(field => field.required && (credentials[field.key] ?? "").trim() === "") || (isOauth && !authorized);
 
   const submit = () => {
     setSubmitting(true);
@@ -290,6 +351,15 @@ function ConnectDialog({
         </a>
       ) : null}
 
+      {isOauth && redirectUri !== "" ? (
+        <Field label={i18next.t("connector:Callback URL")} hint={i18next.t("connector:Callback URL hint")}>
+          <div className="flex items-center gap-2">
+            <code className="bg-muted min-w-0 flex-1 truncate rounded px-2 py-1.5 text-xs">{redirectUri}</code>
+            <CopyButton value={redirectUri} />
+          </div>
+        </Field>
+      ) : null}
+
       {fields.map(field => (
         <Field key={field.key} label={text(field.label)} required={field.required} hint={text(field.help)}>
           <Input
@@ -308,6 +378,31 @@ function ConnectDialog({
           />
         </Field>
       ))}
+
+      {isOauth ? (
+        <Field
+          label={i18next.t("connector:Authorization")}
+          hint={authorized ? undefined : i18next.t("connector:Authorization hint")}
+        >
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant={authorized ? "outline" : "default"}
+              onClick={authorize}
+              disabled={submitting || (credentials["clientId"] ?? "").trim() === ""}
+            >
+              {authorized ? i18next.t("connector:Authorize again") : i18next.t("connector:Authorize")}
+            </Button>
+            <span className="text-muted-foreground text-sm">
+              {awaiting
+                ? i18next.t("connector:Waiting for approval")
+                : authorized
+                  ? i18next.t("connector:Authorized")
+                  : i18next.t("connector:Not authorized")}
+            </span>
+          </div>
+        </Field>
+      ) : null}
 
       <Field
         label={i18next.t("connector:Install into")}

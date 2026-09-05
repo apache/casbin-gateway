@@ -109,13 +109,33 @@ func validate(c Connector) error {
 		if c.Auth.AuthorizeUrl == "" || c.Auth.TokenUrl == "" {
 			return fmt.Errorf("%s: an oauth2 connector needs authorizeUrl and tokenUrl", c.Id)
 		}
+		switch c.Auth.TokenAuth {
+		case "", TokenAuthBody, TokenAuthBasic:
+		default:
+			return fmt.Errorf("%s: unknown tokenAuth %q", c.Id, c.Auth.TokenAuth)
+		}
+		// The client application is the operator's, so the form has to ask for
+		// it; a connector that forgets would send an authorization request with
+		// no client at all.
+		for _, key := range []string{KeyClientId, KeyClientSecret} {
+			if !hasField(c, key) {
+				return fmt.Errorf("%s: an oauth2 connector needs a %q field", c.Id, key)
+			}
+		}
 	default:
 		return fmt.Errorf("%s: unknown auth kind %q", c.Id, c.Auth.Kind)
 	}
 
+	reserved := map[string]bool{}
+	for _, key := range ReservedKeys {
+		reserved[key] = true
+	}
 	for _, field := range c.Auth.Fields {
 		if strings.TrimSpace(field.Key) == "" {
 			return fmt.Errorf("%s: a field needs a key", c.Id)
+		}
+		if reserved[field.Key] {
+			return fmt.Errorf("%s: %q is filled in by Gateway and cannot be a field", c.Id, field.Key)
 		}
 	}
 
@@ -138,12 +158,28 @@ func validate(c Connector) error {
 	for _, field := range c.Auth.Fields {
 		declared[field.Key] = true
 	}
+	// What an authorization produces is not a field anybody fills in, but a
+	// template may refer to it.
+	if c.Auth.Kind == AuthOauth2 {
+		for _, key := range ReservedKeys {
+			declared[key] = true
+		}
+	}
 	for _, reference := range placeholders(c.Server) {
 		if !declared[reference] {
 			return fmt.Errorf("%s: server uses ${%s}, which no field supplies", c.Id, reference)
 		}
 	}
 	return nil
+}
+
+func hasField(c Connector, key string) bool {
+	for _, field := range c.Auth.Fields {
+		if field.Key == key {
+			return true
+		}
+	}
+	return false
 }
 
 // List is the whole catalog, by id.

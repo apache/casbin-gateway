@@ -113,6 +113,12 @@ func initAPI() {
 	beego.Router("/api/connect", &controllers.ApiController{}, "POST:Connect")
 	beego.Router("/api/disconnect", &controllers.ApiController{}, "POST:Disconnect")
 	beego.Router("/api/resolve-connection", &controllers.ApiController{}, "POST:ResolveConnection")
+	beego.Router("/api/get-connector-redirect-uri", &controllers.ApiController{}, "GET:GetConnectorRedirectUri")
+	beego.Router("/api/start-connector-auth", &controllers.ApiController{}, "POST:StartConnectorAuth")
+	// Opened by the vendor's redirect rather than by the UI, so it is reached
+	// without a session: what proves the caller is the unguessable state it
+	// carries, which is the whole point of that parameter.
+	beego.Router("/api/connector-auth-callback", &controllers.ApiController{}, "GET:ConnectorAuthCallback")
 
 	// The desktop tray, which holds the local token instead of a session.
 	beego.Router("/api/get-tray-menu", &controllers.ApiController{}, "GET:GetTrayMenu")
