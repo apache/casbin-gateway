@@ -8,8 +8,7 @@ linters:
   settings:
     govet:
       disable:
-        # Reports every stdlib call that the newer toolchain golangci-lint is
-        # built with cannot inline into a "go 1.20" file. Not actionable here.
+        # Reports every stdlib call the toolchain cannot inline. Not actionable here.
         - inline
 
 formatters:

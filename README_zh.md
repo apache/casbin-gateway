@@ -410,7 +410,7 @@ llmRecordMaxPayloadBytes = 1048576
 
 ### 环境要求
 
-Go 1.20+，以及带 Yarn 的 Node.js。
+Go 1.25+，以及带Yarn的Node.js。
 
 ### 从源码运行
 

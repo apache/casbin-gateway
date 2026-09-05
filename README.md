@@ -416,7 +416,7 @@ The cost next to each record uses list prices, which vendors change and reseller
 
 ### Prerequisites
 
-Go 1.20+, and Node.js with Yarn.
+Go 1.25+, and Node.js with Yarn.
 
 ### Run from source
 

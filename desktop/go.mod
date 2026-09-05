@@ -1,6 +1,8 @@
 module github.com/apache/casbin-gateway/desktop
 
-go 1.21
+go 1.25.0
+
+toolchain go1.25.8
 
 require (
 	fyne.io/systray v1.12.2
