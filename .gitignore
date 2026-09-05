@@ -36,7 +36,8 @@ tmp/
 tmpFiles/
 *.tmp
 logs/
-data/agent-patches/
+# Runtime state: the SQLite database, config snapshots and agent patch state
+data/
 
 # SQLite database and its WAL sidecar files
 *.db
