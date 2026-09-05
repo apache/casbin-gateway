@@ -276,6 +276,13 @@ func (a *Ormer) createTable() {
 		panic(err)
 	}
 
+	// The sign-ins saved aside for an agent, so a subscription account and an
+	// API key are both held while the agent itself keeps only one.
+	err = a.Engine.Sync2(new(AgentAccount))
+	if err != nil {
+		panic(err)
+	}
+
 	// What each agent is allowed to ask for, as the switches of its Permissions
 	// card are set. The casbin policy is compiled from these rows.
 	err = a.Engine.Sync2(new(AgentPermission))

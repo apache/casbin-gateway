@@ -26,10 +26,13 @@ import type {
   AgentInstance,
   AgentRuntime,
   AgentSession,
+  AgentSignin,
   AgentUpdate,
   AgentUsage,
   AgentUsageStat,
   Provider,
+  SavedAccount,
+  SavedAccounts,
 } from "@/types";
 
 /** How long a started app is given before its process is looked for again. */
@@ -975,4 +978,215 @@ export type AgentInstanceControls = ReturnType<typeof useAgentInstances>;
 /** The instances belonging to one installation, out of a listing of them all. */
 export function instancesOf(instances: AgentInstance[], agent: Agent) {
   return instances.filter(instance => instance.agentId === agent.agentId);
+}
+
+
+/** How often a sign-in waiting for the browser is asked how it is getting on. */
+const signinPollMs = 2000;
+
+/** An agent's sign-ins as they arrive, empty until the listing does. */
+const noAccounts: SavedAccounts = {accounts: [], stored: false};
+
+/**
+ * useAgentAccounts owns the sign-ins Gateway keeps for the agents that have
+ * more than one. An agent holds a single credential file and its own sign-in
+ * overwrites it, so the copies here are what let a subscription account and an
+ * API key be swapped without signing in again.
+ *
+ * The listing is per installation - what is in place is read from that owner's
+ * home - so one call is made for each agent that supports it.
+ */
+export function useAgentAccounts(agents: Agent[], enabled = true) {
+  const [byAgent, setByAgent] = React.useState<Record<string, SavedAccounts>>({});
+  const [loading, setLoading] = React.useState(false);
+  const [busyKey, setBusyKey] = React.useState("");
+  const [session, setSession] = React.useState<AgentSignin | null>(null);
+
+  // The installations are re-read on every scan, so the effect is keyed by
+  // which of them have accounts rather than by the array it arrived in.
+  const targets = React.useMemo(
+    () =>
+      agents
+        .filter(agent => agent.supportsAccounts === true)
+        .map(agent => ({agentId: agent.agentId, path: agent.path, owner: agent.owner})),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [agents.filter(agent => agent.supportsAccounts === true).map(agentKey).join("|")],
+  );
+
+  const load = React.useCallback(() => {
+    if (!enabled || targets.length === 0) {
+      setByAgent({});
+      return;
+    }
+
+    setLoading(true);
+    Promise.all(
+      targets.map(target =>
+        AgentBackend.getAgentAccounts(target)
+          .then(res => (res.status === "ok" && res.data ? res.data : noAccounts))
+          .catch(() => noAccounts),
+      ),
+    )
+      .then(listings => {
+        const next: Record<string, SavedAccounts> = {};
+        targets.forEach((target, index) => {
+          next[agentKey(target)] = listings[index];
+        });
+        setByAgent(next);
+      })
+      .then(() => setLoading(false));
+  }, [enabled, targets]);
+
+  React.useEffect(() => {
+    load();
+  }, [load]);
+
+  // A sign-in is finished in a browser, so the page asks how it went rather
+  // than holding the call open for as long as somebody takes to type.
+  React.useEffect(() => {
+    if (!session?.running) {
+      return;
+    }
+    const timer = setInterval(() => {
+      AgentBackend.getAgentSignin(session.id)
+        .then(res => {
+          if (res.status === "ok" && res.data) {
+            setSession(res.data);
+          }
+        })
+        .catch(() => undefined);
+    }, signinPollMs);
+    return () => clearInterval(timer);
+  }, [session?.id, session?.running]);
+
+  const call = React.useCallback(
+    (key: string, run: () => Promise<{status: string; msg?: string}>, done: string) => {
+      setBusyKey(key);
+      return run()
+        .then(res => {
+          if (res.status === "ok") {
+            if (done !== "") {
+              Setting.showMessage("success", done);
+            }
+            load();
+          } else {
+            Setting.showMessage("error", res.msg ?? "");
+          }
+        })
+        .catch(err => Setting.showMessage("error", err.message || String(err)))
+        .then(() => setBusyKey(""));
+    },
+    [load],
+  );
+
+  /** Puts one stored sign-in back into the agent, saving what it replaces. */
+  const switchTo = React.useCallback(
+    (agent: Agent, account: SavedAccount) =>
+      call(
+        account.name,
+        () => AgentBackend.switchAgentAccount(targetOf(agent), account.name),
+        `${i18next.t("agent:Account switched")}: ${accountName(account)}`,
+      ),
+    [call],
+  );
+
+  /** Keeps a copy of the sign-in in place, so a swap can be undone. */
+  const saveCurrent = React.useCallback(
+    (agent: Agent) =>
+      call(
+        `${agentKey(agent)}:save`,
+        () => AgentBackend.saveAgentAccount(targetOf(agent)),
+        i18next.t("agent:Account saved"),
+      ),
+    [call],
+  );
+
+  const add = React.useCallback(
+    (agent: Agent, apiKey: string, displayName: string) =>
+      call(
+        `${agentKey(agent)}:add`,
+        () => AgentBackend.addAgentAccount(targetOf(agent), apiKey, displayName),
+        i18next.t("agent:Account saved"),
+      ),
+    [call],
+  );
+
+  const rename = React.useCallback(
+    (account: SavedAccount, displayName: string) =>
+      call(account.name, () => AgentBackend.renameAgentAccount(account.name, displayName), ""),
+    [call],
+  );
+
+  const remove = React.useCallback(
+    (account: SavedAccount) =>
+      call(
+        account.name,
+        () => AgentBackend.deleteAgentAccount(account.name),
+        i18next.t("agent:Account removed"),
+      ),
+    [call],
+  );
+
+  /** Starts the browser sign-in; the dialog follows it from there. */
+  const signIn = React.useCallback((agent: Agent) => {
+    setBusyKey(`${agentKey(agent)}:signin`);
+    AgentBackend.signInAgentAccount(targetOf(agent))
+      .then(res => {
+        if (res.status === "ok" && res.data) {
+          setSession(res.data);
+        } else {
+          Setting.showMessage("error", res.msg ?? "");
+        }
+      })
+      .catch(err => Setting.showMessage("error", err.message || String(err)))
+      .then(() => setBusyKey(""));
+  }, []);
+
+  const closeSession = React.useCallback(
+    (signedIn: boolean) => {
+      setSession(null);
+      if (signedIn) {
+        load();
+      }
+    },
+    [load],
+  );
+
+  return {
+    byAgent,
+    loading,
+    busyKey,
+    session,
+    reload: load,
+    switchTo,
+    saveCurrent,
+    add,
+    rename,
+    remove,
+    signIn,
+    closeSession,
+  };
+}
+
+/** What one hook call returns, as the cards and the table take it. */
+export type AgentAccountControls = ReturnType<typeof useAgentAccounts>;
+
+/** The sign-ins of one installation, out of a listing of them all. */
+export function accountsOf(controls: AgentAccountControls, agent: Agent) {
+  return controls.byAgent[agentKey(agent)] ?? noAccounts;
+}
+
+/** The name of one stored account: what it was called, or whoever it signs in. */
+export function accountName(account: SavedAccount) {
+  return account.displayName || account.email || account.name.split("/").pop() || account.name;
+}
+
+/** The wording for the two ways an agent is signed in. */
+export function accountKindLabel(kind: string) {
+  return i18next.t(kind === "apikey" ? "agent:API key" : "agent:Subscription");
+}
+
+/** The installation as every account call names it. */
+function targetOf(agent: Agent) {
+  return {agentId: agent.agentId, path: agent.path, owner: agent.owner};
 }

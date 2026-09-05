@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/apache/casbin-gateway/agent"
+	"github.com/apache/casbin-gateway/agentauth"
 	"github.com/apache/casbin-gateway/agenthistory"
 	"github.com/apache/casbin-gateway/agentinstall"
 	"github.com/apache/casbin-gateway/agentmonitor"
@@ -61,6 +62,9 @@ type discoveredAgent struct {
 	// SupportsInstances says whether this agent can be run more than once at a
 	// time, each copy signed in to an account of its own.
 	SupportsInstances bool `json:"supportsInstances"`
+	// SupportsAccounts says whether Gateway knows where this agent keeps its
+	// sign-in, which is what lets it hold more than one and swap between them.
+	SupportsAccounts bool `json:"supportsAccounts"`
 }
 
 // GetAgents scans known installation locations and returns the AI agents
@@ -107,6 +111,7 @@ func (c *ApiController) GetAgents() {
 			Uninstall:      agentinstall.UninstallPlan(installation),
 
 			SupportsInstances: agent.SupportsInstances(installation.AgentId),
+			SupportsAccounts:  agentauth.Supports(installation.AgentId),
 		}
 		baseUrl, ok := baseUrls[installation.AgentId]
 		if !ok {

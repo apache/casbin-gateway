@@ -18,6 +18,7 @@ import {Bot, ChevronRight, UserRound} from "lucide-react";
 import i18next from "i18next";
 
 import {AgentIcon} from "@/components/AgentIcon";
+import {AgentCardAccounts} from "@/components/AgentAccounts";
 import {AgentCardInstances} from "@/components/AgentInstances";
 import {AgentUsageTrend, hasUsageTrend} from "@/components/AgentUsageTrend";
 import {AgentUpdateBadge} from "@/components/AgentVersionDialog";
@@ -42,6 +43,7 @@ import {
   agentDetailPath,
   builtinProvider,
   directMode,
+  type AgentAccountControls,
   type AgentInstanceControls,
 } from "@/lib/agents";
 import {providerIdOf, providerProtocol} from "@/lib/providers";
@@ -166,6 +168,7 @@ export function AgentGridCard({
   status,
   update,
   instances,
+  accounts,
   recording,
   busy,
   runBusy,
@@ -191,6 +194,8 @@ export function AgentGridCard({
   update?: AgentUpdate;
   /** The extra copies of this agent, for the agents that can run more than one. */
   instances?: AgentInstanceControls;
+  /** The sign-ins kept for this agent, for the agents that hold more than one. */
+  accounts?: AgentAccountControls;
   /** False while llmRecordMode is off, when a zero would be a lie. */
   recording: boolean;
   busy: boolean;
@@ -306,6 +311,8 @@ export function AgentGridCard({
               ))}
             </SelectContent>
           </Select>
+
+          {accounts ? <AgentCardAccounts agent={agent} controls={accounts} /> : null}
 
           <Row label={i18next.t("agent:Model")}>
             {lastModel ? (

@@ -23,6 +23,7 @@ import * as ProviderBackend from "@/backend/ProviderBackend";
 import * as LlmRecordBackend from "@/backend/LlmRecordBackend";
 import * as Setting from "@/Setting";
 import {AgentIcon} from "@/components/AgentIcon";
+import {AgentAccounts} from "@/components/AgentAccounts";
 import {AgentInstances} from "@/components/AgentInstances";
 import {accountLabel} from "@/components/AgentGridCard";
 import {RunBadge, RunButton} from "@/components/AgentRunControl";
@@ -579,6 +580,8 @@ export default function AgentDetailPage({account}: {account: Account}) {
       </div>
 
       <PermissionCard agent={agent} providers={providers} />
+
+      <AgentAccounts agent={agent} enabled={isAdmin} />
 
       <AgentInstances agent={agent} enabled={isAdmin} />
 

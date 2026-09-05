@@ -194,6 +194,53 @@ export interface Agent {
   uninstall?: AgentInstallPlan;
   /** Whether a second copy of this agent can run beside the first. */
   supportsInstances?: boolean;
+  /** Whether Gateway knows where this agent keeps its sign-in, which is what
+   *  lets it hold several and swap between them. */
+  supportsAccounts?: boolean;
+}
+
+/** One sign-in Gateway keeps aside for an agent. The credential itself stays on
+ *  the server; this is what the lists show of it. */
+export interface SavedAccount {
+  /** The stored id, "<agentId>/<slug>", which every call names it by. */
+  name: string;
+  agentId: string;
+  /** "subscription" for an account with a plan behind it, "apikey" for a key. */
+  kind: string;
+  displayName: string;
+  email?: string;
+  plan?: string;
+  createdTime: string;
+  lastUsedTime?: string;
+  /** Whether this is the sign-in the agent is using right now. */
+  current?: boolean;
+}
+
+/** The saved sign-ins of one agent beside the one it is using now. */
+export interface SavedAccounts {
+  accounts: SavedAccount[];
+  /** What the agent is signed in to, absent when it is signed in to nothing. */
+  current?: {kind: string; email?: string; name?: string; plan?: string};
+  /** Whether Gateway already holds a copy of the sign-in in place. */
+  stored: boolean;
+  /** The directory the sign-in is read from. */
+  home?: string;
+  /** The program a browser sign-in would run, empty when there is none here. */
+  signIn?: string;
+}
+
+/** A browser sign-in Gateway started, as the page polls it. */
+export interface AgentSignin {
+  id: string;
+  agentId: string;
+  /** The address the sign-in has to be finished at. */
+  url?: string;
+  running: boolean;
+  ok: boolean;
+  /** Who signed in, once someone has. */
+  account?: string;
+  error?: string;
+  output?: string;
 }
 
 /** One switch of the Permissions page: something an agent may be allowed to do,

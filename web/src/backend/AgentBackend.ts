@@ -26,8 +26,11 @@ import type {
   AgentTranscript,
   AgentUpdate,
   AgentUsage,
+  AgentSignin,
   AgentVersionCatalog,
   BrowseListing,
+  SavedAccount,
+  SavedAccounts,
 } from "@/types";
 
 export interface PatchTarget {
@@ -180,6 +183,59 @@ export function captureAgentInstanceLink(name: string, capture: boolean) {
     name: name,
     capture: capture,
   });
+}
+
+/**
+ * The sign-ins Gateway keeps aside for one agent, beside the one the agent is
+ * using now. The installation says whose home that one is read from.
+ */
+export function getAgentAccounts(target: PatchTarget) {
+  return request<SavedAccounts>(
+    `/api/get-agent-accounts${query({agent: target.agentId, path: target.path, owner: target.owner})}`,
+  );
+}
+
+/** Keeps a copy of the sign-in the agent is using, so a swap can be undone. */
+export function saveAgentAccount(target: PatchTarget, displayName = "") {
+  return request<SavedAccount>("/api/save-agent-account", "POST", {
+    ...target,
+    displayName: displayName,
+  });
+}
+
+/** Stores an API key as an account of its own, swapped like any other. */
+export function addAgentAccount(target: PatchTarget, apiKey: string, displayName = "") {
+  return request<SavedAccount>("/api/add-agent-account", "POST", {
+    ...target,
+    apiKey: apiKey,
+    displayName: displayName,
+  });
+}
+
+/** Puts one stored sign-in back into the agent, saving what it replaces. */
+export function switchAgentAccount(target: PatchTarget, name: string) {
+  return request<SavedAccount>("/api/switch-agent-account", "POST", {...target, name: name});
+}
+
+export function renameAgentAccount(name: string, displayName: string) {
+  return request<string>("/api/update-agent-account", "POST", {
+    name: name,
+    displayName: displayName,
+  });
+}
+
+/** Forgets Gateway's copy of one sign-in; the agent keeps what it is using. */
+export function deleteAgentAccount(name: string) {
+  return request<string>("/api/delete-agent-account", "POST", {name: name});
+}
+
+/** Starts a browser sign-in and stores the account it brings back. */
+export function signInAgentAccount(target: PatchTarget) {
+  return request<AgentSignin>("/api/sign-in-agent-account", "POST", target);
+}
+
+export function getAgentSignin(id: string) {
+  return request<AgentSignin>(`/api/get-agent-signin${query({id: id})}`);
 }
 
 export interface AgentRouting {

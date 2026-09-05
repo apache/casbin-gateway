@@ -24,6 +24,7 @@ import * as Setting from "@/Setting";
 import {AgentCatalog} from "@/components/AgentCatalog";
 import {CcSwitchBanner} from "@/components/CcSwitchBanner";
 import {AuthenticityOverview} from "@/components/AuthenticityOverview";
+import {AgentSigninDialog} from "@/components/AgentAccounts";
 import {AgentGridCard} from "@/components/AgentGridCard";
 import {OnboardingButton, OnboardingChecklist, useOnboarding} from "@/components/OnboardingChecklist";
 import {EmptyState, ErrorState} from "@/components/shared/empty-state";
@@ -36,6 +37,7 @@ import {Card} from "@/components/ui/card";
 import {
   agentKey,
   runtimeOf,
+  useAgentAccounts,
   useAgentInstall,
   useAgentInstances,
   useAgents,
@@ -96,6 +98,7 @@ export default function HomePage({account}: {account: Account}) {
   // Every agent's extra copies in one listing, so a page of cards costs one
   // request rather than one per card.
   const instances = useAgentInstances("", isAdmin);
+  const accounts = useAgentAccounts(agents, isAdmin);
   const [providers, setProviders] = React.useState<Provider[]>([]);
   const [health, setHealth] = React.useState<ProviderHealth[]>([]);
   const [quotas, setQuotas] = React.useState<ProviderQuota[]>([]);
@@ -309,6 +312,7 @@ export default function HomePage({account}: {account: Account}) {
               status={runtimeOf(runtime, agent)}
               update={updateOf(updates.updates, agent)}
               instances={instances}
+              accounts={accounts}
               recording={recording}
               busy={busyKey === agentKey(agent)}
               runBusy={runBusyKey === agentKey(agent)}
@@ -320,6 +324,9 @@ export default function HomePage({account}: {account: Account}) {
           ))}
         </div>
       )}
+
+      {/* One sign-in runs at a time, so the whole grid shares one dialog. */}
+      <AgentSigninDialog controls={accounts} />
 
       {/* What is not here yet, so an empty machine has somewhere to go. */}
       <AgentCatalog agents={agents} enabled={scanned} installer={installer} onLocated={() => scan(true)} />

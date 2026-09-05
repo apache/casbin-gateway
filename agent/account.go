@@ -120,10 +120,23 @@ func readAccountIn(kind, dir string) *Account {
 	}
 }
 
+// AccountOfCredential names the sign-in held in an agent's own credential file,
+// given the contents rather than a directory: a copy saved somewhere else is
+// read by the same claims as the one in place.
+func AccountOfCredential(agentId string, data []byte) *Account {
+	if accountKind(agentId) != "codex" {
+		return nil
+	}
+	return codexAccountOf(data)
+}
+
 // readCodexAccount decodes the profile carried in the JWT that Codex and the
 // ChatGPT desktop app store after a ChatGPT sign-in.
 func readCodexAccount(dir string) *Account {
-	data := readCapped(filepath.Join(dir, "auth.json"))
+	return codexAccountOf(readCapped(filepath.Join(dir, "auth.json")))
+}
+
+func codexAccountOf(data []byte) *Account {
 	if data == nil {
 		return nil
 	}
