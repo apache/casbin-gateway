@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strings"
 
 	"github.com/apache/casbin-gateway/agenthome"
 )
@@ -58,6 +59,10 @@ type skillLayout struct {
 // tree that is searched for the skills folders the plugins ship, or the same
 // directory inside every project the agent has been run in.
 type skillSource struct {
+	// base is the agent's own directory when its home variable can move that
+	// directory; nil for a source that sits straight under the account's home,
+	// as the shared ~/.agents skills do.
+	base     agentDir
 	segments []string
 	scope    string
 	scan     bool
@@ -68,7 +73,14 @@ type skillSource struct {
 }
 
 func (s skillSource) dir(home string) string {
-	return filepath.Join(append([]string{home}, s.segments...)...)
+	return joinIn(s.base, home, s.segments)
+}
+
+// within puts this source inside a directory the agent's home variable can
+// move, rather than straight under the account's home.
+func (s skillSource) within(base agentDir) skillSource {
+	s.base = base
+	return s
 }
 
 // roots is every directory this source contributes: one under the home
@@ -127,11 +139,17 @@ func (l *mcpLayout) path(home string) string {
 // The agents spell it differently — CLAUDE.md, AGENTS.md, global_rules.md — and
 // hold the same thing in it.
 type promptLayout struct {
+	base     agentDir
 	segments []string
 }
 
 func (l *promptLayout) path(home string) string {
-	return filepath.Join(append([]string{home}, l.segments...)...)
+	return joinIn(l.base, home, l.segments)
+}
+
+func (l *promptLayout) within(base agentDir) *promptLayout {
+	l.base = base
+	return l
 }
 
 // promptFile names one agent's instruction file, last segment first so the file
@@ -220,10 +238,10 @@ var layouts = map[string]layout{
 	// directory, which is the first user source.
 	"dsh": {
 		skills: &skillLayout{sources: []skillSource{
-			userSkills(".dsh", "skills"),
+			userSkills("skills").within(dshDir),
 			userSkills(".agents", "skills"),
 		}},
-		mcp: &mcpLayout{file: under(".dsh", "cordis.patch.yml"), store: &cordisStore{}},
+		mcp: &mcpLayout{file: in(dshDir, "cordis.patch.yml"), store: &cordisStore{}},
 	},
 	"openclaw": {
 		skills: &skillLayout{sources: []skillSource{
@@ -256,12 +274,12 @@ var layouts = map[string]layout{
 	// KIMI_CODE_HOME so the other agents keep reading them.
 	"kimi-code": {
 		skills: &skillLayout{sources: []skillSource{
-			userSkills(".kimi-code", "skills"),
+			userSkills("skills").within(kimiDir),
 			userSkills(".agents", "skills"),
-			pluginSkills(".kimi-code", "plugins"),
+			pluginSkills("plugins").within(kimiDir),
 		}},
-		mcp:    &mcpLayout{file: under(".kimi-code", "mcp.json"), store: &jsonStore{paths: [][]string{{"mcpServers"}}}},
-		prompt: promptFile("AGENTS.md", ".kimi-code"),
+		mcp:    &mcpLayout{file: in(kimiDir, "mcp.json"), store: &jsonStore{paths: [][]string{{"mcpServers"}}}},
+		prompt: promptFile("AGENTS.md").within(kimiDir),
 	},
 	"codebuddy": {
 		skills: &skillLayout{sources: []skillSource{
@@ -275,11 +293,11 @@ var layouts = map[string]layout{
 
 var codexLayout = layout{
 	skills: &skillLayout{sources: []skillSource{
-		userSkills(".codex", "skills"),
-		pluginSkills(".codex", "plugins"),
+		userSkills("skills").within(codexDir),
+		pluginSkills("plugins").within(codexDir),
 	}},
-	mcp:    &mcpLayout{file: under(".codex", "config.toml"), store: &tomlStore{table: "mcp_servers"}},
-	prompt: promptFile("AGENTS.md", ".codex"),
+	mcp:    &mcpLayout{file: in(codexDir, "config.toml"), store: &tomlStore{table: "mcp_servers"}},
+	prompt: promptFile("AGENTS.md").within(codexDir),
 }
 
 // The opencode CLI and its desktop app read one ~/.config/opencode, on every
@@ -331,11 +349,75 @@ func McpConfigPath(agentId string, home string) (string, bool) {
 	return found.mcp.path(home), true
 }
 
+// McpConfigFile is the same file for owner rather than for a home directory the
+// caller resolved, empty for an agent whose MCP configuration Gateway cannot
+// write. The page shows it so an operator can see where a connection landed.
+func McpConfigFile(agentId string, owner string) string {
+	found, ok := layouts[agentId]
+	if !ok || found.mcp == nil {
+		return ""
+	}
+	home, err := homeOf(owner)
+	if err != nil {
+		return ""
+	}
+	return found.mcp.path(home)
+}
+
 func under(segments ...string) func(string) string {
 	return func(home string) string {
-		return filepath.Join(append([]string{home}, segments...)...)
+		return joinIn(nil, home, segments)
 	}
 }
+
+// in names a file inside a directory the agent's home variable can move.
+func in(base agentDir, segments ...string) func(string) string {
+	return func(home string) string {
+		return joinIn(base, home, segments)
+	}
+}
+
+func joinIn(base agentDir, home string, segments []string) string {
+	root := home
+	if base != nil {
+		root = base(home)
+	}
+	return filepath.Join(append([]string{root}, segments...)...)
+}
+
+// agentDir is where one agent keeps its own configuration under an account's
+// home directory.
+type agentDir func(home string) string
+
+// movedBy is such a directory when the agent lets its owner put it somewhere
+// else. Writing to the default while the agent reads the moved one is a write
+// that reports success and changes nothing, which is why the variable is read
+// here rather than assumed unset.
+//
+// The variable belongs to the account Gateway runs as, so it counts only when
+// home is that account's own; another account's dsh is not moved by this one's
+// environment.
+func movedBy(env string, name string) agentDir {
+	return func(home string) string {
+		configured := strings.TrimSpace(os.Getenv(env))
+		if configured != "" && filepath.IsAbs(configured) && isCurrentHome(home) {
+			return filepath.Clean(configured)
+		}
+		return filepath.Join(home, name)
+	}
+}
+
+func isCurrentHome(home string) bool {
+	current, err := os.UserHomeDir()
+	return err == nil && strings.EqualFold(filepath.Clean(current), filepath.Clean(home))
+}
+
+// The agents whose own directory an environment variable moves.
+var (
+	codexDir = movedBy("CODEX_HOME", ".codex")
+	dshDir   = movedBy("DSH_HOME", ".dsh")
+	kimiDir  = movedBy("KIMI_CODE_HOME", ".kimi-code")
+)
 
 // opencodeConfig is the config file to edit. opencode reads config.json,
 // opencode.json and opencode.jsonc in that order and merges them, so they are

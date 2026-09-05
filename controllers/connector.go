@@ -57,6 +57,9 @@ type ConnectorTarget struct {
 	AgentId string `json:"agentId"`
 	Name    string `json:"name"`
 	Owner   string `json:"owner"`
+	// McpFile is the file a connection is written into for this agent, shown so
+	// an operator can check it against the one their agent actually reads.
+	McpFile string `json:"mcpFile,omitempty"`
 }
 
 // ConnectorCatalog is everything the connectors page draws itself from.
@@ -152,6 +155,7 @@ func connectorTargets() ([]*ConnectorTarget, error) {
 			AgentId: installation.AgentId,
 			Name:    installation.Name,
 			Owner:   installation.Owner,
+			McpFile: agentconfig.McpConfigFile(installation.AgentId, installation.Owner),
 		})
 	}
 

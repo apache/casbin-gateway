@@ -49,7 +49,7 @@ func InstallConnection(connection *Connection, agentIds []string) ([]*agentconfi
 		request, err := proxyRequest(connection, found, agentId)
 		if err != nil {
 			planned = append(planned, &agentconfig.PlanItem{
-				AgentId: agentId, Name: found.Server.Name, Action: "skip", Reason: err.Error(),
+				AgentId: agentId, Name: found.Server.Name, Action: agentconfig.ActionFailed, Reason: err.Error(),
 			})
 			continue
 		}
@@ -58,7 +58,7 @@ func InstallConnection(connection *Connection, agentIds []string) ([]*agentconfi
 		items, err := agentconfig.AddMcp(request)
 		if err != nil {
 			planned = append(planned, &agentconfig.PlanItem{
-				AgentId: agentId, Name: found.Server.Name, Action: "skip", Reason: err.Error(),
+				AgentId: agentId, Name: found.Server.Name, Action: agentconfig.ActionFailed, Reason: err.Error(),
 			})
 			continue
 		}
@@ -210,9 +210,9 @@ func ResolveConnection(owner string, name string) (*connector.Rendered, error) {
 func removeFrom(connection *Connection, serverName string, agentIds []string) []*agentconfig.PlanItem {
 	planned := []*agentconfig.PlanItem{}
 	for _, agentId := range agentIds {
-		item := &agentconfig.PlanItem{AgentId: agentId, Name: serverName, Action: "remove"}
+		item := &agentconfig.PlanItem{AgentId: agentId, Name: serverName, Action: agentconfig.ActionRemove}
 		if err := agentconfig.Delete(agentId, connection.Owner, agentconfig.KindMcp, serverName); err != nil {
-			item.Action, item.Reason = "skip", err.Error()
+			item.Action, item.Reason = agentconfig.ActionSkip, err.Error()
 		}
 		planned = append(planned, item)
 	}
@@ -236,11 +236,12 @@ func dropped(before []string, after []string) []string {
 }
 
 // installed is the agents the write actually reached, so a connection never
-// claims an agent whose configuration could not be written.
+// claims an agent whose configuration could not be written. A skipped agent and
+// a failed one both count as not reached: neither has the entry.
 func installed(planned []*agentconfig.PlanItem, agentIds []string) []string {
 	failed := map[string]bool{}
 	for _, item := range planned {
-		if item.Action == "skip" {
+		if item.Action == agentconfig.ActionSkip || item.Action == agentconfig.ActionFailed {
 			failed[item.AgentId] = true
 		}
 	}

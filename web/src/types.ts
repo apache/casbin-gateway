@@ -1420,7 +1420,7 @@ export type SkillInstallMode = "copy" | "link";
 /** How an MCP server is reached: a spawned command, or an HTTP endpoint. */
 export type McpTransport = "stdio" | "http";
 
-export type AgentConfigAction = "create" | "overwrite" | "skip" | "failed";
+export type AgentConfigAction = "create" | "overwrite" | "remove" | "skip" | "failed";
 
 /** What a copy would do, or did, to one item at one target agent. */
 export interface AgentConfigPlanItem {
@@ -1661,6 +1661,8 @@ export interface ConnectorTarget {
   agentId: string;
   name: string;
   owner: string;
+  /** The file a connection is written into for this agent. */
+  mcpFile?: string;
 }
 
 export interface ConnectorCatalog {

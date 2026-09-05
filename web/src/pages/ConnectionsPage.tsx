@@ -14,7 +14,7 @@
 
 import * as React from "react";
 import {useSearchParams} from "react-router-dom";
-import {ExternalLink, Plug, Search, TriangleAlert} from "lucide-react";
+import {Check, ExternalLink, Plug, Search, TriangleAlert} from "lucide-react";
 import i18next from "i18next";
 
 import * as Setting from "@/Setting";
@@ -31,6 +31,7 @@ import {connectorText as text} from "@/lib/connectors";
 import {cn} from "@/lib/utils";
 import type {
   Account,
+  AgentConfigPlanItem,
   ConnectorCatalog,
   ConnectorEntry,
   ConnectorTarget,
@@ -53,6 +54,19 @@ const categoryLabels: Record<string, string> = {
 
 function iconUrl(icon: string) {
   return icon === "" ? "" : `https://www.google.com/s2/favicons?domain=${icon}&sz=64`;
+}
+
+/** What one planned write ended up doing, as the result list reads it out. */
+function planLabel(item: AgentConfigPlanItem) {
+  switch (item.action) {
+  case "create":
+  case "overwrite":
+    return "connector:Written";
+  case "remove":
+    return "connector:Taken out";
+  default:
+    return "connector:Failed";
+  }
 }
 
 /**
@@ -184,6 +198,7 @@ export default function ConnectionsPage({account}: {account: Account}) {
           entry={editing}
           targets={catalog?.targets ?? []}
           onClose={() => setEditing(null)}
+          onRefresh={reload}
           onDone={() => {
             setEditing(null);
             reload();
@@ -271,11 +286,11 @@ function ConnectorCard({entry, onConnect}: {entry: ConnectorEntry; onConnect: ()
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold">{text(entry.displayName)}</span>
             {entry.connected ? (
-              <Badge variant="secondary">
-                {entry.agents.length > 0
-                  ? i18next.t("connector:Connected in", {count: entry.agents.length})
-                  : i18next.t("connector:Connected")}
-              </Badge>
+              entry.agents.length > 0 ? (
+                <Badge variant="secondary">{i18next.t("connector:Connected in", {count: entry.agents.length})}</Badge>
+              ) : (
+                <Badge variant="destructive">{i18next.t("connector:In no agent")}</Badge>
+              )
             ) : null}
             {entry.tools && entry.tools.length > 0 ? (
               <Badge variant="outline">
@@ -307,29 +322,40 @@ function ConnectDialog({
   entry,
   targets,
   onClose,
+  onRefresh,
   onDone,
 }: {
   account: Account;
   entry: ConnectorEntry;
   targets: ConnectorTarget[];
   onClose: () => void;
+  onRefresh: () => void;
   onDone: () => void;
 }) {
   const fields = entry.auth.fields ?? [];
   const isOauth = entry.auth.kind === "oauth2";
   const [credentials, setCredentials] = React.useState<Record<string, string>>({});
   const [agents, setAgents] = React.useState<string[]>(entry.agents);
+  // installed is the agents the server says this connection actually reached. A
+  // tick is what the operator is asking for; these are what is already there.
+  const [installed, setInstalled] = React.useState<string[]>(entry.agents);
+  const [plan, setPlan] = React.useState<AgentConfigPlanItem[] | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const [authorized, setAuthorized] = React.useState(entry.authorized);
   const [awaiting, setAwaiting] = React.useState(false);
   const [redirectUri, setRedirectUri] = React.useState("");
 
+  // syncAgents is for the first read only: this also runs while the dialog is
+  // open, and resetting the ticks there would undo what is being edited.
   const load = React.useCallback(
-    () =>
+    (syncAgents = false) =>
       ConnectorBackend.getConnection(account.name, entry.id).then(response => {
         if (response.status === "ok" && response.data) {
           setCredentials(response.data.credentials ?? {});
-          setAgents(response.data.agents ?? []);
+          setInstalled(response.data.agents ?? []);
+          if (syncAgents) {
+            setAgents(response.data.agents ?? []);
+          }
           return (response.data.credentials ?? {})["accessToken"] !== undefined;
         }
         return false;
@@ -339,7 +365,7 @@ function ConnectDialog({
 
   React.useEffect(() => {
     if (entry.connected) {
-      load();
+      load(true);
     }
   }, [entry.connected, load]);
 
@@ -417,17 +443,35 @@ function ConnectDialog({
       .finally(() => setTesting(false));
   };
 
+  // wrote is what happened to an agent the operator asked for. An item about an
+  // agent being let go is not one of these: its entry is meant to go.
+  const wrote = (item: AgentConfigPlanItem) => item.action === "create" || item.action === "overwrite";
+  const missed = (item: AgentConfigPlanItem) => agents.includes(item.agentId) && !wrote(item);
+
   const submit = () => {
     setSubmitting(true);
+    setPlan(null);
     ConnectorBackend.connect({owner: account.name, name: entry.id, credentials: credentials, agents: agents})
       .then(response => {
-        if (response.status === "ok") {
-          Setting.showMessage("success", i18next.t("connector:Testing in background"));
-          onDone();
-          window.setTimeout(onDone, 12000);
-        } else {
+        if (response.status !== "ok") {
           Setting.showMessage("error", response.msg ?? "");
+          return;
         }
+        // A connection that reached none of the agents used to close the dialog
+        // and look exactly like one that worked, so a failure keeps it open with
+        // the file each agent was written to.
+        const planned = response.data ?? [];
+        const failures = planned.filter(missed);
+        if (failures.length > 0) {
+          setPlan(planned);
+          load();
+          onRefresh();
+          Setting.showMessage("error", i18next.t("connector:Not written", {count: failures.length}));
+          return;
+        }
+        Setting.showMessage("success", i18next.t("connector:Testing in background"));
+        onDone();
+        window.setTimeout(onDone, 12000);
       })
       .catch(error => Setting.showMessage("error", error.message))
       .finally(() => setSubmitting(false));
@@ -447,6 +491,18 @@ function ConnectDialog({
       .catch(error => Setting.showMessage("error", error.message))
       .finally(() => setSubmitting(false));
   };
+
+  const nameOf = (agentId: string) => targets.find(target => target.agentId === agentId)?.name ?? agentId;
+  const adding = agents.filter(agentId => !installed.includes(agentId));
+  const removing = installed.filter(agentId => !agents.includes(agentId));
+  // What pressing Connect would change, so the button is not the only way to
+  // find out. Empty leaves the field's own hint in place.
+  const pending = [
+    adding.length > 0 ? i18next.t("connector:Will write").replace("{names}", adding.map(nameOf).join(", ")) : "",
+    removing.length > 0 ? i18next.t("connector:Will remove").replace("{names}", removing.map(nameOf).join(", ")) : "",
+  ]
+    .filter(part => part !== "")
+    .join(" ");
 
   return (
     <FormDialog
@@ -572,26 +628,34 @@ function ConnectDialog({
 
       <Field
         label={i18next.t("connector:Install into")}
-        hint={i18next.t("connector:Install into hint")}
+        hint={pending === "" ? i18next.t("connector:Install into hint") : pending}
         error={agents.length === 0 ? i18next.t("connector:Pick at least one agent") : undefined}
       >
         <div className="flex flex-wrap gap-2">
           {targets.map(target => {
             const picked = agents.includes(target.agentId);
+            // A tick is what will be there; the check mark is what is there now,
+            // which is the difference between asking and having asked.
+            const has = installed.includes(target.agentId);
             return (
               <button
                 key={target.agentId}
                 type="button"
+                title={target.mcpFile}
                 onClick={() =>
                   setAgents(picked ? agents.filter(id => id !== target.agentId) : [...agents, target.agentId])
                 }
                 className={cn(
                   "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors",
-                  picked ? "border-foreground bg-foreground text-background" : "hover:bg-muted",
+                  picked && has && "border-foreground bg-foreground text-background",
+                  picked && !has && "border-foreground border-dashed",
+                  !picked && has && "border-destructive/60 text-destructive border-dashed line-through",
+                  !picked && !has && "hover:bg-muted",
                 )}
               >
                 <AgentIcon agent={target.agentId} size={16} />
                 {target.name}
+                {has ? <Check className="size-3.5" /> : null}
               </button>
             );
           })}
@@ -600,6 +664,25 @@ function ConnectDialog({
           ) : null}
         </div>
       </Field>
+
+      {plan && plan.length > 0 ? (
+        <Field label={i18next.t("connector:Where it went")}>
+          <ul className="space-y-1.5 text-xs">
+            {plan.map(item => (
+              <li key={`${item.agentId}-${item.action}`} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                <span className="font-medium">{nameOf(item.agentId)}</span>
+                <span className={missed(item) ? "text-destructive" : "text-muted-foreground"}>
+                  {i18next.t(planLabel(item))}
+                </span>
+                {item.path ? (
+                  <code className="bg-muted min-w-0 rounded px-1.5 py-0.5 break-all">{item.path}</code>
+                ) : null}
+                {item.reason ? <span className="text-destructive break-words">{item.reason}</span> : null}
+              </li>
+            ))}
+          </ul>
+        </Field>
+      ) : null}
     </FormDialog>
   );
 }

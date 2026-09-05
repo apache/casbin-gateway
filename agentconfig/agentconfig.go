@@ -303,6 +303,7 @@ type CopyRequest struct {
 const (
 	ActionCreate    = "create"
 	ActionOverwrite = "overwrite"
+	ActionRemove    = "remove"
 	ActionSkip      = "skip"
 	ActionFailed    = "failed"
 )
