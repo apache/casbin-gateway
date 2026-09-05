@@ -192,7 +192,12 @@ function GroupBlock({
           {items.map(item => (
             <label
               key={item.name}
-              className="flex items-start justify-between gap-3 border-b py-2 text-sm last:border-b-0 sm:[&:nth-last-child(2)]:border-b-0"
+              className={cn(
+                "flex items-start justify-between gap-3 border-b py-2 text-sm last:border-b-0 sm:[&:nth-last-child(2)]:border-b-0",
+                // One tool of an MCP server sits under that server's own switch,
+                // and reads as belonging to it rather than beside it.
+                isNestedItem(item) && "pl-4",
+              )}
             >
               <span className="min-w-0">
                 {itemLabel(item)}
@@ -214,6 +219,15 @@ function GroupBlock({
       ) : null}
     </div>
   );
+}
+
+/**
+ * An item that belongs under another one. Only the MCP group has these: a
+ * server is "mcp/<server>" and one of its tools is "mcp/<server>/<tool>", so
+ * the extra segment is what marks it as nested.
+ */
+function isNestedItem(item: ToolItem) {
+  return item.name.split("/").length > 2;
 }
 
 /** The casbin model and policy the switches above compile to, which is what is

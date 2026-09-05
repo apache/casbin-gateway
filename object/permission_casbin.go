@@ -69,6 +69,10 @@ const (
 type AgentGuard struct {
 	agentId  string
 	enforcer *casbin.Enforcer
+	// switched is every item this permission actually has a switch for. It is
+	// what lets one tool of an MCP server be decided by its own switch rather
+	// than by the server's, without a rule for every tool nobody has set.
+	switched map[string]bool
 }
 
 var (
@@ -99,7 +103,7 @@ func LoadAgentGuard(agentId string) (*AgentGuard, error) {
 		return nil, err
 	}
 
-	guard := &AgentGuard{agentId: agentId, enforcer: enforcer}
+	guard := &AgentGuard{agentId: agentId, enforcer: enforcer, switched: permission.switchedItems()}
 	guardCache[agentId] = guard
 	return guard, nil
 }
@@ -209,6 +213,15 @@ func (permission *AgentPermission) appendToolRules(add func(object string, effec
 // listed reports whether a switch was ever set. An item nobody has touched is
 // allowed, so a switch added in a later version does not silently take
 // something away from an agent configured before it existed.
+// switchedItems is every item somebody has set a switch for.
+func (permission *AgentPermission) switchedItems() map[string]bool {
+	switched := map[string]bool{}
+	for name := range permission.Tools {
+		switched[name] = true
+	}
+	return switched
+}
+
 func (permission *AgentPermission) listed(name string) bool {
 	_, found := permission.Tools[name]
 	return found
@@ -342,6 +355,13 @@ func (guard *AgentGuard) AllowProvider(providerId string) bool {
 
 // AllowTool reports whether this agent may be offered one tool, by name.
 func (guard *AgentGuard) AllowTool(name string) bool {
+	// A tool of an MCP server may have a switch of its own, set from the tools
+	// a connection was found to offer. That switch decides it; the server's own
+	// switch is what every other tool of that server falls back to.
+	if specific, ok := McpToolItemOf(name); ok && guard.switched[specific] {
+		return guard.allow(objectTool + specific)
+	}
+
 	entry := ToolItemOf(name)
 	if entry == "" {
 		return true

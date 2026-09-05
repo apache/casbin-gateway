@@ -17,6 +17,7 @@ package object
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 
 	"github.com/apache/casbin-gateway/connector"
@@ -234,4 +235,30 @@ func updateConnection(connection *Connection) error {
 func DeleteConnection(owner string, name string) error {
 	_, err := ormer.Engine.ID(core.PK{owner, name}).Delete(&Connection{})
 	return err
+}
+
+// ConnectionToolItems is one switch per tool of every connection installed in
+// this agent, built from what the last test found. A connection nobody has
+// tested contributes none and is governed by its server switch alone, which is
+// what makes testing worth doing beyond seeing that it works.
+func ConnectionToolItems(agentId string, owner string) []ToolItem {
+	connections, err := GetConnections(owner)
+	if err != nil {
+		return nil
+	}
+
+	items := []ToolItem{}
+	for _, connection := range connections {
+		if len(connection.Tools) == 0 || !slices.Contains(connection.Agents, agentId) {
+			continue
+		}
+		found, ok := connector.Get(connection.Name)
+		if !ok {
+			continue
+		}
+		for _, tool := range connection.Tools {
+			items = append(items, McpToolItem(found.Server.Name, tool.Name))
+		}
+	}
+	return items
 }

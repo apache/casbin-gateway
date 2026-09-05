@@ -159,6 +159,31 @@ func McpServerItem(server string) ToolItem {
 	}
 }
 
+// McpToolItem is the switch for one tool of one MCP server, which exists only
+// once a connection has been tested and said what it offers. It sits under that
+// server's own switch and takes precedence over it, so a server can be left on
+// with one of its tools taken away, or off with one of them left.
+func McpToolItem(server string, tool string) ToolItem {
+	return ToolItem{
+		Name:  GroupMcp + "/" + normalizeToolName(strings.ToLower(server)) + "/" + normalizeToolName(strings.ToLower(tool)),
+		Group: GroupMcp,
+		Label: server + " · " + tool,
+		Tools: []string{"mcp__" + server + "__" + tool},
+	}
+}
+
+// McpToolItemOf names the switch one MCP tool would have of its own, which is
+// not the same as there being one: the caller decides what to do when nobody
+// has set it.
+func McpToolItemOf(name string) (string, bool) {
+	lower := strings.ToLower(strings.TrimSpace(name))
+	server, tool, ok := mcpPartsOf(lower)
+	if !ok || server == "" || tool == "" {
+		return "", false
+	}
+	return GroupMcp + "/" + server + "/" + tool, true
+}
+
 // CatalogItemNames is every switch of the built-in catalogue, which is what a
 // stored permission is read against.
 func CatalogItemNames() []string {
@@ -236,6 +261,14 @@ func ToolItemOf(name string) string {
 // mcpServerOf reads the server out of an MCP tool name, which the agents write
 // as "mcp__<server>__<tool>".
 func mcpServerOf(lower string) (string, bool) {
+	server, _, ok := mcpPartsOf(lower)
+	return server, ok
+}
+
+// mcpPartsOf splits an MCP tool name into the server and the tool. A name that
+// carries no tool part yields an empty one rather than a failure: it is still
+// that server's, which is what the server's own switch is for.
+func mcpPartsOf(lower string) (string, string, bool) {
 	for _, prefix := range []string{"mcp__", "mcp_", "mcp."} {
 		if !strings.HasPrefix(lower, prefix) {
 			continue
@@ -243,12 +276,12 @@ func mcpServerOf(lower string) (string, bool) {
 		rest := strings.TrimPrefix(lower, prefix)
 		for _, separator := range []string{"__", "_", "."} {
 			if index := strings.Index(rest, separator); index > 0 {
-				return normalizeToolName(rest[:index]), true
+				return normalizeToolName(rest[:index]), normalizeToolName(rest[index:]), true
 			}
 		}
-		return normalizeToolName(rest), true
+		return normalizeToolName(rest), "", true
 	}
-	return "", false
+	return "", "", false
 }
 
 // normalizeToolName drops what only separates the words of a tool's name, so

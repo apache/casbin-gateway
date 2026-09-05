@@ -57,6 +57,9 @@ func mcpItemsOf(agentId string, owner string) []object.ToolItem {
 	for _, server := range inventory.McpServers {
 		items = append(items, object.McpServerItem(server.Name))
 	}
+	// A connection that has been tested knows what it offers, so its tools get a
+	// switch each, under the server switch they already had.
+	items = append(items, object.ConnectionToolItems(agentId, owner)...)
 	return items
 }
 
