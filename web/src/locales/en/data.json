@@ -552,6 +552,7 @@
     "Remove source": "Remove source",
     "Remove source description": "Gateway drops its copy of this source. Skills already installed from it stay where they are.",
     "Remove this source?": "Remove this source?",
+    "Removed": "Removed",
     "Replace items that already exist": "Replace items that already exist",
     "Replaced": "Replaced",
     "Restore": "Restore",

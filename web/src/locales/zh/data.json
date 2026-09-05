@@ -552,6 +552,7 @@
     "Remove source": "移除来源",
     "Remove source description": "Gateway会删除本地缓存的副本。已经安装的技能会原样保留。",
     "Remove this source?": "移除该来源？",
+    "Removed": "移除",
     "Replace items that already exist": "覆盖已存在的同名项",
     "Replaced": "覆盖",
     "Restore": "恢复",

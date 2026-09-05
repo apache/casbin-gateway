@@ -20,6 +20,7 @@ import type {AgentConfigAction} from "@/types";
 const actionStyles: Record<AgentConfigAction, {variant: BadgeVariant; label: string}> = {
   create: {variant: "success", label: "agentConfig:New"},
   overwrite: {variant: "warning", label: "agentConfig:Replaced"},
+  remove: {variant: "warning", label: "agentConfig:Removed"},
   skip: {variant: "muted", label: "agentConfig:Skipped"},
   failed: {variant: "danger", label: "agentConfig:Failed"},
 };
