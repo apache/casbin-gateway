@@ -1,0 +1,20 @@
+{
+  "id": "chrome-devtools",
+  "displayName": "Chrome DevTools",
+  "category": "dev",
+  "icon": "developer.chrome.com",
+  "description": "Hand Chrome DevTools to an agent: record performance profiles, inspect the DOM, read network requests and console errors on a real page.",
+  "docsUrl": "https://github.com/ChromeDevTools/chrome-devtools-mcp",
+  "auth": {
+    "kind": "none"
+  },
+  "server": {
+    "name": "chrome-devtools",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "chrome-devtools-mcp@latest"
+    ]
+  }
+}

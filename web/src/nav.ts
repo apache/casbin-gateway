@@ -16,6 +16,7 @@ import {
   ArrowDownToLine,
   Blocks,
   Bot,
+  Cable,
   ChartColumn,
   CircleDollarSign,
   FileSearch,
@@ -91,6 +92,9 @@ export const navGroups: NavGroup[] = [
       {key: "/agent-configs?tab=prompt", label: "agentConfig:Prompts", path: "/agent-configs?tab=prompt"},
     ],
   },
+  // Connections sit beside Skills, MCP & Prompts because a connection is an MCP
+  // server with its credentials kept here rather than in each agent's file.
+  {key: "/connections", label: "connector:Connections", icon: Cable, path: "/connections", adminOnly: true},
   {
     key: "/authenticity",
     label: "audit:Authenticity",

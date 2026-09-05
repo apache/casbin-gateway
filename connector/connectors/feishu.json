@@ -1,0 +1,42 @@
+{
+  "id": "feishu",
+  "displayName": "Lark",
+  "category": "office",
+  "icon": "feishu.cn",
+  "description": "Work with Lark from inside an agent: messages and groups, documents, spreadsheets, calendars and contacts, through your own company's app.",
+  "docsUrl": "https://github.com/larksuite/lark-openapi-mcp",
+  "unverified": true,
+  "auth": {
+    "kind": "token",
+    "fields": [
+      {
+        "key": "appId",
+        "label": "App ID",
+        "placeholder": "cli_...",
+        "help": "From a self-built app on the Lark open platform. Its permissions are what your own administrator approved.",
+        "required": true
+      },
+      {
+        "key": "appSecret",
+        "label": "App secret",
+        "secret": true,
+        "required": true
+      }
+    ],
+    "registerUrl": "https://open.feishu.cn/app"
+  },
+  "server": {
+    "name": "feishu",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@larksuiteoapi/lark-mcp",
+      "mcp",
+      "-a",
+      "${appId}",
+      "-s",
+      "${appSecret}"
+    ]
+  }
+}

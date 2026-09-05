@@ -1,0 +1,20 @@
+{
+  "id": "playwright",
+  "displayName": "Playwright",
+  "category": "dev",
+  "icon": "playwright.dev",
+  "description": "Drive a browser: open pages, click, fill forms, take screenshots, and read the console and network, for end-to-end tests and scraping.",
+  "docsUrl": "https://github.com/microsoft/playwright-mcp",
+  "auth": {
+    "kind": "none"
+  },
+  "server": {
+    "name": "playwright",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@playwright/mcp@latest"
+    ]
+  }
+}

@@ -1485,3 +1485,74 @@ export interface CcSwitchResult {
   prompts: CcSwitchOutcome[];
   skills: CcSwitchOutcome[];
 }
+
+export type ConnectorAuthKind = "none" | "token" | "oauth2";
+
+/** One value the operator supplies when connecting an application. */
+export interface ConnectorField {
+  key: string;
+  label: string;
+  placeholder?: string;
+  help?: string;
+  /** Never returned once stored; the form shows a mask instead. */
+  secret?: boolean;
+  required?: boolean;
+}
+
+export interface ConnectorAuth {
+  kind: ConnectorAuthKind;
+  fields?: ConnectorField[];
+  authorizeUrl?: string;
+  tokenUrl?: string;
+  scopes?: string[];
+  /** Where the operator creates the application these credentials come from. */
+  registerUrl?: string;
+}
+
+export interface ConnectorServerSpec {
+  name: string;
+  transport: string;
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+  url?: string;
+  headers?: Record<string, string>;
+}
+
+/** One card on the Connections page: the catalog entry and its state here. */
+export interface ConnectorEntry {
+  id: string;
+  displayName: string;
+  category: string;
+  icon: string;
+  description: string;
+  docsUrl?: string;
+  /** The service bills for its own API, said before anybody connects it. */
+  paid?: boolean;
+  /** Its server has not been run against the live service by us. */
+  unverified?: boolean;
+  auth: ConnectorAuth;
+  server: ConnectorServerSpec;
+  connected: boolean;
+  agents: string[];
+}
+
+/** An agent on this machine a connection can be installed into. */
+export interface ConnectorTarget {
+  agentId: string;
+  name: string;
+  owner: string;
+}
+
+export interface ConnectorCatalog {
+  connectors: ConnectorEntry[];
+  categories: string[];
+  targets: ConnectorTarget[];
+}
+
+export interface ConnectRequest {
+  owner: string;
+  name: string;
+  credentials: Record<string, string>;
+  agents: string[];
+}

@@ -1,0 +1,32 @@
+{
+  "id": "context7",
+  "displayName": "Context7",
+  "category": "docs",
+  "icon": "context7.com",
+  "description": "Up-to-date documentation and code samples for third-party libraries, so the model stops writing API calls from memory.",
+  "docsUrl": "https://github.com/upstash/context7",
+  "auth": {
+    "kind": "token",
+    "fields": [
+      {
+        "key": "apiKey",
+        "label": "API key",
+        "placeholder": "ctx7sk-...",
+        "help": "From context7.com. It works without one, under a stricter rate limit.",
+        "secret": true
+      }
+    ]
+  },
+  "server": {
+    "name": "context7",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@upstash/context7-mcp"
+    ],
+    "env": {
+      "CONTEXT7_API_KEY": "${apiKey}"
+    }
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "id": "amap",
+  "displayName": "Amap",
+  "category": "life",
+  "icon": "amap.com",
+  "description": "Search places, plan driving and walking routes, check the weather, and turn an address into coordinates.",
+  "docsUrl": "https://lbs.amap.com/api/mcp-server/summary",
+  "unverified": true,
+  "auth": {
+    "kind": "token",
+    "fields": [
+      {
+        "key": "apiKey",
+        "label": "Web service API key",
+        "help": "From the Amap open platform. Pick the web service key type, not the one for apps.",
+        "secret": true,
+        "required": true
+      }
+    ],
+    "registerUrl": "https://console.amap.com/dev/key/app"
+  },
+  "server": {
+    "name": "amap",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@amap/amap-maps-mcp-server"
+    ],
+    "env": {
+      "AMAP_MAPS_API_KEY": "${apiKey}"
+    }
+  }
+}

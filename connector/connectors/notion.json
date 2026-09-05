@@ -1,0 +1,34 @@
+{
+  "id": "notion",
+  "displayName": "Notion",
+  "category": "docs",
+  "icon": "notion.so",
+  "description": "Read and organise pages, databases and wikis: find a document, take stock of a project, and write the conclusion back.",
+  "docsUrl": "https://github.com/makenotion/notion-mcp-server",
+  "auth": {
+    "kind": "token",
+    "fields": [
+      {
+        "key": "token",
+        "label": "Integration token",
+        "placeholder": "ntn_...",
+        "help": "Create an internal integration in Notion, then share with it the pages it may read.",
+        "secret": true,
+        "required": true
+      }
+    ],
+    "registerUrl": "https://www.notion.so/my-integrations"
+  },
+  "server": {
+    "name": "notion",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@notionhq/notion-mcp-server"
+    ],
+    "env": {
+      "NOTION_TOKEN": "${token}"
+    }
+  }
+}

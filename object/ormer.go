@@ -315,4 +315,12 @@ func (a *Ormer) createTable() {
 	if err != nil {
 		panic(err)
 	}
+
+	// The applications an agent has been connected to, and the credentials they
+	// were connected with, which stay here rather than in each agent's own
+	// configuration file.
+	err = a.Engine.Sync2(new(Connection))
+	if err != nil {
+		panic(err)
+	}
 }

@@ -1,0 +1,30 @@
+{
+  "id": "filesystem",
+  "displayName": "Local files",
+  "category": "storage",
+  "icon": "modelcontextprotocol.io",
+  "description": "Give an agent one directory to read and write. Nothing outside the folder you name is reachable through it.",
+  "docsUrl": "https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem",
+  "auth": {
+    "kind": "token",
+    "fields": [
+      {
+        "key": "root",
+        "label": "Directory to allow",
+        "placeholder": "D:/work/notes",
+        "help": "The agent can read and write this directory and everything under it.",
+        "required": true
+      }
+    ]
+  },
+  "server": {
+    "name": "filesystem",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@modelcontextprotocol/server-filesystem",
+      "${root}"
+    ]
+  }
+}

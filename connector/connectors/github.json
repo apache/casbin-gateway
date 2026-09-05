@@ -1,0 +1,30 @@
+{
+  "id": "github",
+  "displayName": "GitHub",
+  "category": "dev",
+  "icon": "github.com",
+  "description": "Read and write repositories, issues and pull requests, and search code and history, so an agent works inside your project's own context.",
+  "docsUrl": "https://github.com/github/github-mcp-server",
+  "auth": {
+    "kind": "token",
+    "fields": [
+      {
+        "key": "token",
+        "label": "Personal access token",
+        "placeholder": "ghp_... or github_pat_...",
+        "help": "Settings, Developer settings, Personal access tokens. Grant the scopes you want the agent to have, and no more.",
+        "secret": true,
+        "required": true
+      }
+    ],
+    "registerUrl": "https://github.com/settings/personal-access-tokens"
+  },
+  "server": {
+    "name": "github",
+    "transport": "http",
+    "url": "https://api.githubcopilot.com/mcp/",
+    "headers": {
+      "Authorization": "Bearer ${token}"
+    }
+  }
+}

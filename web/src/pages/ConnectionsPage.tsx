@@ -1,0 +1,344 @@
+// Copyright 2026 The casbin Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import * as React from "react";
+import {ExternalLink, Plug} from "lucide-react";
+import i18next from "i18next";
+
+import * as Setting from "@/Setting";
+import * as ConnectorBackend from "@/backend/ConnectorBackend";
+import {AgentIcon} from "@/components/AgentIcon";
+import {Field, FormDialog} from "@/components/shared/form-dialog";
+import {UnauthorizedResult} from "@/components/shared/misc";
+import {PageContainer, PageHeader} from "@/components/shared/page-header";
+import {Badge} from "@/components/ui/badge";
+import {Button} from "@/components/ui/button";
+import {Card, CardContent} from "@/components/ui/card";
+import {Input} from "@/components/ui/input";
+import {cn} from "@/lib/utils";
+import type {Account, ConnectorCatalog, ConnectorEntry, ConnectorTarget} from "@/types";
+
+const CREDENTIAL_MASK = "***";
+
+/** The catalog sections, keyed by the id the backend lists them under. */
+const categoryLabels: Record<string, string> = {
+  office: "connector:Office",
+  docs: "connector:Documents",
+  dev: "connector:Development",
+  mail: "connector:Mail",
+  storage: "connector:Storage",
+  life: "connector:Life",
+};
+
+function iconUrl(icon: string) {
+  return icon === "" ? "" : `https://www.google.com/s2/favicons?domain=${icon}&sz=64`;
+}
+
+/**
+ * Catalog entries are written in English and translated like every other
+ * string, keyed by what they say. An entry nobody has translated yet falls back
+ * to the catalog's own wording rather than rendering its key.
+ *
+ * A description is a sentence and may hold a ":", which i18next reads as the
+ * namespace separator wherever it sits in the key — so the namespace is passed
+ * as an option and that splitting is turned off for the lookup, or every
+ * sentence holding a colon silently falls back to English.
+ */
+function text(value: string | undefined) {
+  if (value === undefined || value === "") {
+    return "";
+  }
+  return i18next.t(value, {ns: "connector", nsSeparator: false, defaultValue: value});
+}
+
+/**
+ * The Connections page: every application an agent on this machine can be
+ * connected to. A connection is stored here once, credentials included, and
+ * written into whichever agents are ticked, which is what makes connecting an
+ * application one action rather than one per agent.
+ */
+export default function ConnectionsPage({account}: {account: Account}) {
+  const isAdmin = Setting.isAdminUser(account);
+  const [catalog, setCatalog] = React.useState<ConnectorCatalog | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [category, setCategory] = React.useState("");
+  const [editing, setEditing] = React.useState<ConnectorEntry | null>(null);
+
+  const reload = React.useCallback(() => {
+    if (!isAdmin) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    ConnectorBackend.getConnectors(account.name)
+      .then(response => {
+        if (response.status === "ok") {
+          setCatalog(response.data);
+        } else {
+          Setting.showMessage("error", response.msg ?? "");
+        }
+      })
+      .catch(error => Setting.showMessage("error", error.message))
+      .finally(() => setLoading(false));
+  }, [account.name, isAdmin]);
+
+  React.useEffect(() => reload(), [reload]);
+
+  if (!isAdmin) {
+    return <UnauthorizedResult />;
+  }
+
+  const connectors = catalog?.connectors ?? [];
+  const shown = category === "" ? connectors : connectors.filter(entry => entry.category === category);
+  const categories = (catalog?.categories ?? []).filter(name => connectors.some(entry => entry.category === name));
+
+  return (
+    <PageContainer>
+      <PageHeader title={i18next.t("connector:Connections")} description={i18next.t("connector:Connections detail")} />
+
+      <div className="flex flex-wrap items-center gap-2">
+        <FilterChip active={category === ""} onClick={() => setCategory("")}>
+          {i18next.t("connector:All")}
+          <span className="text-muted-foreground ml-1.5 text-xs">{connectors.length}</span>
+        </FilterChip>
+        {categories.map(name => (
+          <FilterChip key={name} active={category === name} onClick={() => setCategory(name)}>
+            {i18next.t(categoryLabels[name] ?? name)}
+          </FilterChip>
+        ))}
+      </div>
+
+      {loading && connectors.length === 0 ? (
+        <p className="text-muted-foreground text-sm">{i18next.t("general:Loading")}</p>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {shown.map(entry => (
+            <ConnectorCard key={entry.id} entry={entry} onConnect={() => setEditing(entry)} />
+          ))}
+        </div>
+      )}
+
+      {editing ? (
+        <ConnectDialog
+          account={account}
+          entry={editing}
+          targets={catalog?.targets ?? []}
+          onClose={() => setEditing(null)}
+          onDone={() => {
+            setEditing(null);
+            reload();
+          }}
+        />
+      ) : null}
+    </PageContainer>
+  );
+}
+
+function FilterChip({active, onClick, children}: {active: boolean; onClick: () => void; children: React.ReactNode}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "rounded-full px-3 py-1.5 text-sm transition-colors",
+        active ? "bg-foreground text-background font-medium" : "text-muted-foreground hover:bg-muted",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ConnectorCard({entry, onConnect}: {entry: ConnectorEntry; onConnect: () => void}) {
+  const image = iconUrl(entry.icon);
+  return (
+    <Card className="bg-muted/40 border-none shadow-none">
+      <CardContent className="flex items-start gap-4 p-5">
+        <div className="bg-background flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl">
+          {image === "" ? <Plug className="text-muted-foreground size-5" /> : <img src={image} alt="" className="size-6" />}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold">{text(entry.displayName)}</span>
+            {entry.connected ? (
+              <Badge variant="secondary">
+                {entry.agents.length > 0
+                  ? i18next.t("connector:Connected in {count}").replace("{count}", `${entry.agents.length}`)
+                  : i18next.t("connector:Connected")}
+              </Badge>
+            ) : null}
+            {entry.paid ? <Badge variant="outline">{i18next.t("connector:Billed by vendor")}</Badge> : null}
+            {entry.unverified ? <Badge variant="outline">{i18next.t("connector:Unverified")}</Badge> : null}
+          </div>
+          <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">{text(entry.description)}</p>
+        </div>
+
+        <Button className="shrink-0 rounded-full" onClick={onConnect}>
+          {entry.connected ? i18next.t("connector:Manage") : i18next.t("connector:Connect")}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * The connect dialog: the credentials this connector asks for, and the agents
+ * to write it into. A stored secret comes back masked, and leaving the mask in
+ * place keeps whatever is already there.
+ */
+function ConnectDialog({
+  account,
+  entry,
+  targets,
+  onClose,
+  onDone,
+}: {
+  account: Account;
+  entry: ConnectorEntry;
+  targets: ConnectorTarget[];
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const fields = entry.auth.fields ?? [];
+  const [credentials, setCredentials] = React.useState<Record<string, string>>({});
+  const [agents, setAgents] = React.useState<string[]>(entry.agents);
+  const [submitting, setSubmitting] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!entry.connected) {
+      return;
+    }
+    ConnectorBackend.getConnection(account.name, entry.id).then(response => {
+      if (response.status === "ok" && response.data) {
+        setCredentials(response.data.credentials ?? {});
+        setAgents(response.data.agents ?? []);
+      }
+    });
+  }, [account.name, entry.connected, entry.id]);
+
+  const missing = fields.some(field => field.required && (credentials[field.key] ?? "").trim() === "");
+
+  const submit = () => {
+    setSubmitting(true);
+    ConnectorBackend.connect({owner: account.name, name: entry.id, credentials: credentials, agents: agents})
+      .then(response => {
+        if (response.status === "ok") {
+          Setting.showMessage("success", i18next.t("connector:Connected"));
+          onDone();
+        } else {
+          Setting.showMessage("error", response.msg ?? "");
+        }
+      })
+      .catch(error => Setting.showMessage("error", error.message))
+      .finally(() => setSubmitting(false));
+  };
+
+  const remove = () => {
+    setSubmitting(true);
+    ConnectorBackend.disconnect(account.name, entry.id)
+      .then(response => {
+        if (response.status === "ok") {
+          Setting.showMessage("success", i18next.t("connector:Disconnected"));
+          onDone();
+        } else {
+          Setting.showMessage("error", response.msg ?? "");
+        }
+      })
+      .catch(error => Setting.showMessage("error", error.message))
+      .finally(() => setSubmitting(false));
+  };
+
+  return (
+    <FormDialog
+      open={true}
+      onOpenChange={open => !open && onClose()}
+      title={text(entry.displayName)}
+      description={text(entry.description)}
+      onSubmit={submit}
+      submitting={submitting}
+      submitDisabled={missing || agents.length === 0}
+      submitText={i18next.t("connector:Connect")}
+      note={
+        entry.connected ? (
+          <Button variant="ghost" className="text-destructive" onClick={remove} disabled={submitting}>
+            {i18next.t("connector:Disconnect")}
+          </Button>
+        ) : null
+      }
+    >
+      {entry.auth.registerUrl ? (
+        <a
+          href={entry.auth.registerUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="text-primary inline-flex items-center gap-1 text-sm hover:underline"
+        >
+          {i18next.t("connector:Where these come from")}
+          <ExternalLink className="size-3.5" />
+        </a>
+      ) : null}
+
+      {fields.map(field => (
+        <Field key={field.key} label={text(field.label)} required={field.required} hint={text(field.help)}>
+          <Input
+            type={field.secret ? "password" : "text"}
+            value={credentials[field.key] ?? ""}
+            placeholder={field.placeholder}
+            onFocus={event => {
+              // A masked secret stands for one already stored, not a value to
+              // edit, so touching the box clears it rather than letting the
+              // mask be sent back as the new credential.
+              if (event.target.value === CREDENTIAL_MASK) {
+                setCredentials({...credentials, [field.key]: ""});
+              }
+            }}
+            onChange={event => setCredentials({...credentials, [field.key]: event.target.value})}
+          />
+        </Field>
+      ))}
+
+      <Field
+        label={i18next.t("connector:Install into")}
+        hint={i18next.t("connector:Install into hint")}
+        error={agents.length === 0 ? i18next.t("connector:Pick at least one agent") : undefined}
+      >
+        <div className="flex flex-wrap gap-2">
+          {targets.map(target => {
+            const picked = agents.includes(target.agentId);
+            return (
+              <button
+                key={target.agentId}
+                type="button"
+                onClick={() =>
+                  setAgents(picked ? agents.filter(id => id !== target.agentId) : [...agents, target.agentId])
+                }
+                className={cn(
+                  "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors",
+                  picked ? "border-foreground bg-foreground text-background" : "hover:bg-muted",
+                )}
+              >
+                <AgentIcon agent={target.agentId} size={16} />
+                {target.name}
+              </button>
+            );
+          })}
+          {targets.length === 0 ? (
+            <p className="text-muted-foreground text-sm">{i18next.t("connector:No agent found")}</p>
+          ) : null}
+        </div>
+      </Field>
+    </FormDialog>
+  );
+}

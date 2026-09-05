@@ -313,6 +313,13 @@ func Supports(agentId string) bool {
 	return ok
 }
 
+// SupportsMcp reports whether Gateway knows where agentId keeps its MCP
+// servers, which is what makes it a target a connection can be installed into.
+func SupportsMcp(agentId string) bool {
+	found, ok := layouts[agentId]
+	return ok && found.mcp != nil
+}
+
 // McpConfigPath is where agentId keeps its MCP servers, for the account whose
 // home directory is home. Callers outside this package use it to edit one entry
 // of a file this package otherwise owns.
