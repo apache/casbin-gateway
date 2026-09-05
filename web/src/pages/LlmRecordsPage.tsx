@@ -97,6 +97,7 @@ function RecordFailure({record, errorBody}: {record: LlmRecord; errorBody: strin
             <div key={index} className="flex min-w-0 flex-wrap items-center gap-2 text-xs">
               <Badge variant={statusVariant(failure.status)}>{failure.status || i18next.t("llm:No response")}</Badge>
               <CodeText>{failure.provider}</CodeText>
+              {failure.model ? <CodeText>{failure.model}</CodeText> : null}
               <span className="text-muted-foreground min-w-0 break-all">{failure.error}</span>
             </div>
           ))}
@@ -147,6 +148,11 @@ function RecordDetail({record, onDelete}: {record: LlmRecord; onDelete: () => vo
           {label: i18next.t("general:Created time"), value: Setting.getFormattedDate(record.createdTime)},
           {label: i18next.t("llm:Endpoint"), value: <CodeText>{`${record.protocol} ${record.endpoint}`}</CodeText>},
           record.provider && {label: i18next.t("llm:Provider"), value: <CodeText>{record.provider}</CodeText>},
+          record.upstreamModel && {
+            label: i18next.t("llm:Routed to"),
+            value: <CodeText>{record.upstreamModel}</CodeText>,
+          },
+          record.route && {label: i18next.t("llm:Routed by"), value: <CodeText>{record.route}</CodeText>},
           record.agent && {label: i18next.t("agent:Agent"), value: <CodeText>{record.agent}</CodeText>},
           {label: i18next.t("llm:Attempts"), value: record.attempts},
           {

@@ -44,16 +44,16 @@ func (c *ApiController) Models() {
 
 // Model answers the retrieve-a-model endpoint an Anthropic client checks the
 // configured model with. A name reaches an upstream as long as one provider is
-// enabled, see GetProvidersByModel(), so that is what "available" means here:
-// answering 404 for a name the gateway would happily route would tell the
-// client its model is missing when it is not.
+// enabled or a rule routes it, see PlanModelRoute(), so that is what
+// "available" means here: answering 404 for a name the gateway would happily
+// route would tell the client its model is missing when it is not.
 func (c *ApiController) Model() {
 	if !c.allowModelListing() {
 		return
 	}
 
 	model := c.Ctx.Input.Param(":modelId")
-	if _, err := object.GetProvidersByModel(model); err != nil {
+	if _, err := object.PlanModelRoute(model); err != nil {
 		if errors.Is(err, object.ErrNoProviderAvailable) {
 			c.writeModelsError(http.StatusNotFound, "not_found_error", err.Error())
 		} else {
@@ -92,7 +92,7 @@ func (c *ApiController) AgentModels() {
 		c.writeModelsError(http.StatusBadRequest, "invalid_request_error", err.Error())
 		return
 	}
-	c.writeModelList(object.ModelsOfProviders(providers))
+	c.writeModelList(object.ModelsWithRoutes(object.ModelsOfProviders(providers), agentId))
 }
 
 // allowModelListing gates the listing on the same token the proxy endpoints ask

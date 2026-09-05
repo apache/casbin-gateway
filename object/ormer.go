@@ -330,4 +330,11 @@ func (a *Ormer) createTable() {
 	if err != nil {
 		panic(err)
 	}
+
+	// The rules that decide which model a request is actually sent, and what it
+	// steps down to when that cannot answer.
+	err = a.Engine.Sync2(new(ModelRoute))
+	if err != nil {
+		panic(err)
+	}
 }

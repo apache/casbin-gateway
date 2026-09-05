@@ -228,7 +228,7 @@ func (c *ApiController) GetLlmRecord() {
 
 	// The rates travel with the record, so the detail pane does not match model
 	// names of its own.
-	price, priced := object.GetLlmPrice(record.Model)
+	price, priced := object.GetLlmPrice(record.BilledModel())
 	if !priced {
 		c.ResponseOk(record)
 		return

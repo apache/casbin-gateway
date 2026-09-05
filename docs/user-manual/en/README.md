@@ -28,6 +28,7 @@
 - [3.3 No API key: the caller's own login](3-providers/3.3-caller-login.md)
 - [3.4 Authenticity](3-providers/3.4-authenticity.md)
 - [3.5 Import settings and links](3-providers/3.5-import.md)
+- [3.6 Model routing and automatic fallback](3-providers/3.6-model-routing.md)
 
 **4. Governance**
 

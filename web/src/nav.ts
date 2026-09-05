@@ -24,6 +24,7 @@ import {
   MessageSquare,
   PackageCheck,
   Plug,
+  Route,
   Settings,
   ShieldCheck,
   ShieldHalf,
@@ -80,6 +81,9 @@ export const navGroups: NavGroup[] = [
   // somebody arriving with one gets their providers, and it is not a page they
   // would think to look for behind the add-provider dialog.
   {key: "/import", label: "link:Import settings", icon: ArrowDownToLine, path: "/import", adminOnly: true},
+  // Beside Providers, because a rule here is what decides which of them answers
+  // a model name, and what the request steps down to when none of them can.
+  {key: "/model-routes", label: "llm:Model routing", icon: Route, path: "/model-routes", adminOnly: true},
   {
     key: "/agent-configs",
     label: "agentConfig:Skills, MCP & Prompts",

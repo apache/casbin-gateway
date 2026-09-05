@@ -28,6 +28,7 @@
 - [3.3 没有API Key：沿用调用方自己的登录](3-providers/3.3-caller-login.md)
 - [3.4 真伪检测](3-providers/3.4-authenticity.md)
 - [3.5 导入配置与链接](3-providers/3.5-import.md)
+- [3.6 模型路由与自动降级](3-providers/3.6-model-routing.md)
 
 **4. 管控**
 

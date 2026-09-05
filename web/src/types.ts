@@ -525,6 +525,8 @@ export interface AgentTranscript {
 
 export interface LlmFailure {
   provider: string;
+  /** What that attempt asked for, which is not always what the client named. */
+  model: string;
   status: number;
   error: string;
 }
@@ -535,6 +537,11 @@ export interface LlmRecord {
   protocol: string;
   endpoint: string;
   model: string;
+  /** What the provider was actually asked for, set only when a rule or a
+   *  downgrade put another name on the wire. The cost is priced against it. */
+  upstreamModel: string;
+  /** The routing rule that chose the provider and model, empty when none did. */
+  route: string;
   provider: string;
   agent: string;
   clientIp: string;
@@ -1690,4 +1697,40 @@ export interface ConnectRequest {
   name: string;
   credentials: Record<string, string>;
   agents: string[];
+}
+
+/** One rung of a route: the model to ask for, and optionally the only provider
+ *  allowed to answer it. An empty model keeps the name the client sent. */
+export interface RouteTarget {
+  provider: string;
+  model: string;
+}
+
+/**
+ * One rule for what the gateway actually asks for when a client names a model.
+ * `targets` is a ladder, most preferred first: the rungs below the first are
+ * the automatic downgrade, taken when the rung above cannot answer.
+ */
+export interface ModelRoute {
+  name: string;
+  createdTime: string;
+  updatedTime: string;
+  displayName: string;
+  /** The model the client asks for, with "*" standing for any run of characters. */
+  match: string;
+  /** Limits the rule to one agent id. Empty applies it to every caller. */
+  agent: string;
+  targets: RouteTarget[];
+  sort: number;
+  enabled: boolean;
+}
+
+/** One attempt of the plan a request would be relayed by, as the preview shows it. */
+export interface RoutePreviewStep {
+  provider: string;
+  displayName: string;
+  model: string;
+  /** The rule that put this step in the plan, empty when none did. */
+  route: string;
+  suspended: boolean;
 }

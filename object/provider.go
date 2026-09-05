@@ -910,10 +910,9 @@ func probeDetail(body []byte) string {
 // rejecting them leaves the client unable to talk to any third-party provider
 // at all.
 func GetProvidersByModel(model string) ([]*Provider, error) {
-	providers := []*Provider{}
-	err := ormer.Engine.Where("status = ?", "enabled").Asc("priority").Find(&providers)
+	providers, err := listEnabledProviders()
 	if err != nil {
-		return nil, fmt.Errorf("provider query failed: %w", err)
+		return nil, err
 	}
 
 	// The models are JSON-serialized into a single column, so the match cannot
@@ -952,16 +951,26 @@ func GetProvidersByModel(model string) ([]*Provider, error) {
 }
 
 // ListEnabledModels is every model the enabled providers serve, in priority
-// order and without duplicates. It is what the models endpoint answers with, so
-// that a client fills its model picker with what this gateway can actually
-// reach.
+// order and without duplicates, plus the ones the routing rules answer for. It
+// is what the models endpoint answers with, so that a client fills its model
+// picker with what this gateway can actually reach.
 func ListEnabledModels() ([]string, error) {
-	providers := []*Provider{}
-	err := ormer.Engine.Where("status = ?", "enabled").Asc("priority").Find(&providers)
+	providers, err := listEnabledProviders()
 	if err != nil {
+		return nil, err
+	}
+	return ModelsWithRoutes(ModelsOfProviders(providers), ""), nil
+}
+
+// listEnabledProviders is every provider in rotation, lowest priority value
+// first, which is the order requests are tried against them. The keys are still
+// ciphertext: only the providers a request actually reaches are decrypted.
+func listEnabledProviders() ([]*Provider, error) {
+	providers := []*Provider{}
+	if err := ormer.Engine.Where("status = ?", "enabled").Asc("priority").Find(&providers); err != nil {
 		return nil, fmt.Errorf("provider query failed: %w", err)
 	}
-	return ModelsOfProviders(providers), nil
+	return providers, nil
 }
 
 // ModelsOfProviders flattens the model lists of providers into one, keeping the
@@ -985,17 +994,12 @@ func ModelsOfProviders(providers []*Provider) []string {
 // asked for. An agent picks its model on its own - Codex Desktop remembers the
 // one chosen in its own state, whatever the config file says - so a provider
 // that never heard of it answers with an error naming the models it does serve,
-// rather than with a completion. That agent is sent the first model of the
-// provider it is bound to instead. A provider that serves no named model, which
-// is the client-auth case, takes whatever arrives.
+// rather than with a completion. That agent is sent the closest model the
+// provider does serve instead, see PickProviderModel. A provider that serves no
+// named model, which is the client-auth case, takes whatever arrives.
 func ProviderModel(provider *Provider, model string) string {
 	if len(provider.Models) == 0 {
 		return model
 	}
-	for _, candidate := range provider.Models {
-		if candidate == model {
-			return model
-		}
-	}
-	return provider.Models[0]
+	return PickProviderModel(provider.Models, model)
 }

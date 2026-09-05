@@ -43,8 +43,11 @@ var llmStringCaps = []int{16384, 4096, 1024, 256}
 // the request it was made for.
 type LlmFailure struct {
 	Provider string `json:"provider"`
-	Status   int    `json:"status"`
-	Error    string `json:"error"`
+	// Model is what that attempt asked for, which is not always what the client
+	// named: a routing rule and a downgrade both put another name on the wire.
+	Model  string `json:"model"`
+	Status int    `json:"status"`
+	Error  string `json:"error"`
 }
 
 // LlmRecord is one client request relayed by the LLM proxy, together with the
@@ -57,6 +60,14 @@ type LlmRecord struct {
 	Protocol string `xorm:"varchar(20)" json:"protocol"`
 	Endpoint string `xorm:"varchar(100)" json:"endpoint"`
 	Model    string `xorm:"varchar(255) index" json:"model"`
+	// UpstreamModel is what the provider was actually asked for, filled only
+	// when it differs from the model the client named. A routing rule, and the
+	// downgrade taken when the model above could not answer, both change it,
+	// and the request is priced against this one rather than the asked-for one.
+	UpstreamModel string `xorm:"varchar(255)" json:"upstreamModel"`
+	// Route names the routing rule that chose the provider and model, empty
+	// when nothing matched and the providers were tried in their own order.
+	Route    string `xorm:"varchar(100)" json:"route"`
 	Provider string `xorm:"varchar(201) index" json:"provider"`
 	Agent    string `xorm:"varchar(201) index" json:"agent"`
 	ClientIp string `xorm:"varchar(100) index" json:"clientIp"`
@@ -365,10 +376,20 @@ func fillLlmRecordBody(record *LlmRecord, rawBody []byte) {
 	record.Summary = llmRecordSummary(sanitized)
 }
 
-// fillLlmRecordCost prices a record from its token counters.
+// fillLlmRecordCost prices a record from its token counters, against the model
+// that was actually billed rather than the one the client asked for.
 func fillLlmRecordCost(record *LlmRecord) {
 	record.Cost, record.Priced = GetLlmCost(
-		record.Model, record.PromptTokens, record.CompletionTokens, record.CacheWriteTokens, record.CacheReadTokens)
+		record.BilledModel(), record.PromptTokens, record.CompletionTokens, record.CacheWriteTokens, record.CacheReadTokens)
+}
+
+// BilledModel is the model the upstream charged for: the one it was asked for
+// when a rule or a downgrade renamed it, and otherwise the one the client sent.
+func (record *LlmRecord) BilledModel() string {
+	if record.UpstreamModel != "" {
+		return record.UpstreamModel
+	}
+	return record.Model
 }
 
 // describeLlmRequest counts what the request was made of.

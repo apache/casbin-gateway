@@ -175,6 +175,14 @@ func initAPI() {
 	beego.Router("/api/delete-probe-case", &controllers.ApiController{}, "POST:DeleteProbeCase")
 	beego.Router("/api/reset-probe-cases", &controllers.ApiController{}, "POST:ResetProbeCases")
 
+	// The rules deciding which model a request is sent, and what it steps down
+	// to when that cannot answer.
+	beego.Router("/api/get-model-routes", &controllers.ApiController{}, "GET:GetModelRoutes")
+	beego.Router("/api/add-model-route", &controllers.ApiController{}, "POST:AddModelRoute")
+	beego.Router("/api/update-model-route", &controllers.ApiController{}, "POST:UpdateModelRoute")
+	beego.Router("/api/delete-model-route", &controllers.ApiController{}, "POST:DeleteModelRoute")
+	beego.Router("/api/preview-model-route", &controllers.ApiController{}, "GET:PreviewModelRoute")
+
 	beego.Router("/api/get-llm-records", &controllers.ApiController{}, "GET:GetLlmRecords")
 	beego.Router("/api/get-llm-record", &controllers.ApiController{}, "GET:GetLlmRecord")
 	beego.Router("/api/get-llm-record-status", &controllers.ApiController{}, "GET:GetLlmRecordStatus")

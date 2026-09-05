@@ -142,21 +142,6 @@ func GetProviderHealth() []*ProviderHealth {
 	return result
 }
 
-// SortProvidersByHealth puts the providers that are inside a cooldown window last,
-// keeping the configured order among the rest.
-func SortProvidersByHealth(providers []*Provider) []*Provider {
-	ready := make([]*Provider, 0, len(providers))
-	suspended := []*Provider{}
-	for _, provider := range providers {
-		if IsProviderSuspended(provider.GetId()) {
-			suspended = append(suspended, provider)
-			continue
-		}
-		ready = append(ready, provider)
-	}
-	return append(ready, suspended...)
-}
-
 func healthOf(providerId string) *providerHealth {
 	health, ok := providerHealthMap[providerId]
 	if !ok {

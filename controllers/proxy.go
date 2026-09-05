@@ -269,8 +269,9 @@ func (c *ApiController) forwardByModel(route *proxyRoute) {
 	// what a record describes, so this is the only place one is written.
 	defer c.finishLlmRecord(route)
 
-	// Match the providers globally, without an owner filter.
-	providers, err := object.GetProvidersByModel(route.model)
+	// Match the providers globally, without an owner filter. A routing rule
+	// covering this model puts its own ladder in front of them.
+	attempts, err := object.PlanModelRoute(route.model)
 	if err != nil {
 		if errors.Is(err, object.ErrNoProviderAvailable) {
 			route.recordOutcome(http.StatusBadRequest, err.Error())
@@ -283,7 +284,7 @@ func (c *ApiController) forwardByModel(route *proxyRoute) {
 		return
 	}
 
-	c.forwardToProviders(providers, route)
+	c.forwardAttempts(attempts, route)
 }
 
 // proxyByAgent forwards to the provider chain bound to the agent in the path.
@@ -333,17 +334,30 @@ func (c *ApiController) forwardByAgent(route *proxyRoute) {
 		return
 	}
 
+	// The ladder of a rule covering this agent comes first, resolved against the
+	// chain, and the chain itself is what it falls back to.
+	attempts, err := object.PlanAgentRoute(agentId, route.model, providers)
+	if err != nil {
+		beego.Error("model route lookup failed:", err)
+		route.recordOutcome(http.StatusBadGateway, err.Error())
+		c.writeProxyError(route.codec, http.StatusBadGateway, "server_error", err.Error())
+		return
+	}
+
+	// Held to the permissions after planning rather than before: a rule may name
+	// a provider outside the chain and may ask for another model, and neither is
+	// a way around what this agent is allowed.
 	if guard != nil {
-		allowed, reason := guard.FilterProviders(providers)
+		allowed, reason := guard.FilterAttempts(attempts)
 		if len(allowed) == 0 {
 			route.recordOutcome(http.StatusForbidden, reason)
 			c.writeProxyError(route.codec, http.StatusForbidden, "permission_error", reason)
 			return
 		}
-		providers = allowed
+		attempts = allowed
 	}
 
-	c.forwardToProviders(providers, route)
+	c.forwardAttempts(attempts, route)
 }
 
 // allowAgentRequest holds one relayed request to the agent's permissions: a
@@ -418,21 +432,28 @@ func (c *ApiController) newProxyRoute(target proxyTarget, model string, stream b
 	return route, true
 }
 
-// forwardToProviders relays the request to the first provider that answers.
-func (c *ApiController) forwardToProviders(providers []*object.Provider, route *proxyRoute) {
+// forwardAttempts relays the request down the plan until one attempt answers.
+// An attempt is a provider and the model to ask it for, so failing over can
+// change either: to another upstream serving the same model, or down to a
+// lesser model when nothing above it can answer.
+func (c *ApiController) forwardAttempts(attempts []object.RouteAttempt, route *proxyRoute) {
 	// Drop the providers this proxy cannot talk to before forwarding, so that
-	// the last usable provider is known and its response can be relayed as-is.
-	usableProviders := []*object.Provider{}
+	// the last usable attempt is known and its response can be relayed as-is.
+	usable := []object.RouteAttempt{}
 	skipReason := ""
-	for _, provider := range providers {
-		if reason := c.providerUnusableReason(provider); reason != "" {
-			beego.Error("skipped provider", provider.GetId()+":", reason)
+	reported := map[string]bool{}
+	for _, attempt := range attempts {
+		if reason := c.providerUnusableReason(attempt.Provider); reason != "" {
+			if id := attempt.Provider.GetId(); !reported[id] {
+				reported[id] = true
+				beego.Error("skipped provider", id+":", reason)
+			}
 			skipReason = reason
 			continue
 		}
-		usableProviders = append(usableProviders, provider)
+		usable = append(usable, attempt)
 	}
-	if len(usableProviders) == 0 {
+	if len(usable) == 0 {
 		message := fmt.Sprintf("no usable provider for %s", route.source)
 		if skipReason != "" {
 			message = skipReason
@@ -444,24 +465,24 @@ func (c *ApiController) forwardToProviders(providers []*object.Provider, route *
 
 	// A provider inside its failure cooldown goes last, so a dead upstream stops
 	// costing every request the time it takes to time out.
-	usableProviders = object.SortProvidersByHealth(usableProviders)
+	usable = object.SortAttemptsByHealth(usable)
 
-	// Fail over to the next provider as long as nothing has been written to the
-	// client yet. The last provider is never retried, so the client gets the
-	// real upstream answer instead of a synthesized error.
+	// Fail over to the next attempt as long as nothing has been written to the
+	// client yet. The last one is never retried, so the client gets the real
+	// upstream answer instead of a synthesized error.
 	lastStatus, lastMessage := http.StatusBadGateway, "upstream connection failed"
-	for i, provider := range usableProviders {
+	for i, attempt := range usable {
 		if c.Ctx.Request.Context().Err() != nil {
 			// The client hung up, there is nobody left to fail over for.
 			route.recordOutcome(0, "client disconnected")
 			return
 		}
 
-		status, message, written := c.forwardToProvider(provider, route, i == len(usableProviders)-1)
+		status, message, written := c.forwardToProvider(attempt, route, i == len(usable)-1)
 		if written {
 			return
 		}
-		route.recordFailure(provider.GetId(), status, message)
+		route.recordFailure(attempt, status, message)
 		lastStatus, lastMessage = status, message
 	}
 
@@ -469,13 +490,15 @@ func (c *ApiController) forwardToProviders(providers []*object.Provider, route *
 	c.writeProxyError(route.codec, lastStatus, "server_error", lastMessage)
 }
 
-// forwardToProvider sends the request to a single provider's upstream. It reports
-// whether the client response was already written, and when it was not, the
-// status and message describing the failure so that the caller can fail over to
-// the next provider. The response of the last provider is always relayed, even
-// when its status would otherwise be retried.
-func (c *ApiController) forwardToProvider(provider *object.Provider, route *proxyRoute, isLast bool) (int, string, bool) {
-	route.recordAttempt(provider.GetId())
+// forwardToProvider sends the request to a single provider's upstream, asking
+// for the model the attempt names. It reports whether the client response was
+// already written, and when it was not, the status and message describing the
+// failure so that the caller can fail over to the next attempt. The response of
+// the last attempt is always relayed, even when its status would otherwise be
+// retried.
+func (c *ApiController) forwardToProvider(attempt object.RouteAttempt, route *proxyRoute, isLast bool) (int, string, bool) {
+	provider := attempt.Provider
+	route.recordAttempt(attempt)
 
 	upstream, err := protocol.UpstreamOf(object.ProviderProtocol(provider))
 	if err != nil {
@@ -488,7 +511,7 @@ func (c *ApiController) forwardToProvider(provider *object.Provider, route *prox
 		return c.answerCountTokens(route)
 	}
 
-	requestBody, err := route.upstreamBody(upstream, object.ProviderModel(provider, route.model))
+	requestBody, err := route.upstreamBody(upstream, attempt.Model)
 	if err != nil {
 		return http.StatusBadRequest, err.Error(), false
 	}

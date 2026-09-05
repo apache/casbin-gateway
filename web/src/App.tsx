@@ -45,6 +45,7 @@ import PermissionsPage from "@/pages/PermissionsPage";
 import ProviderEditPage from "@/pages/ProviderEditPage";
 import ProviderListPage from "@/pages/ProviderListPage";
 import LlmRecordsPage from "@/pages/LlmRecordsPage";
+import ModelRoutesPage from "@/pages/ModelRoutesPage";
 import UsagePage from "@/pages/UsagePage";
 import PricingPage from "@/pages/PricingPage";
 import SettingPage from "@/pages/SettingPage";
@@ -335,6 +336,10 @@ export default function App() {
                 />
                 <Route path="/usage" element={requireSignin(user => <UsagePage account={user} />)} />
                 <Route path="/pricing" element={requireSignin(user => <PricingPage account={user} />)} />
+                <Route
+                  path="/model-routes"
+                  element={requireSignin(user => <ModelRoutesPage account={user} />)}
+                />
               </Routes>
             </React.Suspense>
           </main>

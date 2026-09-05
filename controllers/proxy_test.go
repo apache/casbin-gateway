@@ -231,6 +231,10 @@ func TestIdleTimeoutReader(t *testing.T) {
 	}
 }
 
+func attemptOf(provider *object.Provider, model string) object.RouteAttempt {
+	return object.RouteAttempt{Provider: provider, Model: model}
+}
+
 func TestForwardToProvider(t *testing.T) {
 	overloadedServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -264,7 +268,7 @@ func TestForwardToProvider(t *testing.T) {
 
 	// A retryable status fails over instead of reaching the client.
 	c, recorder := newTestApiController()
-	statusCode, message, written := c.forwardToProvider(overloadedProvider, route, false)
+	statusCode, message, written := c.forwardToProvider(attemptOf(overloadedProvider, "gpt-4"), route, false)
 	if written {
 		t.Fatal("a retryable status was relayed instead of failing over")
 	}
@@ -278,14 +282,14 @@ func TestForwardToProvider(t *testing.T) {
 	// The last provider is relayed as-is, even with a retryable status, so that
 	// the client sees the real upstream answer.
 	c, recorder = newTestApiController()
-	_, _, written = c.forwardToProvider(overloadedProvider, route, true)
+	_, _, written = c.forwardToProvider(attemptOf(overloadedProvider, "gpt-4"), route, true)
 	if !written || recorder.Code != http.StatusServiceUnavailable || !strings.Contains(recorder.Body.String(), "overloaded") {
 		t.Errorf("the last provider was not relayed: written = %v, statusCode = %d, body = %s", written, recorder.Code, recorder.Body.String())
 	}
 
 	// A healthy provider, with a trailing slash in its base URL.
 	c, recorder = newTestApiController()
-	_, _, written = c.forwardToProvider(healthyProvider, route, true)
+	_, _, written = c.forwardToProvider(attemptOf(healthyProvider, "gpt-4"), route, true)
 	if !written || recorder.Code != http.StatusOK || !strings.Contains(recorder.Body.String(), "choices") {
 		t.Errorf("the healthy provider failed: written = %v, statusCode = %d, body = %s", written, recorder.Code, recorder.Body.String())
 	}
@@ -293,7 +297,7 @@ func TestForwardToProvider(t *testing.T) {
 	// stream=true, but the upstream rejected the request: the JSON error must
 	// not be dressed up as an SSE stream.
 	c, recorder = newTestApiController()
-	c.forwardToProvider(overloadedProvider, newProxyRoute(openAiChat, rawBody, true), true)
+	c.forwardToProvider(attemptOf(overloadedProvider, "gpt-4"), newProxyRoute(openAiChat, rawBody, true), true)
 	if header := recorder.Header().Get("Content-Type"); header != "application/json" {
 		t.Errorf("Content-Type = %s, expected application/json", header)
 	}
@@ -320,7 +324,7 @@ func TestForwardToProviderAnthropic(t *testing.T) {
 
 	c, recorder := newTestApiController()
 	c.Ctx.Request.Header.Add("Anthropic-Beta", "fine-grained-tool-streaming-2025-05-14")
-	if _, _, written := c.forwardToProvider(provider, route, true); !written {
+	if _, _, written := c.forwardToProvider(attemptOf(provider, "claude-opus-5"), route, true); !written {
 		t.Fatal("the anthropic provider was not relayed")
 	}
 

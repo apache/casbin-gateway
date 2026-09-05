@@ -369,22 +369,29 @@ func (guard *AgentGuard) AllowTool(name string) bool {
 	return guard.allow(objectTool + entry)
 }
 
-// FilterProviders drops the providers this agent may not be sent to, and says
-// which was the last one dropped so that an empty chain can report why.
-func (guard *AgentGuard) FilterProviders(providers []*Provider) ([]*Provider, string) {
-	allowed := []*Provider{}
-	denied := ""
-	for _, provider := range providers {
-		if !guard.AllowProvider(provider.GetId()) {
-			denied = provider.GetId()
+// FilterAttempts drops the attempts this agent may not make. Both halves are
+// checked: a routing rule that steps down to another model, or across to
+// another provider, must not be a way around what the agent is allowed to ask
+// for. The last thing dropped is named so an empty plan can report why.
+func (guard *AgentGuard) FilterAttempts(attempts []RouteAttempt) ([]RouteAttempt, string) {
+	allowed := []RouteAttempt{}
+	reason := ""
+	for _, attempt := range attempts {
+		if !guard.AllowProvider(attempt.Provider.GetId()) {
+			reason = fmt.Sprintf("the permissions of agent %s do not allow the provider %s",
+				guard.agentId, attempt.Provider.GetId())
 			continue
 		}
-		allowed = append(allowed, provider)
+		if !guard.AllowModel(attempt.Model) {
+			reason = fmt.Sprintf("the permissions of agent %s do not allow the model %s",
+				guard.agentId, attempt.Model)
+			continue
+		}
+		allowed = append(allowed, attempt)
 	}
 
-	reason := ""
-	if len(allowed) == 0 && denied != "" {
-		reason = fmt.Sprintf("the permissions of agent %s do not allow the provider %s", guard.agentId, denied)
+	if len(allowed) > 0 {
+		reason = ""
 	}
 	return allowed, reason
 }

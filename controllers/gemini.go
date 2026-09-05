@@ -138,7 +138,9 @@ func (c *ApiController) AgentGeminiModels() {
 		c.writeGeminiError(http.StatusBadRequest, "invalid_request_error", err.Error())
 		return
 	}
-	c.writeProxyBody(http.StatusOK, mustEncode(geminiModelList(object.ModelsOfProviders(providers))))
+	agentId := c.Ctx.Input.Param(":agentId")
+	c.writeProxyBody(http.StatusOK,
+		mustEncode(geminiModelList(object.ModelsWithRoutes(object.ModelsOfProviders(providers), agentId))))
 }
 
 // GeminiModel answers the retrieve-a-model endpoint a Gemini client checks its
@@ -150,7 +152,7 @@ func (c *ApiController) GeminiModel() {
 	}
 
 	model, _ := geminiCall(c.Ctx.Input.Param(":model"))
-	if _, err := object.GetProvidersByModel(model); err != nil {
+	if _, err := object.PlanModelRoute(model); err != nil {
 		if errors.Is(err, object.ErrNoProviderAvailable) {
 			c.writeGeminiError(http.StatusNotFound, "not_found_error", err.Error())
 		} else {

@@ -37,7 +37,7 @@ const (
 )
 
 // finishLlmRecord queues the record of one relayed request. Every path out of
-// forwardToProviders ends the client request, so this is the only place it is
+// forwardAttempts ends the client request, so this is the only place it is
 // called from.
 func (c *ApiController) finishLlmRecord(route *proxyRoute) {
 	if route.record == nil {
@@ -50,12 +50,20 @@ func (c *ApiController) finishLlmRecord(route *proxyRoute) {
 	object.AddLlmRecord(record, route.body)
 }
 
-func (route *proxyRoute) recordAttempt(providerId string) {
+// recordAttempt names the provider and the model this try is being made
+// against. UpstreamModel is filled only when the two names differ, so a record
+// says nothing about routing where nothing was routed.
+func (route *proxyRoute) recordAttempt(attempt object.RouteAttempt) {
 	if route.record == nil {
 		return
 	}
 	route.record.Attempts++
-	route.record.Provider = providerId
+	route.record.Provider = attempt.Provider.GetId()
+	route.record.Route = attempt.Route
+	route.record.UpstreamModel = ""
+	if attempt.Model != route.model {
+		route.record.UpstreamModel = attempt.Model
+	}
 }
 
 func (route *proxyRoute) recordOutcome(status int, message string) {
@@ -82,13 +90,15 @@ func (route *proxyRoute) recordErrorBody(raw []byte) {
 	}
 }
 
-// recordFailure keeps one attempt the chain failed over from.
-func (route *proxyRoute) recordFailure(providerId string, status int, message string) {
+// recordFailure keeps one attempt the plan failed over from, with the model it
+// asked for: a request that ended on a lesser model shows what was tried above.
+func (route *proxyRoute) recordFailure(attempt object.RouteAttempt, status int, message string) {
 	if route.record == nil {
 		return
 	}
 	route.record.Failures = append(route.record.Failures, object.LlmFailure{
-		Provider: providerId,
+		Provider: attempt.Provider.GetId(),
+		Model:    attempt.Model,
 		Status:   status,
 		Error:    auditutil.BoundString(message, llmErrorMessageBytes),
 	})
