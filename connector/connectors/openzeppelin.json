@@ -1,0 +1,20 @@
+{
+  "id": "openzeppelin",
+  "displayName": "OpenZeppelin Contracts",
+  "category": "dev",
+  "icon": "openzeppelin.com",
+  "description": "Generates audited Solidity, Cairo and Stellar contracts from the OpenZeppelin Wizard: tokens, access control, upgradeable proxies.",
+  "docsUrl": "https://github.com/OpenZeppelin/contracts-wizard",
+  "auth": {
+    "kind": "none"
+  },
+  "server": {
+    "name": "openzeppelin",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@openzeppelin/contracts-mcp"
+    ]
+  }
+}

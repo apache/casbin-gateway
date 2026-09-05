@@ -1,0 +1,39 @@
+{
+  "id": "upstash",
+  "displayName": "Upstash",
+  "category": "dev",
+  "icon": "upstash.com",
+  "description": "Create and manage Redis and Vector databases on Upstash, and read what they hold.",
+  "docsUrl": "https://github.com/upstash/mcp-server",
+  "auth": {
+    "kind": "token",
+    "fields": [
+      {
+        "key": "email",
+        "label": "Account email",
+        "required": true
+      },
+      {
+        "key": "apiKey",
+        "label": "Management API key",
+        "help": "Upstash console, Account, Management API.",
+        "secret": true,
+        "required": true
+      }
+    ],
+    "registerUrl": "https://console.upstash.com/account/api"
+  },
+  "server": {
+    "name": "upstash",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@upstash/mcp-server@latest",
+      "--email",
+      "${email}",
+      "--api-key",
+      "${apiKey}"
+    ]
+  }
+}

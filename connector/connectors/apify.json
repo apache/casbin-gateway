@@ -1,0 +1,35 @@
+{
+  "id": "apify",
+  "displayName": "Apify",
+  "category": "dev",
+  "icon": "apify.com",
+  "description": "Run any of Apify's scrapers and automations, so a page that needs a real browser and a proxy is somebody else's problem.",
+  "docsUrl": "https://github.com/apify/apify-mcp-server",
+  "paid": true,
+  "auth": {
+    "kind": "token",
+    "fields": [
+      {
+        "key": "token",
+        "label": "API token",
+        "placeholder": "apify_api_...",
+        "help": "Apify console, Settings, Integrations.",
+        "secret": true,
+        "required": true
+      }
+    ],
+    "registerUrl": "https://console.apify.com/settings/integrations"
+  },
+  "server": {
+    "name": "apify",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@apify/actors-mcp-server"
+    ],
+    "env": {
+      "APIFY_TOKEN": "${token}"
+    }
+  }
+}

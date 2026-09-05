@@ -196,7 +196,7 @@ Gateway 会在自己的窗口里打开 —— 不用登录：它只服务本机�
 - **[规定每个 Agent 能做什么](#每个-agent-能做什么)** —— 每个 Agent 四十来个开关，分组管理，覆盖工具、模型和供应商，每个转发的请求都由 Casbin 判定。
 - **[统计每个 Agent 花了多少，包括没走 Gateway 的部分](#每个-agent-花了多少包括没走-gateway-的那部分)** —— 直接读 Agent 自己写的会话记录。
 - **[跨 Agent 对比、复制技能 / MCP / 提示词](#接下来做什么)** —— 一张表看到所有 Agent 装了什么。
-- **[一次连接一个应用，所有 Agent 都能用](docs/user-manual/zh/2-agents/2.5-connections.md)** —— GitHub、Notion、飞书、Figma、浏览器等十几个。凭据留在 Gateway 而不是散在每个 Agent 的配置文件里，经过它的每次调用都会按该 Agent 的权限校验，测试一次还能得到每个工具的独立开关。
+- **[一次连接一个应用，所有 Agent 都能用](docs/user-manual/zh/2-agents/2.5-connections.md)** —— 36 个：GitHub、Notion、飞书、Figma、Sentry、Kubernetes、Stripe、浏览器等。凭据留在 Gateway 而不是散在每个 Agent 的配置文件里，经过它的每次调用都会按该 Agent 的权限校验，测试一次还能得到每个工具的独立开关。
 
 ## 使用
 

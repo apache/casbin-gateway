@@ -1,0 +1,20 @@
+{
+  "id": "desktop-commander",
+  "displayName": "Desktop Commander",
+  "category": "dev",
+  "icon": "desktopcommander.app",
+  "description": "Runs commands and edits files anywhere on this machine. Powerful enough to be worth being deliberate about: give it its own switches rather than leaving it open.",
+  "docsUrl": "https://github.com/wonderwhy-er/DesktopCommanderMCP",
+  "auth": {
+    "kind": "none"
+  },
+  "server": {
+    "name": "desktop-commander",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@wonderwhy-er/desktop-commander@latest"
+    ]
+  }
+}

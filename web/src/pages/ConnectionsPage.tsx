@@ -38,6 +38,7 @@ const categoryLabels: Record<string, string> = {
   office: "connector:Office",
   docs: "connector:Documents",
   dev: "connector:Development",
+  pro: "connector:Professional",
   mail: "connector:Mail",
   storage: "connector:Storage",
   life: "connector:Life",

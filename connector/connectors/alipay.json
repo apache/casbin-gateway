@@ -1,0 +1,48 @@
+{
+  "id": "alipay",
+  "displayName": "Alipay",
+  "category": "pro",
+  "icon": "alipay.com",
+  "description": "Create payments, check their status and issue refunds through your own Alipay merchant application.",
+  "docsUrl": "https://github.com/alipay/global-open-sdk-mcp",
+  "auth": {
+    "kind": "token",
+    "fields": [
+      {
+        "key": "appId",
+        "label": "App ID",
+        "placeholder": "2014...",
+        "help": "From the Alipay open platform, for your merchant application.",
+        "required": true
+      },
+      {
+        "key": "appKey",
+        "label": "Application private key",
+        "secret": true,
+        "required": true
+      },
+      {
+        "key": "pubKey",
+        "label": "Alipay public key",
+        "help": "Used to check the signature on what Alipay sends back.",
+        "secret": true,
+        "required": true
+      }
+    ],
+    "registerUrl": "https://open.alipay.com/develop/manage"
+  },
+  "server": {
+    "name": "alipay",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@alipay/mcp-server-alipay"
+    ],
+    "env": {
+      "AP_APP_ID": "${appId}",
+      "AP_APP_KEY": "${appKey}",
+      "AP_PUB_KEY": "${pubKey}"
+    }
+  }
+}

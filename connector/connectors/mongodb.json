@@ -1,0 +1,33 @@
+{
+  "id": "mongodb",
+  "displayName": "MongoDB",
+  "category": "dev",
+  "icon": "mongodb.com",
+  "description": "Explore collections, run queries and read indexes and schemas on a MongoDB deployment, without leaving the editor.",
+  "docsUrl": "https://github.com/mongodb-js/mongodb-mcp-server",
+  "auth": {
+    "kind": "token",
+    "fields": [
+      {
+        "key": "connectionString",
+        "label": "Connection string",
+        "placeholder": "mongodb+srv://user:pass@cluster.mongodb.net/db",
+        "help": "The database this connection may reach. Point it at a replica or a read-only user first.",
+        "secret": true,
+        "required": true
+      }
+    ]
+  },
+  "server": {
+    "name": "mongodb",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "mongodb-mcp-server@latest"
+    ],
+    "env": {
+      "MDB_MCP_CONNECTION_STRING": "${connectionString}"
+    }
+  }
+}

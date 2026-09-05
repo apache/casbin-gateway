@@ -1,0 +1,39 @@
+{
+  "id": "browserbase",
+  "displayName": "Browserbase",
+  "category": "dev",
+  "icon": "browserbase.com",
+  "description": "A browser that runs in Browserbase's cloud rather than on this machine, for pages that need a real one and a clean address.",
+  "docsUrl": "https://github.com/browserbase/mcp-server-browserbase",
+  "paid": true,
+  "auth": {
+    "kind": "token",
+    "fields": [
+      {
+        "key": "apiKey",
+        "label": "API key",
+        "secret": true,
+        "required": true
+      },
+      {
+        "key": "projectId",
+        "label": "Project ID",
+        "required": true
+      }
+    ],
+    "registerUrl": "https://www.browserbase.com/settings"
+  },
+  "server": {
+    "name": "browserbase",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@browserbasehq/mcp-server-browserbase"
+    ],
+    "env": {
+      "BROWSERBASE_API_KEY": "${apiKey}",
+      "BROWSERBASE_PROJECT_ID": "${projectId}"
+    }
+  }
+}

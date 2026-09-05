@@ -1,0 +1,34 @@
+{
+  "id": "dbhub",
+  "displayName": "SQL databases",
+  "category": "dev",
+  "icon": "bytebase.com",
+  "description": "One connection for PostgreSQL, MySQL, MariaDB, SQL Server and SQLite: read the schema, run queries, explain a plan.",
+  "docsUrl": "https://github.com/bytebase/dbhub",
+  "auth": {
+    "kind": "token",
+    "fields": [
+      {
+        "key": "dsn",
+        "label": "Connection string",
+        "placeholder": "postgres://user:pass@localhost:5432/db",
+        "help": "Start with a read-only user. The agent can do whatever this account can.",
+        "secret": true,
+        "required": true
+      }
+    ]
+  },
+  "server": {
+    "name": "dbhub",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@bytebase/dbhub@latest",
+      "--transport",
+      "stdio",
+      "--dsn",
+      "${dsn}"
+    ]
+  }
+}

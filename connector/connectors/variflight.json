@@ -1,0 +1,34 @@
+{
+  "id": "variflight",
+  "displayName": "Variflight",
+  "category": "life",
+  "icon": "variflight.com",
+  "description": "Flight status, schedules and how late a route usually runs, from Variflight's data.",
+  "docsUrl": "https://github.com/variflight/variflight-mcp",
+  "paid": true,
+  "auth": {
+    "kind": "token",
+    "fields": [
+      {
+        "key": "apiKey",
+        "label": "API key",
+        "help": "From the Variflight developer platform.",
+        "secret": true,
+        "required": true
+      }
+    ],
+    "registerUrl": "https://mcp.variflight.com"
+  },
+  "server": {
+    "name": "variflight",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@variflight-ai/variflight-mcp"
+    ],
+    "env": {
+      "VARIFLIGHT_API_KEY": "${apiKey}"
+    }
+  }
+}

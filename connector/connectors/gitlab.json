@@ -1,0 +1,42 @@
+{
+  "id": "gitlab",
+  "displayName": "GitLab",
+  "category": "dev",
+  "icon": "gitlab.com",
+  "description": "Read and write projects, issues, merge requests and pipelines on GitLab, self-hosted instances included.",
+  "docsUrl": "https://github.com/zereight/gitlab-mcp",
+  "auth": {
+    "kind": "token",
+    "fields": [
+      {
+        "key": "token",
+        "label": "Personal access token",
+        "placeholder": "glpat-...",
+        "help": "GitLab, Preferences, Access tokens. The api scope covers everything here.",
+        "secret": true,
+        "required": true
+      },
+      {
+        "key": "apiUrl",
+        "label": "API URL",
+        "placeholder": "https://gitlab.com/api/v4",
+        "help": "Change this for a self-hosted GitLab.",
+        "required": true
+      }
+    ],
+    "registerUrl": "https://gitlab.com/-/user_settings/personal_access_tokens"
+  },
+  "server": {
+    "name": "gitlab",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@zereight/mcp-gitlab"
+    ],
+    "env": {
+      "GITLAB_PERSONAL_ACCESS_TOKEN": "${token}",
+      "GITLAB_API_URL": "${apiUrl}"
+    }
+  }
+}

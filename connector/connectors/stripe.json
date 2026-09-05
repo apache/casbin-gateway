@@ -1,7 +1,7 @@
 {
   "id": "stripe",
   "displayName": "Stripe",
-  "category": "dev",
+  "category": "pro",
   "icon": "stripe.com",
   "description": "Read and write customers, products, prices, invoices and payments, so an agent can work against your billing without a dashboard.",
   "docsUrl": "https://docs.stripe.com/mcp",

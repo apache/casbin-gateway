@@ -1,0 +1,20 @@
+{
+  "id": "cloudbase",
+  "displayName": "CloudBase",
+  "category": "dev",
+  "icon": "cloudbase.net",
+  "description": "Tencent CloudBase from inside the agent: environments, cloud functions, the database, hosting and deployments. Signing in happens through its own tool the first time.",
+  "docsUrl": "https://github.com/TencentCloudBase/CloudBase-AI-ToolKit",
+  "auth": {
+    "kind": "none"
+  },
+  "server": {
+    "name": "cloudbase",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@cloudbase/cloudbase-mcp"
+    ]
+  }
+}

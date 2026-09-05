@@ -1,0 +1,31 @@
+{
+  "id": "sentry",
+  "displayName": "Sentry",
+  "category": "dev",
+  "icon": "sentry.io",
+  "description": "Read issues, events and stack traces from Sentry, so an agent debugging a crash starts from what actually happened in production.",
+  "docsUrl": "https://github.com/getsentry/sentry-mcp",
+  "auth": {
+    "kind": "token",
+    "fields": [
+      {
+        "key": "token",
+        "label": "User auth token",
+        "help": "Sentry, Settings, Auth tokens. Read scopes are enough.",
+        "secret": true,
+        "required": true
+      }
+    ],
+    "registerUrl": "https://sentry.io/settings/auth-tokens/"
+  },
+  "server": {
+    "name": "sentry",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@sentry/mcp-server@latest",
+      "--access-token=${token}"
+    ]
+  }
+}

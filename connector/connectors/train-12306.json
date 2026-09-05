@@ -1,0 +1,20 @@
+{
+  "id": "train-12306",
+  "displayName": "China Railway 12306",
+  "category": "life",
+  "icon": "12306.cn",
+  "description": "Looks up trains, seats and fares on China Railway: which trains run, what is left, and how long a transfer takes.",
+  "docsUrl": "https://github.com/Joooook/12306-mcp",
+  "auth": {
+    "kind": "none"
+  },
+  "server": {
+    "name": "train-12306",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "12306-mcp"
+    ]
+  }
+}

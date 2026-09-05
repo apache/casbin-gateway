@@ -1,0 +1,20 @@
+{
+  "id": "howtocook",
+  "displayName": "HowToCook",
+  "category": "life",
+  "icon": "github.com",
+  "description": "Recipes and a plan for the week from the HowToCook cookbook: pick by ingredients, by how many people, or let it decide.",
+  "docsUrl": "https://github.com/worryzyy/HowToCook-mcp",
+  "auth": {
+    "kind": "none"
+  },
+  "server": {
+    "name": "howtocook",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "howtocook-mcp"
+    ]
+  }
+}

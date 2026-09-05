@@ -921,6 +921,7 @@
     "Office": "办公协同",
     "Personal access token": "个人访问令牌",
     "Pick at least one agent": "至少勾选一个Agent。",
+    "Professional": "专业服务",
     "Read and organise pages, databases and wikis: find a document, take stock of a project, and write the conclusion back.": "读取和整理页面、数据库与知识库：查找文档、梳理项目状态，并把结论写回页面。",
     "Read and write repositories, issues and pull requests, and search code and history, so an agent works inside your project's own context.": "读写仓库、issue和pull request，检索代码与提交历史，让Agent直接在你的项目上下文里工作。",
     "Run test": "测试",

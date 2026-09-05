@@ -1,0 +1,20 @@
+{
+  "id": "wikipedia",
+  "displayName": "Wikipedia",
+  "category": "docs",
+  "icon": "wikipedia.org",
+  "description": "Looks up Wikipedia articles and the images in them, so a question of fact is answered from the encyclopedia rather than from memory.",
+  "docsUrl": "https://github.com/shelmesky/wikipedia-mcp-server",
+  "auth": {
+    "kind": "none"
+  },
+  "server": {
+    "name": "wikipedia",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@shelm/wikipedia-mcp-server"
+    ]
+  }
+}

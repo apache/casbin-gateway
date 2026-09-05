@@ -201,5 +201,5 @@ func Get(id string) (Connector, bool) {
 
 // Categories is every section the catalog uses, in display order.
 func Categories() []string {
-	return []string{CategoryOffice, CategoryDocs, CategoryDev, CategoryMail, CategoryStorage, CategoryLife}
+	return []string{CategoryOffice, CategoryDocs, CategoryDev, CategoryPro, CategoryMail, CategoryStorage, CategoryLife}
 }

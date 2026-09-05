@@ -41,6 +41,9 @@ const (
 	CategoryMail    = "mail"
 	CategoryStorage = "storage"
 	CategoryLife    = "life"
+	// CategoryPro is what a business runs on rather than what it builds with:
+	// payments, filings, the services somebody is billed for using.
+	CategoryPro = "pro"
 )
 
 var categories = map[string]bool{
@@ -50,6 +53,7 @@ var categories = map[string]bool{
 	CategoryMail:    true,
 	CategoryStorage: true,
 	CategoryLife:    true,
+	CategoryPro:     true,
 }
 
 // Connector is one entry in the catalog.

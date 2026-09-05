@@ -1,0 +1,20 @@
+{
+  "id": "yt-dlp",
+  "displayName": "Video and subtitles",
+  "category": "life",
+  "icon": "github.com",
+  "description": "Searches videos and pulls their subtitles, transcript, audio or the file itself, through yt-dlp. Needs yt-dlp installed on this machine.",
+  "docsUrl": "https://github.com/kevinwatt/yt-dlp-mcp",
+  "auth": {
+    "kind": "none"
+  },
+  "server": {
+    "name": "yt-dlp",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@kevinwatt/yt-dlp-mcp"
+    ]
+  }
+}

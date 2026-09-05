@@ -1,0 +1,39 @@
+{
+  "id": "elasticsearch",
+  "displayName": "Elasticsearch",
+  "category": "dev",
+  "icon": "elastic.co",
+  "description": "Search indices, read mappings and run queries against an Elasticsearch cluster in the agent's own words.",
+  "docsUrl": "https://github.com/elastic/mcp-server-elasticsearch",
+  "auth": {
+    "kind": "token",
+    "fields": [
+      {
+        "key": "url",
+        "label": "Cluster URL",
+        "placeholder": "https://my-cluster.es.example.com:443",
+        "required": true
+      },
+      {
+        "key": "apiKey",
+        "label": "API key",
+        "help": "Kibana, Stack Management, API keys.",
+        "secret": true,
+        "required": true
+      }
+    ]
+  },
+  "server": {
+    "name": "elasticsearch",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@elastic/mcp-server-elasticsearch"
+    ],
+    "env": {
+      "ES_URL": "${url}",
+      "ES_API_KEY": "${apiKey}"
+    }
+  }
+}

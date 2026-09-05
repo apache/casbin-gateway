@@ -1,0 +1,20 @@
+{
+  "id": "kubernetes",
+  "displayName": "Kubernetes",
+  "category": "dev",
+  "icon": "kubernetes.io",
+  "description": "Reads and changes the cluster your kubeconfig points at: pods, deployments, logs, events. The switches are where you decide how much of that an agent may do.",
+  "docsUrl": "https://github.com/Flux159/mcp-server-kubernetes",
+  "auth": {
+    "kind": "none"
+  },
+  "server": {
+    "name": "kubernetes",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "mcp-server-kubernetes"
+    ]
+  }
+}

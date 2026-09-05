@@ -1,0 +1,20 @@
+{
+  "id": "airbnb",
+  "displayName": "Airbnb",
+  "category": "life",
+  "icon": "airbnb.com",
+  "description": "Searches Airbnb listings and reads one in detail: price, rules, reviews and what is nearby.",
+  "docsUrl": "https://github.com/openbnb-org/mcp-server-airbnb",
+  "auth": {
+    "kind": "none"
+  },
+  "server": {
+    "name": "airbnb",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@openbnb/mcp-server-airbnb"
+    ]
+  }
+}
