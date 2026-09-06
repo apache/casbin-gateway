@@ -426,3 +426,33 @@ func (c *ApiController) TestConnection() {
 	}
 	c.ResponseOk(result)
 }
+
+// RetestConnections tests every connection again. It answers as soon as the
+// work is under way rather than when it is done: each test starts a server and
+// waits for it, so a machine with a dozen connections would hold the request
+// open for minutes. What each one found is read back from the listing.
+func (c *ApiController) RetestConnections() {
+	if c.RequireAdmin() {
+		return
+	}
+
+	var form struct {
+		Owner string `json:"owner"`
+	}
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &form); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	connections, err := object.GetConnections(form.Owner)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	go func(owner string) {
+		beego.Info("retesting", object.RetestConnections(owner), "connections")
+	}(form.Owner)
+
+	c.ResponseOk(len(connections))
+}

@@ -363,3 +363,29 @@ func entryNameOf(connection *Connection) string {
 	}
 	return connection.Name
 }
+
+// RetestConnections tests every connection this owner has, one after another,
+// and reports how many were tried. A server that has been updated since it was
+// connected may offer different tools, and nothing else would notice: the tool
+// list is what the per-tool switches are built from, so a stale one governs an
+// agent by a list of tools that no longer exists.
+//
+// Failures are not returned. Each one is stored against its own connection,
+// which is where the page reads it, and one unreachable service must not stop
+// the rest from being tested.
+func RetestConnections(owner string) int {
+	connections, err := GetConnections(owner)
+	if err != nil {
+		return 0
+	}
+
+	tested := 0
+	for _, connection := range connections {
+		if connection.Orphaned() {
+			continue
+		}
+		_, _ = TestConnection(owner, connection.Name)
+		tested++
+	}
+	return tested
+}

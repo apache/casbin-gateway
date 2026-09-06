@@ -65,3 +65,11 @@ export function startConnectorAuth(owner: string, name: string, credentials: Rec
 export function testConnection(owner: string, name: string) {
   return request<ConnectorProbeResult>("/api/test-connection", "POST", {owner: owner, name: name});
 }
+
+/**
+ * Tests every connection again. It answers as soon as the work has started, so
+ * the caller reloads the listing a little later to see what each one found.
+ */
+export function retestConnections(owner: string) {
+  return request<number>("/api/retest-connections", "POST", {owner: owner});
+}

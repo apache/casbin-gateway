@@ -14,7 +14,7 @@
 
 import * as React from "react";
 import {useSearchParams} from "react-router-dom";
-import {Check, ExternalLink, Plug, Search, TriangleAlert} from "lucide-react";
+import {Check, ExternalLink, Plug, RefreshCw, Search, TriangleAlert} from "lucide-react";
 import i18next from "i18next";
 
 import * as Setting from "@/Setting";
@@ -86,6 +86,7 @@ export default function ConnectionsPage({account}: {account: Account}) {
   // it asks for is this dialog rather than anything written on its behalf.
   const [params, setParams] = useSearchParams();
   const asked = params.get("connect") ?? "";
+  const [retesting, setRetesting] = React.useState(false);
 
   const reload = React.useCallback(() => {
     if (!isAdmin) {
@@ -123,6 +124,27 @@ export default function ConnectionsPage({account}: {account: Account}) {
     setParams(params, {replace: true});
   }, [asked, catalog, params, setParams]);
 
+  // A server that has been updated since it was connected may offer different
+  // tools, and the per-tool switches are built from the list the last test
+  // found. This is how that list is brought up to date.
+  const retestAll = () => {
+    setRetesting(true);
+    ConnectorBackend.retestConnections(account.name)
+      .then(response => {
+        if (response.status !== "ok") {
+          Setting.showMessage("error", response.msg ?? "");
+          return;
+        }
+        Setting.showMessage("success", i18next.t("connector:Retesting").replace("{count}", `${response.data ?? 0}`));
+        // Each test starts a server and waits for it, so the answers arrive
+        // over the next while rather than at once.
+        window.setTimeout(reload, 20000);
+        window.setTimeout(reload, 60000);
+      })
+      .catch(error => Setting.showMessage("error", error.message))
+      .finally(() => setRetesting(false));
+  };
+
   if (!isAdmin) {
     return <UnauthorizedResult />;
   }
@@ -147,7 +169,18 @@ export default function ConnectionsPage({account}: {account: Account}) {
 
   return (
     <PageContainer>
-      <PageHeader title={i18next.t("connector:Connections")} description={i18next.t("connector:Connections detail")} />
+      <PageHeader
+        title={i18next.t("connector:Connections")}
+        description={i18next.t("connector:Connections detail")}
+        actions={
+          connectors.some(entry => entry.connected) ? (
+            <Button variant="outline" onClick={retestAll} disabled={retesting}>
+              <RefreshCw className={cn("size-4", retesting && "animate-spin")} />
+              {i18next.t("connector:Test them all")}
+            </Button>
+          ) : null
+        }
+      />
 
       <div className="flex flex-wrap items-center gap-2">
         <FilterChip active={category === ""} onClick={() => setCategory("")}>
@@ -187,7 +220,12 @@ export default function ConnectionsPage({account}: {account: Account}) {
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           {shown.map(entry => (
-            <ConnectorCard key={entry.id} entry={entry} onConnect={() => setEditing(entry)} />
+            <ConnectorCard
+              key={entry.id}
+              entry={entry}
+              targets={catalog?.targets ?? []}
+              onConnect={() => setEditing(entry)}
+            />
           ))}
         </div>
       )}
@@ -273,8 +311,17 @@ function FilterChip({active, onClick, children}: {active: boolean; onClick: () =
   );
 }
 
-function ConnectorCard({entry, onConnect}: {entry: ConnectorEntry; onConnect: () => void}) {
+function ConnectorCard({
+  entry,
+  targets,
+  onConnect,
+}: {
+  entry: ConnectorEntry;
+  targets: ConnectorTarget[];
+  onConnect: () => void;
+}) {
   const image = iconUrl(entry.icon);
+  const nameOf = (agentId: string) => targets.find(target => target.agentId === agentId)?.name ?? agentId;
   return (
     <Card className="bg-muted/40 border-none shadow-none">
       <CardContent className="flex items-start gap-4 p-5">
@@ -285,12 +332,8 @@ function ConnectorCard({entry, onConnect}: {entry: ConnectorEntry; onConnect: ()
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold">{text(entry.displayName)}</span>
-            {entry.connected ? (
-              entry.agents.length > 0 ? (
-                <Badge variant="secondary">{i18next.t("connector:Connected in", {count: entry.agents.length})}</Badge>
-              ) : (
-                <Badge variant="destructive">{i18next.t("connector:In no agent")}</Badge>
-              )
+            {entry.connected && entry.agents.length === 0 ? (
+              <Badge variant="destructive">{i18next.t("connector:In no agent")}</Badge>
             ) : null}
             {entry.tools && entry.tools.length > 0 ? (
               <Badge variant="outline">
@@ -302,9 +345,28 @@ function ConnectorCard({entry, onConnect}: {entry: ConnectorEntry; onConnect: ()
             {entry.unverified ? <Badge variant="outline">{i18next.t("connector:Unverified")}</Badge> : null}
           </div>
           <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">{text(entry.description)}</p>
+
+          {entry.agents.length > 0 ? (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <span className="text-muted-foreground text-xs">{i18next.t("connector:In agents")}</span>
+              {entry.agents.map(agentId => (
+                <span
+                  key={agentId}
+                  className="bg-background flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium"
+                >
+                  <AgentIcon agent={agentId} size={14} />
+                  {nameOf(agentId)}
+                </span>
+              ))}
+            </div>
+          ) : null}
         </div>
 
-        <Button className="shrink-0 rounded-full" onClick={onConnect}>
+        <Button
+          variant={entry.connected ? "outline" : "default"}
+          className="shrink-0 rounded-full"
+          onClick={onConnect}
+        >
           {entry.connected ? i18next.t("connector:Manage") : i18next.t("connector:Connect")}
         </Button>
       </CardContent>
