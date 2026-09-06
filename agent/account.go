@@ -154,7 +154,7 @@ func codexAccountOf(data []byte) *Account {
 	// The id token carries email and name as standard claims, the access token
 	// carries them nested in a profile object; either may be present.
 	for _, token := range []string{auth.Tokens.IDToken, auth.Tokens.AccessToken} {
-		claims := decodeJWTClaims(token)
+		claims := DecodeJWTClaims(token)
 		if claims == nil {
 			continue
 		}
@@ -283,9 +283,9 @@ func idbMarkedString(data []byte, field string) string {
 	return string(value)
 }
 
-// decodeJWTClaims returns the claim set of a JWT without verifying it: the
+// DecodeJWTClaims returns the claim set of a JWT without verifying it: the
 // account fields are read from local state the user already trusts.
-func decodeJWTClaims(token string) map[string]any {
+func DecodeJWTClaims(token string) map[string]any {
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
 		return nil

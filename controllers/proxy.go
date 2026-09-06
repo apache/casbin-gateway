@@ -537,6 +537,14 @@ func (c *ApiController) forwardToProvider(attempt object.RouteAttempt, route *pr
 		return http.StatusBadGateway, "upstream connection failed", false
 	}
 	upstreamReq.Header.Set("Content-Type", "application/json")
+	// The sign-in a subscription provider spends is renewed here rather than on
+	// a timer, so a token is only refreshed when something is about to send it.
+	if object.UsesSubscription(provider) {
+		if err := object.EnsureSubscription(provider); err != nil {
+			object.ReportProviderFailure(provider.GetId(), err.Error())
+			return http.StatusBadGateway, err.Error(), false
+		}
+	}
 	object.SetProviderAuth(upstreamReq.Header, provider)
 	if object.UsesClientAuth(provider) {
 		c.copyClientAuthHeaders(upstreamReq.Header, upstream)
@@ -937,6 +945,9 @@ func (c *ApiController) providerUnusableReason(provider *object.Provider) string
 	// reads as a broken provider rather than a client that sent no key.
 	if object.UsesClientAuth(provider) && !c.hasClientCredentials() {
 		return fmt.Sprintf("provider %s forwards the credentials of the caller, but the request carries none", provider.GetId())
+	}
+	if object.UsesSubscription(provider) && !object.HasSubscription(provider) {
+		return fmt.Sprintf("provider %s spends a subscription, but it is not signed in", provider.GetId())
 	}
 	return ""
 }

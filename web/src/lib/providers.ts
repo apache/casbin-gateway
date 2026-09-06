@@ -48,9 +48,10 @@ export function wireApiEndpoint(wireApi: string) {
   }
 }
 
-/** Mirrors object.ProviderAuthProvider and object.ProviderAuthClient on the server. */
+/** Mirrors object.ProviderAuthProvider and the two on the server beside it. */
 export const authProvider = "provider";
 export const authClient = "client";
+export const authSubscription = "subscription";
 
 /** Mirrors object.ServesResponsesApi: OpenAI itself, and anything pointed at it. */
 export function servesResponsesApi(provider: {type?: string; protocol?: string} | undefined) {
@@ -60,6 +61,32 @@ export function servesResponsesApi(provider: {type?: string; protocol?: string} 
 /** Mirrors object.UsesClientAuth: whose credentials reach the upstream. */
 export function usesClientAuth(provider: {authMode?: string} | undefined) {
   return provider?.authMode === authClient;
+}
+
+/** Mirrors object.UsesSubscription: a sign-in Gateway holds and renews itself. */
+export function usesSubscription(provider: {authMode?: string} | undefined) {
+  return provider?.authMode === authSubscription;
+}
+
+/**
+ * The authentication modes a provider form offers. A held sign-in is not among
+ * them unless the provider already has one: it is granted by the source card,
+ * which knows which vendor it is signing in to.
+ */
+export function authModeOptions(provider: {authMode?: string} | undefined, label: (key: string) => string) {
+  const options = [
+    {label: label("provider:Stored API key"), value: authProvider},
+    {label: label("provider:Caller's own login"), value: authClient},
+  ];
+  if (usesSubscription(provider)) {
+    options.push({label: label("provider:Held sign-in"), value: authSubscription});
+  }
+  return options;
+}
+
+/** Mirrors object.ServesAnyModel: a provider that names no models on purpose. */
+export function servesAnyModel(provider: {authMode?: string} | undefined) {
+  return usesClientAuth(provider) || usesSubscription(provider);
 }
 
 /** The env vars a client of one wire format reads its endpoint and key from. */
@@ -528,6 +555,8 @@ export interface ProviderSource {
   category?: VendorCategory;
   /** Where the vendor hands out API keys. */
   website?: string;
+  /** The sign-in Gateway holds for this source, for the cards that have one. */
+  vendor?: string;
   /** What the form starts from once the card is picked. */
   provider: Partial<Provider>;
 }
@@ -560,15 +589,16 @@ export const providerSources: ProviderSource[] = [
   {
     key: chatgptSource,
     label: "",
+    vendor: "openai",
     provider: {
       type: "openai",
-      // Codex signs in against the ChatGPT backend rather than the API, and
-      // that endpoint serves the Responses format alone.
+      // A ChatGPT subscription is spent against the Codex backend rather than
+      // the API, and that endpoint serves the Responses format alone.
       protocol: "responses",
       baseUrl: chatgptCodexBaseUrl,
       models: [],
       apiKey: "",
-      authMode: authClient,
+      authMode: authSubscription,
     },
   },
   {

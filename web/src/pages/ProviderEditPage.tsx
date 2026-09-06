@@ -20,6 +20,7 @@ import i18next from "i18next";
 import * as ProviderBackend from "@/backend/ProviderBackend";
 import * as Setting from "@/Setting";
 import {ProviderIcon, ProviderIconField} from "@/components/ProviderIcon";
+import {ProviderLoginField} from "@/components/ProviderLoginField";
 import {ProviderModelsField} from "@/components/ProviderModelsField";
 import {ProviderQuotaSection} from "@/components/ProviderQuota";
 import {ProviderTestField, useProviderTest} from "@/components/ProviderTestField";
@@ -36,13 +37,14 @@ import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {Textarea} from "@/components/ui/textarea";
 import {
-  authClient,
+  authModeOptions,
   baseUrlPlaceholder,
   providerProtocol,
   providerWireApi,
   gatewayBaseUrl,
   localShell,
   usesClientAuth,
+  usesSubscription,
   wireApiEndpoint,
 } from "@/lib/providers";
 import type {Provider, QuotaConfig} from "@/types";
@@ -239,13 +241,27 @@ export default function ProviderEditPage() {
             onChange={value =>
               setProvider(current => (current ? {...current, authMode: value, apiKey: ""} : current))
             }
-            options={[
-              {label: i18next.t("provider:Stored API key"), value: "provider"},
-              {label: i18next.t("provider:Caller's own login"), value: authClient},
-            ]}
+            options={authModeOptions(provider, key => i18next.t(key))}
           />
         </Field>
-        {usesClientAuth(provider) ? null : (
+        {usesSubscription(provider) ? (
+          <ProviderLoginField
+            provider={provider}
+            vendor={provider.subscriptionVendor ?? ""}
+            onSignedIn={session =>
+              setProvider(current =>
+                current
+                  ? {
+                    ...current,
+                    loginId: session.id,
+                    subscriptionAccount: session.account ?? "",
+                    subscriptionPlan: session.plan ?? "",
+                  }
+                  : current,
+              )
+            }
+          />
+        ) : usesClientAuth(provider) ? null : (
           <Field
             label={i18next.t("provider:API Key")}
             htmlFor="provider-api-key"
@@ -261,7 +277,11 @@ export default function ProviderEditPage() {
         )}
         <ProviderModelsField
           provider={provider}
-          hint={usesClientAuth(provider) ? i18next.t("provider:Any model hint") : undefined}
+          hint={
+            usesClientAuth(provider) || usesSubscription(provider)
+              ? i18next.t("provider:Any model hint")
+              : undefined
+          }
           onChange={value => setField("models", value)}
         />
         <Field label={i18next.t("provider:Priority")} hint={i18next.t("provider:Priority hint")}>

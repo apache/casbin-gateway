@@ -164,6 +164,8 @@ func initAPI() {
 	beego.Router("/api/delete-provider", &controllers.ApiController{}, "POST:DeleteProvider")
 	beego.Router("/api/get-provider-models", &controllers.ApiController{}, "POST:GetProviderModels")
 	beego.Router("/api/test-provider", &controllers.ApiController{}, "POST:TestProvider")
+	beego.Router("/api/sign-in-provider", &controllers.ApiController{}, "POST:SignInProvider")
+	beego.Router("/api/get-provider-signin", &controllers.ApiController{}, "GET:GetProviderSignin")
 	beego.Router("/api/get-provider-health", &controllers.ApiController{}, "GET:GetProviderHealth")
 	beego.Router("/api/get-provider-quotas", &controllers.ApiController{}, "GET:GetProviderQuotas")
 	beego.Router("/api/refresh-provider-quotas", &controllers.ApiController{}, "POST:RefreshProviderQuotas")

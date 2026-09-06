@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {CircleX, Pencil, Trash2} from "lucide-react";
+import {CircleX, LogIn, Pencil, Trash2} from "lucide-react";
 import i18next from "i18next";
 
 import {ProviderIcon} from "@/components/ProviderIcon";
@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {SimpleTooltip} from "@/components/ui/tooltip";
 import {agentSpeaks} from "@/lib/agents";
-import {providerIdOf, providerProtocol, usesClientAuth} from "@/lib/providers";
+import {providerIdOf, providerProtocol, servesAnyModel, usesClientAuth, usesSubscription} from "@/lib/providers";
 import {cn} from "@/lib/utils";
 import type {Agent, Provider, ProviderHealth, ProviderQuota} from "@/types";
 
@@ -126,6 +126,14 @@ export function ProviderGridCard({
           {usesClientAuth(provider) ? (
             <Badge variant="muted">{i18next.t("provider:Caller's own login")}</Badge>
           ) : null}
+          {/* A held sign-in is named after the account it spends: that, and not
+              the base URL, is what tells two of them apart. */}
+          {usesSubscription(provider) ? (
+            <Badge variant="muted">
+              <LogIn />
+              {provider.subscriptionAccount || i18next.t("provider:Held sign-in")}
+            </Badge>
+          ) : null}
           {provider.status === "enabled" ? null : (
             <Badge variant="muted">
               <CircleX />
@@ -139,7 +147,7 @@ export function ProviderGridCard({
         <div className="flex flex-wrap gap-1">
           {models.length === 0 ? (
             <span className="text-muted-foreground text-xs">
-              {usesClientAuth(provider) ? i18next.t("provider:Any model") : "-"}
+              {servesAnyModel(provider) ? i18next.t("provider:Any model") : "-"}
             </span>
           ) : (
             <>

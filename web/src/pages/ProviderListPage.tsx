@@ -31,6 +31,7 @@ import * as ProviderBackend from "@/backend/ProviderBackend";
 import * as Setting from "@/Setting";
 import {ProviderIconField} from "@/components/ProviderIcon";
 import {ProviderGridCard} from "@/components/ProviderGridCard";
+import {ProviderLoginField, signedInAs} from "@/components/ProviderLoginField";
 import {ProviderModelsField} from "@/components/ProviderModelsField";
 import {ProviderSourcePicker, sourceTitle} from "@/components/ProviderSourcePicker";
 import {ProviderTestField, useProviderTest} from "@/components/ProviderTestField";
@@ -49,14 +50,15 @@ import {Input} from "@/components/ui/input";
 import {Textarea} from "@/components/ui/textarea";
 import {clearDraft, readDraft, writeDraft, type Draft} from "@/lib/draft";
 import {
+  authModeOptions,
   authProvider,
-  authClient,
   baseUrlPlaceholder,
   customSource,
   providerIdOf,
   providerSlug,
   providerSources,
   usesClientAuth,
+  usesSubscription,
   type ProviderSource,
 } from "@/lib/providers";
 import {cn} from "@/lib/utils";
@@ -525,6 +527,9 @@ export default function ProviderListPage({account}: {account: Account}) {
           )
         }
         submitting={adding || test.testing}
+        // A provider that spends a subscription is nothing until it is signed
+        // in: there would be no credential to send.
+        submitDisabled={usesSubscription(form) && signedInAs(form) === ""}
         submitText={i18next.t("provider:Add provider")}
         onSubmit={submitProvider}
         // Nothing is filled in yet while the source is still being picked, so
@@ -572,6 +577,9 @@ export default function ProviderListPage({account}: {account: Account}) {
                 {usesClientAuth(form) ? (
                   <Badge variant="muted">{i18next.t("provider:Caller's own login")}</Badge>
                 ) : null}
+                {usesSubscription(form) ? (
+                  <Badge variant="muted">{i18next.t("provider:Held sign-in")}</Badge>
+                ) : null}
                 <Button type="button" size="xs" variant="ghost" onClick={() => setSource(null)}>
                   {i18next.t("provider:Change source")}
                 </Button>
@@ -616,7 +624,20 @@ export default function ProviderListPage({account}: {account: Account}) {
                 }}
               />
             </Field>
-            {usesClientAuth(form) ? null : (
+            {usesSubscription(form) ? (
+              <ProviderLoginField
+                provider={form}
+                vendor={source.vendor ?? ""}
+                onSignedIn={session =>
+                  setForm(prev => ({
+                    ...prev,
+                    loginId: session.id,
+                    subscriptionAccount: session.account ?? "",
+                    subscriptionPlan: session.plan ?? "",
+                  }))
+                }
+              />
+            ) : usesClientAuth(form) ? null : (
               <Field
                 label={
                   <span className="flex flex-wrap items-center gap-2">
@@ -649,7 +670,11 @@ export default function ProviderListPage({account}: {account: Account}) {
             <ProviderModelsField
               provider={form}
               className="md:col-span-2"
-              hint={usesClientAuth(form) ? i18next.t("provider:Any model hint") : i18next.t("provider:Models hint")}
+              hint={
+                usesClientAuth(form) || usesSubscription(form)
+                  ? i18next.t("provider:Any model hint")
+                  : i18next.t("provider:Models hint")
+              }
               onChange={value => setFormField("models", value)}
             />
             <ProviderTestField test={test} submitText={i18next.t("provider:Add provider")} />
@@ -700,10 +725,7 @@ export default function ProviderListPage({account}: {account: Account}) {
                   value={form.authMode}
                   // The stored key is meaningless once the caller's own is forwarded.
                   onChange={value => setForm(prev => ({...prev, authMode: value, apiKey: ""}))}
-                  options={[
-                    {label: i18next.t("provider:Stored API key"), value: authProvider},
-                    {label: i18next.t("provider:Caller's own login"), value: authClient},
-                  ]}
+                  options={authModeOptions(form, key => i18next.t(key))}
                 />
               </Field>
               <ProviderIconField provider={form} onChange={value => setFormField("icon", value)} />

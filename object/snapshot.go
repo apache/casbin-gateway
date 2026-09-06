@@ -558,6 +558,9 @@ func credentiallessDetail(connection *Connection) string {
 // keylessDetail marks a provider that arrives with no key, which is the one
 // thing somebody has to finish by hand after importing a redacted snapshot.
 func keylessDetail(provider *Provider) string {
+	if provider.AuthMode == ProviderAuthSubscription {
+		return "the snapshot carries no sign-in for it, so it has to be signed in again"
+	}
 	if provider.ApiKey == "" && provider.AuthMode != ProviderAuthClient {
 		return "the snapshot carries no API key for it"
 	}

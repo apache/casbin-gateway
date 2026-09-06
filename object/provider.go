@@ -70,6 +70,51 @@ func encryptApiKey(provider *Provider) error {
 	return nil
 }
 
+// subscriptionAad keeps a sign-in's ciphertext from being usable in the api_key
+// column of the same row, or in any other row.
+func subscriptionAad(provider *Provider) string {
+	return provider.GetId() + "/subscription"
+}
+
+// encryptedSubscription is one sign-in as it is stored, empty for none.
+func encryptedSubscription(provider *Provider, subscription *ProviderSubscription) (string, error) {
+	if subscription == nil {
+		return "", nil
+	}
+
+	plain, err := json.Marshal(subscription)
+	if err != nil {
+		return "", err
+	}
+	return util.EncryptWithKey(apiKeyEncryptionSecret(), string(plain), subscriptionAad(provider))
+}
+
+func encryptSubscription(provider *Provider) error {
+	if provider.Subscription == "" {
+		return nil
+	}
+
+	encrypted, err := util.EncryptWithKey(apiKeyEncryptionSecret(), provider.Subscription, subscriptionAad(provider))
+	if err != nil {
+		return err
+	}
+	provider.Subscription = encrypted
+	return nil
+}
+
+func decryptSubscription(provider *Provider) {
+	if provider.Subscription == "" {
+		return
+	}
+
+	plain, err := util.DecryptWithKey(apiKeyEncryptionSecret(), provider.Subscription, subscriptionAad(provider))
+	if err != nil {
+		fmt.Printf("decryptSubscription(): provider [%s]: %v\n", provider.GetId(), err)
+		return
+	}
+	provider.Subscription = plain
+}
+
 // quotaTokenAad keeps the quota token's ciphertext from being usable in the
 // api_key column of the same row, or in any other row.
 func quotaTokenAad(provider *Provider) string {
@@ -123,6 +168,7 @@ func decryptProvider(provider *Provider) {
 	}
 
 	decryptQuotaToken(provider)
+	decryptSubscription(provider)
 
 	secret := apiKeyEncryptionSecret()
 	stored := provider.ApiKey
@@ -188,14 +234,23 @@ var (
 const (
 	ProviderAuthProvider = "provider"
 	ProviderAuthClient   = "client"
+	// ProviderAuthSubscription is a sign-in Gateway holds and renews itself, so
+	// a subscription is used from here exactly like a key.
+	ProviderAuthSubscription = "subscription"
 )
 
-var providerAuthModes = []string{ProviderAuthProvider, ProviderAuthClient}
+var providerAuthModes = []string{ProviderAuthProvider, ProviderAuthClient, ProviderAuthSubscription}
 
 // UsesClientAuth reports whether the provider authenticates with the caller's
 // own credentials. An empty AuthMode is a row written before the field existed.
 func UsesClientAuth(provider *Provider) bool {
 	return provider.AuthMode == ProviderAuthClient
+}
+
+// ServesAnyModel reports whether the provider names no models on purpose: what
+// a sign-in may ask for is decided by the account behind it, not by this table.
+func ServesAnyModel(provider *Provider) bool {
+	return UsesClientAuth(provider) || UsesSubscription(provider)
 }
 
 // The wire formats a provider's upstream can serve. A request that arrived in
@@ -269,6 +324,18 @@ type Provider struct {
 	ApiKey string `xorm:"varchar(1000)" json:"apiKey"`
 	// AuthMode selects whose credentials reach the upstream, see UsesClientAuth.
 	AuthMode string `xorm:"varchar(100)" json:"authMode"`
+	// Subscription is the sign-in of a ProviderAuthSubscription provider, stored
+	// as ciphertext like the key. Only the sign-in flow writes it, and it leaves
+	// this process no more than the key does.
+	Subscription string `xorm:"mediumtext" json:"-"`
+	// LoginId names a finished sign-in whose credential this save takes over,
+	// which is how a token reaches the row without passing through the browser.
+	LoginId string `xorm:"-" json:"loginId,omitempty"`
+	// These three describe the stored sign-in, so the page can say whose account
+	// a provider spends and offer to sign in again where it was granted.
+	SubscriptionVendor  string `xorm:"-" json:"subscriptionVendor,omitempty"`
+	SubscriptionAccount string `xorm:"-" json:"subscriptionAccount,omitempty"`
+	SubscriptionPlan    string `xorm:"-" json:"subscriptionPlan,omitempty"`
 	// Models is JSON-serialized by xorm, so it needs a text column rather than
 	// a varchar: the serialized form is longer than the joined model names.
 	Models []string `xorm:"mediumtext" json:"models"`
@@ -340,6 +407,8 @@ func GetMaskedProvider(provider *Provider) *Provider {
 	if masked.ApiKey != "" {
 		masked.ApiKey = ApiKeyMask
 	}
+	describeSubscription(&masked)
+	masked.Subscription = ""
 	// The quota token shares a column with the rest of the quota configuration,
 	// so the whole struct is copied before the token is replaced.
 	if masked.Quota != nil && masked.Quota.Token != "" {
@@ -385,9 +454,10 @@ func validateProvider(provider *Provider) error {
 		return fmt.Errorf("invalid provider auth mode: %s", provider.AuthMode)
 	}
 
-	// A provider that forwards the caller's credentials has no use for a stored
-	// key, and one left behind would be sent upstream again after a switch back.
-	if provider.AuthMode == ProviderAuthClient {
+	// A provider that forwards the caller's credentials, or spends a sign-in of
+	// its own, has no use for a stored key, and one left behind would be sent
+	// upstream again after a switch back.
+	if provider.AuthMode != ProviderAuthProvider {
 		provider.ApiKey = ""
 	}
 
@@ -527,12 +597,42 @@ func SetProviderAuth(header http.Header, provider *Provider) {
 	if UsesClientAuth(provider) {
 		return
 	}
+	if UsesSubscription(provider) {
+		SetSubscriptionAuth(header, provider)
+		return
+	}
 
 	if ProviderProtocol(provider) == ProtocolAnthropic {
 		header.Set("X-Api-Key", provider.ApiKey)
 		return
 	}
 	header.Set("Authorization", "Bearer "+provider.ApiKey)
+}
+
+// takeProviderLogin moves the credential of a finished sign-in onto the row
+// being saved. A save that brings none leaves the stored one alone, which is
+// what makes editing the rest of a signed-in provider harmless.
+func takeProviderLogin(provider *Provider) error {
+	loginId := provider.LoginId
+	provider.LoginId = ""
+	provider.Subscription = ""
+
+	if loginId != "" {
+		granted, err := takeSubscriptionLogin(loginId)
+		if err != nil {
+			return err
+		}
+		plain, err := json.Marshal(granted)
+		if err != nil {
+			return err
+		}
+		provider.Subscription = string(plain)
+	}
+
+	if !UsesSubscription(provider) {
+		provider.Subscription = ""
+	}
+	return nil
 }
 
 func AddProvider(provider *Provider) (bool, error) {
@@ -561,9 +661,15 @@ func AddProvider(provider *Provider) (bool, error) {
 	if err := encryptQuotaToken(provider); err != nil {
 		return false, err
 	}
+	if err := takeProviderLogin(provider); err != nil {
+		return false, err
+	}
 	// The probe needs the key as it was typed, and encryption is in place.
 	probeTarget := *provider
 	if err := encryptApiKey(provider); err != nil {
+		return false, err
+	}
+	if err := encryptSubscription(provider); err != nil {
 		return false, err
 	}
 
@@ -633,7 +739,19 @@ func UpdateProvider(id string, provider *Provider) (bool, error) {
 		return false, err
 	}
 
+	if err := takeProviderLogin(provider); err != nil {
+		return false, err
+	}
+
 	session := ormer.Engine.ID(core.PK{owner, name})
+	// The sign-in never reaches the browser, so a save that carries none is
+	// leaving the stored one alone rather than clearing it. Switching the
+	// provider off a subscription does clear it: it is spent by nothing now.
+	if provider.Subscription == "" && UsesSubscription(provider) {
+		session = session.Omit("subscription")
+	} else if err = encryptSubscription(provider); err != nil {
+		return false, err
+	}
 	// The browser only ever sees the mask, so getting it back means the user
 	// did not touch the field. Any other value (including "") is written, which
 	// is what makes clearing a key possible.
@@ -773,10 +891,10 @@ func TestProviderConnectivity(provider *Provider) (bool, int, string) {
 		return false, 0, err.Error()
 	}
 
-	// A client-auth provider carries no credential of its own, so a completion
-	// would only ever measure the missing key. All that can be checked is that
-	// the endpoint is there.
-	if UsesClientAuth(provider) || provider.ApiKey == "" {
+	// A provider authenticated by a sign-in names no model to ask for, and a
+	// client-auth one carries no credential of its own. All that can be checked
+	// either way is that the endpoint is there.
+	if ServesAnyModel(provider) || provider.ApiKey == "" {
 		return testProviderReachable(provider)
 	}
 
@@ -796,8 +914,11 @@ func testProviderReachable(provider *Provider) (bool, int, string) {
 	}
 
 	// An upstream that rejects the unauthenticated probe has still proven it is
-	// reachable, which is the whole of what a client-auth provider can show.
-	if UsesClientAuth(provider) && (probe.statusCode == http.StatusUnauthorized || probe.statusCode == http.StatusForbidden) {
+	// reachable, which is the whole of what a provider with no key can show.
+	if ServesAnyModel(provider) && (probe.statusCode == http.StatusUnauthorized || probe.statusCode == http.StatusForbidden) {
+		if UsesSubscription(provider) {
+			return true, probe.statusCode, "reachable, and spending the sign-in stored here"
+		}
 		return true, probe.statusCode, "reachable, and authenticated with the caller's own credentials"
 	}
 
@@ -923,14 +1044,14 @@ func GetProvidersByModel(model string) ([]*Provider, error) {
 	// The models are JSON-serialized into a single column, so the match cannot
 	// be pushed down into the query.
 	matchedProviders := []*Provider{}
-	// A provider authenticated with the caller's own credentials cannot know
-	// which models the account behind them may use, so an empty model list
-	// there means "any model". Those providers are tried after the ones that
-	// name the model, so a wildcard never takes traffic from an exact match.
+	// A provider authenticated with a sign-in rather than a key cannot know
+	// which models the account behind it may use, so an empty model list there
+	// means "any model". Those providers are tried after the ones that name the
+	// model, so a wildcard never takes traffic from an exact match.
 	wildcardProviders := []*Provider{}
 	for _, provider := range providers {
 		if len(provider.Models) == 0 {
-			if UsesClientAuth(provider) {
+			if ServesAnyModel(provider) {
 				wildcardProviders = append(wildcardProviders, provider)
 			}
 			continue

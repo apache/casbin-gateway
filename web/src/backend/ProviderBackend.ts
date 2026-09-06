@@ -19,6 +19,7 @@ import type {
   ProviderProbe,
   ProviderProbeMode,
   ProviderQuota,
+  ProviderSignin,
   ProviderTestResult,
 } from "@/types";
 
@@ -71,6 +72,19 @@ export function getProviderModels(provider: Provider) {
  * id, so a form can be checked before it is saved. */
 export function testProvider(provider: Provider) {
   return request<ProviderTestResult>("/api/test-provider", "POST", provider);
+}
+
+/** Starts a browser sign-in for a vendor whose subscription Gateway can hold.
+ *  The token stays on the server; what comes back is the id of the sign-in,
+ *  which the save of the provider redeems. */
+export function signInProvider(vendor: string) {
+  return request<ProviderSignin>(`/api/sign-in-provider${query({vendor: vendor})}`, "POST");
+}
+
+/** How a sign-in that was started is getting on. Approving one takes as long as
+ *  whoever is at the browser, so the page polls. */
+export function getProviderSignin(id: string) {
+  return request<ProviderSignin>(`/api/get-provider-signin${query({id: id})}`);
 }
 
 /** What the proxy has seen of each provider, which is what says why a request

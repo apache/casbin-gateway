@@ -22,7 +22,7 @@ import {Field} from "@/components/shared/form-dialog";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {TagsInput} from "@/components/ui/tags-input";
-import {modelPresets, modelsPlaceholder, usesClientAuth} from "@/lib/providers";
+import {modelPresets, modelsPlaceholder, servesAnyModel} from "@/lib/providers";
 import type {Provider} from "@/types";
 
 /**
@@ -55,7 +55,7 @@ export function ProviderModelsField({
   const models = provider.models ?? [];
   // A provider that forwards the caller's login sends no key upstream, so there
   // is nothing to list models with, and an empty list already means "any model".
-  const canFetch = !usesClientAuth(provider) && provider.baseUrl !== "";
+  const canFetch = !servesAnyModel(provider) && provider.baseUrl !== "";
 
   const fetchModels = () => {
     setFetching(true);
@@ -117,7 +117,7 @@ export function ProviderModelsField({
       {/* An empty list only means "any model" for a provider that forwards the
           caller's login. Anywhere else it means the router will never pick this
           provider, which is worth saying before the form is submitted. */}
-      {models.length === 0 && !usesClientAuth(provider) ? (
+      {models.length === 0 && !servesAnyModel(provider) ? (
         <p className="text-warning text-xs">{i18next.t("provider:No models hint")}</p>
       ) : null}
       {fetched === null ? null : (

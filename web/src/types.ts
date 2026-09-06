@@ -65,6 +65,14 @@ export interface Provider {
   protocol?: string;
   apiKey: string;
   authMode: string;
+  /** A finished sign-in this save takes the credential of. Write-only: the
+   *  token itself never reaches the browser. */
+  loginId?: string;
+  /** Whose subscription this provider spends, when it holds one, and where
+   *  that sign-in was granted. */
+  subscriptionVendor?: string;
+  subscriptionAccount?: string;
+  subscriptionPlan?: string;
   /** A site the vendor's icon is taken from, or an image URL. Empty derives it
    * from the base URL. */
   icon: string;
@@ -107,6 +115,19 @@ export interface ProviderQuota {
   unit: string;
   error: string;
   time: string;
+}
+
+/** One browser sign-in Gateway started for a subscription provider. */
+export interface ProviderSignin {
+  id: string;
+  vendor: string;
+  /** Where the sign-in is approved. The page opens it. */
+  url: string;
+  running: boolean;
+  ok: boolean;
+  account?: string;
+  plan?: string;
+  error?: string;
 }
 
 export interface ProviderTestResult {
