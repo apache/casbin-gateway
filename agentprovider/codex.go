@@ -40,6 +40,10 @@ const (
 	// provider, which is the one place Codex reads it from without an
 	// environment variable and without a sign-in of its own.
 	codexAuthHeader = "Authorization"
+	// codexOpenAiAuthKey tells Codex to send the ChatGPT sign-in it already has
+	// to this provider instead of looking for a key of its own. It is what puts a
+	// subscription through the gateway, which forwards it to the Codex backend.
+	codexOpenAiAuthKey = "requires_openai_auth"
 )
 
 // The keys of the root table Gateway owns, remembered under these names.
@@ -58,10 +62,10 @@ var (
 	codexHeaderPath   = []string{"model_providers", codexProviderName, "http_headers"}
 )
 
-// errCodexNoKey rejects a provider that forwards the caller's own credentials:
-// Codex sends the key Gateway writes, so there is nothing for this provider
-// entry to forward.
-var errCodexNoKey = errors.New("Codex needs an API key, so it cannot use a provider that forwards the credentials of the caller")
+// errCodexNoKey rejects a provider with nothing to authenticate with. A
+// client-auth provider is not one of them: there Codex sends the sign-in it
+// already has, and the entry says so instead of carrying a key.
+var errCodexNoKey = errors.New("Codex has no key to send this provider, and the provider does not forward the caller's own login either")
 
 // errCodexResponsesApi rejects writing an upstream Codex cannot reach. Codex
 // dropped the chat completions wire format, so a provider that serves only that
@@ -267,7 +271,7 @@ func (w codexWriter) document(target Target) (map[string]any, error) {
 
 // check reports why Codex cannot be pointed at endpoint.
 func (codexWriter) check(endpoint Endpoint) error {
-	if endpoint.ApiKey == "" {
+	if endpoint.ApiKey == "" && !endpoint.ClientAuth {
 		return errCodexNoKey
 	}
 	if !endpoint.ServesResponsesApi {
@@ -279,6 +283,8 @@ func (codexWriter) check(endpoint Endpoint) error {
 // providerTable is the [model_providers.casbin-gateway] block, followed by the
 // header sub-table carrying the key. env_key would send Codex looking for an
 // environment variable no shell exports, so the key is written here instead.
+// A client-auth provider has no key to write: the entry asks Codex for the
+// sign-in it already holds, which is the credential forwarded upstream.
 func (codexWriter) providerTable(endpoint Endpoint) string {
 	table := tomlTable(codexProviderPath,
 		[]string{"name", "base_url", "wire_api"},
@@ -287,6 +293,10 @@ func (codexWriter) providerTable(endpoint Endpoint) string {
 			"base_url": endpoint.BaseUrl,
 			"wire_api": "responses",
 		})
+	if endpoint.ClientAuth {
+		return table + codexOpenAiAuthKey + " = true\n"
+	}
+
 	headers := tomlTable(codexHeaderPath,
 		[]string{codexAuthHeader},
 		map[string]string{codexAuthHeader: "Bearer " + endpoint.ApiKey})

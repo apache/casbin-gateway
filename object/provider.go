@@ -426,6 +426,11 @@ func validateBaseUrl(baseUrl string) error {
 	return nil
 }
 
+// ChatGptCodexPath is where the Codex requests of a ChatGPT subscription go.
+// It names no version and serves the endpoint straight off the path, so the
+// /v1 a versionless base URL gets would miss it.
+const ChatGptCodexPath = "/backend-api/codex"
+
 // apiVersionSegment matches a path segment that names an API version, which is
 // how a base URL says it is already the root of the API: v1, v3, v1beta.
 var apiVersionSegment = regexp.MustCompile(`^v[0-9]`)
@@ -458,7 +463,7 @@ func BuildOpenAiUrl(baseUrl string, endpoint string) (string, error) {
 	}
 
 	path := strings.TrimSuffix(strings.TrimRight(u.Path, "/"), endpoint)
-	if !namesApiVersion(path) {
+	if !namesApiVersion(path) && !strings.HasSuffix(path, ChatGptCodexPath) {
 		path += "/v1"
 	}
 

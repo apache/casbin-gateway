@@ -158,6 +158,7 @@ func agentEndpoint(agentId string) (agentprovider.Endpoint, error) {
 
 	endpoint.Provider = provider.GetId()
 	endpoint.Protocol = object.ProviderApiFamily(provider)
+	endpoint.ClientAuth = object.UsesClientAuth(provider)
 	if len(provider.Models) > 0 {
 		endpoint.Model = provider.Models[0]
 		endpoint.Models = provider.Models
@@ -179,7 +180,7 @@ func agentEndpoint(agentId string) (agentprovider.Endpoint, error) {
 	// A client-auth provider forwards whatever the agent sends, so it must keep
 	// sending its own credentials: a placeholder token written into the agent's
 	// configuration would replace the sign-in it already has.
-	if !object.UsesClientAuth(provider) {
+	if !endpoint.ClientAuth {
 		endpoint.ApiKey = conf.GetRelayToken()
 	}
 	return endpoint, nil

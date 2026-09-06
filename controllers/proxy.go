@@ -683,6 +683,9 @@ var clientAuthHeaders = []string{
 	"Openai-Organization",
 	"Openai-Project",
 	"Chatgpt-Account-Id",
+	"Originator",
+	"Session-Id",
+	"Thread-Id",
 }
 
 // hasClientCredentials reports whether the client request carries a credential

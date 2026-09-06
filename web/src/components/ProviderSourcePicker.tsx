@@ -21,6 +21,7 @@ import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {
   providerSources,
+  chatgptSource,
   customSource,
   subscriptionSource,
   vendorCategories,
@@ -30,12 +31,15 @@ import {
 
 /**
  * The title and the line under it. A vendor card is named after the vendor and
- * says where its requests go; the two cards that are not a vendor say what they
- * are instead, because their base URL would not.
+ * says where its requests go; the cards that are not a vendor say what they are
+ * instead, because their base URL would not.
  */
 export function sourceTitle(source: ProviderSource) {
   if (source.key === subscriptionSource) {
     return i18next.t("provider:Claude subscription");
+  }
+  if (source.key === chatgptSource) {
+    return i18next.t("provider:ChatGPT subscription");
   }
   if (source.key === customSource) {
     return i18next.t("provider:Custom vendor");
@@ -46,6 +50,9 @@ export function sourceTitle(source: ProviderSource) {
 function sourceDetail(source: ProviderSource) {
   if (source.key === subscriptionSource) {
     return i18next.t("provider:Claude subscription detail");
+  }
+  if (source.key === chatgptSource) {
+    return i18next.t("provider:ChatGPT subscription detail");
   }
   if (source.key === customSource) {
     return i18next.t("provider:Custom vendor detail");
@@ -64,7 +71,7 @@ function categoryTitle(category: VendorCategory) {
 function SourceCard({source, onPick}: {source: ProviderSource; onPick: (source: ProviderSource) => void}) {
   // Only reached when the vendor's own mark will not load.
   const Icon =
-    source.key === subscriptionSource ? LogIn : source.key === customSource ? Settings2 : KeyRound;
+    source.key === customSource ? Settings2 : source.category === undefined ? LogIn : KeyRound;
 
   return (
     <button
@@ -118,13 +125,16 @@ export function ProviderSourcePicker({
   };
 
   const needle = query.trim().toLowerCase();
+  // The line under the title is searched too: the card a subscription is added
+  // from is named after the client, not after the vendor someone types.
   const matches = (source: ProviderSource) =>
     needle === "" ||
     sourceTitle(source).toLowerCase().includes(needle) ||
+    sourceDetail(source).toLowerCase().includes(needle) ||
     (source.provider.baseUrl ?? "").toLowerCase().includes(needle);
 
-  // The two cards that are not a vendor lead, without a heading of their own:
-  // they are the answers for a vendor that is not on the list at all.
+  // The cards that are not a vendor lead, without a heading of their own: they
+  // are the sign-ins, and the answer for a vendor not on the list at all.
   const leading = providerSources.filter(source => source.category === undefined).filter(matches);
   const groups = vendorCategories
     .map(category => ({

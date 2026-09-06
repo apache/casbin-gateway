@@ -520,11 +520,11 @@ export const providerPresets: ProviderPreset[] = [
 
 /** Where a new provider gets its credentials: one card of the picker. */
 export interface ProviderSource {
-  /** Stable id. The two cards that are not a vendor are titled by the picker. */
+  /** Stable id. The cards that are not a vendor are titled by the picker. */
   key: string;
   /** The vendor's own name, empty when the picker titles the card itself. */
   label: string;
-  /** Absent on the two cards that are not a vendor, which lead the picker. */
+  /** Absent on the cards that are not a vendor, which lead the picker. */
   category?: VendorCategory;
   /** Where the vendor hands out API keys. */
   website?: string;
@@ -533,14 +533,17 @@ export interface ProviderSource {
 }
 
 export const subscriptionSource = "subscription";
+export const chatgptSource = "chatgpt";
 export const customSource = "custom";
 
+/** Where a ChatGPT subscription's Codex requests go, which is not the API. */
+export const chatgptCodexBaseUrl = "https://chatgpt.com/backend-api/codex";
+
 /**
- * The sign-in comes first: it is the only source that needs nothing filled in,
- * and the one people with a subscription and no API key are here for. Anthropic
- * is the vendor of the clients that mode works with; Codex signs in against an
- * API Gateway does not relay. Custom follows it, because the two of them are
- * the answers for a vendor that is not on the list at all.
+ * The sign-ins come first: they are the only sources that need nothing filled
+ * in, and the ones people with a subscription and no API key are here for. One
+ * per vendor whose client signs in rather than carrying a key: Claude Code and
+ * Codex. Custom follows them, for a vendor that is not on the list at all.
  */
 export const providerSources: ProviderSource[] = [
   {
@@ -549,6 +552,20 @@ export const providerSources: ProviderSource[] = [
     provider: {
       type: "anthropic",
       baseUrl: providerPresets.find(preset => preset.type === "anthropic")?.baseUrl ?? "",
+      models: [],
+      apiKey: "",
+      authMode: authClient,
+    },
+  },
+  {
+    key: chatgptSource,
+    label: "",
+    provider: {
+      type: "openai",
+      // Codex signs in against the ChatGPT backend rather than the API, and
+      // that endpoint serves the Responses format alone.
+      protocol: "responses",
+      baseUrl: chatgptCodexBaseUrl,
       models: [],
       apiKey: "",
       authMode: authClient,

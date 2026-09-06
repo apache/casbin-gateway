@@ -65,6 +65,10 @@ type Endpoint struct {
 	// API, which is all Codex speaks. The gateway always does, since it
 	// translates; a provider's own upstream usually stops at chat completions.
 	ServesResponsesApi bool `json:"servesResponsesApi"`
+	// ClientAuth reports whether the provider forwards the credentials the
+	// agent itself sends, which is why there is no key to write into its
+	// configuration: the sign-in it already has is the one being used.
+	ClientAuth bool `json:"clientAuth"`
 }
 
 // File is one configuration file a switch writes, with the section it will
