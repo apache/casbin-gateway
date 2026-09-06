@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 )
@@ -140,6 +141,29 @@ func start(name string, channel Channel) {
 			entry.status.Error = err.Error()
 		}
 	}()
+}
+
+// deliveryPrefix marks the failures reportDelivery wrote, so clearing one never
+// clears something the poll loop had to say.
+const deliveryPrefix = "the last reply did not reach the chat: "
+
+// reportDelivery records what happened to the last reply on a channel, so a
+// delivery that failed shows on the page listing the channels.
+func reportDelivery(name string, err error) {
+	manager.Lock()
+	defer manager.Unlock()
+
+	entry := manager.listeners[name]
+	if entry == nil {
+		return
+	}
+	if err != nil {
+		entry.status.Error = deliveryPrefix + err.Error()
+		return
+	}
+	if strings.HasPrefix(entry.status.Error, deliveryPrefix) {
+		entry.status.Error = ""
+	}
 }
 
 // sameChannel reports whether nothing a listener depends on has changed. A

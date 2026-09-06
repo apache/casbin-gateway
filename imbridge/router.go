@@ -152,7 +152,7 @@ func (r *router) ask(message Message, prompt string) {
 			answer.add(event)
 			if event.Type == agentsession.EventDone {
 				if final := answer.text(); final != "" {
-					posted, _ = r.platform.Send(message, Reply{Text: final, Edit: posted})
+					posted = r.send(message, Reply{Text: final, Edit: posted})
 				}
 				return
 			}
@@ -163,7 +163,7 @@ func (r *router) ask(message Message, prompt string) {
 				continue
 			}
 			if partial := answer.text(); partial != "" {
-				posted, _ = r.platform.Send(message, Reply{Text: partial, Edit: posted})
+				posted = r.send(message, Reply{Text: partial, Edit: posted})
 			}
 		case <-typing.C:
 			if !r.platform.CanEdit() {
@@ -199,5 +199,14 @@ func (r *router) reply(message Message, text string) {
 	if text == "" {
 		return
 	}
-	r.platform.Send(message, Reply{Text: text})
+	r.send(message, Reply{Text: text})
+}
+
+// send posts a reply and reports what became of it. A chat that has quietly
+// stopped showing answers is the one failure nobody can see from the inside, so
+// it is written onto the channel rather than dropped here.
+func (r *router) send(message Message, reply Reply) string {
+	posted, err := r.platform.Send(message, reply)
+	reportDelivery(r.channel.Name, err)
+	return posted
 }

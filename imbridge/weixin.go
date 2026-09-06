@@ -24,9 +24,12 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/apache/casbin-gateway/proxy"
+	"github.com/google/uuid"
 )
 
 // PlatformWeixin is the id this platform is stored under.
@@ -45,6 +48,21 @@ const (
 	weixinMessageLimit = 2000
 )
 
+const (
+	// weixinFromBot is what a message a bot sent is marked with, on the way in
+	// and on the way out.
+	weixinFromBot = 2
+	// weixinFinished is a message that is complete rather than still being
+	// dictated.
+	weixinFinished = 2
+	// weixinTypingOn and weixinTypingOff are the two states of a typing notice.
+	weixinTypingOn  = 1
+	weixinTypingOff = 2
+	// weixinSessionExpired is the protocol saying the sign-in behind the token
+	// is gone, which no amount of retrying fixes.
+	weixinSessionExpired = -14
+)
+
 // Weixin reaches WeChat over iLink, which is long polling: Gateway calls out and
 // the answer is held open, so no public address is needed here either.
 type Weixin struct {
@@ -54,9 +72,9 @@ type Weixin struct {
 	// cursor is the protocol's own "get_updates_buf". It must be handed back on
 	// the next poll or the same messages arrive again.
 	cursor string
-	// typingTicket is asked for once and reused, since it is what a typing
-	// notice has to carry.
-	typingTicket string
+	// tickets are the typing tickets, one per chat, asked for once and reused.
+	mu      sync.Mutex
+	tickets map[string]string
 }
 
 func NewWeixin(channel, token string) *Weixin {
@@ -64,6 +82,7 @@ func NewWeixin(channel, token string) *Weixin {
 		channel: channel,
 		token:   token,
 		client:  &http.Client{Transport: proxy.Transport(), Timeout: 70 * time.Second},
+		tickets: map[string]string{},
 	}
 }
 
@@ -101,10 +120,7 @@ func (w *Weixin) Receive(ctx context.Context, handle func(Message)) error {
 			Msgs   []weixinMessage `json:"msgs"`
 			Cursor string          `json:"get_updates_buf"`
 		}{}
-		body := map[string]any{
-			"get_updates_buf": w.cursor,
-			"base_info":       map[string]any{"channel_version": weixinChannelVersion},
-		}
+		body := map[string]any{"get_updates_buf": w.cursor}
 		if err := w.call(ctx, "/ilink/bot/getupdates", body, &result); err != nil {
 			if ctx.Err() != nil {
 				return nil
@@ -120,9 +136,12 @@ func (w *Weixin) Receive(ctx context.Context, handle func(Message)) error {
 		w.cursor = result.Cursor
 
 		for _, msg := range result.Msgs {
-			// message_type 1 is somebody talking; message_state 2 is a message
-			// that is finished rather than still being dictated.
-			if msg.MessageType != 1 || msg.MessageState != 2 {
+			// A bot's own messages come back on the same feed, and answering
+			// those would be answering itself.
+			if msg.MessageType == weixinFromBot || strings.HasSuffix(msg.FromUserId, "@im.bot") {
+				continue
+			}
+			if msg.MessageState != weixinFinished {
 				continue
 			}
 			text := weixinText(msg)
@@ -164,9 +183,14 @@ func (w *Weixin) Send(message Message, reply Reply) (string, error) {
 	for _, chunk := range splitForChat(reply.Text, weixinMessageLimit) {
 		body := map[string]any{
 			"msg": map[string]any{
-				"to_user_id":    message.ChatId,
-				"message_type":  2,
-				"message_state": 2,
+				"from_user_id": "",
+				"to_user_id":   message.ChatId,
+				// client_id names this message and nothing else. Without one the
+				// protocol takes a second reply for a repeat of the first, answers
+				// 200, and shows nothing.
+				"client_id":     "casbin-gateway-" + uuid.NewString(),
+				"message_type":  weixinFromBot,
+				"message_state": weixinFinished,
 				// The reply carries the token of the message it answers. Without
 				// it the protocol has nowhere to put the reply.
 				"context_token": message.ReplyToken,
@@ -177,31 +201,69 @@ func (w *Weixin) Send(message Message, reply Reply) (string, error) {
 			return "", err
 		}
 	}
+
+	w.stopTyping(message)
 	return "", nil
 }
 
 func (w *Weixin) Typing(message Message) {
-	if w.typingTicket == "" {
-		config := struct {
-			TypingTicket string `json:"typing_ticket"`
-		}{}
-		if err := w.call(context.Background(), "/ilink/bot/getconfig", map[string]any{}, &config); err != nil {
-			return
-		}
-		w.typingTicket = config.TypingTicket
-	}
+	w.sendTyping(message, w.ticket(message), weixinTypingOn)
+}
 
+// stopTyping takes the notice down once the answer is out. It asks for no ticket
+// of its own: with none already in hand there was no notice to take down.
+func (w *Weixin) stopTyping(message Message) {
+	w.mu.Lock()
+	ticket := w.tickets[message.ChatId]
+	w.mu.Unlock()
+	w.sendTyping(message, ticket, weixinTypingOff)
+}
+
+func (w *Weixin) sendTyping(message Message, ticket string, status int) {
+	if ticket == "" {
+		return
+	}
 	body := map[string]any{
-		"to_user_id":    message.ChatId,
-		"context_token": message.ReplyToken,
-		"typing_ticket": w.typingTicket,
+		"ilink_user_id": message.ChatId,
+		"typing_ticket": ticket,
+		"status":        status,
 	}
 	w.call(context.Background(), "/ilink/bot/sendtyping", body, nil)
+}
+
+// ticket is what a typing notice has to carry. It is asked for once per chat,
+// since the request for it needs a message to name and the answer outlives one.
+func (w *Weixin) ticket(message Message) string {
+	w.mu.Lock()
+	ticket := w.tickets[message.ChatId]
+	w.mu.Unlock()
+	if ticket != "" {
+		return ticket
+	}
+
+	config := struct {
+		TypingTicket string `json:"typing_ticket"`
+	}{}
+	body := map[string]any{"ilink_user_id": message.ChatId, "context_token": message.ReplyToken}
+	if err := w.call(context.Background(), "/ilink/bot/getconfig", body, &config); err != nil || config.TypingTicket == "" {
+		return ""
+	}
+
+	w.mu.Lock()
+	w.tickets[message.ChatId] = config.TypingTicket
+	w.mu.Unlock()
+	return config.TypingTicket
 }
 
 // call posts one iLink method. A non-zero "ret" is the protocol's own way of
 // reporting a failure, and comes back with 200.
 func (w *Weixin) call(ctx context.Context, path string, body map[string]any, out any) error {
+	if body == nil {
+		body = map[string]any{}
+	}
+	// Every iLink request is told what client it came from, not only the poll.
+	body["base_info"] = map[string]any{"channel_version": weixinChannelVersion}
+
 	payload, err := json.Marshal(body)
 	if err != nil {
 		return err
@@ -228,11 +290,15 @@ func (w *Weixin) call(ctx context.Context, path string, body map[string]any, out
 		return err
 	}
 	envelope := struct {
-		Ret    int    `json:"ret"`
-		ErrMsg string `json:"errmsg"`
+		Ret     int    `json:"ret"`
+		ErrCode int    `json:"errcode"`
+		ErrMsg  string `json:"errmsg"`
 	}{}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
 		return err
+	}
+	if envelope.ErrCode == weixinSessionExpired {
+		return fmt.Errorf("%w: the WeChat sign-in behind it has expired, so the code has to be scanned again", errUnauthorized)
 	}
 	if envelope.Ret != 0 {
 		return fmt.Errorf("weixin returned %d: %s", envelope.Ret, envelope.ErrMsg)
