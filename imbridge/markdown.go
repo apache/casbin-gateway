@@ -18,12 +18,24 @@ import (
 	"strings"
 )
 
-// telegramHtml renders the Markdown an agent writes into the small HTML subset
-// Telegram parses. HTML is chosen over MarkdownV2 because only three characters
-// ever need escaping and the tags are written here rather than by the agent, so
-// a marker left open halfway through a streamed answer comes out as literal text
-// instead of a refused message.
-func telegramHtml(text string) string {
+// markdownStyle is what one platform makes of the Markdown an agent writes. The
+// reading of it is the same everywhere; only what comes out differs, so a
+// platform with rich text and one without share a parser.
+type markdownStyle struct {
+	escape func(string) string
+	bold   func(string) string
+	italic func(string) string
+	strike func(string) string
+	code   func(string) string
+	block  func(language, body string) string
+	quote  func(lines []string) string
+	link   func(label, url string) string
+	rule   string
+}
+
+// renderMarkdown walks the block shapes: a fenced block, a run of quoted lines,
+// or a single line of its own.
+func renderMarkdown(text string, style markdownStyle) string {
 	out := &strings.Builder{}
 	lines := strings.Split(text, "\n")
 
@@ -35,23 +47,70 @@ func telegramHtml(text string) string {
 			for index++; index < len(lines) && !isFence(lines[index]); index++ {
 				body = append(body, lines[index])
 			}
-			writeCodeBlock(out, language, strings.Join(body, "\n"))
+			out.WriteString(style.block(language, strings.Join(body, "\n")) + "\n")
 			continue
 		}
 
 		if isQuote(line) {
 			quoted := []string{}
 			for ; index < len(lines) && isQuote(lines[index]); index++ {
-				quoted = append(quoted, inlineHtml(trimQuote(lines[index])))
+				quoted = append(quoted, inlineMarkdown(trimQuote(lines[index]), style))
 			}
 			index--
-			out.WriteString("<blockquote>" + strings.Join(quoted, "\n") + "</blockquote>\n")
+			out.WriteString(style.quote(quoted) + "\n")
 			continue
 		}
 
-		out.WriteString(blockLine(line) + "\n")
+		out.WriteString(blockLine(line, style) + "\n")
 	}
 	return strings.TrimRight(out.String(), "\n")
+}
+
+// telegramHtml renders into the small HTML subset Telegram parses. HTML is
+// chosen over MarkdownV2 because only three characters ever need escaping and
+// the tags are written here rather than by the agent, so a marker left open
+// halfway through a streamed answer comes out as literal text instead of a
+// refused message.
+func telegramHtml(text string) string {
+	return renderMarkdown(text, markdownStyle{
+		escape: escapeHtml,
+		bold:   func(inner string) string { return "<b>" + inner + "</b>" },
+		italic: func(inner string) string { return "<i>" + inner + "</i>" },
+		strike: func(inner string) string { return "<s>" + inner + "</s>" },
+		code:   func(inner string) string { return "<code>" + escapeHtml(inner) + "</code>" },
+		block: func(language, body string) string {
+			if !isPlainWord(language) {
+				return "<pre>" + escapeHtml(body) + "</pre>"
+			}
+			return `<pre><code class="language-` + language + `">` + escapeHtml(body) + "</code></pre>"
+		},
+		quote: func(lines []string) string { return "<blockquote>" + strings.Join(lines, "\n") + "</blockquote>" },
+		link:  func(label, url string) string { return `<a href="` + escapeHtml(url) + `">` + label + "</a>" },
+		rule:  "──────────",
+	})
+}
+
+// plainText drops the markup for a platform that has none, so a chat is not
+// shown the asterisks around a word that was meant to be bold. A link keeps its
+// address, since there is nothing else left to carry it.
+func plainText(text string) string {
+	keep := func(inner string) string { return inner }
+	return renderMarkdown(text, markdownStyle{
+		escape: keep,
+		bold:   keep,
+		italic: keep,
+		strike: keep,
+		code:   keep,
+		block:  func(language, body string) string { return body },
+		quote:  func(lines []string) string { return strings.Join(lines, "\n") },
+		link: func(label, url string) string {
+			if label == "" || label == url {
+				return url
+			}
+			return label + " " + url
+		},
+		rule: "──────────",
+	})
 }
 
 func fenceStart(line string) (string, bool) {
@@ -66,19 +125,6 @@ func isFence(line string) bool {
 	return strings.HasPrefix(strings.TrimSpace(line), "```")
 }
 
-func writeCodeBlock(out *strings.Builder, language, body string) {
-	tagged := isPlainWord(language)
-	out.WriteString("<pre>")
-	if tagged {
-		out.WriteString(`<code class="language-` + language + `">`)
-	}
-	out.WriteString(escapeHtml(body))
-	if tagged {
-		out.WriteString("</code>")
-	}
-	out.WriteString("</pre>\n")
-}
-
 func isQuote(line string) bool {
 	return strings.HasPrefix(strings.TrimSpace(line), ">")
 }
@@ -89,24 +135,24 @@ func trimQuote(line string) string {
 
 // blockLine renders the one-line shapes: a heading becomes bold, a list marker
 // becomes a bullet, and a rule becomes a line somebody can actually see.
-func blockLine(line string) string {
+func blockLine(line string, style markdownStyle) string {
 	if trimmed := strings.TrimSpace(line); isRule(trimmed) {
-		return "──────────"
+		return style.rule
 	}
 
 	indent := line[:len(line)-len(strings.TrimLeft(line, " \t"))]
 	rest := line[len(indent):]
 
 	if hashes := len(rest) - len(strings.TrimLeft(rest, "#")); hashes > 0 && hashes <= 6 && strings.HasPrefix(rest[hashes:], " ") {
-		return indent + "<b>" + inlineHtml(strings.TrimSpace(rest[hashes:])) + "</b>"
+		return indent + style.bold(inlineMarkdown(strings.TrimSpace(rest[hashes:]), style))
 	}
 
 	for _, marker := range []string{"- ", "* ", "+ "} {
 		if strings.HasPrefix(rest, marker) {
-			return indent + "• " + inlineHtml(rest[len(marker):])
+			return indent + "• " + inlineMarkdown(rest[len(marker):], style)
 		}
 	}
-	return indent + inlineHtml(rest)
+	return indent + inlineMarkdown(rest, style)
 }
 
 func isRule(line string) bool {
@@ -116,9 +162,9 @@ func isRule(line string) bool {
 	return strings.Trim(line, "-") == "" || strings.Trim(line, "*") == "" || strings.Trim(line, "_") == ""
 }
 
-// inlineHtml walks one line and turns the markers it recognises into tags. A
-// marker with nothing closing it is written out as the character it is.
-func inlineHtml(text string) string {
+// inlineMarkdown walks one line and hands each marker it recognises to the
+// style. A marker with nothing closing it is written out as the character it is.
+func inlineMarkdown(text string, style markdownStyle) string {
 	out := &strings.Builder{}
 	runes := []rune(text)
 
@@ -127,7 +173,7 @@ func inlineHtml(text string) string {
 		case runes[index] == '`':
 			width := runLength(runes, index, '`')
 			if end := findRun(runes, index+width, '`', width); end >= 0 {
-				out.WriteString("<code>" + escapeHtml(strings.Trim(string(runes[index+width:end]), " ")) + "</code>")
+				out.WriteString(style.code(strings.Trim(string(runes[index+width:end]), " ")))
 				index = end + width
 				continue
 			}
@@ -135,34 +181,34 @@ func inlineHtml(text string) string {
 		case hasMarker(runes, index, "**"), hasMarker(runes, index, "__"):
 			marker := string(runes[index : index+2])
 			if end := findMarker(runes, index+2, marker); end >= 0 {
-				out.WriteString("<b>" + inlineHtml(string(runes[index+2:end])) + "</b>")
+				out.WriteString(style.bold(inlineMarkdown(string(runes[index+2:end]), style)))
 				index = end + 2
 				continue
 			}
 
 		case hasMarker(runes, index, "~~"):
 			if end := findMarker(runes, index+2, "~~"); end >= 0 {
-				out.WriteString("<s>" + inlineHtml(string(runes[index+2:end])) + "</s>")
+				out.WriteString(style.strike(inlineMarkdown(string(runes[index+2:end]), style)))
 				index = end + 2
 				continue
 			}
 
 		case opensEmphasis(runes, index):
 			if end := findEmphasis(runes, index+1, runes[index]); end >= 0 {
-				out.WriteString("<i>" + inlineHtml(string(runes[index+1:end])) + "</i>")
+				out.WriteString(style.italic(inlineMarkdown(string(runes[index+1:end]), style)))
 				index = end + 1
 				continue
 			}
 
 		case runes[index] == '[':
 			if label, url, width := linkAt(runes, index); width > 0 {
-				out.WriteString(`<a href="` + escapeHtml(url) + `">` + inlineHtml(label) + "</a>")
+				out.WriteString(style.link(inlineMarkdown(label, style), url))
 				index += width
 				continue
 			}
 		}
 
-		out.WriteString(escapeHtml(string(runes[index])))
+		out.WriteString(style.escape(string(runes[index])))
 		index++
 	}
 	return out.String()

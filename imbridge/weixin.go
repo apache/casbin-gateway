@@ -180,7 +180,9 @@ func (w *Weixin) Send(message Message, reply Reply) (string, error) {
 		return "", nil
 	}
 
-	for _, chunk := range splitForChat(reply.Text, weixinMessageLimit) {
+	// WeChat shows a message exactly as it is written, so the markup comes off
+	// rather than being read out as asterisks and backticks.
+	for _, chunk := range splitForChat(plainText(reply.Text), weixinMessageLimit) {
 		body := map[string]any{
 			"msg": map[string]any{
 				"from_user_id": "",
