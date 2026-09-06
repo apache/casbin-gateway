@@ -348,7 +348,8 @@ export default function App() {
             </React.Suspense>
           </main>
 
-          <footer className="flex items-center justify-center border-t py-5">
+          {/* Fixed height: ChatPage sizes its pane against the header and this. */}
+          <footer className="flex h-18 items-center justify-center border-t">
             <a target="_blank" rel="noreferrer" href="https://github.com/apache/casbin-gateway">
               <Logo className="h-[30px] w-auto" />
             </a>

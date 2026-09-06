@@ -309,7 +309,7 @@ export default function ChatPage({account}: {account: Account}) {
   const turns = toTurns(events);
 
   return (
-    <PageContainer>
+    <PageContainer className="lg:h-[calc(100svh-3.25rem-4.5rem)]">
       <PageHeader
         title={i18next.t("chat:Chat")}
         description={i18next.t("chat:Ask an agent on this machine something, and watch it work")}
@@ -317,8 +317,9 @@ export default function ChatPage({account}: {account: Account}) {
 
       {error ? <MessageAlert variant="destructive" title={error} /> : null}
 
-      <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
-        <div className="flex flex-col gap-3">
+      {/* The chat pane owns the viewport, so only the transcript scrolls. */}
+      <div className="grid min-h-0 gap-4 lg:flex-1 lg:grid-cols-[300px_1fr]">
+        <div className="flex flex-col gap-3 lg:min-h-0 lg:overflow-y-auto">
           <div className="flex flex-col gap-2 rounded-lg border p-3">
             <SimpleSelect
               value={target}
@@ -376,7 +377,7 @@ export default function ChatPage({account}: {account: Account}) {
           </div>
         </div>
 
-        <div className="flex min-h-[60vh] min-w-0 flex-col rounded-lg border">
+        <div className="flex min-h-[60vh] min-w-0 flex-col rounded-lg border lg:min-h-0">
           {active ? (
             <>
               <div className="text-muted-foreground flex items-center gap-2 border-b px-3 py-2 text-xs">
