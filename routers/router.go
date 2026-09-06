@@ -97,6 +97,14 @@ func initAPI() {
 	beego.Router("/api/interrupt-driven-session", &controllers.ApiController{}, "POST:InterruptDrivenSession")
 	beego.Router("/api/close-driven-session", &controllers.ApiController{}, "POST:CloseDrivenSession")
 	beego.Router("/api/stream-driven-session", &controllers.ApiController{}, "GET:StreamDrivenSession")
+
+	// The chat platforms a conversation can arrive on.
+	beego.Router("/api/get-im-channels", &controllers.ApiController{}, "GET:GetImChannels")
+	beego.Router("/api/update-im-channel", &controllers.ApiController{}, "POST:UpdateImChannel")
+	beego.Router("/api/delete-im-channel", &controllers.ApiController{}, "POST:DeleteImChannel")
+	beego.Router("/api/start-weixin-login", &controllers.ApiController{}, "POST:StartWeixinLogin")
+	beego.Router("/api/get-weixin-login-status", &controllers.ApiController{}, "GET:GetWeixinLoginStatus")
+
 	beego.Router("/api/get-agent-accounts", &controllers.ApiController{}, "GET:GetAgentAccounts")
 	beego.Router("/api/save-agent-account", &controllers.ApiController{}, "POST:SaveAgentAccount")
 	beego.Router("/api/add-agent-account", &controllers.ApiController{}, "POST:AddAgentAccount")

@@ -26,6 +26,7 @@ import {
   Plug,
   Route,
   SendHorizontal,
+  Smartphone,
   Settings,
   ShieldCheck,
   ShieldHalf,
@@ -73,6 +74,9 @@ export const navGroups: NavGroup[] = [
   // Driving an agent is what somebody does with one, so it sits beside the
   // list of them rather than down among the pages that only report.
   {key: "/chat", label: "chat:Chat", icon: SendHorizontal, path: "/chat", adminOnly: true},
+  // Under Chat, because a channel is the same conversation arriving from a
+  // phone instead of from this page.
+  {key: "/channels", label: "channel:Chat channels", icon: Smartphone, path: "/channels", adminOnly: true},
   {
     key: "/agent-versions",
     label: "agent:Agent versions",

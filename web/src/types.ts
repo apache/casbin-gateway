@@ -568,6 +568,40 @@ export interface DrivenEvent {
   durationMs?: number;
 }
 
+/** What one chat-platform listener is doing. */
+export interface ImChannelStatus {
+  name?: string;
+  running?: boolean;
+  error?: string;
+  startTime?: string;
+}
+
+/** One chat platform Gateway listens on, and what a conversation there talks to. */
+export interface ImChannel {
+  owner?: string;
+  name: string;
+  createdTime?: string;
+  updatedTime?: string;
+  platform: string;
+  enabled: boolean;
+  /** Masked on the way out: a stored token never comes back to the browser. */
+  token: string;
+  agentId: string;
+  agentPath: string;
+  agentUser: string;
+  workDir: string;
+  model: string;
+  allowedUsers: string[];
+  status?: ImChannelStatus;
+}
+
+/** A WeChat sign-in waiting to be scanned. */
+export interface WeixinQrcode {
+  qrcode: string;
+  /** The link WeChat's scanner opens; the page draws the code out of it. */
+  url: string;
+}
+
 /** One part of a transcript message: prose, thinking, a tool call or its result. */
 export interface AgentMessageBlock {
   kind: "text" | "thinking" | "toolUse" | "toolResult" | "image";

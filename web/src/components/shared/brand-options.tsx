@@ -48,6 +48,12 @@ export function vendorOption(value: string, label: string, site: string): Select
   return brandOption(value, label, <ProviderIcon icon={site} size={16} />);
 }
 
+/** The chat platforms a conversation with an agent can arrive on. */
+export const chatPlatformOptions: SelectOption[] = [
+  vendorOption("telegram", "Telegram", "telegram.org"),
+  vendorOption("weixin", "WeChat", "weixin.qq.com"),
+];
+
 /** The wire format a provider serves, which is a vendor's API either way. */
 export const protocolOptions: SelectOption[] = [
   vendorOption("openai", "OpenAI", "openai.com"),

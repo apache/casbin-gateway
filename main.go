@@ -27,6 +27,7 @@ import (
 	"github.com/apache/casbin-gateway/casdoor"
 	"github.com/apache/casbin-gateway/conf"
 	"github.com/apache/casbin-gateway/controllers"
+	"github.com/apache/casbin-gateway/imbridge"
 	"github.com/apache/casbin-gateway/mcpproxy"
 	"github.com/apache/casbin-gateway/mcpserver"
 	"github.com/apache/casbin-gateway/object"
@@ -131,6 +132,10 @@ func main() {
 	// A driven agent answers through the provider bound to it, so a session
 	// needs no sign-in of the agent's own.
 	service.InitAgentSessionEnv()
+	// The chat platforms those conversations arrive on. Each one polls out from
+	// here, so none of them needs a public address.
+	object.InitImChannels()
+	defer imbridge.Stop()
 
 	// Monitoring is on by default, so the agents already on this host are
 	// patched without anyone opening the UI. The scan walks the disk, hence the
