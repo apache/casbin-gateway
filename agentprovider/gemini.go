@@ -215,6 +215,12 @@ func (w geminiWriter) Builtin(target Target, previous map[string]string) string 
 	return emptyAs(stringAt(objectAt(settings, "model"), "name"), geminiBuiltin)
 }
 
+// sessionEnv points the Gemini CLI at the endpoint for one run. Its .env file
+// never replaces a variable already exported, so this beats it.
+func (w geminiWriter) sessionEnv(endpoint Endpoint) map[string]string {
+	return w.env(endpoint, false)
+}
+
 // env is what a switch writes into ~/.gemini/.env. The base URL is what selects
 // the endpoint; the key is only there because the CLI insists on one.
 func (geminiWriter) env(endpoint Endpoint, masked bool) map[string]string {

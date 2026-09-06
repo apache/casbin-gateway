@@ -125,6 +125,23 @@ type writer interface {
 	Builtin(Target, map[string]string) string
 }
 
+// sessionEnvWriter is a writer whose agent can be pointed at an endpoint by the
+// environment of one process, leaving its configuration file alone.
+type sessionEnvWriter interface {
+	sessionEnv(Endpoint) map[string]string
+}
+
+// SessionEnv is the environment that points one agent at endpoint for a single
+// run, empty for an agent that only reads its provider from a file - that file
+// is the one a switch already wrote.
+func SessionEnv(agentId string, endpoint Endpoint) map[string]string {
+	value, ok := writers[agentId].(sessionEnvWriter)
+	if !ok {
+		return nil
+	}
+	return value.sessionEnv(endpoint)
+}
+
 var (
 	writers     = map[string]writer{}
 	writerMutex sync.Mutex

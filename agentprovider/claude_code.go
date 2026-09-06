@@ -178,6 +178,18 @@ func (w claudeCodeWriter) envOf(target Target) (map[string]any, error) {
 	return objectAt(config, "env"), nil
 }
 
+// sessionEnv points Claude Code at the endpoint for one run. It is what a
+// switch writes into settings.json, and beats it.
+func (w claudeCodeWriter) sessionEnv(endpoint Endpoint) map[string]string {
+	env := map[string]string{}
+	for key, value := range w.env(endpoint, false) {
+		if text, ok := value.(string); ok {
+			env[key] = text
+		}
+	}
+	return env
+}
+
 // env is the block written into settings.json. Claude Code authenticates with
 // ANTHROPIC_AUTH_TOKEN, so the provider key goes there and not into
 // ANTHROPIC_API_KEY, which stays cleared.

@@ -67,7 +67,7 @@ func run(ctx context.Context, headless *agent.Headless, session Session, prompt 
 	args := buildArgs(headless, session, prompt)
 	cmd := newCommand(ctx, launch.Executable, args)
 	cmd.Dir = workDir
-	cmd.Env = os.Environ()
+	cmd.Env = environ(session)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -116,13 +116,19 @@ func run(ctx context.Context, headless *agent.Headless, session Session, prompt 
 		}
 		return errors.New("stopped")
 	}
+	// An agent that reported why it stopped is quoted, and the exit code it
+	// stopped with is not: "exit status 1" beside "Not logged in" says nothing
+	// the agent has not already said better.
+	if parseErr != nil {
+		return parseErr
+	}
 	if waitErr != nil {
 		if detail := strings.TrimSpace(stderr.String()); detail != "" {
 			return fmt.Errorf("%s: %s", waitErr, detail)
 		}
 		return waitErr
 	}
-	return parseErr
+	return nil
 }
 
 // buildArgs writes the command line for one turn. A session the agent can carry

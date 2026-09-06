@@ -217,6 +217,12 @@ func (w qwenWriter) Builtin(target Target, previous map[string]string) string {
 	return emptyAs(stringAt(objectAt(settings, "model"), "name"), qwenBuiltin)
 }
 
+// sessionEnv points Qwen Code at the endpoint for one run. Its .env file never
+// replaces a variable already exported, so this beats it.
+func (w qwenWriter) sessionEnv(endpoint Endpoint) map[string]string {
+	return w.env(endpoint, false)
+}
+
 // env is what a switch writes into ~/.qwen/.env. The base URL selects the
 // endpoint; the key is only there because the CLI insists on one.
 func (qwenWriter) env(endpoint Endpoint, masked bool) map[string]string {

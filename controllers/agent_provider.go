@@ -16,14 +16,11 @@ package controllers
 
 import (
 	"fmt"
-	"net"
-	"strconv"
 	"strings"
 
 	"github.com/apache/casbin-gateway/agent"
 	"github.com/apache/casbin-gateway/agentpatch"
 	"github.com/apache/casbin-gateway/agentprovider"
-	"github.com/apache/casbin-gateway/conf"
 	"github.com/apache/casbin-gateway/object"
 	"github.com/apache/casbin-gateway/service"
 )
@@ -38,7 +35,7 @@ func (c *ApiController) PlanAgentProvider() {
 	if !ok {
 		return
 	}
-	endpoint, err := agentEndpoint(target.AgentId)
+	endpoint, err := service.AgentEndpoint(target.AgentId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -63,7 +60,7 @@ func (c *ApiController) ApplyAgentProvider() {
 	if !ok {
 		return
 	}
-	endpoint, err := agentEndpoint(target.AgentId)
+	endpoint, err := service.AgentEndpoint(target.AgentId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -137,73 +134,6 @@ func checkAgentProtocol(agentId string, mode string, providerIds []string) error
 	return nil
 }
 
-// agentEndpoint resolves where one agent should be pointed. In gateway mode
-// that is the local proxy, which is what makes a later switch take effect
-// without rewriting a file; in direct mode it is the provider's own upstream.
-func agentEndpoint(agentId string) (agentprovider.Endpoint, error) {
-	endpoint := agentprovider.Endpoint{Mode: object.ModeGateway}
-
-	stored, err := object.GetAgent(agentId)
-	if err != nil {
-		return endpoint, err
-	}
-	if stored != nil && stored.Mode != "" {
-		endpoint.Mode = stored.Mode
-	}
-
-	provider, err := object.GetProviderByAgent(agentId)
-	if err != nil {
-		return endpoint, err
-	}
-
-	endpoint.Provider = provider.GetId()
-	endpoint.Protocol = object.ProviderApiFamily(provider)
-	endpoint.ClientAuth = object.UsesClientAuth(provider)
-	if len(provider.Models) > 0 {
-		endpoint.Model = provider.Models[0]
-		endpoint.Models = provider.Models
-	}
-
-	if endpoint.Mode == object.ModeDirect {
-		endpoint.BaseUrl = provider.BaseUrl
-		endpoint.ApiKey = provider.ApiKey
-		endpoint.ServesResponsesApi = object.ServesResponsesApi(provider)
-		return endpoint, nil
-	}
-
-	baseUrl, err := gatewayAgentUrl(agentId)
-	if err != nil {
-		return endpoint, err
-	}
-	endpoint.BaseUrl = baseUrl
-	endpoint.ServesResponsesApi = true
-	// A client-auth provider forwards whatever the agent sends, so it must keep
-	// sending its own credentials: a placeholder token written into the agent's
-	// configuration would replace the sign-in it already has.
-	if !endpoint.ClientAuth {
-		endpoint.ApiKey = conf.GetRelayToken()
-	}
-	return endpoint, nil
-}
-
-// gatewayAgentUrl is the base URL an agent reaches its own provider at. One URL
-// serves every wire format: an OpenAI client appends /chat/completions to it,
-// Codex appends /responses, and an Anthropic one appends /v1/messages. An agent
-// that runs its sessions in a sandbox is named this host's own address instead
-// of loopback, which inside a sandbox is the sandbox itself.
-func gatewayAgentUrl(agentId string) (string, error) {
-	host := "127.0.0.1"
-	if agent.RunsSandboxed(agentId) {
-		lan, err := service.LanHost()
-		if err != nil {
-			return "", err
-		}
-		host = lan
-	}
-	address := net.JoinHostPort(host, strconv.Itoa(conf.GetHttpPort()))
-	return fmt.Sprintf("http://%s/v1/agents/%s", address, agentId), nil
-}
-
 // reapplyAgentProvider writes the bound provider into the configuration of every
 // installation of one agent, which is what makes a routing change reach the
 // agent at all: an installation Gateway never wrote keeps talking to the
@@ -216,7 +146,7 @@ func reapplyAgentProvider(agentId string) string {
 		return err.Error()
 	}
 
-	endpoint, endpointErr := agentEndpoint(agentId)
+	endpoint, endpointErr := service.AgentEndpoint(agentId)
 	failures := []string{}
 	for _, installation := range installations {
 		if installation.AgentId != agentId {

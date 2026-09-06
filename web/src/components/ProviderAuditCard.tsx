@@ -91,6 +91,7 @@ function CheckTile({
   caseName,
   value,
   detail,
+  quote,
   level,
   weight,
   footer,
@@ -102,6 +103,9 @@ function CheckTile({
   caseName?: string;
   value: React.ReactNode;
   detail: React.ReactNode;
+  /** The upstream's own words, kept apart from the sentence Gateway wrote
+   * about them: one of the two is evidence and the other is a reading of it. */
+  quote?: string;
   level: LlmAuditLevel;
   /** What this case was worth in the score, where it counted towards one. */
   weight?: number;
@@ -137,6 +141,11 @@ function CheckTile({
       ) : null}
       <span className={cn("text-lg font-semibold tabular-nums", style.value)}>{value}</span>
       <span className="text-muted-foreground text-xs leading-snug">{detail}</span>
+      {quote ? (
+        <p className="text-foreground/75 line-clamp-3 border-l-2 pl-2 font-mono text-[11px] leading-snug break-words whitespace-pre-wrap">
+          {quote}
+        </p>
+      ) : null}
       {footer}
     </div>
   );
@@ -205,6 +214,9 @@ function ProbeEvidence({
             <EvidenceBlock label={i18next.t("audit:What came back")} value={check.got} />
             <EvidenceBlock label={i18next.t("audit:What a pass looks like")} value={check.want} />
             <EvidenceBlock label={i18next.t("audit:What was sent")} value={check.sent} />
+            <p className="text-muted-foreground text-xs leading-relaxed">
+              {i18next.t("audit:Judged here")}
+            </p>
           </div>
         </DialogContent>
       </Dialog>
@@ -306,9 +318,9 @@ function probeValue(check: ProbeCheck) {
  * is the part that can be sent to the provider and argued about.
  */
 /**
- * The cases that read the answer rather than the envelope. Each of them carries
- * what came back as its first fact and the answer itself as the second, so the
- * tile can quote the sentence the level was drawn from.
+ * The cases that read the answer rather than the envelope. The sentence says
+ * what was made of the answer; the answer itself is quoted under it, so nobody
+ * has to take the reading on trust.
  */
 function probeAnswerDetail(check: ProbeCheck) {
   const [outcome, answer, extra, wanted] = check.facts;
@@ -322,27 +334,25 @@ function probeAnswerDetail(check: ProbeCheck) {
   switch (check.key) {
   case "knowledge":
     if (outcome === "missed") {
-      return fill("audit:Answer wrong", {answer: answer ?? "", expected: extra ?? ""});
+      return fill("audit:Answer wrong", {expected: extra ?? ""});
     }
     if (outcome === "forbidden") {
-      return fill("audit:Answer forbidden", {answer: answer ?? "", forbidden: extra ?? ""});
+      return fill("audit:Answer forbidden", {forbidden: extra ?? ""});
     }
-    return fill("audit:Answer right", {answer: answer ?? ""});
+    return i18next.t("audit:Answer right");
   case "selfid":
     if (outcome === "undocumented") {
       return i18next.t("audit:Self undocumented");
     }
     if (outcome === "other") {
-      return fill("audit:Self other", {answer: answer ?? "", other: extra ?? "", vendor: wanted ?? ""});
+      return fill("audit:Self other", {other: extra ?? "", vendor: wanted ?? ""});
     }
     if (outcome === "silent") {
-      return fill("audit:Self silent", {answer: answer ?? "", vendor: extra ?? ""});
+      return fill("audit:Self silent", {vendor: extra ?? ""});
     }
-    return fill("audit:Self match", {answer: answer ?? "", vendor: extra ?? ""});
+    return fill("audit:Self match", {vendor: extra ?? ""});
   case "hidden":
-    return outcome === "hidden"
-      ? fill("audit:Hidden found", {answer: answer ?? ""})
-      : i18next.t("audit:Hidden none");
+    return outcome === "hidden" ? i18next.t("audit:Hidden found") : i18next.t("audit:Hidden none");
   case "feature":
     if (outcome === "rejected") {
       return fill("audit:Parameter rejected", {reason: answer ?? ""});
@@ -365,13 +375,28 @@ function probeAnswerDetail(check: ProbeCheck) {
       return fill("audit:Repeat tokens", {counts: check.facts.slice(1).join(", ")});
     }
     if (outcome === "answers") {
-      return fill("audit:Repeat answers", {first: answer ?? "", second: extra ?? ""});
+      return i18next.t("audit:Repeat answers");
     }
     return fill("audit:Repeat same", {count: answer ?? ""});
   }
 }
 
 const answerKeys: ProbeCheck["key"][] = ["knowledge", "selfid", "hidden", "feature", "repeat"];
+
+/** The cases whose answer is writing, which is what a tile can quote as it is. */
+const quotedKeys: ProbeCheck["key"][] = ["knowledge", "selfid", "hidden", "repeat"];
+
+/**
+ * The upstream's own words, for the tile to show under the finding. A question
+ * that never got asked has none to show: the sentence already carries the
+ * refusal, and there is nothing the model wrote to quote.
+ */
+function probeQuote(check: ProbeCheck) {
+  if (!quotedKeys.includes(check.key) || !check.got) {
+    return "";
+  }
+  return ["failed", "empty", "undocumented"].includes(check.facts[0] ?? "") ? "" : check.got;
+}
 
 function probeDetail(check: ProbeCheck, probe: ProviderProbe) {
   if (answerKeys.includes(check.key)) {
@@ -552,6 +577,7 @@ function ProbeSection({
                   caseName={check.case}
                   value={probeValue(check)}
                   detail={detail}
+                  quote={probeQuote(check)}
                   level={check.level}
                   weight={check.weight}
                   footer={

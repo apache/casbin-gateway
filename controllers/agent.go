@@ -117,7 +117,7 @@ func (c *ApiController) GetAgents() {
 		if !ok {
 			// A host with no address of its own cannot serve a sandboxed agent
 			// at all; the binding itself reports that, and the listing stays.
-			baseUrl, _ = gatewayAgentUrl(installation.AgentId)
+			baseUrl, _ = service.GatewayAgentUrl(installation.AgentId)
 			baseUrls[installation.AgentId] = baseUrl
 		}
 		item.ProxyBaseUrl = baseUrl

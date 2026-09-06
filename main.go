@@ -128,6 +128,9 @@ func main() {
 	// The conversations Gateway drives on somebody's behalf, put back where a
 	// restart left them.
 	object.InitAgentSessions()
+	// A driven agent answers through the provider bound to it, so a session
+	// needs no sign-in of the agent's own.
+	service.InitAgentSessionEnv()
 
 	// Monitoring is on by default, so the agents already on this host are
 	// patched without anyone opening the UI. The scan walks the disk, hence the
