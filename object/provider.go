@@ -223,8 +223,12 @@ const (
 	maxProviderModelChars = 100
 )
 
+// ProviderTypeOpenAiResponses is an OpenAI-shaped upstream that answers on the
+// Responses endpoint instead of chat completions.
+const ProviderTypeOpenAiResponses = "openai-responses"
+
 var (
-	providerTypes    = []string{"openai", "custom", "anthropic"}
+	providerTypes    = []string{"openai", ProviderTypeOpenAiResponses, "custom", "anthropic"}
 	providerStatuses = []string{"enabled", "disabled"}
 )
 
@@ -276,6 +280,9 @@ func ProviderProtocol(provider *Provider) string {
 	}
 	if provider.Type == "anthropic" {
 		return ProtocolAnthropic
+	}
+	if provider.Type == ProviderTypeOpenAiResponses {
+		return ProtocolResponses
 	}
 	return ProtocolOpenAi
 }

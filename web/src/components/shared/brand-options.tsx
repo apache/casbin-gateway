@@ -18,7 +18,7 @@ import {Bot, Cloud, Folder, Globe, Settings2} from "lucide-react";
 import {AgentIcon} from "@/components/AgentIcon";
 import {ProviderIcon} from "@/components/ProviderIcon";
 import type {SelectOption} from "@/components/shared/simple-select";
-import {providerPresets} from "@/lib/providers";
+import {presetType, providerPresets, typeOpenAiResponses} from "@/lib/providers";
 
 /** A dropdown item that names a brand is read by its mark first. */
 function brandOption(value: string, text: string, mark: React.ReactNode): SelectOption {
@@ -74,6 +74,7 @@ export function wireApiOptions(fromType: string): SelectOption[] {
 /** The Type field of both provider forms: two vendors and everything else. */
 export const providerTypeOptions: SelectOption[] = [
   ...protocolOptions,
+  vendorOption(typeOpenAiResponses, "OpenAI Responses", "openai.com"),
   brandOption("custom", "Custom", <Settings2 className="size-4 opacity-50" />),
 ];
 
@@ -96,7 +97,7 @@ export function storageOption(kind: string, label: string): SelectOption {
  *  mark comes from the vendor's own site: an API host often has no icon. */
 export function baseUrlOptions(type: string): SelectOption[] {
   return providerPresets
-    .filter(preset => preset.type === type)
+    .filter(preset => preset.type === presetType(type))
     .map(preset =>
       brandOption(
         preset.baseUrl,

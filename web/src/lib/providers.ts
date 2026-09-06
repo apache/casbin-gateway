@@ -20,6 +20,9 @@ export function providerIdOf(provider: Pick<Provider, "owner" | "name">) {
   return `${provider.owner}/${provider.name}`;
 }
 
+/** Mirrors object.ProviderTypeOpenAiResponses: OpenAI on its Responses endpoint. */
+export const typeOpenAiResponses = "openai-responses";
+
 /** Mirrors object.ProviderApiFamily: the family a provider's base URL belongs to. */
 export function providerProtocol(type: string) {
   return type === "anthropic" ? "anthropic" : "openai";
@@ -28,12 +31,23 @@ export function providerProtocol(type: string) {
 /** The wire formats the gateway can talk to an upstream in. */
 export const wireApis = ["openai", "responses", "anthropic"] as const;
 
+/** The wire format a type serves on its own, before the provider names one. */
+function typeWireApi(type: string) {
+  return type === typeOpenAiResponses ? "responses" : providerProtocol(type);
+}
+
 /** Mirrors object.ProviderProtocol: the API the gateway posts to. */
 export function providerWireApi(provider: {type?: string; protocol?: string} | undefined) {
   const named = provider?.protocol ?? "";
   return wireApis.includes(named as (typeof wireApis)[number])
     ? named
-    : providerProtocol(provider?.type ?? "");
+    : typeWireApi(provider?.type ?? "");
+}
+
+/** The type whose vendors a form offers: Responses is OpenAI's own API, so it
+ *  is filled in from the same base URLs and models. */
+export function presetType(type: string) {
+  return type === typeOpenAiResponses ? "openai" : type;
 }
 
 /** The path one wire format is appended to the base URL as. */
@@ -628,7 +642,7 @@ export function presetOfSource(source: ProviderSource) {
 
 /** The base URLs and models offered for a provider type, from the vendors of it. */
 export function modelPresets(type: string) {
-  return providerPresets.filter(preset => preset.type === type).flatMap(preset => preset.models);
+  return providerPresets.filter(preset => preset.type === presetType(type)).flatMap(preset => preset.models);
 }
 
 export function baseUrlPlaceholder(type: string) {
