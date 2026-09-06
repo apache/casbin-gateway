@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"github.com/apache/casbin-gateway/agent"
@@ -320,32 +319,8 @@ func (c *ApiController) readAgentAccountForm() (agentAccountForm, string, bool) 
 // which the same scan finds, and which reads the same ~/.codex - is what signs
 // in for both.
 func codexLoginProgram(installation agent.Installation) (string, error) {
-	if program := codexProgramOf(installation); program != "" {
+	if program := agent.CodexProgram(installation); program != "" {
 		return program, nil
 	}
-
-	installations, err := agent.Scan(false)
-	if err != nil {
-		return "", err
-	}
-	for _, other := range installations {
-		if !agentauth.Supports(other.AgentId) {
-			continue
-		}
-		if program := codexProgramOf(other); program != "" {
-			return program, nil
-		}
-	}
 	return "", errors.New("gateway found no Codex program on this machine to sign in with")
-}
-
-func codexProgramOf(installation agent.Installation) string {
-	executable := agent.LaunchOf(installation).Executable
-	if executable == "" {
-		return ""
-	}
-	if strings.HasPrefix(strings.ToLower(filepath.Base(executable)), "codex") {
-		return executable
-	}
-	return ""
 }

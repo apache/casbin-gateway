@@ -99,13 +99,21 @@ func (w codexWriter) Plan(target Target, endpoint Endpoint) ([]File, error) {
 	if endpoint.Model != "" {
 		config = tomlSetRootKey(config, codexModelKey, endpoint.Model)
 	}
+
+	files := []File{}
+	catalogPath := filepath.Join(home, codexCatalogFile)
+	if catalog, ok := codexCatalog(target, endpoint); ok {
+		config = tomlSetRootKey(config, codexCatalogKey, catalogPath)
+		files = append(files, File{Path: catalogPath, Format: "json", Preview: string(catalog)})
+	}
+
 	preview := endpoint
 	preview.ApiKey = maskSecret(endpoint.ApiKey)
 	config = tomlTidy(tomlAppend(config, w.providerTable(preview)))
 
-	return []File{
+	return append([]File{
 		{Path: filepath.Join(home, "config.toml"), Format: "toml", Preview: config},
-	}, nil
+	}, files...), nil
 }
 
 func (w codexWriter) Apply(target Target, endpoint Endpoint) (map[string]string, error) {
@@ -117,6 +125,7 @@ func (w codexWriter) Apply(target Target, endpoint Endpoint) (map[string]string,
 	if err != nil {
 		return nil, err
 	}
+	catalogPath := filepath.Join(filepath.Dir(configPath), codexCatalogFile)
 
 	data, _, _, err := readFile(configPath)
 	if err != nil {
@@ -138,6 +147,9 @@ func (w codexWriter) Apply(target Target, endpoint Endpoint) (map[string]string,
 		if value, ok := document[codexModelKey].(string); ok {
 			previous[codexModelKey] = value
 		}
+		if value, ok := document[codexCatalogKey].(string); ok {
+			previous[codexCatalogKey] = value
+		}
 	}
 
 	text := tomlCutTable(string(data), codexProviderPath...)
@@ -145,15 +157,34 @@ func (w codexWriter) Apply(target Target, endpoint Endpoint) (map[string]string,
 	if endpoint.Model != "" {
 		text = tomlSetRootKey(text, codexModelKey, endpoint.Model)
 	}
+	catalog, named := codexCatalog(target, endpoint)
+	if named {
+		text = tomlSetRootKey(text, codexCatalogKey, catalogPath)
+	} else if stringAt(document, codexCatalogKey) == catalogPath {
+		// One Gateway wrote before, for a Codex that no longer reads it. A
+		// catalog of the user's own is left where it is.
+		text = tomlDeleteRootKey(text, codexCatalogKey)
+	}
 	text = tomlAppend(text, w.providerTable(endpoint))
 
 	changes := &txn{}
+	// The catalog goes in first: a config.toml naming a file that is not there
+	// yet is one Codex refuses to start on.
+	if named {
+		if err := changes.write(catalogPath, catalog); err != nil {
+			changes.abort()
+			return nil, err
+		}
+	}
 	if err := changes.write(configPath, []byte(text)); err != nil {
 		changes.abort()
 		return nil, err
 	}
 	if err := changes.commit(); err != nil {
 		return nil, err
+	}
+	if !named {
+		_ = removeFile(catalogPath)
 	}
 	return previous, nil
 }
@@ -168,12 +199,16 @@ func (w codexWriter) Restore(target Target, previous map[string]string) error {
 	if err != nil {
 		return err
 	}
+	catalogPath := filepath.Join(filepath.Dir(configPath), codexCatalogFile)
 	text := tomlCutTable(string(data), codexProviderPath...)
-	for _, key := range []string{codexModelProviderKey, codexModelKey} {
+	for _, key := range []string{codexModelProviderKey, codexModelKey, codexCatalogKey} {
 		value, ok := previous[key]
 		// A state that recorded Gateway's own entry, from the installation
 		// sharing this file, would leave the agent switched if it were put back.
 		if key == codexModelProviderKey && value == codexProviderName {
+			ok = false
+		}
+		if key == codexCatalogKey && value == catalogPath {
 			ok = false
 		}
 		if ok {
@@ -215,7 +250,12 @@ func (w codexWriter) Restore(target Target, previous map[string]string) error {
 			return err
 		}
 	}
-	return changes.commit()
+	if err := changes.commit(); err != nil {
+		return err
+	}
+	// Nothing but Gateway ever wrote this file, and config.toml no longer names
+	// it, so it goes with the rest of what was put back.
+	return removeFile(catalogPath)
 }
 
 func (w codexWriter) Current(target Target) (string, error) {
