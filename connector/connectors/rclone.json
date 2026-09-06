@@ -1,0 +1,45 @@
+{
+  "id": "rclone",
+  "displayName": "Cloud drives",
+  "category": "storage",
+  "icon": "rclone.org",
+  "description": "Reaches whatever rclone reaches: Google Drive, OneDrive, Dropbox, WebDAV, SFTP and seventy more. Needs rclone running its own daemon on this machine, which is what the address below points at.",
+  "docsUrl": "https://github.com/steipete/rclone-mcp",
+  "auth": {
+    "kind": "token",
+    "fields": [
+      {
+        "key": "url",
+        "label": "Daemon address",
+        "placeholder": "http://localhost:5572",
+        "help": "Start it with: rclone rcd --rc-user=<user> --rc-pass=<pass>",
+        "required": true
+      },
+      {
+        "key": "user",
+        "label": "Daemon user",
+        "required": true
+      },
+      {
+        "key": "pass",
+        "label": "Daemon password",
+        "secret": true,
+        "required": true
+      }
+    ]
+  },
+  "server": {
+    "name": "rclone",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "rclone-mcp"
+    ],
+    "env": {
+      "RCLONE_URL": "${url}",
+      "RCLONE_USER": "${user}",
+      "RCLONE_PASS": "${pass}"
+    }
+  }
+}

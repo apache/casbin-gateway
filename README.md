@@ -198,7 +198,7 @@ The password behind that account is `admin` / `123`, and it only matters if you 
 - **[Say what each agent may do](#what-each-agent-is-allowed-to-do)** — around forty switches per agent, in groups, over its tools, models and providers, enforced by Casbin on every request it relays.
 - **[Know what every agent spent, even off Gateway](#what-the-agents-spend-including-what-never-went-through-gateway)** — read straight from the agents' own transcripts.
 - **[Compare and copy skills, MCP servers and prompts across agents](#what-to-do-next)** — every agent's install list in one table.
-- **[Connect an application once, for every agent](docs/user-manual/en/2-agents/2.5-connections.md)** — 42 of them: GitHub, Slack, Lark, DingTalk, Notion, Figma, Sentry, Kubernetes, Stripe, mail, a browser and the rest. The credential stays in Gateway rather than in each agent's config file, every call through it is checked against that agent's permissions, and testing one gives you a switch per tool.
+- **[Connect an application once, for every agent](docs/user-manual/en/2-agents/2.5-connections.md)** — 45 of them: GitHub, Slack, Lark, DingTalk, Notion, Figma, Sentry, Kubernetes, Stripe, mail, a browser and the rest. The credential stays in Gateway rather than in each agent's config file, every call through it is checked against that agent's permissions, and testing one gives you a switch per tool.
 
 ## Using it
 

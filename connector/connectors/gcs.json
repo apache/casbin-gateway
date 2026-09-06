@@ -1,0 +1,32 @@
+{
+  "id": "gcs",
+  "displayName": "Google Cloud Storage",
+  "category": "storage",
+  "icon": "cloud.google.com",
+  "description": "Lists buckets and reads objects in Google Cloud Storage. It signs in with the gcloud credentials already on this machine, so there is no key to paste.",
+  "docsUrl": "https://github.com/googleapis/nodejs-storage",
+  "auth": {
+    "kind": "token",
+    "fields": [
+      {
+        "key": "project",
+        "label": "Project ID",
+        "placeholder": "my-gcp-project",
+        "help": "Run gcloud auth application-default login first; this connector uses those credentials.",
+        "required": true
+      }
+    ]
+  },
+  "server": {
+    "name": "gcs",
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@google-cloud/storage-mcp"
+    ],
+    "env": {
+      "GOOGLE_CLOUD_PROJECT": "${project}"
+    }
+  }
+}
