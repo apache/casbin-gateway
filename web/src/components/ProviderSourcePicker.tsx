@@ -23,7 +23,7 @@ import {
   providerSources,
   chatgptSource,
   customSource,
-  subscriptionSource,
+  claudeSource,
   vendorCategories,
   type ProviderSource,
   type VendorCategory,
@@ -35,7 +35,7 @@ import {
  * instead, because their base URL would not.
  */
 export function sourceTitle(source: ProviderSource) {
-  if (source.key === subscriptionSource) {
+  if (source.key === claudeSource) {
     return i18next.t("provider:Claude subscription");
   }
   if (source.key === chatgptSource) {
@@ -48,7 +48,7 @@ export function sourceTitle(source: ProviderSource) {
 }
 
 function sourceDetail(source: ProviderSource) {
-  if (source.key === subscriptionSource) {
+  if (source.key === claudeSource) {
     return i18next.t("provider:Claude subscription detail");
   }
   if (source.key === chatgptSource) {

@@ -515,6 +515,9 @@ func (c *ApiController) forwardToProvider(attempt object.RouteAttempt, route *pr
 	if err != nil {
 		return http.StatusBadRequest, err.Error(), false
 	}
+	// A subscription endpoint answers the client its token was granted to, so
+	// the body is put in the shape that client would have sent.
+	requestBody = object.ShapeSubscriptionBody(provider, requestBody)
 
 	upstreamUrl, err := object.BuildProviderUrl(provider.BaseUrl, upstream.Name(), route.upstreamEndpoint(upstream))
 	if err != nil {
@@ -526,6 +529,7 @@ func (c *ApiController) forwardToProvider(attempt object.RouteAttempt, route *pr
 	if route.passthrough(upstream) {
 		upstreamUrl = object.AppendQuery(upstreamUrl, c.Ctx.Request.URL.RawQuery)
 	}
+	upstreamUrl = object.AppendQuery(upstreamUrl, object.SubscriptionQuery(provider))
 
 	// The context is cancelled when this function returns, which happens only
 	// after the response body has been relayed to the client.

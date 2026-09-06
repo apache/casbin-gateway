@@ -1228,7 +1228,7 @@
     "ChatGPT subscription": "ChatGPT subscription",
     "ChatGPT subscription detail": "Sign in to ChatGPT here. Gateway holds the subscription and spends it like a key, for any agent.",
     "Claude subscription": "Claude subscription",
-    "Claude subscription detail": "The sign-in Claude Code already has, forwarded upstream. No API key, nothing to fill in.",
+    "Claude subscription detail": "Sign in to Claude here. Gateway holds the subscription and spends it like a key, for any agent.",
     "Clear": "Clear",
     "Client auth hint": "Requests are forwarded with the credentials the client sent, so an agent already signed in with a subscription keeps its own login and no key is stored here. Only the agent that holds that sign-in can use this provider.",
     "Client auth usage hint": "Only the base URL is set: a token here would replace the sign-in the client already has.",

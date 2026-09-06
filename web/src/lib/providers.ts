@@ -561,7 +561,7 @@ export interface ProviderSource {
   provider: Partial<Provider>;
 }
 
-export const subscriptionSource = "subscription";
+export const claudeSource = "claude";
 export const chatgptSource = "chatgpt";
 export const customSource = "custom";
 
@@ -576,14 +576,15 @@ export const chatgptCodexBaseUrl = "https://chatgpt.com/backend-api/codex";
  */
 export const providerSources: ProviderSource[] = [
   {
-    key: subscriptionSource,
+    key: claudeSource,
     label: "",
+    vendor: "anthropic",
     provider: {
       type: "anthropic",
       baseUrl: providerPresets.find(preset => preset.type === "anthropic")?.baseUrl ?? "",
       models: [],
       apiKey: "",
-      authMode: authClient,
+      authMode: authSubscription,
     },
   },
   {

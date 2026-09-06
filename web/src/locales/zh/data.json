@@ -1414,7 +1414,7 @@
     "ChatGPT subscription": "ChatGPT订阅",
     "ChatGPT subscription detail": "在这里登录ChatGPT，Gateway保管这个订阅，像Key一样给任何Agent用。",
     "Claude subscription": "Claude订阅登录",
-    "Claude subscription detail": "直接用Claude Code已有的登录，原样转发给上游。不需要API Key，什么都不用填。",
+    "Claude subscription detail": "在这里登录Claude，Gateway保管这个订阅，像Key一样给任何Agent用。",
     "Clear": "清空",
     "Client auth hint": "请求会带着客户端自己的凭据转发上游，已经用订阅登录过的Agent可以继续用自己的登录，这里不保存任何Key。只有握着那个登录的Agent能用这个供应商。",
     "Client auth usage hint": "只设置base URL：这里再设一个token会覆盖客户端已有的登录。",

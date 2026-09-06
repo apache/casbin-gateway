@@ -33,10 +33,20 @@ import (
 // The vendors whose subscription Gateway can hold. The sign-in is the one that
 // vendor's own client uses, because the endpoint behind a subscription accepts
 // no other OAuth application.
-const SubscriptionOpenAi = "openai"
+const (
+	SubscriptionOpenAi    = "openai"
+	SubscriptionAnthropic = "anthropic"
+)
 
-// codexOriginator names the client a ChatGPT subscription is spent through.
-const codexOriginator = "codex_cli_rs"
+// What a subscription's requests have to look like to be served: the vendor
+// hands these tokens to one client of its own, and its endpoint answers that
+// client. They are the same values the client on this machine would send.
+const (
+	codexOriginator = "codex_cli_rs"
+	claudeUserAgent = "claude-cli/2.1.170 (external, cli)"
+	claudeBetas     = "oauth-2025-04-20,claude-code-20250219,interleaved-thinking-2025-05-14"
+	claudePreamble  = "You are Claude Code, Anthropic's official CLI for Claude."
+)
 
 // SubscriptionVendor is one sign-in Gateway can hold: where it is granted, and
 // what the provider holding it then talks to.
@@ -58,6 +68,22 @@ type SubscriptionVendor struct {
 	callbackPath string
 	scope        string
 	extraParams  map[string]string
+	// codeJson posts the first exchange as JSON. A renewal is JSON everywhere.
+	codeJson bool
+	// stateInFragment marks a vendor that returns the state after a "#", which
+	// never reaches a server, so the callback page hands it back itself.
+	stateInFragment bool
+	// tokenHeaders are what the token endpoint wants beside the body.
+	tokenHeaders map[string]string
+	// query is appended to every upstream URL, for an endpoint that selects a
+	// variant that way.
+	query string
+	// apply puts the sign-in on an upstream request, in the headers this vendor
+	// reads it from.
+	apply func(http.Header, *ProviderSubscription)
+	// shape rewrites a request body the vendor's endpoint would otherwise
+	// refuse. Nil where nothing has to be changed.
+	shape func([]byte) []byte
 }
 
 var subscriptionVendors = []*SubscriptionVendor{
@@ -78,6 +104,44 @@ var subscriptionVendors = []*SubscriptionVendor{
 			"id_token_add_organizations": "true",
 			"originator":                 codexOriginator,
 		},
+		tokenHeaders: map[string]string{"Originator": codexOriginator},
+		apply: func(header http.Header, subscription *ProviderSubscription) {
+			header.Set("Authorization", "Bearer "+subscription.AccessToken)
+			if subscription.AccountId != "" {
+				header.Set("Chatgpt-Account-Id", subscription.AccountId)
+			}
+			if header.Get("Originator") == "" {
+				header.Set("Originator", codexOriginator)
+			}
+		},
+	},
+	{
+		Id:       SubscriptionAnthropic,
+		Label:    "Claude",
+		BaseUrl:  "https://api.anthropic.com",
+		Protocol: ProtocolAnthropic,
+
+		clientId:        "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
+		authorizeUrl:    "https://claude.ai/oauth/authorize",
+		tokenUrl:        "https://api.anthropic.com/v1/oauth/token",
+		redirectUri:     "http://localhost:54545/callback",
+		listenAddr:      "127.0.0.1:54545",
+		callbackPath:    "/callback",
+		scope:           "org:create_api_key user:profile user:inference",
+		codeJson:        true,
+		stateInFragment: true,
+		tokenHeaders:    map[string]string{"User-Agent": claudeUserAgent},
+		query:           "beta=true",
+		apply: func(header http.Header, subscription *ProviderSubscription) {
+			// The subscription endpoint reads a bearer token, not the x-api-key
+			// an API account authenticates with.
+			header.Del("X-Api-Key")
+			header.Set("Authorization", "Bearer "+subscription.AccessToken)
+			header.Set("Anthropic-Version", AnthropicVersion)
+			header.Set("Anthropic-Beta", mergeBetas(header.Get("Anthropic-Beta"), claudeBetas))
+			header.Set("User-Agent", claudeUserAgent)
+		},
+		shape: withClaudePreamble,
 	},
 }
 
@@ -221,24 +285,120 @@ func storeSubscription(provider *Provider, subscription *ProviderSubscription) e
 	return err
 }
 
-// SetSubscriptionAuth puts a held sign-in on an upstream request. Beside the
-// token the vendor wants the account it is spent on and the client it was
-// granted to, which is what its own client sends.
+// SetSubscriptionAuth puts a held sign-in on an upstream request, in the shape
+// the vendor's endpoint reads it: beside the token it wants the account it is
+// spent on and the client it was granted to.
 func SetSubscriptionAuth(header http.Header, provider *Provider) {
 	subscription := subscriptionOf(provider)
 	if subscription == nil {
 		return
 	}
+	vendor, err := subscriptionVendorOf(subscription.Vendor)
+	if err != nil || vendor.apply == nil {
+		return
+	}
+	vendor.apply(header, subscription)
+}
 
-	header.Set("Authorization", "Bearer "+subscription.AccessToken)
-	if subscription.Vendor == SubscriptionOpenAi {
-		if subscription.AccountId != "" {
-			header.Set("Chatgpt-Account-Id", subscription.AccountId)
-		}
-		if header.Get("Originator") == "" {
-			header.Set("Originator", codexOriginator)
+// SubscriptionQuery is what a subscription endpoint wants on the URL, empty for
+// one that wants nothing.
+func SubscriptionQuery(provider *Provider) string {
+	if vendor := vendorOfProvider(provider); vendor != nil {
+		return vendor.query
+	}
+	return ""
+}
+
+// ShapeSubscriptionBody rewrites a request the subscription endpoint would
+// refuse as it stands. The body is returned unchanged where nothing has to be.
+func ShapeSubscriptionBody(provider *Provider, body []byte) []byte {
+	vendor := vendorOfProvider(provider)
+	if vendor == nil || vendor.shape == nil {
+		return body
+	}
+	return vendor.shape(body)
+}
+
+func vendorOfProvider(provider *Provider) *SubscriptionVendor {
+	subscription := subscriptionOf(provider)
+	if subscription == nil {
+		return nil
+	}
+	vendor, err := subscriptionVendorOf(subscription.Vendor)
+	if err != nil {
+		return nil
+	}
+	return vendor
+}
+
+// mergeBetas keeps the betas the client asked for and adds the ones the
+// subscription endpoint needs, without repeating any.
+func mergeBetas(asked string, needed string) string {
+	seen := map[string]bool{}
+	merged := []string{}
+	for _, list := range []string{asked, needed} {
+		for _, beta := range strings.Split(list, ",") {
+			beta = strings.TrimSpace(beta)
+			if beta == "" || seen[beta] {
+				continue
+			}
+			seen[beta] = true
+			merged = append(merged, beta)
 		}
 	}
+	return strings.Join(merged, ",")
+}
+
+// withClaudePreamble puts the line Anthropic answers a subscription token for at
+// the front of the system prompt. Without it the endpoint refuses the request,
+// and it is the same line the client this token was granted to sends.
+func withClaudePreamble(body []byte) []byte {
+	fields := map[string]json.RawMessage{}
+	if json.Unmarshal(body, &fields) != nil {
+		return body
+	}
+
+	preamble := []map[string]string{{"type": "text", "text": claudePreamble}}
+	blocks := []map[string]any{}
+	switch existing := fields["system"]; {
+	case len(existing) == 0:
+	default:
+		var text string
+		if json.Unmarshal(existing, &text) == nil {
+			if strings.HasPrefix(strings.TrimSpace(text), claudePreamble) {
+				return body
+			}
+			blocks = append(blocks, map[string]any{"type": "text", "text": text})
+			break
+		}
+		var carried []map[string]any
+		if json.Unmarshal(existing, &carried) != nil {
+			return body
+		}
+		if len(carried) > 0 {
+			if first, ok := carried[0]["text"].(string); ok && strings.HasPrefix(strings.TrimSpace(first), claudePreamble) {
+				return body
+			}
+		}
+		blocks = carried
+	}
+
+	system := make([]any, 0, len(blocks)+1)
+	system = append(system, preamble[0])
+	for _, block := range blocks {
+		system = append(system, block)
+	}
+	encoded, err := json.Marshal(system)
+	if err != nil {
+		return body
+	}
+	fields["system"] = encoded
+
+	shaped, err := json.Marshal(fields)
+	if err != nil {
+		return body
+	}
+	return shaped
 }
 
 // SubscriptionLogin is one sign-in Gateway started, running or finished. It
@@ -314,7 +474,16 @@ func StartSubscriptionLogin(vendorId string) (*SubscriptionLogin, error) {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc(vendor.callbackPath, func(writer http.ResponseWriter, request *http.Request) {
-		finishSubscriptionLogin(session, vendor, request.URL.Query(), writer)
+		query := request.URL.Query()
+		// This vendor returns the state after a "#", which no browser sends to a
+		// server. The page below asks for the same address again with it in the
+		// query, and that request is the one that finishes the sign-in.
+		if vendor.stateInFragment && query.Get("state") == "" && query.Get("error") == "" {
+			writer.Header().Set("Content-Type", "text/html; charset=utf-8")
+			fmt.Fprint(writer, fragmentPage)
+			return
+		}
+		finishSubscriptionLogin(session, vendor, query, writer)
 	})
 	session.server = &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 
@@ -476,6 +645,21 @@ func grantOf(session *loginSession, vendor *SubscriptionVendor, query url.Values
 		return nil, fmt.Errorf("the vendor sent no authorization code back")
 	}
 
+	if vendor.codeJson {
+		body, err := json.Marshal(map[string]string{
+			"grant_type":    "authorization_code",
+			"code":          code,
+			"state":         session.state,
+			"redirect_uri":  vendor.redirectUri,
+			"client_id":     vendor.clientId,
+			"code_verifier": session.verifier,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return postSubscriptionToken(vendor, "application/json", strings.NewReader(string(body)), nil)
+	}
+
 	form := url.Values{}
 	form.Set("grant_type", "authorization_code")
 	form.Set("code", code)
@@ -508,7 +692,9 @@ func postSubscriptionToken(vendor *SubscriptionVendor, contentType string, body 
 	}
 	request.Header.Set("Content-Type", contentType)
 	request.Header.Set("Accept", "application/json")
-	request.Header.Set("Originator", codexOriginator)
+	for name, value := range vendor.tokenHeaders {
+		request.Header.Set(name, value)
+	}
 
 	client := &http.Client{Timeout: exchangeTimeout, Transport: proxy.Transport()}
 	response, err := client.Do(request)
@@ -525,8 +711,12 @@ func postSubscriptionToken(vendor *SubscriptionVendor, contentType string, body 
 		AccessToken  string `json:"access_token"`
 		RefreshToken string `json:"refresh_token"`
 		IdToken      string `json:"id_token"`
-		Error        string `json:"error"`
-		ErrorText    string `json:"error_description"`
+		ExpiresIn    int64  `json:"expires_in"`
+		Account      struct {
+			EmailAddress string `json:"email_address"`
+		} `json:"account"`
+		Error     string `json:"error"`
+		ErrorText string `json:"error_description"`
 	}
 	readable := json.Unmarshal(answer, &granted) == nil
 
@@ -553,6 +743,10 @@ func postSubscriptionToken(vendor *SubscriptionVendor, contentType string, body 
 			subscription.RefreshToken = previous.RefreshToken
 		}
 	}
+	if granted.ExpiresIn > 0 {
+		subscription.ExpiresAt = time.Now().Add(time.Duration(granted.ExpiresIn) * time.Second).UTC().Format(time.RFC3339)
+	}
+	fillClaim(&subscription.Account, granted.Account.EmailAddress)
 	describeGrant(subscription, granted.IdToken)
 	return subscription, nil
 }
@@ -560,7 +754,7 @@ func postSubscriptionToken(vendor *SubscriptionVendor, contentType string, body 
 // describeGrant reads whose account this is out of the tokens themselves. The
 // id token carries the profile, the access token carries when it dies.
 func describeGrant(subscription *ProviderSubscription, idToken string) {
-	if expiry, ok := agent.DecodeJWTClaims(subscription.AccessToken)["exp"].(float64); ok {
+	if expiry, ok := agent.DecodeJWTClaims(subscription.AccessToken)["exp"].(float64); ok && subscription.ExpiresAt == "" {
 		subscription.ExpiresAt = time.Unix(int64(expiry), 0).UTC().Format(time.RFC3339)
 	}
 
@@ -614,6 +808,15 @@ func forgetFinishedLoginsLocked() {
 		}
 	}
 }
+
+// fragmentPage hands back the part of the address the browser kept to itself.
+const fragmentPage = `<!doctype html><meta charset="utf-8"><title>Signing in</title>` +
+	`<body style="font:16px system-ui;margin:4rem auto;max-width:32rem;text-align:center">` +
+	`<p style="color:#666">Finishing the sign-in...</p><script>` +
+	`var hash=location.hash.slice(1);` +
+	`if(hash){location.replace(location.pathname+location.search+"&state="+encodeURIComponent(hash));}` +
+	`else{document.body.innerHTML="<p>This sign-in carried no state, so it cannot be finished. Start it again.</p>";}` +
+	`</script>`
 
 const callbackPage = `<!doctype html><meta charset="utf-8"><title>%[1]s</title>` +
 	`<body style="font:16px system-ui;margin:4rem auto;max-width:32rem;text-align:center">` +
