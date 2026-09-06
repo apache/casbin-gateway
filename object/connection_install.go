@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/apache/casbin-gateway/agent"
 	"github.com/apache/casbin-gateway/agentconfig"
 	"github.com/apache/casbin-gateway/agentpatch"
 	"github.com/apache/casbin-gateway/connector"
@@ -100,13 +101,17 @@ func proxyRequest(connection *Connection, found connector.Connector, agentId str
 	if err != nil {
 		return agentconfig.McpRequest{}, err
 	}
-	token, err := agentpatch.IssueIngestToken(agentpatch.Target{AgentId: agentId, Owner: connection.Owner})
+	// Two different accounts meet here: connection.Owner is who signed in to
+	// Gateway, and the entry has to be written into the home of the account the
+	// agent runs as. Only the proxy's own --owner names the first.
+	account := agent.ConfigOwnerOf(agentId)
+	token, err := agentpatch.IssueIngestToken(agentpatch.Target{AgentId: agentId, Owner: account})
 	if err != nil {
 		return agentconfig.McpRequest{}, err
 	}
 
 	return agentconfig.McpRequest{
-		Owner:     connection.Owner,
+		Owner:     account,
 		To:        []string{agentId},
 		Name:      found.Server.Name,
 		Transport: agentconfig.TransportStdio,
@@ -169,7 +174,7 @@ func revokeUnusedTokens(owner string, agentIds []string) {
 		if remaining[agentId] {
 			continue
 		}
-		_ = agentpatch.RevokeIngestToken(agentpatch.Target{AgentId: agentId, Owner: owner})
+		_ = agentpatch.RevokeIngestToken(agentpatch.Target{AgentId: agentId, Owner: agent.ConfigOwnerOf(agentId)})
 	}
 }
 
@@ -211,7 +216,7 @@ func removeFrom(connection *Connection, serverName string, agentIds []string) []
 	planned := []*agentconfig.PlanItem{}
 	for _, agentId := range agentIds {
 		item := &agentconfig.PlanItem{AgentId: agentId, Name: serverName, Action: agentconfig.ActionRemove}
-		if err := agentconfig.Delete(agentId, connection.Owner, agentconfig.KindMcp, serverName); err != nil {
+		if err := agentconfig.Delete(agentId, agent.ConfigOwnerOf(agentId), agentconfig.KindMcp, serverName); err != nil {
 			item.Action, item.Reason = agentconfig.ActionSkip, err.Error()
 		}
 		planned = append(planned, item)

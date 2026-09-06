@@ -59,7 +59,7 @@ func mcpItemsOf(agentId string, owner string) []object.ToolItem {
 	}
 	// A connection that has been tested knows what it offers, so its tools get a
 	// switch each, under the server switch they already had.
-	items = append(items, object.ConnectionToolItems(agentId, owner)...)
+	items = append(items, object.ConnectionToolItems(agentId)...)
 	return items
 }
 

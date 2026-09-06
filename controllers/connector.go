@@ -151,11 +151,15 @@ func connectorTargets() ([]*ConnectorTarget, error) {
 			continue
 		}
 		seen[installation.AgentId] = true
+		// The account whose configuration is written rather than the one this
+		// row was found under, so the file named here is the file a connection
+		// actually lands in.
+		account := agent.ConfigOwnerOf(installation.AgentId)
 		targets = append(targets, &ConnectorTarget{
 			AgentId: installation.AgentId,
 			Name:    installation.Name,
-			Owner:   installation.Owner,
-			McpFile: agentconfig.McpConfigFile(installation.AgentId, installation.Owner),
+			Owner:   account,
+			McpFile: agentconfig.McpConfigFile(installation.AgentId, account),
 		})
 	}
 

@@ -263,8 +263,11 @@ func DeleteConnection(owner string, name string) error {
 // this agent, built from what the last test found. A connection nobody has
 // tested contributes none and is governed by its server switch alone, which is
 // what makes testing worth doing beyond seeing that it works.
-func ConnectionToolItems(agentId string, owner string) []ToolItem {
-	connections, err := GetConnections(owner)
+// Every connection on the machine is looked at, whoever signed in to make it:
+// the switches are per agent, and an agent does not know which account added
+// the server it was given.
+func ConnectionToolItems(agentId string) []ToolItem {
+	connections, err := getAllConnections()
 	if err != nil {
 		return nil
 	}
