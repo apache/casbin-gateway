@@ -159,6 +159,9 @@ func (t *Telegram) Send(message Message, reply Reply) (string, error) {
 
 	// Telegram refuses anything over its limit outright, so a long answer is cut
 	// into messages and only the last one stays editable.
+	// The cut is made on the Markdown rather than on the rendered HTML: tags only
+	// ever shorten what a reader sees, so a chunk within the limit here is within
+	// it after rendering too, and no tag is ever sliced in half.
 	chunks := splitForChat(text, telegramMessageLimit)
 	last := ""
 	for index, chunk := range chunks {
@@ -166,14 +169,31 @@ func (t *Telegram) Send(message Message, reply Reply) (string, error) {
 			MessageId int64 `json:"message_id"`
 		}{}
 
-		method, body := "sendMessage", map[string]any{"chat_id": message.ChatId, "text": chunk}
+		method := "sendMessage"
+		body := map[string]any{
+			"chat_id":    message.ChatId,
+			"text":       telegramHtml(chunk),
+			"parse_mode": "HTML",
+			// A link in an answer would otherwise pull in a preview card, redrawn
+			// on every edit while the answer is still growing.
+			"link_preview_options": map[string]any{"is_disabled": true},
+		}
 		// Only the first chunk can replace what is already there; the rest are
 		// new messages under it.
 		if reply.Edit != "" && index == 0 {
 			method = "editMessageText"
 			body["message_id"] = reply.Edit
 		}
-		if err := t.call(context.Background(), method, body, &result); err != nil {
+
+		err := t.call(context.Background(), method, body, &result)
+		// Nothing an agent writes is worth losing to a markup complaint: the same
+		// message goes again as the plain text it was.
+		if err != nil && isParseError(err) {
+			delete(body, "parse_mode")
+			body["text"] = chunk
+			err = t.call(context.Background(), method, body, &result)
+		}
+		if err != nil {
 			return last, err
 		}
 		last = strconv.FormatInt(result.MessageId, 10)
@@ -192,6 +212,15 @@ var errUnauthorized = errors.New("the bot token was refused")
 // out. Telegram reports it in words rather than in a code of its own.
 func isWebhookConflict(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "webhook is active")
+}
+
+// isParseError recognises Telegram refusing the markup rather than the message.
+func isParseError(err error) bool {
+	if err == nil {
+		return false
+	}
+	lowered := strings.ToLower(err.Error())
+	return strings.Contains(lowered, "parse entities") || strings.Contains(lowered, "tag") && strings.Contains(lowered, "entities")
 }
 
 // dropWebhook takes the bot's webhook down. Updates already waiting are kept:
