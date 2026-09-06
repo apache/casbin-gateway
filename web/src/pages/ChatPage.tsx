@@ -49,6 +49,9 @@ interface Turn {
   seq: number;
   prompt: string;
   blocks: Block[];
+  // notices are what the agent mentioned in passing; they are shown beside the
+  // answer rather than in it, because the turn carried on regardless.
+  notices: string[];
   error: string;
   usage?: DrivenEvent;
   done: boolean;
@@ -78,7 +81,7 @@ function toTurns(events: DrivenEvent[]): Turn[] {
   for (const event of events) {
     switch (event.type) {
     case "prompt":
-      turn = {seq: event.seq, prompt: event.text ?? "", blocks: [], error: "", done: false};
+      turn = {seq: event.seq, prompt: event.text ?? "", blocks: [], notices: [], error: "", done: false};
       turns.push(turn);
       break;
     case "text":
@@ -110,6 +113,11 @@ function toTurns(events: DrivenEvent[]): Turn[] {
     case "error":
       if (turn) {
         turn.error = event.text ?? "";
+      }
+      break;
+    case "notice":
+      if (turn && event.text && !turn.notices.includes(event.text)) {
+        turn.notices.push(event.text);
       }
       break;
     case "done":
@@ -165,6 +173,10 @@ function TurnView({turn}: {turn: Turn}) {
           </div>
         );
       })}
+
+      {turn.notices.map(notice => (
+        <MessageAlert key={notice} variant="warning" description={notice} />
+      ))}
 
       {turn.error ? <MessageAlert variant="destructive" title={turn.error} /> : null}
 

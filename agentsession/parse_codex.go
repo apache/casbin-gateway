@@ -138,9 +138,12 @@ func emitCodexItem(item *codexItem, emit func(Event)) {
 		event.ToolName = "Edit"
 		event.ToolInput = firstOf(item.Text, item.Message)
 		emit(event)
+	// An error item is Codex saying something went sideways without the turn
+	// ending: a setting it dropped, a budget it trimmed to fit. A turn that
+	// really failed says so through turn.failed, which fails the run.
 	case "error":
 		if text := firstOf(item.Message, item.Text); text != "" {
-			emit(textEvent(EventError, text))
+			emit(textEvent(EventNotice, text))
 		}
 	}
 }

@@ -553,7 +553,7 @@ export interface DrivenSession {
 
 /** One piece of what a driven agent said, in the shape every agent is flattened into. */
 export interface DrivenEvent {
-  type: "prompt" | "text" | "thinking" | "toolUse" | "toolResult" | "usage" | "done" | "error";
+  type: "prompt" | "text" | "thinking" | "toolUse" | "toolResult" | "usage" | "done" | "error" | "notice";
   seq: number;
   createdTime: string;
   text?: string;

@@ -30,6 +30,10 @@ const (
 	EventUsage      EventType = "usage"
 	EventDone       EventType = "done"
 	EventError      EventType = "error"
+	// EventNotice is something the agent mentioned in passing - a setting it
+	// ignored, a limit it worked around. The turn carried on, so it is kept out
+	// of the answer and shown beside it.
+	EventNotice EventType = "notice"
 )
 
 // Event is one piece of what an agent said, in a shape every agent is flattened
@@ -44,7 +48,7 @@ type Event struct {
 	CreatedTime string `json:"createdTime"`
 
 	// Text is the answer for EventText and EventThinking, and the message for
-	// EventError.
+	// EventError and EventNotice.
 	Text string `json:"text,omitempty"`
 
 	ToolName  string `json:"toolName,omitempty"`

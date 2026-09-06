@@ -25,6 +25,9 @@ import (
 // what an agent did is most of what somebody watching wants to see.
 type answerBuffer struct {
 	parts []string
+	// prose says the last part is the agent talking, which is the only part a
+	// fragment of prose may be joined onto.
+	prose bool
 	// dirty says something has arrived since the last time this was written out.
 	dirty bool
 }
@@ -37,25 +40,31 @@ func (b *answerBuffer) add(event agentsession.Event) {
 		}
 		// Prose arrives in fragments, so it is joined onto the piece before it
 		// rather than starting a new one.
-		if len(b.parts) > 0 && !strings.HasPrefix(b.parts[len(b.parts)-1], toolMarker) {
+		if b.prose {
 			b.parts[len(b.parts)-1] += event.Text
 		} else {
 			b.parts = append(b.parts, event.Text)
+			b.prose = true
 		}
 	case agentsession.EventToolUse:
 		b.parts = append(b.parts, toolMarker+toolLine(event))
+		b.prose = false
 	case agentsession.EventError:
-		if event.Text != "" {
-			b.parts = append(b.parts, "\n⚠ "+event.Text)
+		if event.Text == "" {
+			return
 		}
+		b.parts = append(b.parts, "\n⚠ "+event.Text)
+		b.prose = false
+	// What the agent mentioned in passing stays out of the chat: the answer is
+	// what somebody asked for, and a warning about a setting on top of every
+	// reply is noise. The session page still shows it.
 	default:
 		return
 	}
 	b.dirty = true
 }
 
-// toolMarker starts the pieces that are a tool rather than prose, so a fragment
-// of prose is not appended onto one.
+// toolMarker sets a tool line apart from the prose around it.
 const toolMarker = "· "
 
 // toolInputLimit keeps a command in the message without the message becoming the
