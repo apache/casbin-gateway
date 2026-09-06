@@ -103,6 +103,11 @@ type Fingerprint struct {
 	// both installs and upgrades. It runs through the platform shell, so it is
 	// shown in full before anyone clicks it.
 	InstallScript *InstallScript `json:"installScript,omitempty"`
+
+	// Headless is the agent's own non-interactive mode, which is what Gateway
+	// drives it through. Nil for an agent that publishes none: it can still be
+	// watched and configured, just not driven.
+	Headless *Headless `json:"headless,omitempty"`
 }
 
 // InstallScript is the vendor's installer command per platform. An empty

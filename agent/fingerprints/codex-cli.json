@@ -16,5 +16,27 @@
   ],
   "updateArgs": [
     "update"
-  ]
+  ],
+  "headless": {
+    "args": [
+      "exec",
+      "--json",
+      "--skip-git-repo-check",
+      "-"
+    ],
+    "resumeArgs": [
+      "exec",
+      "resume",
+      "--json",
+      "--skip-git-repo-check",
+      "{session}",
+      "-"
+    ],
+    "modelArgs": [
+      "--model",
+      "{model}"
+    ],
+    "format": "codex-json",
+    "promptStdin": true
+  }
 }

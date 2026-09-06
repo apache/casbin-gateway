@@ -337,4 +337,11 @@ func (a *Ormer) createTable() {
 	if err != nil {
 		panic(err)
 	}
+
+	// The conversations Gateway is driving on somebody's behalf, kept for the
+	// agent's own id for each, which is what carries one across a restart.
+	err = a.Engine.Sync2(new(AgentSession))
+	if err != nil {
+		panic(err)
+	}
 }

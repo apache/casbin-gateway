@@ -522,6 +522,52 @@ export interface AgentSession {
   historical?: boolean;
 }
 
+/** One installation Gateway can hand a prompt to. */
+export interface DrivableAgent {
+  agentId: string;
+  name: string;
+  path: string;
+  owner: string;
+  /** False for an agent that carries nothing from one turn to the next. */
+  resumable: boolean;
+}
+
+/** One conversation Gateway is driving on somebody's behalf. */
+export interface DrivenSession {
+  id: string;
+  agentId: string;
+  agentPath: string;
+  owner: string;
+  workDir: string;
+  model: string;
+  source: string;
+  nativeId: string;
+  resumable: boolean;
+  title: string;
+  state: "idle" | "running" | "failed";
+  turns: number;
+  createdTime: string;
+  updatedTime: string;
+  lastError?: string;
+}
+
+/** One piece of what a driven agent said, in the shape every agent is flattened into. */
+export interface DrivenEvent {
+  type: "prompt" | "text" | "thinking" | "toolUse" | "toolResult" | "usage" | "done" | "error";
+  seq: number;
+  createdTime: string;
+  text?: string;
+  toolName?: string;
+  toolUseId?: string;
+  toolInput?: string;
+  model?: string;
+  nativeId?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  costUsd?: number;
+  durationMs?: number;
+}
+
 /** One part of a transcript message: prose, thinking, a tool call or its result. */
 export interface AgentMessageBlock {
   kind: "text" | "thinking" | "toolUse" | "toolResult" | "image";

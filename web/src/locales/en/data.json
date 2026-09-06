@@ -831,6 +831,21 @@
     "What was sent": "What was sent",
     "Wrong": "Wrong"
   },
+  "chat": {
+    "Ask an agent on this machine something, and watch it work": "Ask an agent on this machine something, and watch it work",
+    "Ask the agent something": "Ask the agent something",
+    "Chat": "Chat",
+    "Each message stands alone": "Each message stands alone",
+    "New session": "New session",
+    "No agent on this machine can be driven": "No agent on this machine can be driven",
+    "No session is open": "No session is open",
+    "Nothing asked yet": "Nothing asked yet",
+    "Pick an agent": "Pick an agent",
+    "Thinking": "Thinking",
+    "Working directory": "Working directory",
+    "{count} tokens in": "{count} tokens in",
+    "{count} tokens out": "{count} tokens out"
+  },
   "connector": {
     "API key": "API key",
     "All": "All",

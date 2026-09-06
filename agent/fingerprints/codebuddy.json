@@ -5,5 +5,29 @@
   "execName": "codebuddy",
   "instanceEnv": "CODEBUDDY_CONFIG_DIR",
   "stateDir": "codebuddy",
-  "npmPackage": "@tencent-ai/codebuddy-code"
+  "npmPackage": "@tencent-ai/codebuddy-code",
+  "headless": {
+    "args": [
+      "-p",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--session-id",
+      "{session}"
+    ],
+    "resumeArgs": [
+      "-p",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--resume",
+      "{session}"
+    ],
+    "modelArgs": [
+      "--model",
+      "{model}"
+    ],
+    "format": "claude-stream-json",
+    "promptStdin": true
+  }
 }

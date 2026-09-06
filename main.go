@@ -125,6 +125,10 @@ func main() {
 	}
 	defer agentmonitor.Stop()
 
+	// The conversations Gateway drives on somebody's behalf, put back where a
+	// restart left them.
+	object.InitAgentSessions()
+
 	// Monitoring is on by default, so the agents already on this host are
 	// patched without anyone opening the UI. The scan walks the disk, hence the
 	// goroutine.

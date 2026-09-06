@@ -4,5 +4,21 @@
   "installUrl": "https://google-gemini.github.io/gemini-cli/",
   "execName": "gemini",
   "stateDir": "gemini",
-  "npmPackage": "@google/gemini-cli"
+  "npmPackage": "@google/gemini-cli",
+  "headless": {
+    "args": [
+      "-p",
+      "",
+      "-o",
+      "text",
+      "--session-id",
+      "{session}"
+    ],
+    "modelArgs": [
+      "-m",
+      "{model}"
+    ],
+    "format": "text",
+    "promptStdin": true
+  }
 }

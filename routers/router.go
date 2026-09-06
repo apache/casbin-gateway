@@ -88,6 +88,15 @@ func initAPI() {
 	beego.Router("/api/start-agent-instance", &controllers.ApiController{}, "POST:StartAgentInstance")
 	beego.Router("/api/stop-agent-instance", &controllers.ApiController{}, "POST:StopAgentInstance")
 	beego.Router("/api/capture-agent-instance-link", &controllers.ApiController{}, "POST:CaptureAgentInstanceLink")
+
+	// Driving an agent: Gateway hands it a prompt and reads back what it says.
+	beego.Router("/api/get-drivable-agents", &controllers.ApiController{}, "GET:GetDrivableAgents")
+	beego.Router("/api/get-driven-sessions", &controllers.ApiController{}, "GET:GetDrivenSessions")
+	beego.Router("/api/open-driven-session", &controllers.ApiController{}, "POST:OpenDrivenSession")
+	beego.Router("/api/send-driven-session", &controllers.ApiController{}, "POST:SendDrivenSession")
+	beego.Router("/api/interrupt-driven-session", &controllers.ApiController{}, "POST:InterruptDrivenSession")
+	beego.Router("/api/close-driven-session", &controllers.ApiController{}, "POST:CloseDrivenSession")
+	beego.Router("/api/stream-driven-session", &controllers.ApiController{}, "GET:StreamDrivenSession")
 	beego.Router("/api/get-agent-accounts", &controllers.ApiController{}, "GET:GetAgentAccounts")
 	beego.Router("/api/save-agent-account", &controllers.ApiController{}, "POST:SaveAgentAccount")
 	beego.Router("/api/add-agent-account", &controllers.ApiController{}, "POST:AddAgentAccount")

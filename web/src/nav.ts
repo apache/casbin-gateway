@@ -25,6 +25,7 @@ import {
   PackageCheck,
   Plug,
   Route,
+  SendHorizontal,
   Settings,
   ShieldCheck,
   ShieldHalf,
@@ -69,6 +70,9 @@ export const navGroups: NavGroup[] = [
   // The table of installations is the home screen's own advanced view, linked
   // from it rather than competing with it in the rail.
   {key: "/agents", label: "agent:Advanced view", icon: Table2, path: "/agents", adminOnly: true, hidden: true},
+  // Driving an agent is what somebody does with one, so it sits beside the
+  // list of them rather than down among the pages that only report.
+  {key: "/chat", label: "chat:Chat", icon: SendHorizontal, path: "/chat", adminOnly: true},
   {
     key: "/agent-versions",
     label: "agent:Agent versions",

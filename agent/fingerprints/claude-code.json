@@ -23,5 +23,29 @@
     "windows": "irm https://claude.ai/install.ps1 | iex",
     "darwin": "curl -fsSL https://claude.ai/install.sh | bash",
     "linux": "curl -fsSL https://claude.ai/install.sh | bash"
+  },
+  "headless": {
+    "args": [
+      "-p",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--session-id",
+      "{session}"
+    ],
+    "resumeArgs": [
+      "-p",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--resume",
+      "{session}"
+    ],
+    "modelArgs": [
+      "--model",
+      "{model}"
+    ],
+    "format": "claude-stream-json",
+    "promptStdin": true
   }
 }

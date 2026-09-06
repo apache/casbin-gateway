@@ -38,6 +38,7 @@ import AgentVersionsPage from "@/pages/AgentVersionsPage";
 import AgentsPage from "@/pages/AgentsPage";
 import AuthCallback from "@/pages/AuthCallback";
 import AuthenticityPage from "@/pages/AuthenticityPage";
+import ChatPage from "@/pages/ChatPage";
 import ConnectionsPage from "@/pages/ConnectionsPage";
 import HomePage from "@/pages/HomePage";
 import ImportLinkPage from "@/pages/ImportLinkPage";
@@ -286,6 +287,7 @@ export default function App() {
                   )}
                 />
                 <Route path="/account" element={requireSignin(user => <AccountPage account={user} />)} />
+                <Route path="/chat" element={requireSignin(user => <ChatPage account={user} />)} />
                 <Route path="/agents" element={requireSignin(user => <AgentsPage account={user} />)} />
                 <Route
                   path="/agent-versions"
