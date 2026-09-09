@@ -90,6 +90,41 @@ func InstanceDir(agentId string, name string) (string, error) {
 	return filepath.Join(home, instancesDir, agentId, name), nil
 }
 
+// DefaultInstanceDir is the state directory the first instance of an agent runs
+// on: the one it uses when it is started with no instance of its own. An agent
+// isolated by an environment variable keeps it under the home directory, the
+// way its own default does; one isolated by a flag is a desktop app, whose
+// default is wherever it puts its user data, known only for the apps Gateway
+// reads an account from. Empty where Gateway does not know it.
+func DefaultInstanceDir(agentId string, owner string) string {
+	rules := isolationOf(agentId)
+	if !rules.supported() {
+		return ""
+	}
+	home, err := agenthome.Resolve(owner)
+	if err != nil {
+		return ""
+	}
+	if rules.env != "" {
+		if dir := stateDirOf(agentId); dir != "" {
+			return filepath.Join(home, "."+dir)
+		}
+		return ""
+	}
+	return accountStateDir(accountKind(agentId), home)
+}
+
+// stateDirOf is the directory, named without its leading dot, that an agent
+// keeps its state in under a home.
+func stateDirOf(agentId string) string {
+	for i := range fingerprints {
+		if fingerprints[i].ID == agentId {
+			return fingerprints[i].StateDir
+		}
+	}
+	return ""
+}
+
 // CheckInstanceName keeps an instance name to what is safe as one path segment
 // and readable as a label.
 func CheckInstanceName(name string) error {

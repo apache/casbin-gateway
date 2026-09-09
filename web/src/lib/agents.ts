@@ -846,9 +846,10 @@ export function getOutcomeVariant(outcome: string | undefined): BadgeVariant {
 }
 
 /**
- * useAgentInstances owns the extra copies of one agent: the ones stored, what
- * each is signed in to, and whether each is running. Each has a state directory
- * of its own, so they start, stop and sign in independently of one another.
+ * useAgentInstances owns the copies of one agent: the installation's own, the
+ * ones stored beside it, what each is signed in to, and whether each is
+ * running. Each has a state directory of its own, so they start, stop and sign
+ * in independently of one another.
  */
 export function useAgentInstances(agentId = "", enabled = true) {
   const [instances, setInstances] = React.useState<AgentInstance[]>([]);
@@ -1016,7 +1017,7 @@ export function useAgentInstances(agentId = "", enabled = true) {
 /** What one hook call returns, as the cards and the tables take it. */
 export type AgentInstanceControls = ReturnType<typeof useAgentInstances>;
 
-/** The instances belonging to one installation, out of a listing of them all. */
+/** The copies of one installation, the first included, out of a listing of them all. */
 export function instancesOf(instances: AgentInstance[], agent: Agent) {
   return instances.filter(instance => instance.agentId === agent.agentId);
 }

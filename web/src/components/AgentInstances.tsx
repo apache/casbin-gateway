@@ -82,6 +82,21 @@ function AddInstanceButton({
 }
 
 /**
+ * The name of the first copy, which is the installation itself: it is named
+ * after the installation wherever it is listed, so there is nothing to edit.
+ */
+function DefaultInstanceName({instance}: {instance: AgentInstance}) {
+  return (
+    <SimpleTooltip title={i18next.t("agent:Default instance hint")}>
+      <span className="inline-flex items-center gap-1.5 px-1 font-medium">
+        {instance.instance}
+        <Badge variant="muted">{i18next.t("agent:Default instance")}</Badge>
+      </span>
+    </SimpleTooltip>
+  );
+}
+
+/**
  * The name of one instance, editable where it is listed. A copy is added in one
  * click and numbered by the server, so this is where it is given a name worth
  * reading - once there is an account in it to name it after.
@@ -209,7 +224,12 @@ export function AgentInstances({agent, enabled = true}: {agent: Agent; enabled?:
       title: i18next.t("general:Name"),
       key: "instance",
       dataIndex: "instance",
-      render: (_value, record) => <InstanceName instance={record} onRename={controls.rename} />,
+      render: (_value, record) =>
+        record.default ? (
+          <DefaultInstanceName instance={record} />
+        ) : (
+          <InstanceName instance={record} onRename={controls.rename} />
+        ),
     },
     {
       title: i18next.t("agent:Account"),
@@ -254,7 +274,8 @@ export function AgentInstances({agent, enabled = true}: {agent: Agent; enabled?:
       key: "dataDir",
       dataIndex: "dataDir",
       ellipsis: true,
-      render: (value: string) => <CodeText copyable>{value}</CodeText>,
+      render: (value: string) =>
+        value ? <CodeText copyable>{value}</CodeText> : <span className="text-muted-foreground">-</span>,
     },
     {
       title: i18next.t("general:Action"),
@@ -271,17 +292,19 @@ export function AgentInstances({agent, enabled = true}: {agent: Agent; enabled?:
             busy={controls.busyName === record.name}
             onToggle={controls.toggleCapture}
           />
-          <ConfirmDialog
-            title={`${i18next.t("agent:Remove instance")}: ${instanceLabel(record)}?`}
-            description={i18next.t("agent:Remove instance hint")}
-            confirmText={i18next.t("agent:Remove instance")}
-            variant="destructive"
-            onConfirm={() => controls.remove(record)}
-          >
-            <Button size="icon" variant="ghost" className="size-6">
-              <Trash2 />
-            </Button>
-          </ConfirmDialog>
+          {record.default ? null : (
+            <ConfirmDialog
+              title={`${i18next.t("agent:Remove instance")}: ${instanceLabel(record)}?`}
+              description={i18next.t("agent:Remove instance hint")}
+              confirmText={i18next.t("agent:Remove instance")}
+              variant="destructive"
+              onConfirm={() => controls.remove(record)}
+            >
+              <Button size="icon" variant="ghost" className="size-6">
+                <Trash2 />
+              </Button>
+            </ConfirmDialog>
+          )}
         </div>
       ),
     },

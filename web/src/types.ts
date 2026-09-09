@@ -332,6 +332,9 @@ export interface AgentInstance {
   /** The account this copy is signed in to, absent until someone signs in. */
   account?: AgentAccount;
   desktop: boolean;
+  /** Whether this is the installation's own copy, the first instance, which is
+   *  listed beside the extra ones but is not renamed or removed. */
+  default?: boolean;
   running: boolean;
   pids: number[];
   canStart: boolean;

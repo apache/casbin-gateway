@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/apache/casbin-gateway/agent"
@@ -33,6 +34,11 @@ import (
 // keeps asking cannot fill the disk with empty profiles.
 const maxInstances = 50
 
+// defaultInstanceName is what the installation's own copy is listed as. It runs
+// on the state directory the agent uses by itself, so no row is stored for it
+// and the names Gateway hands out start at the second.
+const defaultInstanceName = "1"
+
 // linkCaptureTtl is how long a copy waiting to be signed in holds the URL scheme
 // of its agent: long enough for a sign-in in a browser, short enough that a link
 // arriving later still opens whichever copy the agent registered itself for.
@@ -46,6 +52,9 @@ type agentInstanceView struct {
 	// Desktop tells the UI what a start would open: the app itself, or a console
 	// window for a CLI.
 	Desktop bool `json:"desktop"`
+	// Default marks the installation's own copy, which is listed beside the
+	// extra ones but is not stored, renamed or removed.
+	Default bool `json:"default"`
 	// CanCapture is whether Gateway can route this agent's own links here at
 	// all, and Capturing whether the next one will open this copy.
 	CanCapture bool `json:"canCapture"`
@@ -61,7 +70,8 @@ func (c *ApiController) GetAgentInstances() {
 		return
 	}
 
-	instances, err := object.GetAgentInstances(c.Input().Get("agent"))
+	agentId := c.Input().Get("agent")
+	instances, err := object.GetAgentInstances(agentId)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -70,7 +80,12 @@ func (c *ApiController) GetAgentInstances() {
 		agentprocess.Refresh()
 	}
 
-	result := make([]*agentInstanceView, 0, len(instances))
+	// The installation itself is the first copy, so it is listed first, ahead of
+	// the ones stored beside it.
+	result := make([]*agentInstanceView, 0, len(instances)+1)
+	for _, installation := range instancedInstallations(agentId) {
+		result = append(result, instanceView(defaultInstance(installation)))
+	}
 	for _, instance := range instances {
 		result = append(result, instanceView(instance))
 	}
@@ -120,6 +135,10 @@ func (c *ApiController) AddAgentInstance() {
 		c.ResponseError(err.Error())
 		return
 	}
+	if form.Instance == defaultInstanceName {
+		c.ResponseError(fmt.Sprintf("%s is the installation's own copy and is listed on its own", defaultInstanceName))
+		return
+	}
 
 	dataDir, err := agent.InstanceDir(installation.AgentId, form.Instance)
 	if err != nil {
@@ -157,6 +176,10 @@ func (c *ApiController) UpdateAgentInstance() {
 
 	instance, ok := c.readAgentInstance()
 	if !ok {
+		return
+	}
+	if isDefaultInstance(instance) {
+		c.ResponseError("the first instance is the installation itself and is named after it")
 		return
 	}
 	var form struct {
@@ -207,6 +230,10 @@ func (c *ApiController) DeleteAgentInstance() {
 	if !ok {
 		return
 	}
+	if isDefaultInstance(instance) {
+		c.ResponseError("the first instance is the installation itself and cannot be removed")
+		return
+	}
 	if err := object.DeleteAgentInstance(instance.Name); err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -230,9 +257,12 @@ func (c *ApiController) StartAgentInstance() {
 		c.ResponseError(err.Error())
 		return
 	}
-	if err := agent.PrepareInstance(installation, instance.DataDir); err != nil {
-		c.ResponseError(err.Error())
-		return
+	// The first copy runs on the state the agent laid out itself.
+	if !isDefaultInstance(instance) {
+		if err := agent.PrepareInstance(installation, instance.DataDir); err != nil {
+			c.ResponseError(err.Error())
+			return
+		}
 	}
 
 	target, err := instanceTarget(installation, instance)
@@ -249,7 +279,8 @@ func (c *ApiController) StartAgentInstance() {
 	// directory. A copy with no account in it is one that is about to sign in.
 	// The start is not worth failing over it: the copy runs either way, and the
 	// pages show whether the link was captured.
-	if agentlink.Supported() && agent.AccountOfInstance(instance.AgentId, instance.DataDir) == nil {
+	if !isDefaultInstance(instance) && agentlink.Supported() &&
+		agent.AccountOfInstance(instance.AgentId, instance.DataDir) == nil {
 		if err := captureLink(instance, target); err != nil {
 			beego.Error("the sign-in link of", instance.Name, "cannot be routed to it:", err)
 		}
@@ -268,6 +299,10 @@ func (c *ApiController) CaptureAgentInstanceLink() {
 
 	instance, ok := c.readAgentInstance()
 	if !ok {
+		return
+	}
+	if isDefaultInstance(instance) {
+		c.ResponseError("the agent's own links already open the first instance")
 		return
 	}
 	var form struct {
@@ -369,20 +404,90 @@ func (c *ApiController) readAgentInstance() (*object.AgentInstance, bool) {
 		return nil, false
 	}
 	if instance == nil {
-		c.ResponseError("no agent instance is stored under this name")
-		return nil, false
+		// The first copy is stored nowhere, so it is rebuilt from the
+		// installation it runs.
+		if instance = defaultInstanceNamed(form.Name); instance == nil {
+			c.ResponseError("no agent instance is stored under this name")
+			return nil, false
+		}
 	}
 	return instance, true
 }
 
-func instanceView(instance *object.AgentInstance) *agentInstanceView {
-	view := &agentInstanceView{
-		AgentInstance: instance,
-		Account:       agent.AccountOfInstance(instance.AgentId, instance.DataDir),
-		Status:        agentprocess.Status{Pids: []int{}},
+// isDefaultInstance reports whether one instance is the installation's own copy
+// rather than a stored one. The name is Gateway's to hand out and starts at the
+// second, so no stored instance answers to it.
+func isDefaultInstance(instance *object.AgentInstance) bool {
+	return instance != nil && instance.Instance == defaultInstanceName
+}
+
+// defaultInstance is the installation's own copy as the lists show it: the
+// state directory the agent uses when nothing hands it another one, under the
+// name every call addresses it by.
+func defaultInstance(installation agent.Installation) *object.AgentInstance {
+	return &object.AgentInstance{
+		Owner:    object.AgentOwner,
+		Name:     object.AgentInstanceName(installation.AgentId, defaultInstanceName),
+		AgentId:  installation.AgentId,
+		Instance: defaultInstanceName,
+		DataDir:  agent.DefaultInstanceDir(installation.AgentId, installation.Owner),
+		Path:     installation.Path,
+		HostUser: installation.Owner,
+	}
+}
+
+// defaultInstanceNamed resolves the name of a first copy against the
+// installations found here, nil for a name that is not one.
+func defaultInstanceNamed(name string) *object.AgentInstance {
+	agentId, instance, found := strings.Cut(name, "/")
+	if !found || instance != defaultInstanceName {
+		return nil
+	}
+	installations := instancedInstallations(agentId)
+	if len(installations) == 0 {
+		return nil
+	}
+	return defaultInstance(installations[0])
+}
+
+// instancedInstallations are the installations whose own copy is listed as the
+// first instance: one per agent Gateway can run more than one copy of, since
+// the extra copies are listed per agent too.
+func instancedInstallations(agentId string) []agent.Installation {
+	installations, err := agent.Scan(false)
+	if err != nil {
+		return nil
 	}
 
-	if scheme := agent.LinkSchemeOf(instance.AgentId); scheme != "" && agentlink.Supported() {
+	listed := map[string]bool{}
+	result := []agent.Installation{}
+	for _, installation := range installations {
+		if agentId != "" && installation.AgentId != agentId {
+			continue
+		}
+		if !agent.SupportsInstances(installation.AgentId) || listed[installation.AgentId] {
+			continue
+		}
+		listed[installation.AgentId] = true
+		result = append(result, installation)
+	}
+	return result
+}
+
+func instanceView(instance *object.AgentInstance) *agentInstanceView {
+	isDefault := isDefaultInstance(instance)
+	view := &agentInstanceView{
+		AgentInstance: instance,
+		Default:       isDefault,
+		Status:        agentprocess.Status{Pids: []int{}},
+	}
+	if !isDefault {
+		view.Account = agent.AccountOfInstance(instance.AgentId, instance.DataDir)
+	}
+
+	// The agent's own links open the first copy already, so there is nothing to
+	// route for it.
+	if scheme := agent.LinkSchemeOf(instance.AgentId); scheme != "" && agentlink.Supported() && !isDefault {
 		view.CanCapture = true
 		claim, pending := agentlink.Pending(scheme)
 		view.Capturing = pending && claim.Instance == instance.Name
@@ -390,6 +495,11 @@ func instanceView(instance *object.AgentInstance) *agentInstanceView {
 
 	installation, err := findInstallation(instance.AgentId, instance.Path, instance.HostUser)
 	if err == nil {
+		// The first copy is signed in wherever the installation is, which the
+		// scan has already read.
+		if isDefault {
+			view.Account = installation.Account
+		}
 		var target agentprocess.Target
 		if target, err = instanceTarget(installation, instance); err == nil {
 			view.Desktop = target.Desktop
@@ -402,6 +512,12 @@ func instanceView(instance *object.AgentInstance) *agentInstanceView {
 }
 
 func instanceTarget(installation agent.Installation, instance *object.AgentInstance) (agentprocess.Target, error) {
+	// The first copy is the installation run as it stands, which is also what
+	// counts its processes apart from the other copies'.
+	if isDefaultInstance(instance) {
+		return processTarget(installation), nil
+	}
+
 	launch, err := agent.InstanceLaunchOf(installation, instance.DataDir)
 	if err != nil {
 		return agentprocess.Target{}, err
