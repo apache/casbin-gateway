@@ -21,7 +21,14 @@ import {Badge, type BadgeVariant} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import {cn} from "@/lib/utils";
-import {parseRequest, type ParsedRequest, type RequestBlock, type RequestMessage, type ToolSchema} from "@/lib/llm-request";
+import {
+  parseRequest,
+  parseResponse,
+  type ParsedRequest,
+  type RequestBlock,
+  type RequestMessage,
+  type ToolSchema,
+} from "@/lib/llm-request";
 
 const COLLAPSED_CHARS = 1200;
 
@@ -225,11 +232,44 @@ function SystemView({request}: {request: ParsedRequest}) {
   );
 }
 
+function ResponseView({response}: {response: string}) {
+  const parsed = React.useMemo(() => parseResponse(response), [response]);
+
+  if (!response) {
+    return <span className="text-muted-foreground text-xs">{i18next.t("llm:No response stored")}</span>;
+  }
+  if (parsed.invalid || !parsed.message) {
+    return (
+      <div className="grid gap-2">
+        <span className="text-muted-foreground text-xs">{i18next.t("llm:Body is not JSON")}</span>
+        <CodeBlock copyable maxHeight="24rem">
+          {parsed.raw}
+        </CodeBlock>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-2">
+      <div className="flex items-center gap-2">
+        {parsed.stopReason ? (
+          <span className="text-muted-foreground text-xs">
+            {i18next.t("llm:Stop reason")}: <CodeText>{parsed.stopReason}</CodeText>
+          </span>
+        ) : null}
+        <CopyButton value={parsed.raw} />
+      </div>
+      <MessageView message={parsed.message} />
+    </div>
+  );
+}
+
 /**
  * Everything the client sent this turn: the system prompt, every message in
- * order, and the schema of every tool the model was offered.
+ * order, and the schema of every tool the model was offered. The answer it got
+ * back has a tab of its own.
  */
-export function RequestInspector({payload}: {payload: string}) {
+export function RequestInspector({payload, response = ""}: {payload: string; response?: string}) {
   const request = React.useMemo(() => parseRequest(payload), [payload]);
   const [tab, setTab] = React.useState("messages");
 
@@ -251,6 +291,7 @@ export function RequestInspector({payload}: {payload: string}) {
           {i18next.t("llm:Messages")}
           <Badge variant="muted">{request.messages.length}</Badge>
         </TabsTrigger>
+        <TabsTrigger value="response">{i18next.t("llm:Response")}</TabsTrigger>
         <TabsTrigger value="system">
           {i18next.t("llm:System prompt")}
           {request.systemChars > 0 ? <Badge variant="muted">{formatChars(request.systemChars)}</Badge> : null}
@@ -269,6 +310,10 @@ export function RequestInspector({payload}: {payload: string}) {
         ) : (
           request.messages.map(message => <MessageView key={message.index} message={message} />)
         )}
+      </TabsContent>
+
+      <TabsContent value="response">
+        <ResponseView response={response} />
       </TabsContent>
 
       <TabsContent value="system">

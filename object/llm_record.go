@@ -15,6 +15,7 @@
 package object
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/apache/casbin-gateway/auditutil"
 	"github.com/apache/casbin-gateway/conf"
+	"github.com/apache/casbin-gateway/protocol"
 	"github.com/apache/casbin-gateway/util"
 	"github.com/beego/beego"
 	"github.com/xorm-io/xorm"
@@ -51,8 +53,8 @@ type LlmFailure struct {
 }
 
 // LlmRecord is one client request relayed by the LLM proxy, together with the
-// outcome it ended in. Payload is filled only in "full" mode, and only after
-// auditutil has removed the credentials the body may carry.
+// outcome it ended in. Payload and Response are filled only in "full" mode, and
+// only after auditutil has removed the credentials the bodies may carry.
 type LlmRecord struct {
 	Id          int64  `xorm:"int notnull pk autoincr" json:"id"`
 	CreatedTime string `xorm:"varchar(100) notnull index" json:"createdTime"`
@@ -105,8 +107,11 @@ type LlmRecord struct {
 	MessageCount int `xorm:"int" json:"messageCount"`
 	ToolCount    int `xorm:"int" json:"toolCount"`
 
-	Summary    string `xorm:"varchar(500)" json:"summary"`
-	Payload    string `xorm:"mediumtext" json:"payload"`
+	Summary string `xorm:"varchar(500)" json:"summary"`
+	Payload string `xorm:"mediumtext" json:"payload"`
+	// Response is the answer as an Anthropic message, whatever the upstream
+	// spoke, with a stream folded into one.
+	Response   string `xorm:"mediumtext" json:"response"`
 	Redactions int    `xorm:"int" json:"redactions"`
 	Truncated  bool   `xorm:"bool" json:"truncated"`
 	Bytes      int    `xorm:"int" json:"bytes"`
@@ -195,9 +200,18 @@ type LlmRecordStatus struct {
 	Count         int64  `json:"count"`
 }
 
+// LlmResponseCapture is an upstream answer as it came off the wire. It is
+// decoded on the writer goroutine, not on the request's.
+type LlmResponseCapture struct {
+	Protocol string
+	Stream   bool
+	Raw      []byte
+}
+
 type llmRecordTask struct {
-	record  *LlmRecord
-	rawBody []byte
+	record   *LlmRecord
+	rawBody  []byte
+	response *LlmResponseCapture
 }
 
 type llmRecordWriter struct {
@@ -248,9 +262,18 @@ func IsLlmRecording() bool {
 	return conf.GetLlmRecordMode() != conf.LlmRecordOff
 }
 
+// LlmResponseCaptureBytes is how much of an answer the proxy should keep for its
+// record, zero when the record would not store it.
+func LlmResponseCaptureBytes() int {
+	if conf.GetLlmRecordMode() != conf.LlmRecordFull {
+		return 0
+	}
+	return conf.GetLlmRecordMaxPayloadBytes() * llmOversizeFactor
+}
+
 // AddLlmRecord queues one finished request. Recording is best effort: a full
 // queue drops the record rather than holding the request up.
-func AddLlmRecord(record *LlmRecord, rawBody []byte) {
+func AddLlmRecord(record *LlmRecord, rawBody []byte, response *LlmResponseCapture) {
 	if record == nil {
 		return
 	}
@@ -258,6 +281,7 @@ func AddLlmRecord(record *LlmRecord, rawBody []byte) {
 	record.Bytes = len(rawBody)
 	if conf.GetLlmRecordMode() != conf.LlmRecordFull {
 		rawBody = nil
+		response = nil
 	} else if len(rawBody) > conf.GetLlmRecordMaxPayloadBytes()*llmOversizeFactor {
 		record.Truncated = true
 		rawBody = nil
@@ -269,7 +293,7 @@ func AddLlmRecord(record *LlmRecord, rawBody []byte) {
 		return
 	}
 	select {
-	case llmWriter.queue <- llmRecordTask{record: record, rawBody: rawBody}:
+	case llmWriter.queue <- llmRecordTask{record: record, rawBody: rawBody, response: response}:
 	default:
 		llmWriter.noteDrop()
 	}
@@ -310,6 +334,9 @@ func (writer *llmRecordWriter) write(task llmRecordTask) {
 	}
 	if len(task.rawBody) > 0 {
 		fillLlmRecordBody(task.record, task.rawBody)
+	}
+	if task.response != nil && len(task.response.Raw) > 0 {
+		fillLlmRecordResponse(task.record, task.response)
 	}
 	fillLlmRecordCost(task.record)
 	if _, err := ormer.Engine.Insert(task.record); err != nil {
@@ -374,6 +401,46 @@ func fillLlmRecordBody(record *LlmRecord, rawBody []byte) {
 	record.Truncated = record.Truncated || truncated
 	record.Redactions = strings.Count(record.Payload, "[REDACTED")
 	record.Summary = llmRecordSummary(sanitized)
+}
+
+// fillLlmRecordResponse stores the answer in one shape for every upstream, so
+// the page reads a single format. What cannot be decoded, such as a body cut
+// off by the capture limit, is kept as it came.
+func fillLlmRecordResponse(record *LlmRecord, capture *LlmResponseCapture) {
+	maximum := conf.GetLlmRecordMaxPayloadBytes()
+	var decoded any
+	if response, err := decodeLlmResponse(record.BilledModel(), capture); err == nil {
+		if encoded, err := protocol.Of(protocol.Anthropic).EncodeResponse(response); err == nil {
+			_ = json.Unmarshal(encoded, &decoded)
+		}
+	}
+	if decoded == nil {
+		record.Response = auditutil.SanitizeJSON(string(capture.Raw), maximum)
+		return
+	}
+	record.Response, _ = encodeLlmBody(auditutil.SanitizeValue("", decoded), maximum)
+}
+
+func decodeLlmResponse(model string, capture *LlmResponseCapture) (*protocol.Response, error) {
+	upstream, err := protocol.UpstreamOf(capture.Protocol)
+	if err != nil {
+		return nil, err
+	}
+	if !capture.Stream {
+		return upstream.DecodeResponse(capture.Raw)
+	}
+
+	collector := protocol.NewCollector(model)
+	err = upstream.DecodeStream(bytes.NewReader(capture.Raw), func(event protocol.Event) bool {
+		collector.Add(event)
+		return true
+	})
+	// A stream cut short still shows what arrived before the cut.
+	response := collector.Response()
+	if err != nil && len(response.Content) == 0 {
+		return nil, err
+	}
+	return response, nil
 }
 
 // fillLlmRecordCost prices a record from its token counters, against the model
@@ -576,7 +643,7 @@ func GetLlmRecords(filter LlmRecordFilter, offset int, limit int) ([]*LlmRecord,
 	session := llmRecordSession(filter)
 	defer session.Close()
 	records := []*LlmRecord{}
-	err = session.Omit("payload", "error_body").Desc("id").Limit(limit, offset).Find(&records)
+	err = session.Omit("payload", "response", "error_body").Desc("id").Limit(limit, offset).Find(&records)
 	return records, count, err
 }
 
@@ -917,6 +984,7 @@ func publishLlmRecord(record *LlmRecord) {
 	}
 	summary := *record
 	summary.Payload = ""
+	summary.Response = ""
 	summary.ErrorBody = ""
 	for _, feed := range llmHub.subscribers {
 		select {

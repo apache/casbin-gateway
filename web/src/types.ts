@@ -674,6 +674,8 @@ export interface LlmRecord {
   summary: string;
   /** Only returned by getLlmRecord, the list endpoint leaves it out. */
   payload: string;
+  /** The answer as an Anthropic message, whatever the upstream spoke. Only returned by getLlmRecord. */
+  response: string;
   redactions: number;
   truncated: boolean;
   bytes: number;

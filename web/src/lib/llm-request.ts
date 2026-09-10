@@ -230,6 +230,44 @@ function typeOfProperty(property: any): string {
   return property.enum ? "enum" : "";
 }
 
+export interface ParsedResponse {
+  message: RequestMessage | null;
+  stopReason: string;
+  raw: string;
+  invalid: boolean;
+}
+
+/** Reads a recorded answer, which is stored as an Anthropic message whatever the upstream spoke. */
+export function parseResponse(payload: string): ParsedResponse {
+  const empty: ParsedResponse = {message: null, stopReason: "", raw: payload, invalid: false};
+  if (!payload) {
+    return empty;
+  }
+
+  let body: Record<string, any>;
+  try {
+    body = JSON.parse(payload);
+  } catch {
+    return {...empty, invalid: true};
+  }
+  if (!body || typeof body !== "object" || !Array.isArray(body.content)) {
+    return {...empty, raw: JSON.stringify(body, null, 2), invalid: true};
+  }
+
+  const blocks = readContent(body.content);
+  return {
+    message: {
+      index: 0,
+      role: String(body.role ?? "assistant"),
+      blocks: blocks,
+      chars: blocks.reduce((total, block) => total + block.chars, 0),
+    },
+    stopReason: String(body.stop_reason ?? ""),
+    raw: JSON.stringify(body, null, 2),
+    invalid: false,
+  };
+}
+
 export function parseRequest(payload: string): ParsedRequest {
   const empty: ParsedRequest = {
     system: [],

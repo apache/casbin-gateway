@@ -101,7 +101,8 @@ type proxyRoute struct {
 	start  time.Time
 	// record accumulates what is written to the LLM record of this request. It
 	// is nil while recording is off.
-	record *object.LlmRecord
+	record   *object.LlmRecord
+	response *object.LlmResponseCapture
 	// request is the body in canonical form, decoded on first use: a provider
 	// speaking the client's own format never needs one.
 	request    *protocol.Request
@@ -604,10 +605,11 @@ func (c *ApiController) forwardToProvider(attempt object.RouteAttempt, route *pr
 	// The tap reads the counters out of the upstream answer as it passes, so it
 	// sees them in the provider's own spelling, translated or not. On a failure
 	// the same bytes are the error the client was handed.
-	tap := &usageTap{reader: body}
+	tap := &usageTap{reader: body, headLimit: object.LlmResponseCaptureBytes()}
 	c.relayResponse(route, upstream, upstreamResp, tap)
 	if isSuccessStatus(upstreamResp.StatusCode) {
 		route.recordUsage(tap.tail)
+		route.recordResponse(upstream, isEventStream(upstreamResp), tap.head)
 	} else {
 		route.recordErrorBody(tap.tail)
 	}

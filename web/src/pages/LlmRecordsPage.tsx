@@ -135,6 +135,7 @@ function RecordDetail({record, onDelete}: {record: LlmRecord; onDelete: () => vo
   }, [record.id]);
 
   const payload = detail?.payload ?? "";
+  const response = detail?.response ?? "";
   const rate = price
     ? `${formatCost(price.input)} / ${formatCost(price.output)} ${i18next.t("llm:per million")}`
     : i18next.t("llm:No price for this model");
@@ -186,9 +187,9 @@ function RecordDetail({record, onDelete}: {record: LlmRecord; onDelete: () => vo
       {error ? <MessageAlert title={error} /> : null}
       {record.truncated ? <MessageAlert variant="warning" title={i18next.t("llm:Body was shortened")} /> : null}
 
-      {payload ? <RequestInspector payload={payload} /> : null}
-      {!payload && detail === null && error === "" ? <Loading type="small" /> : null}
-      {!payload && detail !== null ? (
+      {payload || response ? <RequestInspector payload={payload} response={response} /> : null}
+      {!payload && !response && detail === null && error === "" ? <Loading type="small" /> : null}
+      {!payload && !response && detail !== null ? (
         <span className="text-muted-foreground text-xs">{i18next.t("llm:Body not stored")}</span>
       ) : null}
 

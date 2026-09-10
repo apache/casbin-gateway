@@ -47,7 +47,16 @@ func (c *ApiController) finishLlmRecord(route *proxyRoute) {
 	record := route.record
 	route.record = nil
 	record.DurationMs = time.Since(route.start).Milliseconds()
-	object.AddLlmRecord(record, route.body)
+	object.AddLlmRecord(record, route.body, route.response)
+}
+
+// recordResponse keeps the answer the client was given, in the upstream's own
+// spelling. The record writer decodes it.
+func (route *proxyRoute) recordResponse(upstream protocol.Upstream, stream bool, raw []byte) {
+	if route.record == nil || len(raw) == 0 {
+		return
+	}
+	route.response = &object.LlmResponseCapture{Protocol: upstream.Name(), Stream: stream, Raw: raw}
 }
 
 // recordAttempt names the provider and the model this try is being made
@@ -131,17 +140,26 @@ func (route *proxyRoute) recordUsage(tail []byte) {
 	}
 }
 
-// usageTap keeps the tail of a relayed response. It never changes a byte of
-// what the client receives, and never holds more than usageTailBytes.
+// usageTap keeps the tail of a relayed response, and its head up to headLimit
+// when the record stores the answer. It never changes a byte of what the client
+// receives.
 type usageTap struct {
-	reader io.Reader
-	tail   []byte
+	reader    io.Reader
+	tail      []byte
+	head      []byte
+	headLimit int
 }
 
 func (tap *usageTap) Read(p []byte) (int, error) {
 	n, err := tap.reader.Read(p)
 	if n > 0 {
 		tap.keep(p[:n])
+		if room := tap.headLimit - len(tap.head); room > 0 {
+			if room > n {
+				room = n
+			}
+			tap.head = append(tap.head, p[:room]...)
+		}
 	}
 	return n, err
 }
