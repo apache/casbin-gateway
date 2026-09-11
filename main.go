@@ -166,6 +166,8 @@ func main() {
 
 	controllers.InitSessions()
 
+	beego.BConfig.CopyRequestBody = true
+
 	port := conf.GetHttpPort()
 	addr := conf.GetHttpAddr()
 
