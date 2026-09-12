@@ -36,6 +36,10 @@ var ownsServer struct {
 }
 
 func runTray() {
+	// Read before anything is started from here, so that none of it inherits
+	// the variable.
+	handedOver = takeHandover()
+
 	go func() {
 		// An archive that was unpacked by hand has no way in but the executable
 		// itself, so the first start is what gives it one.
@@ -100,12 +104,16 @@ func onTrayReady() {
 			return
 		}
 		ownsServer.Lock()
-		ownsServer.value = started
+		ownsServer.value = started || handedOver.ownsServer
 		ownsServer.Unlock()
 
 		go watchStatus(mStatus, port)
 		go providers.watch()
-		showWindow()
+		// A restart puts back the window that was open, and leaves one that
+		// was not closed.
+		if !handedOver.taken || handedOver.window {
+			showWindow()
+		}
 	}()
 
 	for {

@@ -87,10 +87,10 @@ func BeginStartup() {
 }
 
 // FinishStartup is the update taking. This version is about to serve, so there
-// is nothing left to roll back to.
-func FinishStartup() {
+// is nothing left to roll back to. It reports whether this start was an update.
+func FinishStartup() bool {
 	if startedBy == nil {
-		return
+		return false
 	}
 
 	startedBy = nil
@@ -98,6 +98,7 @@ func FinishStartup() {
 		_ = os.Remove(filepath.Join(filepath.Dir(executable), restartFileName))
 	}
 	CleanupBackup()
+	return true
 }
 
 // RollBackFailedStart puts back the executable an update replaced and starts it,

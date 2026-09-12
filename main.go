@@ -189,7 +189,11 @@ func main() {
 	}
 
 	// Nothing is left to roll back to from here: this version has the port.
-	version.FinishStartup()
+	if version.FinishStartup() {
+		// The same update replaced the launcher, and the tray still runs the
+		// build it took away.
+		version.RestartDesktopLauncher(port)
+	}
 
 	service.PrintStartupSummary()
 

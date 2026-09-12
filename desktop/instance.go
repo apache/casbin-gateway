@@ -27,9 +27,11 @@ import (
 )
 
 const (
-	showRequest  = "show"
-	showReply    = "ok"
-	instanceWait = 2 * time.Second
+	showRequest = "show"
+	// restartRequest is the updated server saying the launcher was replaced too.
+	restartRequest = "restart"
+	showReply      = "ok"
+	instanceWait   = 2 * time.Second
 )
 
 // instanceMarker records the loopback port the running tray listens on. The
@@ -73,6 +75,10 @@ func raiseRunningInstance() bool {
 	return err == nil && strings.TrimSpace(reply) == showReply
 }
 
+// heldPort is kept so a restart that could not start the new launcher can name
+// this tray in the marker again.
+var heldPort int
+
 // holdInstance opens the socket later launches look for. Failing to leaves the
 // desktop as it was before any of this: a second launch is a second tray.
 func holdInstance() {
@@ -93,11 +99,21 @@ func holdInstance() {
 		return
 	}
 
+	heldPort = address.Port
 	go serveInstance(listener)
 }
 
 func releaseInstance() {
 	_ = os.Remove(instanceMarker())
+}
+
+// restoreInstance puts back what releaseInstance took.
+func restoreInstance() {
+	if heldPort == 0 {
+		return
+	}
+
+	_ = os.WriteFile(instanceMarker(), []byte(strconv.Itoa(heldPort)), 0o600)
 }
 
 func serveInstance(listener net.Listener) {
@@ -115,12 +131,19 @@ func serveInstanceRequest(conn net.Conn) {
 
 	_ = conn.SetDeadline(time.Now().Add(instanceWait))
 	line, err := bufio.NewReader(conn).ReadString('\n')
-	if err != nil || strings.TrimSpace(line) != showRequest {
+	if err != nil {
 		return
 	}
 
-	// Answering first keeps the launch that is waiting on this from outliving
-	// the window it asked for.
-	_, _ = io.WriteString(conn, showReply+"\n")
-	showWindow()
+	// Answering first keeps whoever is waiting on this from outliving what it
+	// asked for.
+	switch strings.TrimSpace(line) {
+	case showRequest:
+		_, _ = io.WriteString(conn, showReply+"\n")
+		showWindow()
+	case restartRequest:
+		_, _ = io.WriteString(conn, showReply+"\n")
+		conn.Close()
+		restartLauncher()
+	}
 }
