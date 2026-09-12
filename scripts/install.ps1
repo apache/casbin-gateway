@@ -9,7 +9,8 @@
 # Optional environment variables:
 #   INSTALL_DIR   where the executable and its data live
 #                 (default: $env:LOCALAPPDATA\casbin-gateway)
-#   NO_START      set to any value to install without starting Gateway
+#   NO_START      set to any value to install without starting Gateway; one that
+#                 was already running is stopped for the update and started again
 #   NO_AUTOSTART  set to any value to skip the login-time startup entry
 #   NO_SHORTCUT   set to any value to skip the desktop and Start menu shortcuts
 
@@ -29,6 +30,34 @@ $BinDir     = Join-Path $InstallDir 'bin'
 $ProgressPreference = 'SilentlyContinue'
 
 function Write-Info { param([string]$Message) Write-Host $Message }
+
+# Windows will not write over an executable that is running. The Gateway this
+# install replaces is stopped first, but an agent can still hold one of its MCP
+# servers open, so a file that is locked anyway is renamed out of the way — that
+# Windows does allow — and the Gateway deletes the ".old" copy on its next start.
+function Install-Executable {
+    param([string]$Source, [string]$Destination)
+
+    try {
+        Copy-Item -Path $Source -Destination $Destination -Force
+        return
+    }
+    catch {
+        if (-not (Test-Path $Destination)) {
+            throw "cannot write $Destination ($_)"
+        }
+    }
+
+    $Name = Split-Path $Destination -Leaf
+    try {
+        Remove-Item -Path "$Destination.old" -Force -ErrorAction SilentlyContinue
+        Rename-Item -Path $Destination -NewName "$Name.old" -Force
+        Copy-Item -Path $Source -Destination $Destination -Force
+    }
+    catch {
+        throw "cannot replace $Name in $(Split-Path $Destination -Parent), something is still running it - close the agents that use Gateway and try again ($_)"
+    }
+}
 
 # ── pick the archive for this machine ─────────────────────────────────────────
 # Only the x86_64 archive is published; Windows on ARM runs it under the
@@ -62,15 +91,34 @@ try {
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
 
     $DesktopExePath = Join-Path $InstallDir 'casbin-gateway-desktop.exe'
-    foreach ($executable in @('casbin-gateway.exe', 'casbin-gateway-desktop.exe')) {
+
+    # ── stop the Gateway that is running ──────────────────────────────────────
+    # Without this the install failed outright: Windows holds the running
+    # executables open, so there was no way to update without quitting Gateway
+    # from its tray icon first. The launcher from the archive is what stops it,
+    # because an installation old enough to have no "quit" command cannot stop
+    # itself, and because it runs from the temporary directory rather than from
+    # the files about to be replaced. CASBIN_GATEWAY_HOME points it at the
+    # installation instead of at the directory it was unpacked into.
+    $WasRunning = $false
+    if (Test-Path (Join-Path $InstallDir 'casbin-gateway.exe')) {
+        $env:CASBIN_GATEWAY_HOME = $InstallDir
         try {
-            Copy-Item -Path (Join-Path $Unpacked $executable) -Destination (Join-Path $InstallDir $executable) -Force
+            $quit = Start-Process -FilePath (Join-Path $Unpacked 'casbin-gateway-desktop.exe') `
+                -ArgumentList 'quit' -WorkingDirectory $InstallDir -Wait -PassThru
+            $WasRunning = $quit.ExitCode -eq 0
         }
         catch {
-            # Windows locks a running executable, so this is what an upgrade over
-            # a started Gateway looks like.
-            throw "cannot replace $executable in $InstallDir, quit Casbin Gateway from its tray icon and try again ($_)"
+            Write-Info "Could not stop the running Casbin Gateway: $_"
         }
+        Remove-Item Env:\CASBIN_GATEWAY_HOME -ErrorAction SilentlyContinue
+        if ($WasRunning) {
+            Write-Info 'Stopped the running Gateway, and will start it again once it is updated'
+        }
+    }
+
+    foreach ($executable in @('casbin-gateway.exe', 'casbin-gateway-desktop.exe')) {
+        Install-Executable -Source (Join-Path $Unpacked $executable) -Destination (Join-Path $InstallDir $executable)
     }
 
     foreach ($legalFile in @('LICENSE', 'NOTICE', 'DISCLAIMER')) {
@@ -149,7 +197,10 @@ Write-Info 'Closing its window leaves it running in the tray; quit it from there
 Write-Info 'Without the window: "casbin-gateway start", "casbin-gateway stop", "casbin-gateway status".'
 Write-Info ''
 
-if ($env:NO_START) {
+# A Gateway that was running when this started is started again even with
+# NO_START: the install is what stopped it, and leaving the machine without one
+# is not what "install without starting" asked for.
+if ($env:NO_START -and -not $WasRunning) {
     Write-Info 'Start it from the "Casbin Gateway" shortcut, or with: casbin-gateway start'
     return
 }

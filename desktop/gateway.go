@@ -184,3 +184,28 @@ func stopServer() error {
 	}
 	return nil
 }
+
+// quitRunning stops the whole of a Gateway that is running out of this home:
+// the tray and its window through the socket they listen on, and the server
+// behind them whether or not the tray was what started it. It reports whether
+// there was anything to stop.
+//
+// This is what an installer calls before it replaces the executables. Windows
+// will not write over one that is running, and everywhere else an install that
+// left the old process serving would look like an update that did nothing.
+func quitRunning() bool {
+	port := instancePort()
+	stopped := askInstance(quitRequest)
+	if stopped {
+		waitForInstanceGone(port)
+	}
+
+	if !isServing(httpPort()) {
+		return stopped
+	}
+	if err := stopServer(); err != nil {
+		fmt.Fprintln(os.Stderr, "casbin-gateway-desktop: could not stop the Gateway server:", err)
+		return stopped
+	}
+	return true
+}

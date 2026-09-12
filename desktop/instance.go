@@ -28,10 +28,15 @@ import (
 
 const (
 	showRequest = "show"
+	quitRequest = "quit"
 	// restartRequest is the updated server saying the launcher was replaced too.
 	restartRequest = "restart"
-	showReply      = "ok"
+	okReply        = "ok"
 	instanceWait   = 2 * time.Second
+	// quitWait bounds the wait for a tray that agreed to go: it answers first
+	// and lets go of the socket a moment later.
+	quitWait = 15 * time.Second
+	quitPoll = 100 * time.Millisecond
 )
 
 // instanceMarker records the loopback port the running tray listens on. The
@@ -47,12 +52,27 @@ func instanceMarker() string {
 // what would have been a second tray icon and a second window becomes the one
 // that is there, raised. It reports whether a tray took the launch.
 func raiseRunningInstance() bool {
+	return askInstance(showRequest)
+}
+
+// instancePort is where the running tray listens, or 0 when nothing names it.
+func instancePort() int {
 	data, err := os.ReadFile(instanceMarker())
 	if err != nil {
-		return false
+		return 0
 	}
 	port, err := strconv.Atoi(strings.TrimSpace(string(data)))
 	if err != nil || port <= 0 {
+		return 0
+	}
+	return port
+}
+
+// askInstance sends one request to the tray that is already running and reports
+// whether it took it.
+func askInstance(request string) bool {
+	port := instancePort()
+	if port == 0 {
 		return false
 	}
 
@@ -65,14 +85,34 @@ func raiseRunningInstance() bool {
 	defer conn.Close()
 
 	_ = conn.SetDeadline(time.Now().Add(instanceWait))
-	if _, err = io.WriteString(conn, showRequest+"\n"); err != nil {
+	if _, err = io.WriteString(conn, request+"\n"); err != nil {
 		return false
 	}
 
-	// Whatever holds that port now may not be a Gateway tray, so the launch is
+	// Whatever holds that port now may not be a Gateway tray, so the request is
 	// only given up once one has answered.
 	reply, err := bufio.NewReader(conn).ReadString('\n')
-	return err == nil && strings.TrimSpace(reply) == showReply
+	return err == nil && strings.TrimSpace(reply) == okReply
+}
+
+// waitForInstanceGone blocks until nothing answers on the port the tray was
+// listening on, which is the process itself going away rather than the marker
+// it deletes on the way out. An installer replacing the executable that process
+// runs from has to wait for exactly that.
+func waitForInstanceGone(port int) {
+	if port == 0 {
+		return
+	}
+
+	deadline := time.Now().Add(quitWait)
+	for time.Now().Before(deadline) {
+		conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", port), instanceWait)
+		if err != nil {
+			return
+		}
+		conn.Close()
+		time.Sleep(quitPoll)
+	}
 }
 
 // heldPort is kept so a restart that could not start the new launcher can name
@@ -136,13 +176,17 @@ func serveInstanceRequest(conn net.Conn) {
 	}
 
 	// Answering first keeps whoever is waiting on this from outliving what it
-	// asked for.
+	// asked for - and, for a quit, from waiting on a process on its way out.
 	switch strings.TrimSpace(line) {
 	case showRequest:
-		_, _ = io.WriteString(conn, showReply+"\n")
+		_, _ = io.WriteString(conn, okReply+"\n")
 		showWindow()
+	case quitRequest:
+		_, _ = io.WriteString(conn, okReply+"\n")
+		conn.Close()
+		quit()
 	case restartRequest:
-		_, _ = io.WriteString(conn, showReply+"\n")
+		_, _ = io.WriteString(conn, okReply+"\n")
 		conn.Close()
 		restartLauncher()
 	}

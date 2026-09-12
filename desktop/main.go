@@ -56,6 +56,17 @@ func main() {
 		return
 	}
 
+	// "quit" stops the Gateway that is running - window, tray and server - which
+	// is what the installers do before they replace the executables it runs
+	// from. It exits 2 when there was nothing running, so that an install which
+	// stopped one knows to start it again.
+	if len(os.Args) > 1 && os.Args[1] == "quit" {
+		if !quitRunning() {
+			os.Exit(2)
+		}
+		return
+	}
+
 	// "open-agent-link <url>" is what a URL scheme Gateway captured opens with.
 	// The server routes the link; it is started from here because this
 	// executable is windowed and flashes no console on the way.

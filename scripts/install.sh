@@ -12,7 +12,8 @@
 #                 (default: $HOME/.local/share/casbin-gateway)
 #   BIN_DIR       where the "casbin-gateway" command is placed
 #                 (default: $HOME/.local/bin)
-#   NO_START      set to any value to install without starting Gateway
+#   NO_START      set to any value to install without starting Gateway; one that
+#                 was already running is stopped for the update and started again
 #   NO_AUTOSTART  set to any value to skip the login-time startup entry
 #   NO_SHORTCUT   set to any value to skip the macOS bundle or the desktop entry
 
@@ -81,6 +82,21 @@ stage="${INSTALL_DIR}/.install"
 rm -rf "${stage}"
 mkdir -p "${stage}"
 tar -xzf "${tmpDir}/${archive}" -C "${stage}" --strip-components=1
+
+# ── stop the Gateway that is running ──────────────────────────────────────────
+# Without this an install over a running Gateway put the new executables in
+# place and left the old process serving, so nothing appeared to change until
+# that process was stopped by hand. The launcher from the archive is what stops
+# it, because an installation old enough to have no "quit" command cannot stop
+# itself. CASBIN_GATEWAY_HOME points that launcher at the installation rather
+# than at the staging directory it runs from.
+wasRunning=""
+chmod 755 "${stage}/casbin-gateway-desktop"
+if [[ -e "${INSTALL_DIR}/casbin-gateway" ]] &&
+	CASBIN_GATEWAY_HOME="${INSTALL_DIR}" "${stage}/casbin-gateway-desktop" quit; then
+	wasRunning="yes"
+	info "Stopped the running Gateway, and will start it again once it is updated"
+fi
 
 for executable in casbin-gateway casbin-gateway-desktop; do
 	mv -f "${stage}/${executable}" "${INSTALL_DIR}/${executable}"
@@ -186,7 +202,10 @@ if [[ -n "${autostartNote}" ]]; then
 fi
 info ""
 
-if [[ -n "${NO_START}" ]]; then
+# A Gateway that was running when this started is started again even with
+# NO_START: the install is what stopped it, and leaving the machine without one
+# is not what "install without starting" asked for.
+if [[ -n "${NO_START}" && -z "${wasRunning}" ]]; then
 	info "Start it from the Casbin Gateway application, or with: casbin-gateway start"
 	exit 0
 fi
