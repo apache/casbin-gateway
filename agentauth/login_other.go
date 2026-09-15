@@ -16,7 +16,25 @@
 
 package agentauth
 
-import "os/exec"
+import (
+	"os/exec"
+	"syscall"
+)
 
-// hideWindow has nothing to hide anywhere but Windows.
-func hideWindow(*exec.Cmd) {}
+// prepare has no console to hide anywhere but Windows, and puts the agent in a
+// group of its own so stopping it stops what it started.
+func prepare(cmd *exec.Cmd) {
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+}
+
+// terminate takes the whole group: a shim that runs the real program as a child
+// would otherwise leave it holding the port the next sign-in listens on.
+func terminate(cmd *exec.Cmd) error {
+	if cmd.Process == nil {
+		return nil
+	}
+	if err := syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL); err != nil {
+		return cmd.Process.Kill()
+	}
+	return nil
+}

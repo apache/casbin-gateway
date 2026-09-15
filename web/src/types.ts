@@ -260,6 +260,8 @@ export interface AgentSignin {
   url?: string;
   running: boolean;
   ok: boolean;
+  /** Set when someone ended the sign-in rather than when it went wrong. */
+  cancelled?: boolean;
   /** Who signed in, once someone has. */
   account?: string;
   error?: string;

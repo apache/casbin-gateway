@@ -209,8 +209,10 @@ export function AgentSigninDialog({controls}: {controls: AgentAccountControls}) 
           </div>
         ) : null}
 
+        {/* A sign-in somebody ended is not a failure, so it is not shouted at
+            them the way one that went wrong is. */}
         {finished && session.error ? (
-          <Alert variant="destructive">
+          <Alert variant={session.cancelled ? "warning" : "destructive"}>
             <AlertDescription>{session.error}</AlertDescription>
           </Alert>
         ) : null}
