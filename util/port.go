@@ -49,6 +49,11 @@ const (
 	// waiting, which costs a netstat each time.
 	portStopInterval  = 2 * time.Second
 	portClaimInterval = 250 * time.Millisecond
+	// updateBackupSuffix and updateFailedSuffix are what an update renames the
+	// executable it replaces to. They mirror the version package's own
+	// constants, which cannot be imported here: that package imports this one.
+	updateBackupSuffix = ".old"
+	updateFailedSuffix = ".failed"
 )
 
 // ListenTcp binds a TCP listener on all interfaces for the given port. Callers
@@ -217,16 +222,24 @@ func isSelfExecutable(name string) bool {
 	return mine == other
 }
 
-// executableBaseName drops the directory and the ".exe" suffix and lowercases
-// the rest, so that "C:\Program Files\Casbin-Gateway.exe" and
-// "casbin-gateway" are recognised as the same program.
+// executableBaseName drops the directory, the suffix an update renamed the file
+// to and the ".exe" suffix, and lowercases the rest, so that
+// "C:\Program Files\Casbin-Gateway.exe" and "casbin-gateway" are recognised as
+// the same program.
+//
+// The renamed suffix matters because a process is named after the file it runs
+// from as that file is now: an update renames the executable it is replacing
+// before the new Gateway starts, so the one still holding the port is reported
+// as "casbin-gateway.exe.old".
 func executableBaseName(value string) string {
 	value = strings.TrimSpace(value)
 	if value == "" {
 		return ""
 	}
 
-	return strings.TrimSuffix(strings.ToLower(filepath.Base(value)), ".exe")
+	name := strings.ToLower(filepath.Base(value))
+	name = strings.TrimSuffix(strings.TrimSuffix(name, updateFailedSuffix), updateBackupSuffix)
+	return strings.TrimSuffix(name, ".exe")
 }
 
 // findListenerPid returns the pid of a process listening on the port, or 0 when
