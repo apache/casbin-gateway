@@ -1184,14 +1184,21 @@ export function useAgentAccounts(agents: Agent[], enabled = true) {
       .then(() => setBusyKey(""));
   }, []);
 
+  // Closing the dialog on a sign-in that is still waiting ends it: the agent
+  // holds a fixed port until something tells it nobody is coming back, and
+  // until it lets go the next sign-in cannot start.
   const closeSession = React.useCallback(
     (signedIn: boolean) => {
+      const closed = session;
       setSession(null);
+      if (closed?.running) {
+        AgentBackend.cancelAgentSignin(closed.id).catch(() => undefined);
+      }
       if (signedIn) {
         load();
       }
     },
-    [load],
+    [load, session],
   );
 
   return {

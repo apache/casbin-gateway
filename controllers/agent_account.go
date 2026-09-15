@@ -290,6 +290,22 @@ func (c *ApiController) GetAgentSignin() {
 	c.ResponseOk(session)
 }
 
+// CancelAgentSignin ends a sign-in that is still waiting for the browser.
+// Closing the page is not something the agent can see, so this is what frees
+// the port it holds and lets the next sign-in start.
+func (c *ApiController) CancelAgentSignin() {
+	if c.RequireAdmin() {
+		return
+	}
+
+	session, err := agentauth.CancelLogin(c.Input().Get("id"))
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(session)
+}
+
 // readAgentAccountForm resolves the body against the installations a scan found
 // and answers with the directory its sign-in is read from. Writing there is
 // writing into somebody's home, so an unverified body would name any of them.

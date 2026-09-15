@@ -238,6 +238,12 @@ export function getAgentSignin(id: string) {
   return request<AgentSignin>(`/api/get-agent-signin${query({id: id})}`);
 }
 
+/** Ends a sign-in still waiting for the browser, freeing it for the next one.
+ *  Closing the page is not something the agent can see, so this is what says so. */
+export function cancelAgentSignin(id: string) {
+  return request<AgentSignin>(`/api/cancel-agent-signin${query({id: id})}`, "POST");
+}
+
 export interface AgentRouting {
   provider: string;
   fallbacks: string[];
