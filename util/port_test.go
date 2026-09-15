@@ -18,6 +18,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -57,6 +58,56 @@ func TestParseNetstatPid(t *testing.T) {
 				t.Errorf("parseNetstatPid(port %d) = %d, want %d", tt.port, got, tt.want)
 			}
 		})
+	}
+}
+
+// TestExecutableBaseName covers the names the same program can be reported
+// under, including the ones an update leaves behind.
+func TestExecutableBaseName(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+		want  string
+	}{
+		{"plain name", "casbin-gateway", "casbin-gateway"},
+		{"windows path", `C:\Program Files\Casbin-Gateway.exe`, "casbin-gateway"},
+		{"replaced by an update", "casbin-gateway.exe.old", "casbin-gateway"},
+		{"replaced by an update off windows", "casbin-gateway.old", "casbin-gateway"},
+		{"set aside by a rollback", "casbin-gateway.exe.failed", "casbin-gateway"},
+		{"another program", "nginx.exe", "nginx"},
+		{"nothing to name", "  ", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := executableBaseName(tt.value); got != tt.want {
+				t.Errorf("executableBaseName(%q) = %q, want %q", tt.value, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestIsSelfExecutableAcrossAnUpdate is the check a restart into an update
+// depends on. The update renames the executable it replaces before the new
+// Gateway starts, and a process is named after the file it runs from as that
+// file is now, so the Gateway still holding the port is reported under the
+// renamed name. Taking that for another program is what made the restarted
+// Gateway give up the port and exit instead of taking it over.
+func TestIsSelfExecutableAcrossAnUpdate(t *testing.T) {
+	self, err := os.Executable()
+	if err != nil {
+		t.Fatalf("os.Executable() error: %v", err)
+	}
+	name := filepath.Base(self)
+
+	for _, suffix := range []string{"", ".old", ".failed"} {
+		if !isSelfExecutable(name + suffix) {
+			t.Errorf("isSelfExecutable(%q) = false, want true", name+suffix)
+		}
+	}
+
+	if isSelfExecutable("nginx.exe") {
+		t.Errorf(`isSelfExecutable("nginx.exe") = true, want false`)
 	}
 }
 
