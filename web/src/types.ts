@@ -239,6 +239,29 @@ export interface SavedAccount {
   current?: boolean;
 }
 
+/** One rate limit window of an account: what is left of it, and when it fills. */
+export interface AccountUsageWindow {
+  /** What is left of the window, 0 to 100. */
+  remainingPercent: number;
+  windowMinutes: number;
+  resetTime?: string;
+}
+
+/** What one stored account has left of its plan limits. */
+export interface AccountUsage {
+  /** The short window, and the weekly one. Either is absent with no such limit. */
+  primary?: AccountUsageWindow;
+  secondary?: AccountUsageWindow;
+  /** Rate limit resets the account still holds, each emptying a window early. */
+  resetCredits: number;
+}
+
+/** One account's limits as the server answers for them, or why it could not. */
+export interface AccountUsageResult {
+  usage?: AccountUsage;
+  error?: string;
+}
+
 /** The saved sign-ins of one agent beside the one it is using now. */
 export interface SavedAccounts {
   accounts: SavedAccount[];

@@ -266,6 +266,7 @@
     "Remove instance hint": "Gateway将不再管理该实例。它的状态目录以及其中登录的账号仍保留在磁盘上。",
     "Remove the line to clear it": "请删除该行，然后重新启动该Agent。",
     "Reported from": "上报来源",
+    "Resets {time}": "{time}重置",
     "Restore configuration": "还原配置",
     "Restore confirm hint": "把该Agent在Gateway首次写入之前的供应商配置还原回去，其他配置保持不变。",
     "Restore the configuration of {agent}?": "还原{agent}的配置？",
@@ -329,6 +330,7 @@
     "Tool use ID": "工具调用ID",
     "Transcript truncated": "这个会话有部分内容太大，没能全部展示出来",
     "Turn on monitoring to collect activity": "开启监控后才会收集活动",
+    "Unavailable": "无法获取",
     "Uninstall": "卸载",
     "Uninstall hint": "按当初的安装方式删除程序。Agent自己的目录（登录状态、历史记录）会原封不动。",
     "Uninstall {agent}?": "卸载{agent}？",
@@ -349,6 +351,7 @@
     "Upgrade {agent}?": "升级{agent}？",
     "Upgrading": "升级中",
     "Usage": "用量",
+    "Usage left": "剩余用量",
     "Use": "切换",
     "Use this program": "使用该程序",
     "User": "用户",
@@ -380,7 +383,9 @@
     "{count} agents not installed": "{count}个Agent未安装",
     "{count} from transcripts": "{count}个来自会话记录",
     "{count} messages": "{count}条消息",
-    "{count} running": "{count}个在运行"
+    "{count} resets left": "剩余{count}次重置额度",
+    "{count} running": "{count}个在运行",
+    "{percent}% left": "剩余{percent}%"
   },
   "agentConfig": {
     "1 file": "1个文件",

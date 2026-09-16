@@ -266,6 +266,7 @@
     "Remove instance hint": "Gateway forgets this instance. Its state directory, and the account signed in to it, are left on disk.",
     "Remove the line to clear it": "Remove that line, then start the agent again.",
     "Reported from": "Reported from",
+    "Resets {time}": "resets {time}",
     "Restore configuration": "Restore configuration",
     "Restore confirm hint": "Puts back the provider settings this agent had before Gateway first wrote them, and leaves every other setting untouched.",
     "Restore the configuration of {agent}?": "Restore the configuration of {agent}?",
@@ -329,6 +330,7 @@
     "Tool use ID": "Tool use ID",
     "Transcript truncated": "Some of this session was too large to show, so what follows is not all of it",
     "Turn on monitoring to collect activity": "Turn on monitoring to collect activity",
+    "Unavailable": "Unavailable",
     "Uninstall": "Uninstall",
     "Uninstall hint": "Removes the program the way it was installed. The agent's own directory, with its sign-in and its history, stays where it is.",
     "Uninstall {agent}?": "Uninstall {agent}?",
@@ -349,6 +351,7 @@
     "Upgrade {agent}?": "Upgrade {agent}?",
     "Upgrading": "Upgrading",
     "Usage": "Usage",
+    "Usage left": "Usage left",
     "Use": "Use",
     "Use this program": "Use this program",
     "User": "User",
@@ -380,7 +383,9 @@
     "{count} agents not installed": "{count} agents not installed",
     "{count} from transcripts": "{count} from transcripts",
     "{count} messages": "{count} messages",
-    "{count} running": "{count} running"
+    "{count} resets left": "{count} rate limit resets left",
+    "{count} running": "{count} running",
+    "{percent}% left": "{percent}% left"
   },
   "agentConfig": {
     "1 file": "1 file",

@@ -106,6 +106,7 @@ func initAPI() {
 	beego.Router("/api/get-weixin-login-status", &controllers.ApiController{}, "GET:GetWeixinLoginStatus")
 
 	beego.Router("/api/get-agent-accounts", &controllers.ApiController{}, "GET:GetAgentAccounts")
+	beego.Router("/api/get-agent-accounts-usage", &controllers.ApiController{}, "GET:GetAgentAccountsUsage")
 	beego.Router("/api/save-agent-account", &controllers.ApiController{}, "POST:SaveAgentAccount")
 	beego.Router("/api/add-agent-account", &controllers.ApiController{}, "POST:AddAgentAccount")
 	beego.Router("/api/switch-agent-account", &controllers.ApiController{}, "POST:SwitchAgentAccount")

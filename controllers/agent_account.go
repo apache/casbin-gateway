@@ -93,6 +93,21 @@ func (c *ApiController) GetAgentAccounts() {
 	c.ResponseOk(view)
 }
 
+// GetAgentAccountsUsage reports what each stored sign-in of one agent has left.
+// It is separate from the listing because it asks the vendor, not the database.
+func (c *ApiController) GetAgentAccountsUsage() {
+	if c.RequireAdmin() {
+		return
+	}
+
+	usage, err := object.GetAgentAccountsUsage(c.Input().Get("agent"))
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(usage)
+}
+
 // agentAccountForm is what the account calls take: the installation, and
 // whichever of the stored name, the label and the key the call needs.
 type agentAccountForm struct {
