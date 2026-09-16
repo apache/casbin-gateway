@@ -14,6 +14,7 @@
 
 import {query, request} from "@/backend/request";
 import type {
+  AccountUsageResult,
   Agent,
   AgentCatalogEntry,
   AgentInstallJob,
@@ -192,6 +193,13 @@ export function captureAgentInstanceLink(name: string, capture: boolean) {
 export function getAgentAccounts(target: PatchTarget) {
   return request<SavedAccounts>(
     `/api/get-agent-accounts${query({agent: target.agentId, path: target.path, owner: target.owner})}`,
+  );
+}
+
+/** What each stored sign-in of one agent has left, keyed by the stored name. */
+export function getAgentAccountsUsage(agentId: string) {
+  return request<Record<string, AccountUsageResult>>(
+    `/api/get-agent-accounts-usage${query({agent: agentId})}`,
   );
 }
 

@@ -20,6 +20,7 @@ import * as Setting from "@/Setting";
 import type {BadgeVariant} from "@/components/ui/badge";
 import {providerProtocol, servesResponsesApi} from "@/lib/providers";
 import type {
+  AccountUsageResult,
   Agent,
   AgentCatalogEntry,
   AgentInstallJob,
@@ -1040,6 +1041,8 @@ const noAccounts: SavedAccounts = {accounts: [], stored: false};
  */
 export function useAgentAccounts(agents: Agent[], enabled = true) {
   const [byAgent, setByAgent] = React.useState<Record<string, SavedAccounts>>({});
+  const [usage, setUsage] = React.useState<Record<string, AccountUsageResult>>({});
+  const [usageLoading, setUsageLoading] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [busyKey, setBusyKey] = React.useState("");
   const [session, setSession] = React.useState<AgentSignin | null>(null);
@@ -1079,9 +1082,35 @@ export function useAgentAccounts(agents: Agent[], enabled = true) {
       .then(() => setLoading(false));
   }, [enabled, targets]);
 
-  React.useEffect(() => {
+  // The vendor answers these, so they land after the listing instead of holding
+  // it up, and one call covers an agent: an account is not per installation.
+  const loadUsage = React.useCallback(() => {
+    const agentIds = [...new Set(targets.map(target => target.agentId))];
+    if (!enabled || agentIds.length === 0) {
+      setUsage({});
+      return;
+    }
+
+    setUsageLoading(true);
+    Promise.all(
+      agentIds.map(agentId =>
+        AgentBackend.getAgentAccountsUsage(agentId)
+          .then(res => (res.status === "ok" && res.data ? res.data : {}))
+          .catch(() => ({}) as Record<string, AccountUsageResult>),
+      ),
+    )
+      .then(listings => setUsage(Object.assign({}, ...listings)))
+      .then(() => setUsageLoading(false));
+  }, [enabled, targets]);
+
+  const reload = React.useCallback(() => {
     load();
-  }, [load]);
+    loadUsage();
+  }, [load, loadUsage]);
+
+  React.useEffect(() => {
+    reload();
+  }, [reload]);
 
   // A sign-in is finished in a browser, so the page asks how it went rather
   // than holding the call open for as long as somebody takes to type.
@@ -1101,8 +1130,15 @@ export function useAgentAccounts(agents: Agent[], enabled = true) {
     return () => clearInterval(timer);
   }, [session?.id, session?.running]);
 
+  // withUsage is for the calls that change which sign-in is stored or in use; a
+  // rename changes neither, so it asks the vendor nothing.
   const call = React.useCallback(
-    (key: string, run: () => Promise<{status: string; msg?: string}>, done: string) => {
+    (
+      key: string,
+      run: () => Promise<{status: string; msg?: string}>,
+      done: string,
+      withUsage = false,
+    ) => {
       setBusyKey(key);
       return run()
         .then(res => {
@@ -1111,6 +1147,9 @@ export function useAgentAccounts(agents: Agent[], enabled = true) {
               Setting.showMessage("success", done);
             }
             load();
+            if (withUsage) {
+              loadUsage();
+            }
           } else {
             Setting.showMessage("error", res.msg ?? "");
           }
@@ -1118,7 +1157,7 @@ export function useAgentAccounts(agents: Agent[], enabled = true) {
         .catch(err => Setting.showMessage("error", err.message || String(err)))
         .then(() => setBusyKey(""));
     },
-    [load],
+    [load, loadUsage],
   );
 
   /** Puts one stored sign-in back into the agent, saving what it replaces. */
@@ -1128,6 +1167,7 @@ export function useAgentAccounts(agents: Agent[], enabled = true) {
         account.name,
         () => AgentBackend.switchAgentAccount(targetOf(agent), account.name),
         `${i18next.t("agent:Account switched")}: ${accountName(account)}`,
+        true,
       ),
     [call],
   );
@@ -1139,6 +1179,7 @@ export function useAgentAccounts(agents: Agent[], enabled = true) {
         `${agentKey(agent)}:save`,
         () => AgentBackend.saveAgentAccount(targetOf(agent)),
         i18next.t("agent:Account saved"),
+        true,
       ),
     [call],
   );
@@ -1149,6 +1190,7 @@ export function useAgentAccounts(agents: Agent[], enabled = true) {
         `${agentKey(agent)}:add`,
         () => AgentBackend.addAgentAccount(targetOf(agent), apiKey, displayName),
         i18next.t("agent:Account saved"),
+        true,
       ),
     [call],
   );
@@ -1203,10 +1245,12 @@ export function useAgentAccounts(agents: Agent[], enabled = true) {
 
   return {
     byAgent,
+    usage,
+    usageLoading,
     loading,
     busyKey,
     session,
-    reload: load,
+    reload,
     switchTo,
     saveCurrent,
     add,
@@ -1223,6 +1267,26 @@ export type AgentAccountControls = ReturnType<typeof useAgentAccounts>;
 /** The sign-ins of one installation, out of a listing of them all. */
 export function accountsOf(controls: AgentAccountControls, agent: Agent) {
   return controls.byAgent[agentKey(agent)] ?? noAccounts;
+}
+
+/** A rate limit window named by how long it is: "5h", "7d". */
+export function usageWindowLabel(minutes: number) {
+  if (minutes > 0 && minutes % (60 * 24) === 0) {
+    return `${minutes / (60 * 24)}d`;
+  }
+  if (minutes > 0 && minutes % 60 === 0) {
+    return `${minutes / 60}h`;
+  }
+  return `${minutes}m`;
+}
+
+/** When a window fills back up, in the reader's own time zone. */
+export function usageResetLabel(resetTime: string | undefined) {
+  if (!resetTime) {
+    return "";
+  }
+  const at = new Date(resetTime);
+  return Number.isNaN(at.getTime()) ? "" : at.toLocaleString();
 }
 
 /** The name of one stored account: what it was called, or whoever it signs in. */

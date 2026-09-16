@@ -47,10 +47,12 @@ import {
   accountName,
   accountsOf,
   agentKey,
+  usageResetLabel,
+  usageWindowLabel,
   useAgentAccounts,
   type AgentAccountControls,
 } from "@/lib/agents";
-import type {Agent, SavedAccount} from "@/types";
+import type {AccountUsageWindow, Agent, SavedAccount} from "@/types";
 
 /** The mark for one kind of sign-in, so a key is told from an account at a glance. */
 function KindIcon({kind, className}: {kind: string; className?: string}) {
@@ -58,6 +60,68 @@ function KindIcon({kind, className}: {kind: string; className?: string}) {
     <KeyRound className={className} />
   ) : (
     <UserRound className={className} />
+  );
+}
+
+/** One rate limit window: how much of it is left, and when it fills back up. */
+function UsageWindow({limit}: {limit: AccountUsageWindow}) {
+  const reset = usageResetLabel(limit.resetTime);
+  return (
+    <span className="flex items-center gap-1.5 whitespace-nowrap">
+      <span className="text-muted-foreground w-8 shrink-0">
+        {usageWindowLabel(limit.windowMinutes)}
+      </span>
+      <span className="font-medium">
+        {i18next.t("agent:{percent}% left").replace("{percent}", String(limit.remainingPercent))}
+      </span>
+      {reset ? (
+        <span className="text-muted-foreground">
+          {i18next.t("agent:Resets {time}").replace("{time}", reset)}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/** What one stored account has left, or that the vendor would not say. */
+function AccountUsageCell({
+  account,
+  controls,
+}: {
+  account: SavedAccount;
+  controls: AgentAccountControls;
+}) {
+  // A key is billed by what it spends and has no plan limits.
+  if (account.kind === "apikey") {
+    return <span className="text-muted-foreground text-xs">-</span>;
+  }
+
+  // Not answered for yet, which is not the vendor refusing to answer.
+  const result = controls.usage[account.name];
+  if (!result) {
+    return (
+      <span className="text-muted-foreground text-xs">
+        {controls.usageLoading ? i18next.t("general:Loading") : "-"}
+      </span>
+    );
+  }
+  if (!result.usage) {
+    return (
+      <SimpleTooltip title={result.error ?? ""}>
+        <span className="text-muted-foreground text-xs">{i18next.t("agent:Unavailable")}</span>
+      </SimpleTooltip>
+    );
+  }
+
+  const usage = result.usage;
+  return (
+    <div className="flex flex-col gap-0.5 text-xs">
+      {usage.primary ? <UsageWindow limit={usage.primary} /> : null}
+      {usage.secondary ? <UsageWindow limit={usage.secondary} /> : null}
+      <span className="text-muted-foreground whitespace-nowrap">
+        {i18next.t("agent:{count} resets left").replace("{count}", String(usage.resetCredits))}
+      </span>
+    </div>
   );
 }
 
@@ -276,6 +340,11 @@ export function AgentAccounts({agent, enabled = true}: {agent: Agent; enabled?: 
           ) : null}
         </div>
       ),
+    },
+    {
+      title: i18next.t("agent:Usage left"),
+      key: "usage",
+      render: (_value, record) => <AccountUsageCell account={record} controls={controls} />,
     },
     {
       title: i18next.t("agent:Status"),
