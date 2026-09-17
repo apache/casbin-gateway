@@ -601,7 +601,7 @@ export function useAgentInstall(enabled = true, onFinished?: () => void) {
         job.ok ? "success" : "error",
         job.ok
           ? `${i18next.t(installOutcomeKey(job.action))}: ${job.name}${job.version ? ` ${job.version}` : ""}`
-          : `${i18next.t("agent:Failed to install the agent")}: ${job.error || job.name}`,
+          : `${i18next.t(installFailureKey(job.action))}: ${job.error || job.name}`,
       );
       finished.current?.();
     });
@@ -666,6 +666,14 @@ function installOutcomeKey(action: string) {
   default:
     return "agent:Agent installed";
   }
+}
+
+/** The same for one that failed, which an uninstall is not an install of. */
+function installFailureKey(action: string) {
+  if (action === "uninstall") {
+    return "agent:Failed to uninstall the agent";
+  }
+  return "agent:Failed to install the agent";
 }
 
 /** How often the registries are asked again while a page stays open. */

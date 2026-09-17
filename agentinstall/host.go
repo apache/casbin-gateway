@@ -111,6 +111,15 @@ func ownedByUser(path string) bool {
 	return within(home, path)
 }
 
+// samePath compares two paths the way the host itself would.
+func samePath(left string, right string) bool {
+	left, right = filepath.Clean(left), filepath.Clean(right)
+	if runtime.GOOS == "windows" {
+		return strings.EqualFold(left, right)
+	}
+	return left == right
+}
+
 // within reports whether path is inside root, comparing whole segments so that
 // a directory is never confused with one whose name merely starts the same.
 func within(root string, path string) bool {

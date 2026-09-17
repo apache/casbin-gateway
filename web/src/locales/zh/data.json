@@ -131,6 +131,7 @@
     "Failed to scan agents": "探测Agent失败",
     "Failed to start the agent": "启动Agent失败",
     "Failed to stop the agent": "停止Agent失败",
+    "Failed to uninstall the agent": "卸载失败",
     "Failed to update agent patch": "更新Agent Patch失败",
     "Failed to update agent provider": "更新Agent供应商失败",
     "Failed to write the agent configuration": "写入Agent配置失败",

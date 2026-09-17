@@ -131,6 +131,7 @@
     "Failed to scan agents": "Failed to scan agents",
     "Failed to start the agent": "Failed to start the agent",
     "Failed to stop the agent": "Failed to stop the agent",
+    "Failed to uninstall the agent": "Failed to uninstall the agent",
     "Failed to update agent patch": "Failed to update agent patch",
     "Failed to update agent provider": "Failed to update agent provider",
     "Failed to write the agent configuration": "Failed to write the agent configuration",
