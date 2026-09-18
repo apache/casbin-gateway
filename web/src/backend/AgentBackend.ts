@@ -32,6 +32,7 @@ import type {
   BrowseListing,
   SavedAccount,
   SavedAccounts,
+  SwitchedAccount,
 } from "@/types";
 
 export interface PatchTarget {
@@ -222,7 +223,7 @@ export function addAgentAccount(target: PatchTarget, apiKey: string, displayName
 
 /** Puts one stored sign-in back into the agent, saving what it replaces. */
 export function switchAgentAccount(target: PatchTarget, name: string) {
-  return request<SavedAccount>("/api/switch-agent-account", "POST", {...target, name: name});
+  return request<SwitchedAccount>("/api/switch-agent-account", "POST", {...target, name: name});
 }
 
 export function renameAgentAccount(name: string, displayName: string) {

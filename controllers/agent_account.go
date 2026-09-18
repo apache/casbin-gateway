@@ -23,6 +23,7 @@ import (
 	"github.com/apache/casbin-gateway/agent"
 	"github.com/apache/casbin-gateway/agentauth"
 	"github.com/apache/casbin-gateway/agentpatch"
+	"github.com/apache/casbin-gateway/agentprocess"
 	"github.com/apache/casbin-gateway/object"
 )
 
@@ -31,6 +32,15 @@ import (
 type agentAccountView struct {
 	*object.AgentAccount
 	Current bool `json:"current"`
+}
+
+// agentAccountSwitchView is the answer to a swap: the account now in the
+// credential file, and whether the agent has to be restarted before it uses it.
+type agentAccountSwitchView struct {
+	agentAccountView
+	// Restart marks a swap made while the agent was running. An agent reads its
+	// sign-in when it starts, so what is running keeps the account it read then.
+	Restart bool `json:"restart"`
 }
 
 // agentAccountsView is the accounts of one agent and what it is signed in to,
@@ -124,7 +134,7 @@ func (c *ApiController) SaveAgentAccount() {
 		return
 	}
 
-	form, home, ok := c.readAgentAccountForm()
+	form, _, home, ok := c.readAgentAccountForm()
 	if !ok {
 		return
 	}
@@ -153,7 +163,7 @@ func (c *ApiController) AddAgentAccount() {
 		return
 	}
 
-	form, _, ok := c.readAgentAccountForm()
+	form, _, _, ok := c.readAgentAccountForm()
 	if !ok {
 		return
 	}
@@ -178,7 +188,7 @@ func (c *ApiController) SwitchAgentAccount() {
 		return
 	}
 
-	form, home, ok := c.readAgentAccountForm()
+	form, installation, home, ok := c.readAgentAccountForm()
 	if !ok {
 		return
 	}
@@ -216,7 +226,10 @@ func (c *ApiController) SwitchAgentAccount() {
 		c.ResponseError(err.Error())
 		return
 	}
-	c.ResponseOk(agentAccountView{AgentAccount: account, Current: true})
+	c.ResponseOk(agentAccountSwitchView{
+		agentAccountView: agentAccountView{AgentAccount: account, Current: true},
+		Restart:          agentprocess.StatusOf(processTarget(installation)).Running,
+	})
 }
 
 // UpdateAgentAccount renames one stored account in the lists.
@@ -322,27 +335,28 @@ func (c *ApiController) CancelAgentSignin() {
 }
 
 // readAgentAccountForm resolves the body against the installations a scan found
-// and answers with the directory its sign-in is read from. Writing there is
-// writing into somebody's home, so an unverified body would name any of them.
-func (c *ApiController) readAgentAccountForm() (agentAccountForm, string, bool) {
+// and answers with the installation and the directory its sign-in is read from.
+// Writing there is writing into somebody's home, so an unverified body would
+// name any of them.
+func (c *ApiController) readAgentAccountForm() (agentAccountForm, agent.Installation, string, bool) {
 	var form agentAccountForm
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &form); err != nil {
 		c.ResponseError(err.Error())
-		return form, "", false
+		return form, agent.Installation{}, "", false
 	}
 
 	installation, err := findInstallation(form.AgentId, form.Path, form.Owner)
 	if err != nil {
 		c.ResponseError(err.Error())
-		return form, "", false
+		return form, agent.Installation{}, "", false
 	}
 	home, err := agentauth.HomeOf(installation.AgentId, installation.Path, installation.Owner)
 	if err != nil {
 		c.ResponseError(err.Error())
-		return form, "", false
+		return form, agent.Installation{}, "", false
 	}
 	form.AgentId = installation.AgentId
-	return form, home, true
+	return form, installation, home, true
 }
 
 // codexLoginProgram is the Codex program a sign-in is run with. The desktop app

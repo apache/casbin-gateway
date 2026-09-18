@@ -267,6 +267,7 @@
     "Remove the line to clear it": "请删除该行，然后重新启动该Agent。",
     "Reported from": "上报来源",
     "Resets {time}": "{time}重置",
+    "Restart the agent for it to take effect": "重启Agent后生效",
     "Restore configuration": "还原配置",
     "Restore confirm hint": "把该Agent在Gateway首次写入之前的供应商配置还原回去，其他配置保持不变。",
     "Restore the configuration of {agent}?": "还原{agent}的配置？",

@@ -267,6 +267,7 @@
     "Remove the line to clear it": "Remove that line, then start the agent again.",
     "Reported from": "Reported from",
     "Resets {time}": "resets {time}",
+    "Restart the agent for it to take effect": "restart the agent for it to take effect",
     "Restore configuration": "Restore configuration",
     "Restore confirm hint": "Puts back the provider settings this agent had before Gateway first wrote them, and leaves every other setting untouched.",
     "Restore the configuration of {agent}?": "Restore the configuration of {agent}?",

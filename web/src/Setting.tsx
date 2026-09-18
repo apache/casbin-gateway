@@ -102,7 +102,7 @@ export function goToLink(link: string) {
   window.location.href = link;
 }
 
-export function showMessage(type: "" | "success" | "error" | "info", text: string) {
+export function showMessage(type: "" | "success" | "warning" | "error" | "info", text: string) {
   // Backend messages are worth pasting into a bug report, and a toast is gone
   // before it can be selected by hand, so every one carries a copy button.
   const options = {action: <CopyButton value={text} className="text-current" />};
@@ -111,6 +111,8 @@ export function showMessage(type: "" | "success" | "error" | "info", text: strin
     return;
   } else if (type === "success") {
     toast.success(text, options);
+  } else if (type === "warning") {
+    toast.warning(text, options);
   } else if (type === "error") {
     toast.error(text, options);
   } else {
