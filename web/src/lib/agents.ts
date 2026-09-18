@@ -35,6 +35,7 @@ import type {
   Provider,
   SavedAccount,
   SavedAccounts,
+  SwitchedAccount,
 } from "@/types";
 
 /** How long a started app is given before its process is looked for again. */
@@ -1133,17 +1134,21 @@ export function useAgentAccounts(agents: Agent[], enabled = true) {
   // withUsage is for the calls that change which sign-in is stored or in use; a
   // rename changes neither, so it asks the vendor nothing.
   const call = React.useCallback(
-    (
+    <T,>(
       key: string,
-      run: () => Promise<{status: string; msg?: string}>,
-      done: string,
+      run: () => Promise<{status: string; msg?: string; data?: T}>,
+      // A string is reported as it stands; a call whose wording depends on the
+      // answer reports it itself.
+      done: string | ((data?: T) => void),
       withUsage = false,
     ) => {
       setBusyKey(key);
       return run()
         .then(res => {
           if (res.status === "ok") {
-            if (done !== "") {
+            if (typeof done === "function") {
+              done(res.data);
+            } else if (done !== "") {
               Setting.showMessage("success", done);
             }
             load();
@@ -1163,10 +1168,22 @@ export function useAgentAccounts(agents: Agent[], enabled = true) {
   /** Puts one stored sign-in back into the agent, saving what it replaces. */
   const switchTo = React.useCallback(
     (agent: Agent, account: SavedAccount) =>
-      call(
+      call<SwitchedAccount>(
         account.name,
         () => AgentBackend.switchAgentAccount(targetOf(agent), account.name),
-        `${i18next.t("agent:Account switched")}: ${accountName(account)}`,
+        switched => {
+          const done = `${i18next.t("agent:Account switched")}: ${accountName(account)}`;
+          // A running agent keeps the sign-in it started with, and saying the
+          // swap is done would be saying it is already answering as the new one.
+          if (switched?.restart) {
+            Setting.showMessage(
+              "warning",
+              `${done} - ${i18next.t("agent:Restart the agent for it to take effect")}`,
+            );
+          } else {
+            Setting.showMessage("success", done);
+          }
+        },
         true,
       ),
     [call],

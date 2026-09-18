@@ -239,6 +239,12 @@ export interface SavedAccount {
   current?: boolean;
 }
 
+/** The account a swap put in place, and what it takes for the agent to use it. */
+export interface SwitchedAccount extends SavedAccount {
+  /** Set when the agent was running: it keeps the sign-in it started with. */
+  restart?: boolean;
+}
+
 /** One rate limit window of an account: what is left of it, and when it fills. */
 export interface AccountUsageWindow {
   /** What is left of the window, 0 to 100. */
