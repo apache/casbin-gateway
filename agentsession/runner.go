@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -56,7 +57,7 @@ func run(ctx context.Context, headless *agent.Headless, session Session, prompt 
 		return errors.New("this agent takes its prompt on the command line, which cannot carry more than one line")
 	}
 
-	workDir, err := resolveWorkDir(session.WorkDir)
+	workDir, err := ResolveWorkDir(session.WorkDir)
 	if err != nil {
 		return err
 	}
@@ -169,17 +170,31 @@ func fill(template []string, session Session, prompt string, promptOnStdin bool)
 	return args
 }
 
-// resolveWorkDir is the directory the agent runs in. An empty one is the home of
+// ResolveWorkDir is the directory the agent runs in. An empty one is the home of
 // the account Gateway runs as, which is where an agent started by hand would
-// have been.
-func resolveWorkDir(workDir string) (string, error) {
+// have been. A relative path is refused rather than resolved, which would take
+// it against Gateway's own directory and run the agent where nobody asked.
+func ResolveWorkDir(workDir string) (string, error) {
+	workDir = strings.TrimSpace(workDir)
 	if workDir == "" {
 		return agenthome.Resolve("")
 	}
 
+	if workDir == "~" || strings.HasPrefix(workDir, "~/") || strings.HasPrefix(workDir, `~\`) {
+		home, err := agenthome.Resolve("")
+		if err != nil {
+			return "", err
+		}
+		workDir = filepath.Join(home, workDir[1:])
+	}
+	if !filepath.IsAbs(workDir) {
+		return "", fmt.Errorf("the working directory must be a full path, not %q", workDir)
+	}
+	workDir = filepath.Clean(workDir)
+
 	info, err := os.Stat(workDir)
 	if err != nil {
-		return "", fmt.Errorf("the working directory cannot be opened: %w", err)
+		return "", fmt.Errorf("the working directory %s cannot be opened", workDir)
 	}
 	if !info.IsDir() {
 		return "", fmt.Errorf("%s is not a directory", workDir)

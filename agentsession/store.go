@@ -91,6 +91,17 @@ func Open(spec Spec) (Session, error) {
 		return Session{}, ErrNotDrivable
 	}
 
+	// Settled here rather than on the first turn, so a path that is not there is
+	// refused while somebody is still looking at the form. The resolved one is
+	// what is kept, restored and handed to the agent.
+	if spec.WorkDir != "" {
+		workDir, err := ResolveWorkDir(spec.WorkDir)
+		if err != nil {
+			return Session{}, err
+		}
+		spec.WorkDir = workDir
+	}
+
 	entry := &live{
 		session: Session{
 			Id:          uuid.NewString(),
