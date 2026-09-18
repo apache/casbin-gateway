@@ -157,7 +157,15 @@ func run(started *job, plan Plan) {
 
 	err := cmd.Run()
 	if ctx.Err() != nil {
-		err = errors.New("the install did not finish within " + jobTimeout.String())
+		err = errors.New("the " + plan.Action + " did not finish within " + jobTimeout.String())
+	}
+
+	// Whatever the outcome, what is on disk changed: the next listing has to be
+	// read from the host rather than from the scan that ran before this. The
+	// job waits for it, since an uninstall is judged by what it finds.
+	installations, scanErr := agent.Scan(true)
+	if err == nil && scanErr == nil {
+		err = confirmRemoved(plan, installations)
 	}
 
 	started.Lock()
@@ -168,10 +176,22 @@ func run(started *job, plan Plan) {
 	}
 	started.EndTime = now()
 	started.Unlock()
+}
 
-	// Whatever the outcome, what is on disk changed: the next listing has to be
-	// read from the host rather than from the scan that ran before this.
-	_, _ = agent.Scan(true)
+// confirmRemoved reports an uninstall that left the installation where it was.
+// An uninstaller exits zero for a tree it found nothing in, so the exit code
+// alone would have the page say the agent had gone.
+func confirmRemoved(plan Plan, installations []agent.Installation) error {
+	if plan.Action != ActionUninstall || plan.removedPath == "" {
+		return nil
+	}
+
+	for _, installation := range installations {
+		if installation.AgentId == plan.AgentId && samePath(installation.Path, plan.removedPath) {
+			return errors.New("the uninstall reported success, but the agent is still installed at " + plan.removedPath)
+		}
+	}
+	return nil
 }
 
 func (j *job) snapshot() Job {

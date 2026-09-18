@@ -91,6 +91,8 @@ type Plan struct {
 
 	program string
 	args    []string
+	// removedPath is what an uninstall has to take off the host to have worked.
+	removedPath string
 }
 
 // InstallPlan picks the way to install an agent this host does not have.
@@ -189,6 +191,10 @@ func resolve(installation agent.Installation, action string, version string) Pla
 		return plan
 	}
 
+	if action == ActionUninstall {
+		plan.removedPath = installation.Path
+	}
+
 	notes := []string{}
 	spec := target{installation: installation, packages: packages,
 		action: action, version: version, notes: &notes}
@@ -272,7 +278,11 @@ func ownManagerDriver(plan Plan, spec target) (Plan, bool) {
 			return plan, false
 		}
 		if spec.action == ActionUninstall {
-			return fill(plan, ManagerNpm, program, "uninstall", "-g", packages.Npm), true
+			args := []string{"uninstall", "-g"}
+			if prefix := npmGlobalPrefix(spec.installation, packages.Npm); prefix != "" {
+				args = append(args, "--prefix", prefix)
+			}
+			return fill(plan, ManagerNpm, program, append(args, packages.Npm)...), true
 		}
 		return fill(plan, ManagerNpm, program, "install", "-g", packages.Npm+"@"+requestedRelease(spec.version)), true
 	case ManagerHomebrew:
@@ -392,6 +402,35 @@ func scriptDriver(plan Plan, spec target) (Plan, bool) {
 	built.Command = script
 	built.Warning = "this runs the vendor's own install command, which downloads and runs their installer"
 	return built, true
+}
+
+// npmGlobalPrefix is the prefix the installation a scan found sits in, derived
+// from its own path. npm acts on the prefix its own configuration names, and a
+// host can have several, so a command that does not name this one removes
+// nothing and still exits zero. Empty for a tree that is not an npm global root
+// at all - a pnpm store, npx's cache - which npm cannot be pointed at.
+func npmGlobalPrefix(installation agent.Installation, pkg string) string {
+	if installation.InstallMethod != ManagerNpm || installation.Path == "" {
+		return ""
+	}
+
+	dir := installation.Path
+	for range strings.Split(pkg, "/") {
+		dir = filepath.Dir(dir)
+	}
+	if !strings.EqualFold(filepath.Base(dir), "node_modules") {
+		return ""
+	}
+	// A global root is <prefix>/node_modules on Windows and <prefix>/lib/
+	// node_modules everywhere else.
+	prefix := filepath.Dir(dir)
+	if runtime.GOOS == "windows" {
+		return prefix
+	}
+	if filepath.Base(prefix) != "lib" {
+		return ""
+	}
+	return filepath.Dir(prefix)
 }
 
 // requestedRelease is the npm tag or version an install asks for.

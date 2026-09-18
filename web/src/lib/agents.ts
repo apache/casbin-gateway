@@ -602,7 +602,7 @@ export function useAgentInstall(enabled = true, onFinished?: () => void) {
         job.ok ? "success" : "error",
         job.ok
           ? `${i18next.t(installOutcomeKey(job.action))}: ${job.name}${job.version ? ` ${job.version}` : ""}`
-          : `${i18next.t("agent:Failed to install the agent")}: ${job.error || job.name}`,
+          : `${i18next.t(installFailedKey(job.action))}: ${job.error || job.name}`,
       );
       finished.current?.();
     });
@@ -666,6 +666,20 @@ function installOutcomeKey(action: string) {
     return "agent:Agent uninstalled";
   default:
     return "agent:Agent installed";
+  }
+}
+
+/** The same for one that did not, which an uninstall is no install of. */
+function installFailedKey(action: string) {
+  switch (action) {
+  case "upgrade":
+    return "agent:Failed to upgrade the agent";
+  case "downgrade":
+    return "agent:Failed to move the agent to an older version";
+  case "uninstall":
+    return "agent:Failed to uninstall the agent";
+  default:
+    return "agent:Failed to install the agent";
   }
 }
 
