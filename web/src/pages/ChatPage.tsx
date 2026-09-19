@@ -366,7 +366,10 @@ export default function ChatPage({account}: {account: Account}) {
               <button
                 key={session.id}
                 type="button"
-                onClick={() => setActiveId(session.id)}
+                onClick={() => {
+                  setActiveId(session.id);
+                  setWorkDir(session.workDir);
+                }}
                 className={cn(
                   "group hover:bg-muted/60 flex items-center gap-2 rounded-md border border-transparent px-2 py-1.5 text-left text-sm",
                   session.id === activeId && "bg-muted border-border",
