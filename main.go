@@ -20,6 +20,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/apache/casbin-gateway/agentegress"
 	"github.com/apache/casbin-gateway/agenthook"
 	"github.com/apache/casbin-gateway/agentlink"
 	"github.com/apache/casbin-gateway/agentmonitor"
@@ -125,6 +126,9 @@ func main() {
 		beego.Error("agent monitor could not start:", err)
 	}
 	defer agentmonitor.Stop()
+	// Where each agent's own processes send data, which the proxy never sees.
+	agentegress.Start(controllers.AgentPids)
+	defer agentegress.Stop()
 
 	// The conversations Gateway drives on somebody's behalf, put back where a
 	// restart left them.
@@ -149,6 +153,7 @@ func main() {
 	// An update ends this process without unwinding main, so what the deferred
 	// calls above would have flushed has to be flushed there instead.
 	version.BeforeRestart = func() {
+		agentegress.Stop()
 		agentmonitor.Stop()
 		object.StopAgentRecordWriter()
 		object.StopLlmRecordWriter()

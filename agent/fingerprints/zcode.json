@@ -1,0 +1,12 @@
+{
+  "id": "zcode",
+  "displayName": "ZCode",
+  "installUrl": "https://zcode.z.ai",
+  "execName": "ZCode",
+  "desktop": true,
+  "linkScheme": "zcode",
+  "stateDir": "zcode",
+  "windowsProgramDirs": [
+    "ZCode"
+  ]
+}

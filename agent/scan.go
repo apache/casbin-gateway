@@ -39,6 +39,14 @@ var installationCache = struct {
 	current   *scanCall
 }{}
 
+// Cached is the last scan's result without scanning, for a caller that polls
+// too often to pay for a scan of its own.
+func Cached() []Installation {
+	installationCache.Lock()
+	defer installationCache.Unlock()
+	return cloneInstallations(installationCache.result)
+}
+
 // Scan returns installations visible to Gateway and caches successful results.
 func Scan(forceRefresh bool) ([]Installation, error) {
 	installationCache.Lock()

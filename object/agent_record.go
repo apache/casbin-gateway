@@ -344,3 +344,25 @@ func agentSessionTitle(newestFirst []*AgentRecord) string {
 	oldest := newestFirst[len(newestFirst)-1]
 	return strings.TrimSpace(oldest.EventType + " " + oldest.Action)
 }
+
+// CountAgentRecords counts the records of one event type per agent.
+func CountAgentRecords(eventType string) map[string]int {
+	counts := map[string]int{}
+	if ormer == nil || ormer.Engine == nil {
+		return counts
+	}
+	rows := []struct {
+		Agent string
+		Count int
+	}{}
+	err := ormer.Engine.Table(&AgentRecord{}).Select("agent, count(*) as count").
+		Where("lower(event_type) = ?", strings.ToLower(eventType)).GroupBy("agent").Find(&rows)
+	if err != nil {
+		beego.Error("agent record count failed:", err)
+		return counts
+	}
+	for _, row := range rows {
+		counts[row.Agent] = row.Count
+	}
+	return counts
+}

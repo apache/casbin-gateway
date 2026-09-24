@@ -26,6 +26,7 @@ import (
 
 	"github.com/apache/casbin-gateway/agent"
 	"github.com/apache/casbin-gateway/agentauth"
+	"github.com/apache/casbin-gateway/agentegress"
 	"github.com/apache/casbin-gateway/agenthistory"
 	"github.com/apache/casbin-gateway/agentinstall"
 	"github.com/apache/casbin-gateway/agentmonitor"
@@ -65,6 +66,8 @@ type discoveredAgent struct {
 	// SupportsAccounts says whether Gateway knows where this agent keeps its
 	// sign-in, which is what lets it hold more than one and swap between them.
 	SupportsAccounts bool `json:"supportsAccounts"`
+	// EgressFindings counts the uploads the egress watch recorded for this agent.
+	EgressFindings int `json:"egressFindings,omitempty"`
 }
 
 // GetAgents scans known installation locations and returns the AI agents
@@ -93,6 +96,7 @@ func (c *ApiController) GetAgents() {
 		beego.Error("some connections could not be written again:", err)
 	}
 
+	egressFindings := object.CountAgentRecords(agentegress.EventType)
 	result := make([]*discoveredAgent, 0, len(installations))
 	baseUrls := map[string]string{}
 	for _, installation := range installations {
@@ -121,6 +125,7 @@ func (c *ApiController) GetAgents() {
 			baseUrls[installation.AgentId] = baseUrl
 		}
 		item.ProxyBaseUrl = baseUrl
+		item.EgressFindings = egressFindings[installation.AgentId]
 		if stored, ok := agents[installation.AgentId]; ok {
 			item.Provider = stored.Provider
 			item.Mode = stored.Mode

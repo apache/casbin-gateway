@@ -17,6 +17,7 @@ import type {
   AccountUsageResult,
   Agent,
   AgentCatalogEntry,
+  AgentEgress,
   AgentInstallJob,
   AgentInstance,
   AgentProviderConfig,
@@ -129,6 +130,10 @@ export function unpatchAgent(target: PatchTarget) {
 
 export function getAgentProcesses(forceRefresh = false) {
   return request<AgentRuntime[]>(`/api/get-agent-processes${forceRefresh ? "?refresh=true" : ""}`);
+}
+
+export function getAgentEgress(agentId: string, owner: string) {
+  return request<AgentEgress>(`/api/get-agent-egress${query({agentId: agentId, owner: owner})}`);
 }
 
 export function startAgent(target: PatchTarget) {

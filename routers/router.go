@@ -79,6 +79,7 @@ func initAPI() {
 	beego.Router("/api/get-agent-permissions", &controllers.ApiController{}, "GET:GetAgentPermissions")
 	beego.Router("/api/update-agent-permission", &controllers.ApiController{}, "POST:UpdateAgentPermission")
 	beego.Router("/api/get-agent-processes", &controllers.ApiController{}, "GET:GetAgentProcesses")
+	beego.Router("/api/get-agent-egress", &controllers.ApiController{}, "GET:GetAgentEgress")
 	beego.Router("/api/start-agent", &controllers.ApiController{}, "POST:StartAgent")
 	beego.Router("/api/stop-agent", &controllers.ApiController{}, "POST:StopAgent")
 	beego.Router("/api/get-agent-instances", &controllers.ApiController{}, "GET:GetAgentInstances")

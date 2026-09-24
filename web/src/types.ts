@@ -220,6 +220,64 @@ export interface Agent {
   /** Whether Gateway knows where this agent keeps its sign-in, which is what
    *  lets it hold several and swap between them. */
   supportsAccounts?: boolean;
+  /** How many uploads the egress watch recorded for this agent. */
+  egressFindings?: number;
+}
+
+/** One place an agent's own processes connected to, as the egress watch saw it. */
+export interface EgressDestination {
+  host?: string;
+  address: string;
+  /** "model", "storage", "telemetry", "local" or "other". */
+  kind: string;
+  /** The local process a "local" connection went to, usually a proxy. */
+  via?: string;
+  connections: number;
+  bytesOut: number;
+  bytesIn: number;
+  firstSeen: string;
+  lastSeen: string;
+  /** An upload to it is in progress and not recorded yet. */
+  flagged?: boolean;
+}
+
+/** A workspace the agent packed up whole, read from what it left on disk. */
+export interface EgressSnapshot {
+  workspace: string;
+  encryptedBytes?: number;
+  workspaceBytes?: number;
+  recordedAt?: string;
+  accepted: boolean;
+  pending: boolean;
+  failures?: number;
+  files?: number;
+  gitFiles?: number;
+  gitBytes?: number;
+}
+
+/** The detail of an egress record. */
+export interface EgressDetail {
+  host?: string;
+  address: string;
+  kind: string;
+  via?: string;
+  bytesOut: number;
+  bytesIn: number;
+  connections: number;
+  counted: boolean;
+  start: string;
+  end: string;
+}
+
+export interface AgentEgress {
+  /** False on a platform the watch does not run on. */
+  supported: boolean;
+  /** Whether bytes are measured; without it only destinations are. */
+  counted: boolean;
+  since: string;
+  destinations: EgressDestination[];
+  snapshots: EgressSnapshot[];
+  findings: AgentRecord[];
 }
 
 /** One sign-in Gateway keeps aside for an agent. The credential itself stays on
