@@ -1,5 +1,5 @@
 <h1 align="center" style="border-bottom: none;">📦⚡️ Casbin Gateway</h1>
-<h3 align="center">An open-source gateway for the AI coding agents on your machine, developed by Go and React.</h3>
+<h3 align="center">See what every AI coding agent on your machine is doing, and whether the API behind it is the one you paid for.</h3>
 <p align="center">
   <a href="https://github.com/apache/casbin-gateway/actions/workflows/golangci-lint.yml"><img alt="Lint" src="https://img.shields.io/github/actions/workflow/status/apache/casbin-gateway/golangci-lint.yml?branch=master&style=flat-square&logo=github&logoColor=white&label=lint"></a>
   <a href="https://github.com/apache/casbin-gateway/actions/workflows/build.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/apache/casbin-gateway/build.yml?branch=master&style=flat-square&logo=github&logoColor=white&label=build"></a>
@@ -98,6 +98,10 @@
 <p align="center">
   <a href="https://cdn.casbin.org/img/casbin-gateway.gif"><img alt="Casbin Gateway" src="https://cdn.casbin.org/img/casbin-gateway.gif" width="900"></a>
 </p>
+
+- **Is that API key what it was sold as?** A reseller can serve a cheaper model, fake a cache hit, or quietly drop a parameter it claims to support. [Authenticity](#the-killer-feature-is-the-api-behind-that-key-what-it-was-sold-as) probes every provider on its own and grades it A–F.
+- **What every agent did, spent and sent.** Every prompt and tool call, the spend read from the agents' own transcripts, and, on Windows, where each agent's own processes upload data, including what never passes through any proxy.
+- **One place for all of them.** Point Claude Code, Codex, Cursor, Gemini CLI and the rest at any of 44 model vendors, say what each may do, and install, upgrade or roll back the agents themselves.
 
 ## Run it
 
@@ -198,7 +202,7 @@ The password behind that account is `admin` / `123`, and it only matters if you 
 - **[Say what each agent may do](#what-each-agent-is-allowed-to-do)** — around forty switches per agent, in groups, over its tools, models and providers, enforced by Casbin on every request it relays.
 - **[Know what every agent spent, even off Gateway](#what-the-agents-spend-including-what-never-went-through-gateway)** — read straight from the agents' own transcripts.
 - **[Compare and copy skills, MCP servers and prompts across agents](#what-to-do-next)** — every agent's install list in one table.
-- **[Connect an application once, for every agent](docs/user-manual/en/2-agents/2.5-connections.md)** — 45 of them: GitHub, Slack, Lark, DingTalk, Notion, Figma, Sentry, Kubernetes, Stripe, mail, a browser and the rest. The credential stays in Gateway rather than in each agent's config file, every call through it is checked against that agent's permissions, and testing one gives you a switch per tool.
+- **Connect an application once, for every agent** — 45 of them: GitHub, Slack, Lark, DingTalk, Notion, Figma, Sentry, Kubernetes, Stripe, mail, a browser and the rest. The credential stays in Gateway rather than in each agent's config file, every call through it is checked against that agent's permissions, and testing one gives you a switch per tool.
 
 ## Using it
 
@@ -496,7 +500,7 @@ https://ai.casbin.com
 
 ## Documentation
 
-[User Manual](docs/user-manual/en/README.md) — every page of the UI, from installing Gateway to routing an agent through it.
+[User Manual](https://github.com/casdoor/casbin-gateway-website/blob/master/content/docs/en/index.md) — every page of the UI, from installing Gateway to routing an agent through it. It lives in [casbin-gateway-website](https://github.com/casdoor/casbin-gateway-website), the repository behind the documentation site.
 
 ## Contribute
 

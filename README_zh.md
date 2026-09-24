@@ -1,5 +1,5 @@
 <h1 align="center" style="border-bottom: none;">📦⚡️ Casbin Gateway</h1>
-<h3 align="center">一个开源网关，管理你机器上的 AI 编程 Agent，由 Go 和 React 开发。</h3>
+<h3 align="center">看清你机器上每个AI编程Agent在做什么，以及它背后的API是不是你花钱买的那个。</h3>
 <p align="center">
   <a href="https://github.com/apache/casbin-gateway/actions/workflows/golangci-lint.yml"><img alt="Lint" src="https://img.shields.io/github/actions/workflow/status/apache/casbin-gateway/golangci-lint.yml?branch=master&style=flat-square&logo=github&logoColor=white&label=lint"></a>
   <a href="https://github.com/apache/casbin-gateway/actions/workflows/build.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/apache/casbin-gateway/build.yml?branch=master&style=flat-square&logo=github&logoColor=white&label=build"></a>
@@ -99,6 +99,10 @@
   <a href="https://cdn.casbin.org/img/casbin-gateway.gif"><img alt="Casbin Gateway" src="https://cdn.casbin.org/img/casbin-gateway.gif" width="900"></a>
 </p>
 
+- **这个API Key，真是卖给你的那个吗？** 中转商可以拿便宜模型冒充、伪造缓存命中，或者悄悄丢掉它声称支持的参数。[真伪检测](#杀手锏那个-key-背后的-api真是卖给你的那个吗)会主动探测每个Provider，给出A–F评级。
+- **每个Agent做了什么、花了多少、发到了哪里。** 每条提示词和工具调用，从Agent自己的会话记录里读出的花费；在Windows上还能看到每个Agent自己的进程把数据上传到了哪里，包括任何代理都看不到的那部分。
+- **所有Agent，一个地方管。** 把Claude Code、Codex、Cursor、Gemini CLI等接到44个模型厂商中的任意一个，规定每个Agent能做什么，并直接安装、升级或回滚这些Agent本身。
+
 ## 运行
 
 一条命令。不需要数据库，不需要 Go，不需要 Node，不需要配置。
@@ -196,7 +200,7 @@ Gateway 会在自己的窗口里打开 —— 不用登录：它只服务本机�
 - **[规定每个 Agent 能做什么](#每个-agent-能做什么)** —— 每个 Agent 四十来个开关，分组管理，覆盖工具、模型和供应商，每个转发的请求都由 Casbin 判定。
 - **[统计每个 Agent 花了多少，包括没走 Gateway 的部分](#每个-agent-花了多少包括没走-gateway-的那部分)** —— 直接读 Agent 自己写的会话记录。
 - **[跨 Agent 对比、复制技能 / MCP / 提示词](#接下来做什么)** —— 一张表看到所有 Agent 装了什么。
-- **[一次连接一个应用，所有 Agent 都能用](docs/user-manual/zh/2-agents/2.5-connections.md)** —— 45 个：GitHub、Slack、飞书、钉钉、Notion、Figma、Sentry、Kubernetes、Stripe、邮箱、浏览器等。凭据留在 Gateway 而不是散在每个 Agent 的配置文件里，经过它的每次调用都会按该 Agent 的权限校验，测试一次还能得到每个工具的独立开关。
+- **一次连接一个应用，所有 Agent 都能用** —— 45 个：GitHub、Slack、飞书、钉钉、Notion、Figma、Sentry、Kubernetes、Stripe、邮箱、浏览器等。凭据留在 Gateway 而不是散在每个 Agent 的配置文件里，经过它的每次调用都会按该 Agent 的权限校验，测试一次还能得到每个工具的独立开关。
 
 ## 使用
 
@@ -490,7 +494,7 @@ https://ai.casbin.com
 
 ## 文档
 
-[用户手册](docs/user-manual/zh/README.md)——从安装Gateway到把Agent的流量接进来，界面上的每一页。
+[用户手册](https://github.com/casdoor/casbin-gateway-website/blob/master/content/docs/zh/index.md)——从安装Gateway到把Agent的流量接进来，界面上的每一页。手册放在文档站的仓库[casbin-gateway-website](https://github.com/casdoor/casbin-gateway-website)里。
 
 ## 贡献
 
