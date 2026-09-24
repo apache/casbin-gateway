@@ -48,7 +48,10 @@ const (
 	dnsTypeA            = 1
 	dnsTypeCname        = 5
 	dnsTypeAAAA         = 28
-	dnsQueryNoWire      = 0x10
+	// DNS_QUERY_NO_WIRE_QUERY plus the undocumented bit ipconfig /displaydns
+	// passes. Without it the cache hides what getaddrinfo put there, which is
+	// every name Node and Electron resolve.
+	dnsQueryCacheOnly = 0x8010
 )
 
 // MIB_TCPROW and MIB_TCP6ROW: what the EStats calls take.
@@ -231,7 +234,7 @@ func cachedNames() map[netip.Addr]string {
 
 func cachedAddrs(name string, kind uint16) ([]netip.Addr, bool) {
 	var records *windows.DNSRecord
-	if windows.DnsQuery(name, kind, dnsQueryNoWire, nil, &records, nil) != nil {
+	if windows.DnsQuery(name, kind, dnsQueryCacheOnly, nil, &records, nil) != nil {
 		return nil, false
 	}
 	defer windows.DnsRecordListFree(records, 1)

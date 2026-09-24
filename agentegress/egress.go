@@ -35,6 +35,7 @@ import (
 const (
 	sampleInterval = 500 * time.Millisecond
 	pidInterval    = 5 * time.Second
+	cacheInterval  = 5 * time.Second
 	// A burst is this much sent to one destination within burstWindow.
 	burstBytes  = 5 << 20
 	burstWindow = time.Minute
@@ -434,7 +435,9 @@ func evictOldest(dests map[string]*destination) {
 
 // resolve names the remote addresses the DNS cache knows, going back to the
 // cache for a new address at most once a second and giving up on one after a
-// few tries: an agent that connects by address has no name to find.
+// few tries: an agent that connects by address has no name to find. The cache
+// is also read every few seconds regardless, because a name with a short TTL
+// leaves it while the agent keeps connecting to its addresses.
 func (w *watcher) resolve(sockets []socket, now time.Time) {
 	var missing []netip.Addr
 	for _, sock := range sockets {
@@ -453,7 +456,7 @@ func (w *watcher) resolve(sockets []socket, now time.Time) {
 		}
 		missing = append(missing, addr)
 	}
-	if len(missing) == 0 || now.Sub(w.lookedUp) < time.Second {
+	if since := now.Sub(w.lookedUp); since < time.Second || (len(missing) == 0 && since < cacheInterval) {
 		return
 	}
 	w.lookedUp = now
