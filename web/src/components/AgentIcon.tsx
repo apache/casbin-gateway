@@ -45,6 +45,7 @@ const agentSites: Record<string, string> = {
   Pi: "pi.dev",
   "Kimi Code CLI": "kimi.com",
   "CodeBuddy Code": "codebuddy.ai",
+  ZCode: "z.ai",
 };
 
 // Records name an agent by id, and a few ids do not spell out the name above.

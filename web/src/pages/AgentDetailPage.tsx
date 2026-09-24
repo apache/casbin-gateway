@@ -24,6 +24,7 @@ import * as LlmRecordBackend from "@/backend/LlmRecordBackend";
 import * as Setting from "@/Setting";
 import {AgentIcon} from "@/components/AgentIcon";
 import {AgentAccounts} from "@/components/AgentAccounts";
+import {AgentEgressCard} from "@/components/AgentEgressCard";
 import {AgentInstances} from "@/components/AgentInstances";
 import {AgentUsageTrend, hasUsageTrend} from "@/components/AgentUsageTrend";
 import {accountLabel} from "@/components/AgentGridCard";
@@ -608,6 +609,8 @@ export default function AgentDetailPage({account}: {account: Account}) {
       </div>
 
       <PermissionCard agent={agent} providers={providers} />
+
+      <AgentEgressCard agent={agent} enabled={isAdmin} />
 
       <AgentAccounts agent={agent} enabled={isAdmin} />
 

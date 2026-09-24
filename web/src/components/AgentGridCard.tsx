@@ -137,6 +137,15 @@ export function AgentGridCard({
               <Link to={detail} className="truncate text-sm font-medium hover:underline">
                 {agent.name}
               </Link>
+              {agent.egressFindings ? (
+                <SimpleTooltip
+                  title={i18next
+                    .t("agent:Suspicious uploads recorded")
+                    .replace("{count}", String(agent.egressFindings))}
+                >
+                  <span className="bg-destructive size-1.5 shrink-0 rounded-full" />
+                </SimpleTooltip>
+              ) : null}
               {/* A waiting release is a dot rather than a line of its own: it is
                   worth noticing and not worth a sentence on every card. */}
               {update?.available ? (
