@@ -73,6 +73,14 @@ const (
 	codexDesktopAgent = "codex"
 )
 
+// The two Claude front ends that share ~/.claude/projects, told apart by the
+// entrypoint each line carries.
+const (
+	claudeCodeAgent         = "claude-code"
+	claudeDesktopAgent      = "claude-desktop"
+	claudeDesktopEntrypoint = "claude-desktop"
+)
+
 // transcriptDirs are where each agent keeps its own transcripts, relative to a
 // home directory. Both write one JSONL file per session.
 var transcriptDirs = []struct {
@@ -82,7 +90,7 @@ var transcriptDirs = []struct {
 	// names the directory holding the file rather than the file itself.
 	keyOf func(path string) string
 }{
-	{agent: "claude-code", parts: []string{".claude", "projects"}},
+	{agent: claudeCodeAgent, parts: []string{".claude", "projects"}},
 	{agent: codexCliAgent, parts: []string{".codex", "sessions"}},
 	// The Gemini CLI and its Qwen Code fork keep one directory per project hash,
 	// and OpenClaw one per agent id; all hold the sessions a level or two
@@ -92,9 +100,9 @@ var transcriptDirs = []struct {
 	{agent: "openclaw", parts: []string{".openclaw", "agents"}},
 	// Claude Desktop writes one directory per Cowork session, named by the
 	// session id, with the transcript inside it under a fixed name.
-	{agent: "claude-desktop", parts: []string{"AppData", "Roaming", "Claude", "local-agent-mode-sessions"}, keyOf: parentDirName},
-	{agent: "claude-desktop", parts: []string{"AppData", "Local", "Claude-3p", "local-agent-mode-sessions"}, keyOf: parentDirName},
-	{agent: "claude-desktop", parts: []string{"AppData", "Local", "Packages", "Claude_pzs8sxrjxfjjc", "LocalCache", "Roaming", "Claude", "local-agent-mode-sessions"}, keyOf: parentDirName},
+	{agent: claudeDesktopAgent, parts: []string{"AppData", "Roaming", "Claude", "local-agent-mode-sessions"}, keyOf: parentDirName},
+	{agent: claudeDesktopAgent, parts: []string{"AppData", "Local", "Claude-3p", "local-agent-mode-sessions"}, keyOf: parentDirName},
+	{agent: claudeDesktopAgent, parts: []string{"AppData", "Local", "Packages", "Claude_pzs8sxrjxfjjc", "LocalCache", "Roaming", "Claude", "local-agent-mode-sessions"}, keyOf: parentDirName},
 }
 
 type cacheKey struct {
@@ -231,6 +239,9 @@ type line struct {
 	RequestId string          `json:"requestId"`
 	Cwd       string          `json:"cwd"`
 	Message   json.RawMessage `json:"message"`
+	// Entrypoint is the Claude front end that wrote the line. Claude Desktop's
+	// Code tab writes into ~/.claude/projects alongside the CLI.
+	Entrypoint string `json:"entrypoint"`
 	// Role and Content are how the Cowork audit log and the Gemini CLI spell a
 	// message: the line is the message rather than carrying one. AuditTimestamp
 	// and StartTime are the same two files' names for when it happened.
@@ -370,6 +381,9 @@ func parse(agent string, file transcript, keyOf func(string) string) (Session, b
 					session.Agent = front
 				}
 			}
+		}
+		if agent == claudeCodeAgent && entry.Entrypoint == claudeDesktopEntrypoint {
+			session.Agent = claudeDesktopAgent
 		}
 		if session.Cwd == "" {
 			session.Cwd = firstNonEmpty(entry.Cwd, entry.Payload.Cwd)
