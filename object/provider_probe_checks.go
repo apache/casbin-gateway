@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -447,6 +448,10 @@ func probeIdentityCheck(probeCase *ProbeCase, provider *Provider, asked string, 
 	return check
 }
 
+// snapshotSuffix is what may separate two names of one model: a date, a
+// Bedrock or Vertex version, or "latest". "-mini" or "-4-5" is another model.
+var snapshotSuffix = regexp.MustCompile(`^[-@](\d{4}(-?\d{2}-?\d{2})?|latest|v\d+(:\d+)?)$`)
+
 // sameModelName treats a name that only adds a version or date suffix as the
 // same model, which is what a vendor answering "claude-opus-4-5-20251101" to a
 // request for "claude-opus-4-5" is doing.
@@ -463,7 +468,16 @@ func sameModelName(asked string, answered string) bool {
 	if index := strings.LastIndex(right, "/"); index >= 0 {
 		right = right[index+1:]
 	}
-	return strings.HasPrefix(left, right) || strings.HasPrefix(right, left)
+	if left == right {
+		return true
+	}
+	if strings.HasPrefix(right, left) {
+		return snapshotSuffix.MatchString(right[len(left):])
+	}
+	if strings.HasPrefix(left, right) {
+		return snapshotSuffix.MatchString(left[len(right):])
+	}
+	return false
 }
 
 // probeVendorUndocumented is what the header case reports when there is no
