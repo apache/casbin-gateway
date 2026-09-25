@@ -318,6 +318,27 @@ p, claude-code, tool:*, use, allow
 
 规则管的是走代理的流量，所以直连供应商的 Agent（它自己的配置指向厂商而不是 Gateway）不受这些规则约束，页面上会直接提示。
 
+#### 策略包：看工具调用具体做什么，而不只是哪个工具
+
+开关能把`Bash`整个拿走，却没法让`Bash`能跑`go build`、不能跑`rm -rf`。**策略包**可以。Gateway装在Agent里的钩子，会把每次工具调用的参数连同工具名一起发过来，再由第二份Casbin策略去读：它要跑什么命令、碰哪些文件、连哪些域名。
+
+| 策略包 | 拒绝什么 |
+| --- | --- |
+| 禁止破坏性命令 | 各种shell写法的递归删除、`git reset --hard`、`git clean -f`、强制推送、一次丢弃所有改动、格式化磁盘、关机 |
+| 保护密钥文件 | `~/.ssh`、`~/.aws`、`~/.kube`、包仓库Token、各Agent自己的登录凭据、`.env`、`*.pem`、`*.key`，无论用工具读还是在终端里读，以及打印全部环境变量 |
+| 只允许访问白名单域名 | 不属于代码托管、包仓库及其常用镜像或本机的任何网址和`curl`/`wget`目标 |
+| 禁止发布和部署 | `git push`、发布包或镜像、GitHub发布和PR、`kubectl`、`helm`、`terraform`的变更 |
+
+每个策略包在Permissions页顶部都有一个按钮，一键应用到所有Agent；每个Agent的卡片上也各有一个开关。Agent存的是策略包的名字而不是里面的规则，所以以后的版本收紧某个策略包，所有地方都会跟着收紧。**Advanced**里能看到它们编译出的守卫策略，也可以自己加守卫规则，这些规则排在所有策略包之前：
+
+```
+host, *.mycorp.com, allow
+path, ~/work/secrets/**, deny
+command, \bdocker\s+system\s+prune\b, deny
+```
+
+策略包管得住的，是在工具调用前会触发钩子的Agent：Claude Code、Qwen Code、Gemini CLI、Cursor、Windsurf、opencode、Hermes和OpenClaw。Codex和Claude Desktop没有这种钩子，页面上会把它们列为管不到。
+
 ### 每个 Agent 花了多少，包括没走 Gateway 的那部分
 
 用自己订阅登录的 Agent 不会往 Gateway 转发任何东西，直接打到厂商的请求在这里也不会留下记录 —— 但 Agent 自己会

@@ -22,6 +22,7 @@ import * as ProviderBackend from "@/backend/ProviderBackend";
 import * as Setting from "@/Setting";
 import {AgentIcon} from "@/components/AgentIcon";
 import {PermissionCard} from "@/components/PermissionCard";
+import {PermissionPackBoard} from "@/components/PermissionPacks";
 import {EmptyState} from "@/components/shared/empty-state";
 import {AiDots} from "@/components/shared/loading";
 import {PageContainer, PageHeader} from "@/components/shared/page-header";
@@ -94,6 +95,7 @@ export default function PermissionsPage({account}: {account: Account}) {
   const {agents, scanned, scan} = useAgents(isAdmin);
   const [permissions, setPermissions] = React.useState<AgentPermission[]>([]);
   const [providers, setProviders] = React.useState<Provider[]>([]);
+  const [packsChanged, setPacksChanged] = React.useState(0);
 
   // The rail lists one row per agent, not per installation: the rules are
   // stored per agent id, so two copies of one agent are held to the same ones.
@@ -165,28 +167,38 @@ export default function PermissionsPage({account}: {account: Account}) {
           description={i18next.t("agent:Permissions empty hint")}
         />
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
-          <div className="flex flex-col gap-1.5">
-            {unique.map(agent => (
-              <AgentRow
-                key={agent.agentId}
-                agent={agent}
-                permission={permissionOf(agent.agentId)}
-                active={selected?.agentId === agent.agentId}
-                onSelect={() => setSearchParams({agent: agent.agentId})}
-              />
-            ))}
-          </div>
+        <div className="space-y-4">
+          <PermissionPackBoard
+            agents={unique}
+            permissions={permissions}
+            onChanged={() => {
+              load();
+              setPacksChanged(packsChanged + 1);
+            }}
+          />
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
+            <div className="flex flex-col gap-1.5">
+              {unique.map(agent => (
+                <AgentRow
+                  key={agent.agentId}
+                  agent={agent}
+                  permission={permissionOf(agent.agentId)}
+                  active={selected?.agentId === agent.agentId}
+                  onSelect={() => setSearchParams({agent: agent.agentId})}
+                />
+              ))}
+            </div>
 
-          {selected ? (
-            <PermissionCard
-              key={selected.agentId}
-              agent={selected}
-              providers={providers}
-              className="self-start"
-              onSaved={load}
-            />
-          ) : null}
+            {selected ? (
+              <PermissionCard
+                agent={selected}
+                providers={providers}
+                className="self-start"
+                key={`${selected.agentId}-${packsChanged}`}
+                onSaved={load}
+              />
+            ) : null}
+          </div>
         </div>
       )}
     </PageContainer>

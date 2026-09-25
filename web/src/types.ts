@@ -391,6 +391,14 @@ export interface AgentPermission {
   tools: {[group: string]: boolean};
   /** Extra casbin policy lines, written by hand on the advanced view. */
   rules: string[];
+  packs: string[];
+  /** "kind, pattern, eft" */
+  guards: string[];
+}
+
+export interface PermissionPack {
+  name: string;
+  guards: string[];
 }
 
 /** The permissions of one agent with what the card needs to draw them: the tool
@@ -400,6 +408,9 @@ export interface AgentPermissionInfo {
   groups: ToolGroup[];
   model: string;
   policy: string[];
+  packs: PermissionPack[];
+  guardModel: string;
+  guardPolicy: string[];
 }
 
 /**

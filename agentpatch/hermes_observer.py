@@ -15,6 +15,7 @@ from __future__ import annotations
 import atexit
 import json
 import logging
+import os
 import queue
 import re
 import threading
@@ -442,7 +443,16 @@ def _tool_record(action: str, outcome: str, values: dict[str, Any]) -> dict[str,
     return {key: value for key, value in record.items() if value not in ("", None)}
 
 
-def _decide(tool_name: str, session_id: str, tool_call_id: str) -> str:
+_BULKY_ARGUMENTS = {"content", "contents", "new_string", "old_string", "edits", "patch"}
+
+
+def _guarded_arguments(args: Any) -> dict[str, Any]:
+    if not isinstance(args, dict):
+        return {}
+    return {key: value for key, value in args.items() if key not in _BULKY_ARGUMENTS}
+
+
+def _decide(tool_name: str, session_id: str, tool_call_id: str, args: Any = None) -> str:
     """Ask Gateway whether a tool call may go ahead, answering with the reason
     it may not. Every failure answers "" - a plugin that cannot get a verdict
     must not stop Hermes working."""
@@ -455,7 +465,10 @@ def _decide(tool_name: str, session_id: str, tool_call_id: str) -> str:
                 "tool": tool_name,
                 "sessionKey": session_id,
                 "toolUseId": tool_call_id,
-            }
+                "input": _guarded_arguments(args),
+                "cwd": os.getcwd(),
+            },
+            default=str,
         ).encode("utf-8")
         request = urllib.request.Request(
             _DECISION_URL, data=body, headers={"Content-Type": "application/json"}
@@ -481,6 +494,7 @@ def _on_pre_tool_call(**values: Any) -> dict[str, Any] | None:
         _text(values.get("tool_name")),
         _text(values.get("session_id")),
         _text(values.get("tool_call_id")),
+        values.get("args"),
     )
     # Hermes vetoes the call on this directive and hands the message to the
     # model; any other return value is ignored, which is what leaves every

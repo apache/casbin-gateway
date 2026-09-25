@@ -124,6 +124,46 @@ func listed(values []string, name string) bool {
 	return false
 }
 
+// bulkyArguments carry file contents, which guards never read.
+var bulkyArguments = map[string]bool{
+	"content": true, "contents": true, "new_string": true, "old_string": true, "edits": true,
+	"new_source": true, "code_edit": true, "text": true, "patch": true, "input": true,
+}
+
+func toolArguments(event map[string]any) map[string]any {
+	arguments := map[string]any{}
+	for _, key := range []string{"tool_input", "tool_info"} {
+		if nested, ok := event[key].(map[string]any); ok {
+			for name, value := range nested {
+				if !bulkyArguments[name] {
+					arguments[name] = value
+				}
+			}
+		}
+	}
+	for _, key := range []string{"command", "file_path", "url"} {
+		if value := stringValue(event[key]); value != "" {
+			arguments[key] = value
+		}
+	}
+	return arguments
+}
+
+func eventCwd(event map[string]any) string {
+	if cwd := firstString(event, "cwd"); cwd != "" {
+		return cwd
+	}
+	if info, ok := event["tool_info"].(map[string]any); ok {
+		if cwd := stringValue(info["cwd"]); cwd != "" {
+			return cwd
+		}
+	}
+	if roots, ok := event["workspace_roots"].([]any); ok && len(roots) > 0 {
+		return stringValue(roots[0])
+	}
+	return ""
+}
+
 // allowed asks Gateway whether this tool call may go ahead. Anything that goes
 // wrong - no endpoint, no answer, a body that will not parse - allows the call:
 // a hook that cannot get a verdict must not stop the agent from working.

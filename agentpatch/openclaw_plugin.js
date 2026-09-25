@@ -29,7 +29,7 @@ const DECIDE_TIMEOUT_MS = 2000;
 // decide asks Gateway whether a tool call may go ahead, answering with the
 // reason it may not. Everything that can go wrong answers "": a plugin that
 // cannot get a verdict must not stop OpenClaw working.
-async function decide(toolName, sessionKey, toolCallId) {
+async function decide(toolName, sessionKey, toolCallId, params) {
   if (!DECISION_URL || !toolName) return "";
   try {
     const controller = new AbortController();
@@ -44,6 +44,7 @@ async function decide(toolName, sessionKey, toolCallId) {
         tool: toolName,
         sessionKey: sessionKey || "",
         toolUseId: toolCallId || "",
+        input: argumentsOf(params),
       }),
       signal: controller.signal,
     }).finally(() => clearTimeout(timer));
@@ -53,6 +54,17 @@ async function decide(toolName, sessionKey, toolCallId) {
   } catch {
     return "";
   }
+}
+
+// argumentsOf drops the file contents, which Gateway's guards never read.
+function argumentsOf(params) {
+  const kept = {};
+  if (!params || typeof params !== "object") return kept;
+  for (const [key, value] of Object.entries(params)) {
+    if (["content", "contents", "newText", "oldText", "new_string", "old_string", "edits", "patch"].includes(key)) continue;
+    kept[key] = value;
+  }
+  return kept;
 }
 
 // The plugin entry. definePluginEntry is not importable from outside the
@@ -74,6 +86,7 @@ export default {
         event?.toolName || ctx?.toolName,
         ctx?.sessionKey || event?.sessionKey,
         event?.toolCallId || ctx?.toolCallId,
+        event?.params,
       );
       return reason ? { block: true, blockReason: reason } : {};
     });

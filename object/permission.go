@@ -62,6 +62,10 @@ type AgentPermission struct {
 	// Rules are extra casbin policy lines, written by hand on the advanced view
 	// and appended to the compiled ones. Each is "sub, obj, act, eft".
 	Rules []string `xorm:"mediumtext" json:"rules"`
+
+	// Guards are "kind, pattern, eft", see permission_guard.go.
+	Packs  []string `xorm:"mediumtext" json:"packs"`
+	Guards []string `xorm:"mediumtext" json:"guards"`
 }
 
 func (permission *AgentPermission) GetId() string {
@@ -81,6 +85,8 @@ func DefaultAgentPermission(agentId string) *AgentPermission {
 		Providers:    []string{},
 		Tools:        map[string]bool{},
 		Rules:        []string{},
+		Packs:        []string{},
+		Guards:       []string{},
 	}
 }
 
@@ -152,7 +158,7 @@ func UpdateAgentPermission(agentId string, permission *AgentPermission) error {
 		// Cols() is what writes an emptied list or a switch turned off: xorm
 		// skips zero values otherwise.
 		_, err = ormer.Engine.ID(core.PK{AgentOwner, agentId}).
-			Cols("enabled", "model_mode", "models", "provider_mode", "providers", "tools", "rules", "updated_time").
+			Cols("enabled", "model_mode", "models", "provider_mode", "providers", "tools", "rules", "packs", "guards", "updated_time").
 			Update(permission)
 		if err != nil {
 			return err
@@ -160,6 +166,7 @@ func UpdateAgentPermission(agentId string, permission *AgentPermission) error {
 	}
 
 	dropAgentEnforcer(agentId)
+	dropCallGuard(agentId)
 	return nil
 }
 
@@ -186,6 +193,19 @@ func validateAgentPermission(permission *AgentPermission) error {
 			return err
 		}
 	}
+	for _, guard := range permission.Guards {
+		if strings.TrimSpace(guard) == "" {
+			continue
+		}
+		if _, err := parseGuardRule(guard); err != nil {
+			return err
+		}
+	}
+	for _, pack := range permission.Packs {
+		if !containsString(PermissionPackNames(), pack) {
+			return fmt.Errorf("unknown permission pack: %s", pack)
+		}
+	}
 	return nil
 }
 
@@ -210,10 +230,18 @@ func normalizeAgentPermission(permission *AgentPermission) {
 	if permission.Rules == nil {
 		permission.Rules = []string{}
 	}
+	if permission.Packs == nil {
+		permission.Packs = []string{}
+	}
+	if permission.Guards == nil {
+		permission.Guards = []string{}
+	}
 
 	permission.Models = trimList(permission.Models)
 	permission.Providers = trimList(permission.Providers)
 	permission.Rules = trimList(permission.Rules)
+	permission.Packs = trimList(permission.Packs)
+	permission.Guards = trimList(permission.Guards)
 }
 
 func trimList(values []string) []string {

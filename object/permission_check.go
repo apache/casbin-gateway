@@ -28,11 +28,12 @@ import "fmt"
 // It answers "allowed" for an agent nobody has restricted, and for a tool that
 // falls under no switch, so a hook installed everywhere costs nothing until
 // someone turns permissions on.
-func CheckAgentTool(agentIds []string, tool string) (bool, string, error) {
+func CheckAgentTool(agentIds []string, tool string, input map[string]any, cwd string) (bool, string, error) {
 	if tool == "" {
 		return true, "", nil
 	}
 
+	var facts *ToolCallFacts
 	for _, agentId := range agentIds {
 		guard, err := LoadAgentGuard(agentId)
 		if err != nil {
@@ -40,11 +41,64 @@ func CheckAgentTool(agentIds []string, tool string) (bool, string, error) {
 			// caller logs this and the tool call goes ahead.
 			return true, "", err
 		}
-		if guard == nil || guard.AllowTool(tool) {
+		if guard == nil {
 			continue
 		}
-		return false, fmt.Sprintf("the permissions of agent %s do not allow %s (%s)",
-			agentId, tool, ToolItemOf(tool)), nil
+		if !guard.AllowTool(tool) {
+			return false, fmt.Sprintf("the permissions of agent %s do not allow %s (%s)",
+				agentId, tool, ToolItemOf(tool)), nil
+		}
+
+		permission, err := GetAgentPermission(agentId)
+		if err != nil {
+			return true, "", err
+		}
+		callGuard, err := loadCallGuard(permission)
+		if err != nil {
+			return true, "", err
+		}
+		if callGuard == nil {
+			continue
+		}
+		if facts == nil {
+			read := ReadToolCallFacts(input, cwd)
+			facts = &read
+		}
+		if facts.empty() {
+			continue
+		}
+		if reason := callGuard.check(agentId, *facts); reason != "" {
+			return false, fmt.Sprintf("the permissions of agent %s refuse this %s call: %s", agentId, tool, reason), nil
+		}
 	}
 	return true, "", nil
+}
+
+// SetPermissionPack also enables permissions when turning a pack on.
+func SetPermissionPack(agentIds []string, pack string, on bool) error {
+	if !containsString(PermissionPackNames(), pack) {
+		return fmt.Errorf("unknown permission pack: %s", pack)
+	}
+
+	for _, agentId := range agentIds {
+		permission, err := GetAgentPermission(agentId)
+		if err != nil {
+			return err
+		}
+		packs := []string{}
+		for _, name := range permission.Packs {
+			if name != pack {
+				packs = append(packs, name)
+			}
+		}
+		if on {
+			packs = append(packs, pack)
+			permission.Enabled = true
+		}
+		permission.Packs = packs
+		if err := UpdateAgentPermission(agentId, permission); err != nil {
+			return err
+		}
+	}
+	return nil
 }

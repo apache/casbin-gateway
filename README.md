@@ -321,6 +321,27 @@ The first rule that matches decides, which is what lets one exception stand in f
 
 The rules apply to what goes through the proxy, so an agent bound directly to a provider — its own configuration pointing at the vendor rather than at Gateway — is not held to them. The page says so where that is the case.
 
+#### Policy packs: what a tool call does, not only which tool it is
+
+A switch can take `Bash` away; it cannot let `Bash` run `go build` and refuse `rm -rf`. **Policy packs** can. The hook Gateway installs in an agent sends the arguments of every tool call along with its name, and a second Casbin policy reads them: the command it runs, the files it touches, the hosts it reaches.
+
+| Pack | Refuses |
+| --- | --- |
+| No destructive commands | recursive deletes in every shell's spelling, `git reset --hard`, `git clean -f`, force pushes, discarding every change, formatting a disk, shutting down |
+| Protect secrets | `~/.ssh`, `~/.aws`, `~/.kube`, registry tokens, the agents' own sign-ins, `.env`, `*.pem`, `*.key` — through a tool or through the shell — and dumping the environment |
+| Only known hosts | any URL or `curl`/`wget` target that is not code hosting, a package registry or its common mirrors, or this machine |
+| No publishing | `git push`, publishing a package or an image, GitHub releases and pull requests, `kubectl`, `helm` and `terraform` changes |
+
+Each pack is one button to apply to every agent at the top of the Permissions page, and one switch on each agent's card. An agent stores the name of the pack rather than its lines, so a release that tightens a pack tightens it everywhere. **Advanced** shows the guard policy they compile to and takes guards of your own, which are checked before every pack:
+
+```
+host, *.mycorp.com, allow
+path, ~/work/secrets/**, deny
+command, \bdocker\s+system\s+prune\b, deny
+```
+
+Packs hold the agents whose hook runs before a tool call: Claude Code, Qwen Code, Gemini CLI, Cursor, Windsurf, opencode, Hermes and OpenClaw. Codex and Claude Desktop have no such hook, and the page lists them as not held.
+
 ### What the agents spend, including what never went through Gateway
 
 An agent on its own subscription relays nothing through Gateway, and a request that goes straight to the vendor

@@ -26,18 +26,24 @@ import (
 // to draw them: the switches it has, and the casbin model and policy they
 // compile to, which is what the advanced view shows.
 type agentPermissionInfo struct {
-	Permission *object.AgentPermission `json:"permission"`
-	Groups     []object.ToolGroup      `json:"groups"`
-	Model      string                  `json:"model"`
-	Policy     []string                `json:"policy"`
+	Permission  *object.AgentPermission `json:"permission"`
+	Groups      []object.ToolGroup      `json:"groups"`
+	Model       string                  `json:"model"`
+	Policy      []string                `json:"policy"`
+	Packs       []object.PermissionPack `json:"packs"`
+	GuardModel  string                  `json:"guardModel"`
+	GuardPolicy []string                `json:"guardPolicy"`
 }
 
 func newAgentPermissionInfo(permission *object.AgentPermission, owner string) *agentPermissionInfo {
 	return &agentPermissionInfo{
-		Permission: permission,
-		Groups:     object.ToolGroups(mcpItemsOf(permission.Name, owner)),
-		Model:      object.PermissionModelText,
-		Policy:     permission.PolicyText(),
+		Permission:  permission,
+		Groups:      object.ToolGroups(mcpItemsOf(permission.Name, owner)),
+		Model:       object.PermissionModelText,
+		Policy:      permission.PolicyText(),
+		Packs:       object.PermissionPacks(),
+		GuardModel:  object.GuardModelText,
+		GuardPolicy: permission.GuardText(),
 	}
 }
 
@@ -133,4 +139,39 @@ func (c *ApiController) UpdateAgentPermission() {
 	}
 
 	c.ResponseOk(newAgentPermissionInfo(form.Permission, form.Owner))
+}
+
+func (c *ApiController) GetPermissionPacks() {
+	if c.RequireAdmin() {
+		return
+	}
+	c.ResponseOk(object.PermissionPacks())
+}
+
+func (c *ApiController) SetPermissionPack() {
+	if c.RequireAdmin() {
+		return
+	}
+
+	var form struct {
+		Pack   string   `json:"pack"`
+		On     bool     `json:"on"`
+		Agents []string `json:"agents"`
+	}
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &form); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	for _, agentId := range form.Agents {
+		if !agent.IsKnownAgentId(agentId) {
+			c.ResponseError("unknown agent: " + agentId)
+			return
+		}
+	}
+
+	if err := object.SetPermissionPack(form.Agents, form.Pack, form.On); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk()
 }

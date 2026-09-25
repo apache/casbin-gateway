@@ -93,6 +93,8 @@ func Run(args []string, input io.Reader, output io.Writer, errOutput io.Writer) 
 			"tool":       tool,
 			"sessionKey": firstString(event, "session_id", "conversation_id", "trajectory_id"),
 			"toolUseId":  stringValue(event["tool_use_id"]),
+			"input":      toolArguments(event),
+			"cwd":        eventCwd(event),
 		}
 		if allow, reason := allowed(*decisionURL, *ingestToken, request); !allow {
 			code = writeDenial(output, errOutput, *agentID, reason)

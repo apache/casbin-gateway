@@ -402,10 +402,12 @@ func (c *ApiController) CheckAgentTool() {
 	}
 
 	var form struct {
-		Agent      string `json:"agent"`
-		Tool       string `json:"tool"`
-		SessionKey string `json:"sessionKey"`
-		ToolUseId  string `json:"toolUseId"`
+		Agent      string         `json:"agent"`
+		Tool       string         `json:"tool"`
+		SessionKey string         `json:"sessionKey"`
+		ToolUseId  string         `json:"toolUseId"`
+		Input      map[string]any `json:"input"`
+		Cwd        string         `json:"cwd"`
 	}
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &form); err != nil {
 		c.ResponseError(err.Error())
@@ -423,7 +425,7 @@ func (c *ApiController) CheckAgentTool() {
 	}
 
 	agentIds := agentmonitor.SharedAgentIds(form.Agent)
-	allowed, reason, err := object.CheckAgentTool(agentIds, form.Tool)
+	allowed, reason, err := object.CheckAgentTool(agentIds, form.Tool, form.Input, form.Cwd)
 	if err != nil {
 		beego.Error("agent tool check failed, the call was allowed:", err)
 	}

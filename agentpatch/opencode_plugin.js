@@ -100,7 +100,7 @@ function post(record) {
 // decide asks Gateway whether a tool call may go ahead. Anything that goes
 // wrong - Gateway down, a timeout, a body that will not parse - allows the
 // call: a plugin that cannot get a verdict must not stop opencode working.
-async function decide(tool, sessionID, callID) {
+async function decide(tool, sessionID, callID, args, cwd) {
   if (!DECISION_URL || !tool) return "";
   try {
     const controller = new AbortController();
@@ -110,7 +110,14 @@ async function decide(tool, sessionID, callID) {
     const response = await fetch(DECISION_URL, {
       method: "POST",
       headers,
-      body: JSON.stringify({ agent: AGENT, tool, sessionKey: sessionID || "", toolUseId: callID || "" }),
+      body: JSON.stringify({
+        agent: AGENT,
+        tool,
+        sessionKey: sessionID || "",
+        toolUseId: callID || "",
+        input: argumentsOf(args),
+        cwd: cwd || "",
+      }),
       signal: controller.signal,
     }).finally(() => clearTimeout(timer));
     const answer = await response.json();
@@ -119,6 +126,17 @@ async function decide(tool, sessionID, callID) {
   } catch {
     return "";
   }
+}
+
+// argumentsOf drops the file contents, which Gateway's guards never read.
+function argumentsOf(args) {
+  const kept = {};
+  if (!args || typeof args !== "object") return kept;
+  for (const [key, value] of Object.entries(args)) {
+    if (["content", "contents", "newString", "oldString", "new_string", "old_string", "edits", "patch"].includes(key)) continue;
+    kept[key] = value;
+  }
+  return kept;
 }
 
 // promptText joins the text parts of a message. Attachments and file contents
@@ -135,7 +153,7 @@ function promptText(parts) {
   }
 }
 
-export const CasbinGatewayMonitor = async () => {
+export const CasbinGatewayMonitor = async ({ directory } = {}) => {
   return {
     event: async ({ event }) => {
       const mapping = EVENTS[event?.type];
@@ -180,7 +198,7 @@ export const CasbinGatewayMonitor = async () => {
       });
       // Throwing is how a plugin refuses a call: opencode abandons the tool and
       // hands the message back to the model.
-      const refusal = await decide(input?.tool, input?.sessionID, input?.callID);
+      const refusal = await decide(input?.tool, input?.sessionID, input?.callID, output?.args, directory);
       if (refusal) throw new Error(refusal);
     },
 

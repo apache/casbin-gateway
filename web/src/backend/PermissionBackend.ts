@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import {query, request} from "@/backend/request";
-import type {AgentPermission, AgentPermissionInfo} from "@/types";
+import type {AgentPermission, AgentPermissionInfo, PermissionPack} from "@/types";
 
 /** What one agent may do. An agent nobody has configured answers with the
  *  unrestricted default rather than with nothing. The owner is the host user the
@@ -35,4 +35,13 @@ export function updateAgentPermission(agentId: string, permission: AgentPermissi
     owner: owner,
     permission: permission,
   });
+}
+
+export function getPermissionPacks() {
+  return request<PermissionPack[]>("/api/get-permission-packs");
+}
+
+/** Turning a pack on also enables those agents' permissions. */
+export function setPermissionPack(pack: string, on: boolean, agents: string[]) {
+  return request<void>("/api/set-permission-pack", "POST", {pack: pack, on: on, agents: agents});
 }

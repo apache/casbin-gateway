@@ -31,6 +31,7 @@ import i18next from "i18next";
 
 import * as PermissionBackend from "@/backend/PermissionBackend";
 import * as Setting from "@/Setting";
+import {PackSwitches} from "@/components/PermissionPacks";
 import {SimpleSelect} from "@/components/shared/simple-select";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
@@ -236,18 +237,15 @@ function AdvancedView({
   info,
   busy,
   onRules,
+  onGuards,
 }: {
   info: AgentPermissionInfo;
   busy: boolean;
   onRules: (rules: string[]) => void;
+  onGuards: (guards: string[]) => void;
 }) {
   const policy = info.policy ?? [];
-  const stored = (info.permission.rules ?? []).join("\n");
-  const [draft, setDraft] = React.useState(stored);
-
-  // The textarea is only a draft until it loses focus, so a half-typed rule is
-  // never saved; a rule saved elsewhere replaces it.
-  React.useEffect(() => setDraft(stored), [stored]);
+  const guardPolicy = info.guardPolicy ?? [];
 
   return (
     <div className="space-y-3 rounded-md border p-3">
@@ -260,7 +258,7 @@ function AdvancedView({
           variant="outline"
           size="xs"
           onClick={() => {
-            copy(`${info.model}\n${policy.join("\n")}\n`);
+            copy(`${info.model}\n${policy.join("\n")}\n\n${info.guardModel}\n${guardPolicy.join("\n")}\n`);
             Setting.showMessage("success", i18next.t("agent:Casbin configuration copied"));
           }}
         >
@@ -283,25 +281,77 @@ function AdvancedView({
         </pre>
       </div>
 
+      <RuleDraft
+        label={i18next.t("agent:Extra rules")}
+        hint={i18next.t("agent:Extra rules hint")}
+        placeholder="claude-code, tool:mcp/*, use, deny"
+        stored={info.permission.rules ?? []}
+        busy={busy}
+        onSave={onRules}
+      />
+
       <div className="space-y-1">
-        <div className="text-xs text-muted-foreground">{i18next.t("agent:Extra rules")}</div>
-        <Textarea
-          className="font-mono text-xs"
-          rows={3}
-          spellCheck={false}
-          value={draft}
-          disabled={busy}
-          placeholder="claude-code, tool:mcp/*, use, deny"
-          onChange={event => setDraft(event.target.value)}
-          onBlur={() => {
-            const rules = draft.split("\n").map(line => line.trim()).filter(line => line !== "");
-            if (rules.join("\n") !== stored) {
-              onRules(rules);
-            }
-          }}
-        />
-        <p className="text-xs text-muted-foreground">{i18next.t("agent:Extra rules hint")}</p>
+        <div className="text-xs text-muted-foreground">guard_model.conf</div>
+        <pre className="overflow-x-auto rounded-md bg-muted p-2 text-xs">{info.guardModel}</pre>
       </div>
+
+      <div className="space-y-1">
+        <div className="text-xs text-muted-foreground">guard_policy.csv</div>
+        <pre className="max-h-72 overflow-auto rounded-md bg-muted p-2 text-xs">{guardPolicy.join("\n")}</pre>
+      </div>
+
+      <RuleDraft
+        label={i18next.t("agent:Extra guards")}
+        hint={i18next.t("agent:Extra guards hint")}
+        placeholder="host, *.example.com, allow"
+        stored={info.permission.guards ?? []}
+        busy={busy}
+        onSave={onGuards}
+      />
+    </div>
+  );
+}
+
+/** Saved on blur, so a half-typed line is never saved. */
+function RuleDraft({
+  label,
+  hint,
+  placeholder,
+  stored,
+  busy,
+  onSave,
+}: {
+  label: string;
+  hint: string;
+  placeholder: string;
+  stored: string[];
+  busy: boolean;
+  onSave: (lines: string[]) => void;
+}) {
+  const joined = stored.join("\n");
+  const [draft, setDraft] = React.useState(joined);
+
+  React.useEffect(() => setDraft(joined), [joined]);
+
+  return (
+    <div className="space-y-1">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <Textarea
+        className="font-mono text-xs"
+        rows={3}
+        spellCheck={false}
+        value={draft}
+        disabled={busy}
+        placeholder={placeholder}
+        onChange={event => setDraft(event.target.value)}
+        onBlur={() => {
+          const lines = draft.split("\n").map(line => line.trim()).filter(line => line !== "");
+          if (lines.join("\n") !== joined) {
+            onSave(lines);
+          }
+        }}
+      />
+      <p className="text-xs text-muted-foreground">{hint}</p>
     </div>
   );
 }
@@ -488,6 +538,14 @@ export function PermissionCard({
             <p className="text-xs text-muted-foreground">{i18next.t("agent:Tool hint")}</p>
           </div>
 
+          <PackSwitches
+            agent={agent}
+            packs={info.packs ?? []}
+            permission={permission}
+            busy={busy || !permission.enabled}
+            onPacks={packs => save({packs: packs})}
+          />
+
           <div className="space-y-2">
             <div className="text-sm font-medium">{i18next.t("provider:Models")}</div>
             <SimpleSelect
@@ -553,7 +611,12 @@ export function PermissionCard({
         </div>
 
         {advanced ? (
-          <AdvancedView info={info} busy={busy} onRules={rules => save({rules: rules})} />
+          <AdvancedView
+            info={info}
+            busy={busy}
+            onRules={rules => save({rules: rules})}
+            onGuards={guards => save({guards: guards})}
+          />
         ) : null}
       </CardContent>
     </Card>
