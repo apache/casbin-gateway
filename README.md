@@ -99,7 +99,7 @@
   <a href="https://cdn.casbin.org/img/casbin-gateway.gif"><img alt="Casbin Gateway" src="https://cdn.casbin.org/img/casbin-gateway.gif" width="900"></a>
 </p>
 
-- **Is that API key what it was sold as?** A reseller can serve a cheaper model, fake a cache hit, or quietly drop a parameter it claims to support. [Authenticity](#the-killer-feature-is-the-api-behind-that-key-what-it-was-sold-as) probes every provider on its own and grades it A–F.
+- **Is that API key what it was sold as?** A reseller can serve a cheaper model, fake a cache hit, or quietly drop a parameter it claims to support. [Authenticity](#the-killer-feature-is-the-api-behind-that-key-what-it-was-sold-as) probes every provider on its own and grades it A–F, and [grades a single endpoint](#check-one-endpoint-without-installing-anything) without installing anything.
 - **What every agent did, spent and sent.** Every prompt and tool call, the spend read from the agents' own transcripts, and, on Windows, where each agent's own processes upload data, including what never passes through any proxy.
 - **One place for all of them.** Point Claude Code, Codex, Cursor, Gemini CLI and the rest at any of 44 model vendors, say what each may do, and install, upgrade or roll back the agents themselves.
 
@@ -248,6 +248,16 @@ about that upstream — how much of the cache it really accounted for, how many 
 to answer, and how much of what it served has no price.
 
 A probe spends a few cents of that provider's own credit, which is on the report next to the finding. `providerProbeIntervalHours` sets how often a report goes stale, `providerProbeMode = "manual"` probes only when asked, and `"off"` never probes.
+
+#### Check one endpoint without installing anything
+
+The same suite runs on its own against any OpenAI- or Anthropic-compatible endpoint: a report in the terminal, and a PNG card you can post. Nothing is stored, and the key never leaves the requests the probe makes.
+
+```bash
+GATEWAY_PROBE_KEY=sk-... go run github.com/apache/casbin-gateway/cmd/gateway-probe@master https://relay.example.com --model claude-sonnet-4-5
+```
+
+No Go? Download the single `gateway-probe` file for your platform from the [nightly build](https://github.com/apache/casbin-gateway/releases/tag/nightly) and run it the same way. Gateway itself answers to `casbin-gateway probe` too. `--hide-host` masks the endpoint on the report and the card, `--json` prints every request and answer the grade was drawn from, and `--help` lists the rest.
 
 ### Send an agent's traffic through Gateway
 

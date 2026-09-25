@@ -32,6 +32,7 @@ import (
 	"github.com/apache/casbin-gateway/mcpproxy"
 	"github.com/apache/casbin-gateway/mcpserver"
 	"github.com/apache/casbin-gateway/object"
+	"github.com/apache/casbin-gateway/probecmd"
 	"github.com/apache/casbin-gateway/proxy"
 	"github.com/apache/casbin-gateway/routers"
 	"github.com/apache/casbin-gateway/service"
@@ -58,6 +59,11 @@ func main() {
 	// "version" prints the build and exits. An update runs it on what it just
 	// downloaded, before that executable replaces this one.
 	if version.RunCommand(os.Args) {
+		return
+	}
+
+	// "probe" grades one endpoint and exits, touching no database.
+	if probecmd.RunCommand(os.Args) {
 		return
 	}
 

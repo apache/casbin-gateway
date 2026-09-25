@@ -99,7 +99,7 @@
   <a href="https://cdn.casbin.org/img/casbin-gateway.gif"><img alt="Casbin Gateway" src="https://cdn.casbin.org/img/casbin-gateway.gif" width="900"></a>
 </p>
 
-- **这个API Key，真是卖给你的那个吗？** 中转商可以拿便宜模型冒充、伪造缓存命中，或者悄悄丢掉它声称支持的参数。[真伪检测](#杀手锏那个-key-背后的-api真是卖给你的那个吗)会主动探测每个Provider，给出A–F评级。
+- **这个API Key，真是卖给你的那个吗？** 中转商可以拿便宜模型冒充、伪造缓存命中，或者悄悄丢掉它声称支持的参数。[真伪检测](#杀手锏那个-key-背后的-api真是卖给你的那个吗)会主动探测每个Provider，给出A–F评级；[不安装也能单测一个接口](#不安装单测一个接口)。
 - **每个Agent做了什么、花了多少、发到了哪里。** 每条提示词和工具调用，从Agent自己的会话记录里读出的花费；在Windows上还能看到每个Agent自己的进程把数据上传到了哪里，包括任何代理都看不到的那部分。
 - **所有Agent，一个地方管。** 把Claude Code、Codex、Cursor、Gemini CLI等接到44个模型厂商中的任意一个，规定每个Agent能做什么，并直接安装、升级或回滚这些Agent本身。
 
@@ -245,6 +245,16 @@ Agent 是通过读取 **Gateway 所在机器**的用户账户、home 目录和�
 计入了多少、有多少次请求失败、响应有多快、有多少跑过的模型还没有价格。
 
 一次探测会花掉该 Provider 一点点额度，具体花了多少就写在报告上。`providerProbeIntervalHours` 决定报告多久算过期，`providerProbeMode = "manual"` 表示只在手动触发时探测，`"off"` 表示从不探测。
+
+#### 不安装，单测一个接口
+
+同一套用例可以单独跑，对象是任何OpenAI或Anthropic兼容的接口：终端里出一份报告，同时存一张可以直接发帖的PNG卡片。什么都不落盘，Key只用在探测自己发出的请求里。
+
+```bash
+GATEWAY_PROBE_KEY=sk-... go run github.com/apache/casbin-gateway/cmd/gateway-probe@master https://relay.example.com --model claude-sonnet-4-5
+```
+
+没装Go的话，从[nightly构建](https://github.com/apache/casbin-gateway/releases/tag/nightly)下载对应平台的`gateway-probe`单文件，用法相同。已经装了Gateway的，直接`casbin-gateway probe`。`--hide-host`会在报告和卡片上打码接口地址，`--json`输出评级依据的每个请求和返回，其余参数见`--help`。
 
 ### 让 Agent 的流量走 Gateway
 

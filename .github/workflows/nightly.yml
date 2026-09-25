@@ -190,6 +190,15 @@ jobs:
                 ;;
             esac
 
+            # The probe on its own, as a bare file: grading an endpoint should
+            # not mean unpacking Gateway.
+            probeBinary="dist/gateway-probe-${goos}-${archName}"
+            if [[ "${goos}" == "windows" ]]; then
+              probeBinary="${probeBinary}.exe"
+            fi
+            GOOS="${goos}" GOARCH="${goarch}" CGO_ENABLED=0 \
+              go build -trimpath -ldflags "-s -w" -o "${probeBinary}" ./cmd/gateway-probe
+
             cp LICENSE NOTICE DISCLAIMER README.md "${stage}/"
 
             if [[ "${goos}" == "windows" ]]; then
@@ -238,6 +247,10 @@ jobs:
           | Linux x86_64 | `BASENAME_PLACEHOLDER-linux-x86_64.tar.gz` |
           | macOS x86_64 | `BASENAME_PLACEHOLDER-darwin-x86_64.tar.gz` |
           | Windows x86_64 | `BASENAME_PLACEHOLDER-windows-x86_64.zip` |
+
+          `gateway-probe-*` are the authenticity probe on its own: one file that grades an
+          OpenAI- or Anthropic-compatible endpoint and saves a shareable card, with nothing
+          installed. Run it with `--help`.
           NOTES
 
           sed -i "s/BASENAME_PLACEHOLDER/${BASENAME}/g" release-notes.md
@@ -265,4 +278,4 @@ jobs:
             --target "${GITHUB_SHA}" \
             --title "Nightly build (not an official release)" \
             --notes-file release-notes.md \
-            dist/*.tar.gz dist/*.zip
+            dist/*.tar.gz dist/*.zip dist/gateway-probe-*
