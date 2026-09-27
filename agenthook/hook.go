@@ -47,6 +47,11 @@ const (
 // its normal HTTP server. Hook delivery is best effort and must never affect a
 // Claude Code action, so errors are intentionally ignored here.
 func ServeIfInvoked() {
+	// Grok runs Claude Code's hooks without their args array, which would
+	// otherwise start a whole second Gateway from inside a Grok session.
+	if len(os.Args) < 2 && InsideGrok() {
+		os.Exit(0)
+	}
 	if len(os.Args) < 2 || os.Args[1] != Subcommand {
 		return
 	}
@@ -75,6 +80,11 @@ func Run(args []string, input io.Reader, output io.Writer, errOutput io.Writer) 
 	normalize, known := normalizers[*agentID]
 	if !*managed || !known {
 		return 0, fmt.Errorf("unsupported hook agent %q", *agentID)
+	}
+	// A Claude Code or Cursor hook that Grok ran is a Grok call, which Grok's
+	// own hook records and decides.
+	if *agentID != "grok-build" && InsideGrok() {
+		return 0, nil
 	}
 
 	decoder := json.NewDecoder(io.LimitReader(input, maxHookInput))
@@ -134,6 +144,7 @@ var normalizers = map[string]func(map[string]any, string, time.Time) *agentmonit
 	"claude-code": Normalize,
 	"cursor":      NormalizeCursor,
 	"gemini-cli":  NormalizeGemini,
+	"grok-build":  NormalizeGrok,
 	"qwen-code":   NormalizeQwen,
 	"windsurf":    NormalizeWindsurf,
 }

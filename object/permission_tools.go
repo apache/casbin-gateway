@@ -69,9 +69,9 @@ func item(group string, name string, tools ...string) ToolItem {
 // toolCatalog is every switch there is. The order is the order they are drawn
 // in, and the "other" item of a group always comes last.
 var toolCatalog = []ToolItem{
-	item(GroupShell, "run", "Bash", "shell", "run_shell_command", "run_terminal_cmd", "execute_command"),
-	item(GroupShell, "output", "BashOutput"),
-	item(GroupShell, "kill", "KillShell", "KillBash"),
+	item(GroupShell, "run", "Bash", "shell", "run_shell_command", "run_terminal_cmd", "run_terminal_command", "execute_command"),
+	item(GroupShell, "output", "BashOutput", "get_command_or_subagent_output"),
+	item(GroupShell, "kill", "KillShell", "KillBash", "kill_command_or_subagent"),
 	item(GroupShell, otherItem),
 
 	item(GroupRead, "file", "Read", "read_file", "view"),
@@ -85,7 +85,7 @@ var toolCatalog = []ToolItem{
 	item(GroupRead, otherItem),
 
 	item(GroupWrite, "create", "Write", "write_file", "create_file"),
-	item(GroupWrite, "edit", "Edit", "edit_file", "replace", "str_replace_editor"),
+	item(GroupWrite, "edit", "Edit", "edit_file", "replace", "str_replace_editor", "search_replace"),
 	item(GroupWrite, "multi", "MultiEdit"),
 	item(GroupWrite, "patch", "apply_patch"),
 	item(GroupWrite, "notebook", "NotebookEdit"),
@@ -99,9 +99,9 @@ var toolCatalog = []ToolItem{
 	item(GroupNetwork, "browser", "browser_navigate", "browser_click", "playwright"),
 	item(GroupNetwork, otherItem),
 
-	item(GroupAgentic, "subagent", "Task", "Agent"),
+	item(GroupAgentic, "subagent", "Task", "Agent", "spawn_subagent"),
 	item(GroupAgentic, "todo", "TodoWrite", "TodoRead", "update_plan"),
-	item(GroupAgentic, "plan", "ExitPlanMode"),
+	item(GroupAgentic, "plan", "ExitPlanMode", "enter_plan_mode"),
 	item(GroupAgentic, "ask", "AskUserQuestion"),
 	item(GroupAgentic, "command", "SlashCommand"),
 	item(GroupAgentic, "skill", "Skill"),

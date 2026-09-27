@@ -47,6 +47,7 @@ var preToolEvents = map[string][]string{
 	"claude-code": {"PreToolUse"},
 	"qwen-code":   {"PreToolUse"},
 	"gemini-cli":  {"BeforeTool"},
+	"grok-build":  {"PreToolUse"},
 	// Cursor asks separately for a shell command, an MCP call, a file read and
 	// a subagent, and none of those carries a tool name the general event would
 	// have given.
@@ -102,6 +103,9 @@ func preToolEvent(agentID string, event map[string]any) (string, bool) {
 	}
 
 	tool := stringValue(event["tool_name"])
+	if agentID == "grok-build" {
+		tool = grokToolName(event)
+	}
 	return tool, tool != ""
 }
 
@@ -221,7 +225,7 @@ func writeDenial(out io.Writer, errOut io.Writer, agentID string, reason string)
 				"permissionDecisionReason": reason,
 			},
 		}
-	case "gemini-cli":
+	case "gemini-cli", "grok-build":
 		answer = map[string]any{"decision": "deny", "reason": reason}
 	case "cursor":
 		answer = map[string]any{"permission": "deny", "user_message": reason, "agent_message": reason}
