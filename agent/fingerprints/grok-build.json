@@ -1,0 +1,38 @@
+{
+  "id": "grok-build",
+  "displayName": "Grok Build",
+  "installUrl": "https://x.ai/cli",
+  "execName": "grok",
+  "instanceEnv": "GROK_HOME",
+  "stateDir": "grok",
+  "npmPackage": "@xai-official/grok",
+  "homeDirs": [".grok/bin"],
+  "versionFile": "../.metadata_version",
+  "updateArgs": ["update"],
+  "installScript": {
+    "windows": "irm https://x.ai/cli/install.ps1 | iex",
+    "darwin": "curl -fsSL https://x.ai/cli/install.sh | bash",
+    "linux": "curl -fsSL https://x.ai/cli/install.sh | bash"
+  },
+  "headless": {
+    "args": [
+      "--single={prompt}",
+      "--output-format",
+      "streaming-messages-json",
+      "-s",
+      "{session}"
+    ],
+    "resumeArgs": [
+      "--single={prompt}",
+      "--output-format",
+      "streaming-messages-json",
+      "-r",
+      "{session}"
+    ],
+    "modelArgs": [
+      "-m",
+      "{model}"
+    ],
+    "format": "claude-stream-json"
+  }
+}

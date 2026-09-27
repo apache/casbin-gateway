@@ -289,6 +289,16 @@ var layouts = map[string]layout{
 		mcp:    &mcpLayout{file: under(".codebuddy", ".mcp.json"), store: &jsonStore{paths: [][]string{{"mcpServers"}}}},
 		prompt: promptFile("CODEBUDDY.md", ".codebuddy"),
 	},
+	// Grok Build reads its home-level AGENTS.md straight from GROK_HOME, and
+	// the shared ~/.agents skills beside its own.
+	"grok-build": {
+		skills: &skillLayout{sources: []skillSource{
+			userSkills("skills").within(grokDir),
+			userSkills(".agents", "skills"),
+		}},
+		mcp:    &mcpLayout{file: in(grokDir, "config.toml"), store: &tomlStore{table: "mcp_servers"}},
+		prompt: promptFile("AGENTS.md").within(grokDir),
+	},
 }
 
 var codexLayout = layout{
@@ -417,6 +427,7 @@ var (
 	codexDir = movedBy("CODEX_HOME", ".codex")
 	dshDir   = movedBy("DSH_HOME", ".dsh")
 	kimiDir  = movedBy("KIMI_CODE_HOME", ".kimi-code")
+	grokDir  = movedBy("GROK_HOME", ".grok")
 )
 
 // opencodeConfig is the config file to edit. opencode reads config.json,

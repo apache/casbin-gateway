@@ -45,6 +45,7 @@ const agentSites: Record<string, string> = {
   Pi: "pi.dev",
   "Kimi Code CLI": "kimi.com",
   "CodeBuddy Code": "codebuddy.ai",
+  "Grok Build": "x.ai",
   ZCode: "z.ai",
 };
 
@@ -52,6 +53,7 @@ const agentSites: Record<string, string> = {
 const agentIdSites: Record<string, string> = {
   codebuddy: "codebuddy.ai",
   dsh: "deepseek.com",
+  "grok-build": "x.ai",
   "kimi-code": "kimi.com",
 };
 

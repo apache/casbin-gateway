@@ -160,6 +160,7 @@
     "Gateway mode hint": "The agent is pointed at the local proxy, so switching to another provider takes effect on the next request without restarting the agent.",
     "Gateway only hint": "Codex speaks only the OpenAI Responses API. Gateway serves it by translating to the chat completions this provider answers, so Codex cannot be pointed at it directly.",
     "Gemini CLI config hint": "The Gemini CLI reads no base URL from a settings file: the endpoint is GOOGLE_GEMINI_BASE_URL in ~/.gemini/.env, with GEMINI_API_KEY beside it and \"security.auth.selectedType\": \"gemini-api-key\" in ~/.gemini/settings.json. A project of its own .env is read first, and that one wins.",
+    "Grok Build config hint": "Grok Build keeps the endpoint in ~/.grok/config.toml: one [model.\"casbin-gateway/*\"] table per model, each with its own base_url, api_key and api_backend \"chat_completions\", and [models] default and session_summary naming the one it starts on. Grok's own models keep going to xAI on its sign-in. GROK_DEFAULT_MODEL beats that default, and GROK_HOME moves the whole directory.",
     "Gemini gateway only hint": "The Gemini CLI speaks only Google's generateContent API, which no provider here serves. Gateway serves it by translating to the API the provider answers, so the CLI cannot be pointed at a provider directly.",
     "Getting started": "Getting started",
     "Home folder": "Home",

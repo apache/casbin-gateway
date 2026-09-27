@@ -30,6 +30,7 @@
   <a href="https://platform.iflow.cn/en/cli" title="iFlow CLI"><img src="https://www.google.com/s2/favicons?domain=iflow.cn&sz=64" width="30" height="30" alt="iFlow CLI"></a>
   <a href="https://moonshotai.github.io/kimi-code" title="Kimi Code CLI"><img src="https://www.google.com/s2/favicons?domain=kimi.com&sz=64" width="30" height="30" alt="Kimi Code CLI"></a>
   <a href="https://www.codebuddy.ai" title="CodeBuddy Code"><img src="https://www.google.com/s2/favicons?domain=codebuddy.ai&sz=64" width="30" height="30" alt="CodeBuddy Code"></a>
+  <a href="https://x.ai/cli" title="Grok Build"><img src="https://www.google.com/s2/favicons?domain=x.ai&sz=64" width="30" height="30" alt="Grok Build"></a>
   <a href="https://roocode.com" title="Roo Code"><img src="https://www.google.com/s2/favicons?domain=roocode.com&sz=64" width="30" height="30" alt="Roo Code"></a>
   <a href="https://github.com/github/copilot-cli" title="Copilot CLI"><img src="https://www.google.com/s2/favicons?domain=github.com&sz=64" width="30" height="30" alt="Copilot CLI"></a>
   <a href="https://continue.dev" title="Continue"><img src="https://www.google.com/s2/favicons?domain=continue.dev&sz=64" width="30" height="30" alt="Continue"></a>
@@ -166,6 +167,7 @@ Gateway 会在自己的窗口里打开 —— 不用登录：它只服务本机�
 | <img src="https://www.google.com/s2/favicons?domain=iflow.cn&sz=64" width="16" height="16" alt=""> **iFlow CLI** | — | ✅ OpenAI | ✅ | — | ✅ | — | npm |
 | <img src="https://www.google.com/s2/favicons?domain=kimi.com&sz=64" width="16" height="16" alt=""> **Kimi Code CLI** | — | ✅ OpenAI | ✅ | ✅ | ✅ | — | npm · winget |
 | <img src="https://www.google.com/s2/favicons?domain=codebuddy.ai&sz=64" width="16" height="16" alt=""> **CodeBuddy Code** | — | ✅ OpenAI | ✅ | ✅ | ✅ | — | npm |
+| <img src="https://www.google.com/s2/favicons?domain=x.ai&sz=64" width="16" height="16" alt=""> **Grok Build** | — | ✅ OpenAI | ✅ | ✅ | ✅ | — | npm · script · self |
 | <img src="https://www.google.com/s2/favicons?domain=roocode.com&sz=64" width="16" height="16" alt=""> **Roo Code** | — | — | — | — | — | — | — |
 | <img src="https://www.google.com/s2/favicons?domain=github.com&sz=64" width="16" height="16" alt=""> **Copilot CLI** | — | — | — | — | — | — | npm |
 | <img src="https://www.google.com/s2/favicons?domain=continue.dev&sz=64" width="16" height="16" alt=""> **Continue** | — | ✅ OpenAI | — | — | — | — | npm |

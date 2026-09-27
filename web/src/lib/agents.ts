@@ -131,6 +131,8 @@ export function agentSetupNoteKey(agentId: string) {
     return "agent:Kimi Code config hint";
   case "codebuddy":
     return "agent:CodeBuddy config hint";
+  case "grok-build":
+    return "agent:Grok Build config hint";
   default:
     return "";
   }

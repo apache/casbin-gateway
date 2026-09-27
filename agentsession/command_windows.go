@@ -29,16 +29,24 @@ import (
 // own. A package manager's shim is a batch file, which Windows cannot start
 // directly, so those go through cmd.exe.
 func newCommand(ctx context.Context, executable string, args []string) *exec.Cmd {
-	switch strings.ToLower(filepath.Ext(executable)) {
-	case ".cmd", ".bat":
+	if viaShell(executable) {
 		cmd := exec.Command("cmd.exe")
 		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CmdLine: batchLine(executable, args)}
 		return cmd
-	default:
-		cmd := exec.Command(executable, args...)
-		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-		return cmd
 	}
+	cmd := exec.Command(executable, args...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	return cmd
+}
+
+// viaShell reports whether a launcher's command line is parsed again by
+// cmd.exe, which is what a batch file needs to run at all.
+func viaShell(executable string) bool {
+	switch strings.ToLower(filepath.Ext(executable)) {
+	case ".cmd", ".bat":
+		return true
+	}
+	return false
 }
 
 // batchLine writes the command line for a shim run through cmd.exe, which parses

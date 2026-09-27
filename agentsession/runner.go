@@ -52,8 +52,9 @@ func run(ctx context.Context, headless *agent.Headless, session Session, prompt 
 	// A command line cannot carry a newline through a package manager's Windows
 	// shim - cmd.exe ends the argument there - and a message typed in a chat
 	// window routinely has one. An agent whose prompt goes on the command line
-	// is therefore held to a single line rather than quietly losing the rest.
-	if !headless.PromptStdin && strings.ContainsAny(prompt, "\r\n") {
+	// of such a shim is therefore held to a single line rather than quietly
+	// losing the rest.
+	if !headless.PromptStdin && viaShell(launch.Executable) && strings.ContainsAny(prompt, "\r\n") {
 		return errors.New("this agent takes its prompt on the command line, which cannot carry more than one line")
 	}
 
@@ -164,6 +165,12 @@ func fill(template []string, session Session, prompt string, promptOnStdin bool)
 		case agent.ModelPlaceholder:
 			args = append(args, session.Model)
 		default:
+			if flag, ok := strings.CutSuffix(arg, "="+agent.PromptPlaceholder); ok {
+				if !promptOnStdin {
+					args = append(args, flag+"="+prompt)
+				}
+				continue
+			}
 			args = append(args, arg)
 		}
 	}

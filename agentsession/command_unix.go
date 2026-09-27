@@ -30,6 +30,12 @@ func newCommand(ctx context.Context, executable string, args []string) *exec.Cmd
 	return cmd
 }
 
+// viaShell reports whether a launcher's command line is parsed again by a
+// shell, which no launcher here is.
+func viaShell(executable string) bool {
+	return false
+}
+
 // killTree ends the launcher and everything it started. Every one of these
 // agents is a shim in front of a runtime, so killing the shim alone would leave
 // the agent running.

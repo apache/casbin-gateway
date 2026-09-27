@@ -24,9 +24,9 @@ func TestFingerprintsLoad(t *testing.T) {
 	want := []string{
 		"aider", "claude-code", "claude-desktop", "cline", "codebuddy",
 		"codex-cli", "codex", "continue", "copilot-cli", "crush", "cursor-agent",
-		"cursor", "droid", "dsh", "gemini-cli", "goose", "hermes-agent",
+		"cursor", "droid", "dsh", "gemini-cli", "goose", "grok-build", "hermes-agent",
 		"iflow-cli", "kimi-code", "openagent", "openclaw", "opencode-desktop",
-		"opencode", "pi", "qwen-code", "roo-code", "trae", "windsurf", "zed",
+		"opencode", "pi", "qwen-code", "roo-code", "trae", "windsurf", "zcode", "zed",
 	}
 
 	loaded, err := loadFingerprints(fingerprintFS)

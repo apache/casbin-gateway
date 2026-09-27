@@ -30,20 +30,37 @@ func tomlHeader(line string) ([]string, bool) {
 	if !strings.HasPrefix(text, "[") || strings.HasPrefix(text, "[[") {
 		return nil, false
 	}
-	end := strings.Index(text, "]")
-	if end < 0 {
-		return nil, false
-	}
 
-	parts := strings.Split(text[1:end], ".")
-	for index, part := range parts {
-		part = strings.TrimSpace(part)
-		if unquoted, err := strconv.Unquote(part); err == nil {
-			part = unquoted
+	// A quoted part may hold a "." or a "]" of its own - a model id such as
+	// "gpt-5.5" does - so the header is scanned rather than split.
+	parts := []string{}
+	part := strings.Builder{}
+	var quote byte
+	for index := 1; index < len(text); index++ {
+		character := text[index]
+		switch {
+		case quote != 0:
+			if character == '\\' && quote == '"' && index+1 < len(text) {
+				index++
+				part.WriteByte(text[index])
+			} else if character == quote {
+				quote = 0
+			} else {
+				part.WriteByte(character)
+			}
+		case character == '"' || character == '\'':
+			quote = character
+		case character == '.' || character == ']':
+			parts = append(parts, strings.TrimSpace(part.String()))
+			part.Reset()
+			if character == ']' {
+				return parts, true
+			}
+		default:
+			part.WriteByte(character)
 		}
-		parts[index] = part
 	}
-	return parts, true
+	return nil, false
 }
 
 // tomlCutTable removes one table and its sub-tables, leaving every other line,
@@ -129,6 +146,76 @@ func tomlDeleteRootKey(text string, key string) string {
 		kept = append(kept, line)
 	}
 	return strings.Join(kept, "\n")
+}
+
+// tomlSetTableKey writes a key of one top-level table, appending the table when
+// the file has none. An existing assignment is replaced in place.
+func tomlSetTableKey(text string, table string, key string, value string) string {
+	assignment := fmt.Sprintf("%s = %s", key, strconv.Quote(value))
+	lines := strings.Split(text, "\n")
+	start, end := tomlTableSpan(lines, table)
+	if start < 0 {
+		return tomlAppend(text, fmt.Sprintf("[%s]\n%s\n", tomlKey(table), assignment))
+	}
+
+	last := start
+	for index := start + 1; index < end; index++ {
+		if tomlAssigns(lines[index], key) {
+			lines[index] = assignment
+			return strings.Join(lines, "\n")
+		}
+		if strings.TrimSpace(lines[index]) != "" {
+			last = index
+		}
+	}
+	rest := append([]string{assignment}, lines[last+1:]...)
+	return strings.Join(append(lines[:last+1:last+1], rest...), "\n")
+}
+
+// tomlDeleteTableKey removes a key of one top-level table, and the table with
+// it when nothing else is left in it.
+func tomlDeleteTableKey(text string, table string, key string) string {
+	lines := strings.Split(text, "\n")
+	start, end := tomlTableSpan(lines, table)
+	if start < 0 {
+		return text
+	}
+
+	kept := []string{}
+	empty := true
+	for index := start + 1; index < end; index++ {
+		if tomlAssigns(lines[index], key) {
+			continue
+		}
+		if strings.TrimSpace(lines[index]) != "" {
+			empty = false
+		}
+		kept = append(kept, lines[index])
+	}
+	if empty {
+		return strings.Join(append(lines[:start:start], lines[end:]...), "\n")
+	}
+	rest := append(kept, lines[end:]...)
+	return strings.Join(append(lines[:start+1:start+1], rest...), "\n")
+}
+
+// tomlTableSpan is the header line of one top-level table and the line its
+// body ends before, -1 when the file has no such table.
+func tomlTableSpan(lines []string, table string) (int, int) {
+	start := -1
+	for index, line := range lines {
+		header, ok := tomlHeader(line)
+		if !ok && !strings.HasPrefix(strings.TrimSpace(line), "[[") {
+			continue
+		}
+		if start >= 0 {
+			return start, index
+		}
+		if ok && len(header) == 1 && header[0] == table {
+			start = index
+		}
+	}
+	return start, len(lines)
 }
 
 func tomlAssigns(line string, key string) bool {

@@ -50,15 +50,16 @@ const (
 // and its desktop app share ~/.config/opencode — because the listing keeps one
 // entry per location, under whichever of the two was found first.
 var importLinkAgents = map[string][]string{
-	"claude":   {"claude-code"},
-	"codex":    {"codex-cli", "codex"},
-	"cursor":   {"cursor", "cursor-agent"},
-	"gemini":   {"gemini-cli"},
-	"hermes":   {"hermes-agent"},
-	"iflow":    {"iflow-cli"},
-	"kimi":     {"kimi-code"},
-	"opencode": {"opencode", "opencode-desktop"},
-	"qwen":     {"qwen-code"},
+	"claude":    {"claude-code"},
+	"codex":     {"codex-cli", "codex"},
+	"cursor":    {"cursor", "cursor-agent"},
+	"gemini":    {"gemini-cli"},
+	"grokbuild": {"grok-build"},
+	"hermes":    {"hermes-agent"},
+	"iflow":     {"iflow-cli"},
+	"kimi":      {"kimi-code"},
+	"opencode":  {"opencode", "opencode-desktop"},
+	"qwen":      {"qwen-code"},
 }
 
 // ImportLink is what one link carries, read and handed to the page. Nothing in

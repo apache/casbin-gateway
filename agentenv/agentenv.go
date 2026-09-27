@@ -114,6 +114,12 @@ var agentVars = map[string][]variable{
 	"codebuddy": {
 		{key: "CODEBUDDY_MODEL"},
 	},
+	// Grok Build reads the starting model from the environment before
+	// config.toml. Each model a switch writes carries its own base_url and
+	// key, which GROK_MODELS_BASE_URL and XAI_API_KEY do not reach.
+	"grok-build": {
+		{key: "GROK_DEFAULT_MODEL"},
+	},
 }
 
 // value is one variable found set, with where it was found.

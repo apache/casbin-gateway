@@ -16,7 +16,9 @@ package agent
 
 // Placeholders one of Headless's command lines carries. Each is replaced whole:
 // a placeholder is always an argument of its own, never part of one, so nothing
-// here has to be quoted or escaped.
+// here has to be quoted or escaped. The one exception is a prompt written as
+// "--flag={prompt}", for an agent that would take a prompt starting with a dash
+// for a flag of its own.
 const (
 	PromptPlaceholder  = "{prompt}"
 	SessionPlaceholder = "{session}"

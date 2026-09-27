@@ -160,6 +160,7 @@
     "Gateway mode hint": "把Agent指向本地代理，切换供应商在下一次请求即生效，无需重启Agent。",
     "Gateway only hint": "Codex只会说OpenAI Responses API。Gateway会把它翻译成该供应商应答的chat completions，所以Codex无法直连这个供应商。",
     "Gemini CLI config hint": "Gemini CLI不从配置文件读取Base URL：端点是~/.gemini/.env中的GOOGLE_GEMINI_BASE_URL，旁边是GEMINI_API_KEY，同时~/.gemini/settings.json中写入\"security.auth.selectedType\": \"gemini-api-key\"。项目自带的.env会被优先读取并覆盖它。",
+    "Grok Build config hint": "Grok Build的端点写在~/.grok/config.toml里：每个模型一个[model.\"casbin-gateway/*\"]表，各自带base_url、api_key和api_backend \"chat_completions\"，再由[models]下的default和session_summary选中启动用的那个。Grok自带的模型仍凭它的登录直连xAI。GROK_DEFAULT_MODEL会覆盖这个默认值，GROK_HOME会把整个目录挪到别处。",
     "Gemini gateway only hint": "Gemini CLI只会说Google的generateContent API，这里没有供应商提供该API。Gateway会把它翻译成供应商应答的API，所以Gemini CLI无法直连供应商。",
     "Getting started": "快速上手",
     "Home folder": "主目录",
