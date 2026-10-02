@@ -51,6 +51,11 @@ type Fingerprint struct {
 	// LinkScheme is the URL scheme the agent registers for its own links, which
 	// is how a browser hands a finished sign-in back to it.
 	LinkScheme string `json:"linkScheme,omitempty"`
+	// SignInLog is the log, under an instance's state directory, where the
+	// agent notes that it sent a sign-in to the browser, and SignInMarker is
+	// the text of that line.
+	SignInLog    string `json:"signInLog,omitempty"`
+	SignInMarker string `json:"signInMarker,omitempty"`
 
 	StateDir            string   `json:"stateDir,omitempty"`
 	NpmPackage          string   `json:"npmPackage,omitempty"`

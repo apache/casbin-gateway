@@ -57,6 +57,38 @@ func SupportsInstances(agentId string) bool {
 	return isolationOf(agentId).supported()
 }
 
+// SignInLogOf is the log an instance of this agent notes a browser sign-in in,
+// relative to its state directory, and the text it notes it with. Both are
+// empty for an agent Gateway cannot watch this way.
+func SignInLogOf(agentId string) (string, string) {
+	for i := range fingerprints {
+		if fingerprints[i].ID == agentId {
+			return fingerprints[i].SignInLog, fingerprints[i].SignInMarker
+		}
+	}
+	return "", ""
+}
+
+// DefaultSignInLogsOf is where the installation's own copy may note a browser
+// sign-in: the log under its state directory, and for Claude Desktop also the
+// one under the local profile, which is where current versions write it.
+func DefaultSignInLogsOf(agentId string, owner string) []string {
+	logName, _ := SignInLogOf(agentId)
+	dir := DefaultInstanceDir(agentId, owner)
+	if logName == "" || dir == "" {
+		return nil
+	}
+
+	logs := []string{filepath.Join(dir, filepath.FromSlash(logName))}
+	if accountKind(agentId) == "claude-desktop" {
+		home, err := agenthome.Resolve(owner)
+		if logDir := claudeDesktopLogDir(home); err == nil && logDir != "" {
+			logs = append(logs, filepath.Join(logDir, filepath.Base(logName)))
+		}
+	}
+	return logs
+}
+
 // LinkSchemeOf is the URL scheme an agent registers for its own links, which is
 // what a browser hands a finished sign-in back through. Empty for an agent that
 // has none, or none Gateway knows about.

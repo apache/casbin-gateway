@@ -22,3 +22,9 @@ import "path/filepath"
 func claudeDesktopDataDir(home string) string {
 	return filepath.Join(home, ".config", "Claude")
 }
+
+// claudeDesktopLogDir is empty here: Gateway routes no links on this host, so
+// nothing watches the logs.
+func claudeDesktopLogDir(string) string {
+	return ""
+}

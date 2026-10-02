@@ -23,3 +23,9 @@ import "path/filepath"
 func claudeDesktopDataDir(home string) string {
 	return filepath.Join(home, "AppData", "Roaming", "Claude")
 }
+
+// claudeDesktopLogDir is where the installation's own copy writes its logs,
+// under the local profile rather than beside its state.
+func claudeDesktopLogDir(home string) string {
+	return filepath.Join(home, "AppData", "Local", "Claude", "Logs")
+}

@@ -146,6 +146,9 @@ func main() {
 	// here, so none of them needs a public address.
 	object.InitImChannels()
 	defer imbridge.Stop()
+	// A copy of an agent that signs in through the browser gets the link back,
+	// rather than the copy the agent's own scheme opens.
+	controllers.WatchAgentSignIns()
 
 	// Monitoring is on by default, so the agents already on this host are
 	// patched without anyone opening the UI. The scan walks the disk, hence the
