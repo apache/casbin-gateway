@@ -308,7 +308,7 @@ The scheme is taken from whatever held it only the first time, and given back wh
 
 A request that asks for something switched off comes back as a `permission_error` in the API the agent speaks, so it reads as a refusal rather than as a broken gateway.
 
-Underneath, the switches compile to a [Casbin](https://casbin.org) policy, and every relayed request is decided by an enforcer rather than by a hand-written check. **Advanced** shows the `model.conf` and `policy.csv` they compile to, and takes extra policy lines of your own:
+Underneath, the switches compile to a [Casbin](https://casbin.apache.org) policy, and every relayed request is decided by an enforcer rather than by a hand-written check. **Advanced** shows the `model.conf` and `policy.csv` they compile to, and takes extra policy lines of your own:
 
 ```
 p, claude-code, model:claude-opus-*, use, deny
@@ -412,7 +412,7 @@ Everything is optional. Settings are changed on the **Settings** page of the web
 | `llmRecordMode` | `full` | How much of each relayed LLM request is kept — including the prompt, see [Recording prompts](#recording-prompts) |
 | `providerProbeMode` | `auto` | Whether providers are probed for authenticity on their own, only when asked (`manual`), or never (`off`) |
 | `apiKeyEncryptionKey` | empty | Encrypts provider API keys at rest (AES-256-GCM) |
-| `casdoorEndpoint` | empty | Switches sign-in over to [Casdoor](https://casdoor.org) SSO |
+| `casdoorEndpoint` | empty | Switches sign-in over to [Casdoor](https://casdoor.ai) SSO |
 
 Gateway prints what it is actually doing when it starts, so the result can be checked instead of the file:
 
@@ -451,7 +451,7 @@ The cost next to each record uses list prices, which vendors change and reseller
 
 ### Connecting Casdoor
 
-[Casdoor](https://casdoor.org) is optional and takes over member management. Create an organization and an application for Gateway in a Casdoor instance, then fill in the five fields of **Settings → Sign-in**. Sign-in redirects to Casdoor as soon as `casdoorEndpoint` is set, which also enables [OAuth logins](https://casdoor.org/docs/provider/oauth/overview).
+[Casdoor](https://casdoor.ai) is optional and takes over member management. Create an organization and an application for Gateway in a Casdoor instance, then fill in the five fields of **Settings → Sign-in**. Sign-in redirects to Casdoor as soon as `casdoorEndpoint` is set, which also enables [OAuth logins](https://casdoor.ai/docs/provider/oauth/overview/).
 
 ## Development
 
