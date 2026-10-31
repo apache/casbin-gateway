@@ -224,8 +224,12 @@ func firstNonSystem(messages []json.RawMessage) []byte {
 }
 
 // PreferSticky moves the provider that answered this conversation last to the
-// front, so its prompt cache is spent rather than paid for again elsewhere. A
-// provider that is cooling down or out of its plan is left where it is.
+// front of the stretch of attempts it belongs to, so its prompt cache is spent
+// rather than paid for again elsewhere. A stretch is the attempts one routing
+// rule put there, or the ruleless ones below them: a rule is the operator
+// saying where a model goes, and a conversation that has been answered by some
+// other provider before must not step over it. A provider that is cooling down
+// or out of its plan is left where it is.
 func PreferSticky(key string, attempts []RouteAttempt) []RouteAttempt {
 	if key == "" || len(attempts) < 2 {
 		return attempts
@@ -241,16 +245,39 @@ func PreferSticky(key string, attempts []RouteAttempt) []RouteAttempt {
 		return attempts
 	}
 
-	front := []RouteAttempt{}
-	rest := []RouteAttempt{}
-	for _, attempt := range attempts {
-		if attempt.providerId() == entry.provider {
-			front = append(front, attempt)
-		} else {
-			rest = append(rest, attempt)
+	ordered := make([]RouteAttempt, 0, len(attempts))
+	for start := 0; start < len(attempts); {
+		end := start + 1
+		for end < len(attempts) && attempts[end].Route == attempts[start].Route {
+			end++
+		}
+		ordered = appendSticky(ordered, attempts[start:end], entry.provider)
+		start = end
+	}
+	return ordered
+}
+
+// appendSticky adds one stretch with the remembered provider moved to its
+// front, and the rest in the order it was given.
+func appendSticky(dst []RouteAttempt, stretch []RouteAttempt, providerId string) []RouteAttempt {
+	promoted := -1
+	for i, attempt := range stretch {
+		if attempt.providerId() == providerId {
+			promoted = i
+			break
 		}
 	}
-	return append(front, rest...)
+	if promoted < 0 {
+		return append(dst, stretch...)
+	}
+
+	dst = append(dst, stretch[promoted])
+	for i, attempt := range stretch {
+		if i != promoted {
+			dst = append(dst, attempt)
+		}
+	}
+	return dst
 }
 
 // RememberSticky records which provider answered a conversation.
