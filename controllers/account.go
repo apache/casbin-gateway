@@ -46,7 +46,7 @@ func (c *ApiController) GetSigninOptions() {
 	c.ResponseOk(map[string]interface{}{
 		"casdoorAvailable": casdoorAvailable,
 		"signinAvailable":  signinEnabled,
-		"autoSignin":       signinEnabled && object.IsAdminUsingDefaultPassword() && util.IsLoopbackRequest(c.Ctx.Request),
+		"autoSignin":       c.canAutoSignin(),
 		"authConfig": map[string]string{
 			"serverUrl":        getUnquotedConfig("casdoorEndpoint"),
 			"clientId":         getUnquotedConfig("clientId"),
@@ -90,9 +90,7 @@ func (c *ApiController) Signin() {
 	}
 
 	claims.AccessToken = token.AccessToken
-	c.SetSessionClaims(claims)
-
-	c.ResponseOk(claims)
+	c.completeSignin(claims)
 }
 
 func (c *ApiController) signinWithPassword() {
@@ -108,11 +106,13 @@ func (c *ApiController) signinWithPassword() {
 			return
 		}
 	}
-	if form.Username == "" {
-		form.Username = c.Input().Get("username")
-	}
-	if form.Password == "" {
-		form.Password = c.Input().Get("password")
+	if conf.GetRemoteOrigin() == "" {
+		if form.Username == "" {
+			form.Username = c.Input().Get("username")
+		}
+		if form.Password == "" {
+			form.Password = c.Input().Get("password")
+		}
 	}
 
 	user, ok, err := object.VerifyUser(form.Username, form.Password)
@@ -126,9 +126,12 @@ func (c *ApiController) signinWithPassword() {
 	}
 
 	claims := &auth.Claims{User: user.ToCasdoorUser()}
-	c.SetSessionClaims(claims)
+	c.completeSignin(claims)
+}
 
-	c.ResponseOk(claims)
+func (c *ApiController) canAutoSignin() bool {
+	return conf.GetRemoteOrigin() == "" && util.IsLoopbackRequest(c.Ctx.Request) &&
+		object.IsSigninEnabled() && object.IsAdminUsingDefaultPassword()
 }
 
 func (c *ApiController) Signout() {
@@ -160,7 +163,7 @@ func (c *ApiController) autoLoginAdmin() bool {
 func (c *ApiController) GetAccount() {
 	if c.GetSessionUser() == nil {
 		fromPath := c.Input().Get("fromPath")
-		if object.IsSigninEnabled() && fromPath != "/signin" && object.IsAdminUsingDefaultPassword() && util.IsLoopbackRequest(c.Ctx.Request) {
+		if fromPath != "/signin" && c.canAutoSignin() {
 			if !c.autoLoginAdmin() {
 				return
 			}

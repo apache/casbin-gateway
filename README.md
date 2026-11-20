@@ -417,6 +417,19 @@ To serve other machines anyway, set `httpaddr = 0.0.0.0` in `conf/app.conf`, and
 
 **These are nightly builds**, rebuilt from `master` on every push and published as the [`nightly`](https://github.com/apache/casbin-gateway/releases/tag/nightly) pre-release. They exist so that Gateway can be tried without a Go and Node toolchain; anything else should be built from a source release.
 
+### Serving through an HTTPS reverse proxy
+
+To expose the relay through a same-host HTTPS reverse proxy, keep Gateway bound to `127.0.0.1` and set the startup-only `remoteOrigin` in `conf/app.conf` or as an environment variable.
+
+```ini
+httpaddr = 127.0.0.1
+remoteOrigin = https://gateway.example.com
+```
+
+Before enabling this mode, configure your providers, copy the relay token from **Settings → Security**, and change the seeded admin password or configure Casdoor. The reverse proxy terminates TLS, preserves the public `Host`, and sets `X-Forwarded-Proto: https` itself on HTTPS requests. Configure it to redirect HTTP to HTTPS and overwrite any incoming forwarded-protocol header.
+
+The remote profile requires explicit sign-in, uses separate secure cookies, and requires the relay token for every model request. It serves the web shell, sign-in and account endpoints, version information, and the relay. Provider management, desktop APIs, subscription providers, and client credential forwarding are unavailable in this mode.
+
 ### Running in Docker or Podman
 
 **A container cannot see the agents on your machine.** Agents are discovered by reading the home directories and install paths of the machine Gateway runs on, and inside a container that is the container's own filesystem. **Agents**, **Skills, MCP & Prompts** and agent monitoring therefore stay empty there, and the pages say so rather than pretending nothing is installed. Everything that does not depend on the host works normally: **Providers**, **Authenticity** and **LLM Records**.

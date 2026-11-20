@@ -53,7 +53,7 @@ func (c *ApiController) GetSessionClaims() *auth.Claims {
 		return nil
 	}
 
-	s := store.Get("user")
+	s := store.Get(sessionClaimsKey())
 	if s == nil {
 		return nil
 	}
@@ -73,9 +73,9 @@ func (c *ApiController) SetSessionClaims(claims *auth.Claims) {
 	}
 
 	if claims == nil {
-		store.Delete("user")
+		store.Delete(sessionClaimsKey())
 	} else {
-		store.Set("user", *claims)
+		store.Set(sessionClaimsKey(), *claims)
 	}
 
 	// Nothing else writes the session out now that beego does not start it.
@@ -93,7 +93,7 @@ func (c *ApiController) GetSessionUser() *auth.User {
 
 func (c *ApiController) SetSessionUser(user *auth.User) {
 	if user == nil {
-		c.DelSession("user")
+		c.SetSessionClaims(nil)
 		return
 	}
 

@@ -56,6 +56,10 @@ func LanHost() (string, error) {
 // as the rest of Gateway is concerned, so they carry the relay token, which is
 // written into the agent's configuration along with the endpoint.
 func SyncLanAccess() error {
+	if conf.GetRemoteOrigin() != "" {
+		closeLanAccess()
+		return nil
+	}
 	needed, err := sandboxedAgentIsBound()
 	if err != nil {
 		return err

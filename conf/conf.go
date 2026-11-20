@@ -18,6 +18,7 @@ import (
 	_ "embed"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"runtime"
 	"strconv"
@@ -155,6 +156,27 @@ func IsHttpAddrLoopback() bool {
 	}
 	ip := net.ParseIP(addr)
 	return ip != nil && ip.IsLoopback()
+}
+
+// GetRemoteOrigin enables the authenticated reverse-proxy profile when set.
+func GetRemoteOrigin() string {
+	return GetConfigStringUnquoted("remoteOrigin")
+}
+
+func ValidateRemoteOrigin() error {
+	origin := GetRemoteOrigin()
+	if origin == "" {
+		return nil
+	}
+	parsed, err := url.Parse(origin)
+	if err != nil || parsed.Hostname() == "" || origin != "https://"+parsed.Host || parsed.Port() == "443" {
+		return fmt.Errorf("remoteOrigin must be an HTTPS origin with no path, query, fragment or explicit default port")
+	}
+	if GetHttpAddr() != "127.0.0.1" || !beego.BConfig.Listen.EnableHTTP ||
+		beego.BConfig.Listen.EnableHTTPS || beego.BConfig.Listen.EnableMutualHTTPS {
+		return fmt.Errorf("remoteOrigin requires a loopback HTTP backend (httpaddr = 127.0.0.1) behind an HTTPS reverse proxy")
+	}
+	return nil
 }
 
 // GetAllowedHosts is the extra Host header values the management UI and the

@@ -411,6 +411,19 @@ Gateway 默认只监听 `127.0.0.1`，因为有两样东西对能连上这个端
 
 **这些是 nightly 构建**，每次推送都从 `master` 重新构建，并作为 [`nightly`](https://github.com/apache/casbin-gateway/releases/tag/nightly) 预发布版本发布。它们的用途是让人不装 Go 和 Node 工具链就能试用 Gateway；其他场景都应该从源码发布版构建。
 
+### 通过HTTPS反向代理访问
+
+通过同机HTTPS反向代理提供模型中继时，保持Gateway绑定到 `127.0.0.1`，并在 `conf/app.conf` 或环境变量中设置启动参数 `remoteOrigin`。
+
+```ini
+httpaddr = 127.0.0.1
+remoteOrigin = https://gateway.example.com
+```
+
+启用前先配置Provider、在 **Settings → Security** 中复制中继令牌，并更改初始管理员密码或配置Casdoor。反向代理负责终止TLS，保留公网 `Host`，对HTTPS请求自行设置 `X-Forwarded-Proto: https`。将HTTP重定向至HTTPS，并覆盖客户端传来的协议转发头。
+
+远程模式要求显式登录，使用独立的安全Cookie，每次模型请求均需中继令牌。该入口提供Web页面、登录与账号接口、版本信息及模型中继。Provider管理、桌面接口、订阅Provider和客户端凭据转发在此模式下不可用。
+
 ### 在 Docker 或 Podman 里运行
 
 **容器看不到你机器上的 Agent。** Agent 是靠读取 Gateway 所在机器的用户主目录和安装路径发现的，而在容器里那是容器自己的文件系统。所以 **Agents**、**Skills, MCP & Prompts** 和 Agent 监控在容器里一直是空的，页面会直接说明这一点，而不是让人以为什么都没装。不依赖宿主机的部分照常可用：**Providers**、**Authenticity** 和 **LLM Records**。
