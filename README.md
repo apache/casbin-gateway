@@ -518,6 +518,17 @@ cd web && yarn dev
 
 That serves the UI on http://localhost:16002 with hot reload and proxies API calls to the backend on port 17000, so both have to be running.
 
+### Workspace runtime smoke check
+
+Run the standalone probe against a Linux Docker engine with cgroup v2. The probe uses a digest-pinned Alpine-based image and a disposable named volume. It checks non-root execution, resource limits, progress after the Docker client exits, cancellation, and log recovery in a fresh container.
+
+```bash
+bash scripts/workspace-runtime-smoke.sh \
+  alpine/git@sha256:ae0f6f4bce38d2b8c40becc0d6241a08d9f57186ea03029de2189a2b5e722d94
+```
+
+Add `--require-rootless` before the image to require a rootless engine. The probe uses a shell fixture and requires no Agent credentials or running Gateway.
+
 ### Using MySQL instead of SQLite
 
 XORM is used, so every database it supports works. Point Gateway at your server and it creates `dbName` on first start if it does not exist:

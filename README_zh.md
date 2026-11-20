@@ -512,6 +512,17 @@ cd web && yarn dev
 
 这会在 http://localhost:16002 上提供带热更新的 UI，并把 API 请求代理到 17000 端口的后端，所以两边都得跑着。
 
+### Workspace运行时冒烟验证
+
+使用启用cgroup v2的Linux Docker引擎，运行以下独立脚本。脚本使用固定摘要的Alpine镜像和临时命名卷，验证非root执行、资源限制、Docker客户端退出后任务继续、任务取消以及新容器读取日志。
+
+```bash
+bash scripts/workspace-runtime-smoke.sh \
+  alpine/git@sha256:ae0f6f4bce38d2b8c40becc0d6241a08d9f57186ea03029de2189a2b5e722d94
+```
+
+若需强制验证rootless引擎，在镜像参数前添加 `--require-rootless`。脚本运行Shell验证任务，无需Agent凭据或运行中的Gateway。
+
 ### 使用 MySQL 代替 SQLite
 
 项目用的是 XORM，所以它支持的每种数据库都能用。把 Gateway 指向你的服务器，首次启动时如果 `dbName` 不存在它会自动创建：
