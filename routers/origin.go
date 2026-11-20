@@ -19,6 +19,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"path"
 	"strings"
 
 	"github.com/apache/casbin-gateway/conf"
@@ -38,6 +39,11 @@ import (
 // calling the relay, or from an origin the operator listed on the Settings
 // page.
 func OriginFilter(ctx *context.Context) {
+	if origin := conf.GetRemoteOrigin(); origin != "" {
+		remoteOriginFilter(ctx, origin)
+		return
+	}
+
 	host := ctx.Request.Host
 	if !isAllowedHost(host) {
 		denyOrigin(ctx, fmt.Sprintf("%q is not a name this Gateway answers to; add it to \"Allowed hosts\" on the Settings page (%s) to reach Gateway under that name",
@@ -61,6 +67,47 @@ func OriginFilter(ctx *context.Context) {
 	if isPreflight(ctx) {
 		ctx.ResponseWriter.WriteHeader(http.StatusOK)
 	}
+}
+
+func remoteOriginFilter(ctx *context.Context, origin string) {
+	request := ctx.Request
+	if !util.IsLoopbackRequest(request) || request.Header.Get("X-Forwarded-Proto") != "https" ||
+		!strings.EqualFold(request.Host, strings.TrimPrefix(origin, "https://")) {
+		denyOrigin(ctx, "request must arrive through the configured HTTPS reverse proxy")
+		return
+	}
+
+	from := request.Header.Get("Origin")
+	if from != "" && !strings.EqualFold(from, origin) {
+		denyOrigin(ctx, "cross-origin requests are not allowed")
+		return
+	}
+	requestPath := request.URL.Path
+	if path.Clean(requestPath) != requestPath {
+		denyOrigin(ctx, "request path must be canonical")
+		return
+	}
+	if !isRelayPath(requestPath) {
+		switch request.Method {
+		case http.MethodGet, http.MethodHead:
+			if strings.HasPrefix(strings.ToLower(requestPath), "/api/") &&
+				requestPath != "/api/get-signin-options" && requestPath != "/api/get-account" && requestPath != "/api/get-version" {
+				denyOrigin(ctx, "API endpoint is not available through the remote profile")
+				return
+			}
+		case http.MethodPost:
+			if from == "" || (requestPath != "/api/signin" && requestPath != "/api/signout") {
+				denyOrigin(ctx, "only same-origin sign-in and sign-out are available through the remote profile")
+				return
+			}
+		default:
+			denyOrigin(ctx, "method is not available through the remote profile")
+			return
+		}
+	}
+
+	// Beego checks the request scheme before marking a session cookie Secure.
+	request.URL.Scheme = "https"
 }
 
 // settingsUrl is where the two lists are edited. It is built from the address

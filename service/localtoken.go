@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/apache/casbin-gateway/conf"
 	"github.com/apache/casbin-gateway/util"
 )
 
@@ -73,7 +74,7 @@ func IssueLocalToken() error {
 // holding that token. Loopback alone would not do: a page in the operator's
 // browser reaches loopback too, and cannot read the file.
 func IsLocalRequest(r *http.Request) bool {
-	if r == nil || !util.IsLoopbackRequest(r) {
+	if conf.GetRemoteOrigin() != "" || r == nil || !util.IsLoopbackRequest(r) {
 		return false
 	}
 

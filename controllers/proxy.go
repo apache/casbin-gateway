@@ -17,6 +17,7 @@ package controllers
 import (
 	"bytes"
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -679,12 +680,12 @@ func reportProviderStatus(provider *object.Provider, statusCode int) {
 // credential in the same header a token would use. Anything off-box has to
 // present the relay token instead.
 func (c *ApiController) allowRelay() bool {
-	if util.IsLoopbackRequest(c.Ctx.Request) {
+	if conf.GetRemoteOrigin() == "" && util.IsLoopbackRequest(c.Ctx.Request) {
 		return true
 	}
 
 	token := conf.GetRelayToken()
-	return token != "" && c.relayCredential() == token
+	return token != "" && subtle.ConstantTimeCompare([]byte(c.relayCredential()), []byte(token)) == 1
 }
 
 // relayCredential is the token the client sent, in either of the two headers
@@ -961,6 +962,9 @@ func isRetryableStatus(statusCode int) bool {
 // an empty string when it can. The wire format the provider speaks is not one
 // of the reasons: a request in another one is translated for it.
 func (c *ApiController) providerUnusableReason(provider *object.Provider) string {
+	if conf.GetRemoteOrigin() != "" && (object.UsesClientAuth(provider) || object.UsesSubscription(provider)) {
+		return "client-auth and subscription providers are not available through the remote profile"
+	}
 	if !object.IsProviderTypeSupported(provider) {
 		return fmt.Sprintf("the %s provider type is not supported", provider.Type)
 	}

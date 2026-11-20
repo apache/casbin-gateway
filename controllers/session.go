@@ -17,7 +17,10 @@ package controllers
 import (
 	"net/http"
 	"net/url"
+	"os"
 
+	"github.com/apache/casbin-gateway/auth"
+	"github.com/apache/casbin-gateway/conf"
 	"github.com/beego/beego"
 	"github.com/beego/beego/session"
 	_ "github.com/beego/beego/session/redis"
@@ -34,10 +37,10 @@ func InitSessions() {
 	beego.BConfig.WebConfig.Session.SessionOn = false
 
 	config := &session.ManagerConfig{
-		CookieName:      beego.BConfig.WebConfig.Session.SessionName,
+		CookieName:      sessionCookieName(),
 		EnableSetCookie: true,
 		Gclifetime:      3600 * 24 * 365,
-		Secure:          beego.BConfig.Listen.EnableHTTPS,
+		Secure:          beego.BConfig.Listen.EnableHTTPS || conf.GetRemoteOrigin() != "",
 		// The session is only ever presented by Gateway's own pages, so the
 		// browser is told to keep it off requests another site makes.
 		CookieSameSite: http.SameSiteStrictMode,
@@ -49,6 +52,11 @@ func InitSessions() {
 	if redisEndpoint := beego.AppConfig.String("redisEndpoint"); redisEndpoint != "" {
 		provider = "redis"
 		config.ProviderConfig = redisEndpoint
+	} else if conf.GetRemoteOrigin() != "" {
+		config.ProviderConfig = "./tmp/remote-sessions"
+		if err := os.MkdirAll(config.ProviderConfig, 0o700); err != nil {
+			panic(err)
+		}
 	}
 
 	sessions, err := session.NewManager(provider, config)
@@ -58,6 +66,36 @@ func InitSessions() {
 
 	beego.GlobalSessions = sessions
 	go sessions.GC()
+}
+
+func sessionCookieName() string {
+	if conf.GetRemoteOrigin() != "" {
+		return "__Host-casbin-gateway"
+	}
+	return beego.BConfig.WebConfig.Session.SessionName
+}
+
+func sessionClaimsKey() string {
+	if conf.GetRemoteOrigin() != "" {
+		return "remoteUser"
+	}
+	return "user"
+}
+
+func (c *ApiController) completeSignin(claims *auth.Claims) {
+	if conf.GetRemoteOrigin() != "" {
+		request := c.Ctx.Request.Clone(c.Ctx.Request.Context())
+		request.Header.Del("Cookie")
+		store, err := beego.GlobalSessions.SessionStart(c.Ctx.ResponseWriter, request)
+		if err != nil {
+			beego.Error("the session could not be started:", err)
+			c.ResponseError("could not start a session")
+			return
+		}
+		c.CruSession = store
+	}
+	c.SetSessionClaims(claims)
+	c.ResponseOk(claims)
 }
 
 // sessionStore is this request's session, or nil when it has none: it is read
@@ -85,7 +123,7 @@ func (c *ApiController) sessionStore(create bool) session.Store {
 // so that a cookie left over from a session that is gone is not answered with a
 // new one.
 func (c *ApiController) hasSession() bool {
-	cookie, err := c.Ctx.Request.Cookie(beego.BConfig.WebConfig.Session.SessionName)
+	cookie, err := c.Ctx.Request.Cookie(sessionCookieName())
 	if err != nil || cookie.Value == "" {
 		return false
 	}

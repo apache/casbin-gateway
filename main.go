@@ -85,6 +85,11 @@ func main() {
 	version.BeginStartup()
 	defer version.RollBackOnPanic()
 
+	if err := conf.ValidateRemoteOrigin(); err != nil {
+		beego.Error(err)
+		os.Exit(1)
+	}
+
 	// A URL scheme is only Gateway while it waits for one link. A Gateway that
 	// did not get to hand one over left the scheme registered to itself, and
 	// this is the only process that can now give it back.
@@ -92,8 +97,10 @@ func main() {
 
 	// The tray runs as a process of its own, so the credential it presents in
 	// place of a session has to be on disk before it asks for anything.
-	if err := service.IssueLocalToken(); err != nil {
-		beego.Error("the desktop tray cannot be given a local token:", err)
+	if conf.GetRemoteOrigin() == "" {
+		if err := service.IssueLocalToken(); err != nil {
+			beego.Error("the desktop tray cannot be given a local token:", err)
+		}
 	}
 
 	object.InitFlag()
@@ -102,10 +109,16 @@ func main() {
 	// The built-in Setting row answers conf from here on, so it has to be loaded
 	// before anything reads a setting out of conf.
 	object.InitBuiltInSetting()
-	object.StartLlmRecordWriter()
-	defer object.StopLlmRecordWriter()
 	casdoor.InitCasdoorConfig()
 	object.InitUsers()
+	if conf.GetRemoteOrigin() != "" {
+		if err := object.CheckRemoteAdminPassword(); err != nil {
+			beego.Error(err)
+			os.Exit(1)
+		}
+	}
+	object.StartLlmRecordWriter()
+	defer object.StopLlmRecordWriter()
 	proxy.InitHttpClient()
 	// The probe suite is stored, so the shipped cases have to exist before
 	// anything can run one.

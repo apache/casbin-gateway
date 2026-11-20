@@ -217,6 +217,20 @@ func IsAdminUsingDefaultPassword() bool {
 	return CheckUserPassword(user, defaultAdminPassword)
 }
 
+func CheckRemoteAdminPassword() error {
+	if !IsSigninEnabled() {
+		return nil
+	}
+	user, err := GetUser(defaultAdminName)
+	if err != nil {
+		return err
+	}
+	if CheckUserPassword(user, defaultAdminPassword) {
+		return fmt.Errorf("change the seeded admin password before enabling remoteOrigin")
+	}
+	return nil
+}
+
 const (
 	defaultAdminName     = "admin"
 	defaultAdminPassword = "123"

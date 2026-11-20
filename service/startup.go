@@ -49,6 +49,9 @@ func PrintStartupSummary() {
 // describeManagementUrl says both where the UI is and who can reach it, since
 // the bind address decides whether the local admin is signed in automatically.
 func describeManagementUrl() string {
+	if origin := conf.GetRemoteOrigin(); origin != "" {
+		return origin + " (HTTPS reverse proxy)"
+	}
 	url := fmt.Sprintf("http://localhost:%d", conf.GetHttpPort())
 	if !conf.IsHttpAddrLoopback() {
 		return fmt.Sprintf("%s, bound to %s", url, conf.GetHttpAddr())
@@ -73,6 +76,9 @@ func lanAccessNeeded() bool {
 // this machine needs the token, which is also what Gateway writes into the
 // configuration of an agent it switches.
 func describeRelayAuth() string {
+	if conf.GetRemoteOrigin() != "" {
+		return "token required"
+	}
 	if conf.IsHttpAddrLoopback() && !lanAccessNeeded() {
 		return "this machine only, no token needed"
 	}
