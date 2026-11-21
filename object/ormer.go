@@ -345,6 +345,11 @@ func (a *Ormer) createTable() {
 		panic(err)
 	}
 
+	err = a.Engine.Sync2(new(Workspace))
+	if err != nil {
+		panic(err)
+	}
+
 	// The chat platforms Gateway listens on, and the bot credential for each.
 	err = a.Engine.Sync2(new(ImChannel))
 	if err != nil {
