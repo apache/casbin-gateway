@@ -12,6 +12,8 @@
 #                 (default: $HOME/.local/share/casbin-gateway)
 #   BIN_DIR       where the "casbin-gateway" command is placed
 #                 (default: $HOME/.local/bin)
+#   SERVER_ONLY   set to any value to install the server and CLI without desktop
+#                 integration or starting or stopping a process
 #   NO_START      set to any value to install without starting Gateway; one that
 #                 was already running is stopped for the update and started again
 #   NO_AUTOSTART  set to any value to skip the login-time startup entry
@@ -25,6 +27,7 @@ BASENAME="casbin-gateway-nightly"
 
 INSTALL_DIR="${INSTALL_DIR:-${HOME}/.local/share/casbin-gateway}"
 BIN_DIR="${BIN_DIR:-${HOME}/.local/bin}"
+SERVER_ONLY="${SERVER_ONLY:-}"
 NO_START="${NO_START:-}"
 NO_AUTOSTART="${NO_AUTOSTART:-}"
 NO_SHORTCUT="${NO_SHORTCUT:-}"
@@ -64,9 +67,24 @@ esac
 archive="${BASENAME}-${osName}-${archName}.tar.gz"
 url="https://github.com/${REPO}/releases/download/${TAG}/${archive}"
 
+if [[ -n "${SERVER_ONLY}" ]]; then
+	if [[ -e "${INSTALL_DIR}/casbin-gateway-desktop" || -L "${INSTALL_DIR}/casbin-gateway-desktop" ]]; then
+		die "SERVER_ONLY needs an install directory without a desktop launcher. Use the desktop installer to update this installation, or choose a separate INSTALL_DIR."
+	fi
+elif [[ "${osName}" == "linux" ]]; then
+	need_cmd ldd
+fi
+
 # ── download ──────────────────────────────────────────────────────────────────
 tmpDir="$(mktemp -d)"
-trap 'rm -rf "${tmpDir}"' EXIT
+stage=""
+cleanup() {
+	rm -rf "${tmpDir}"
+	if [[ -n "${stage}" ]]; then
+		rm -rf "${stage}"
+	fi
+}
+trap cleanup EXIT
 
 info "Downloading ${url}"
 curl -fsSL -o "${tmpDir}/${archive}" "${url}"
@@ -78,10 +96,31 @@ mkdir -p "${INSTALL_DIR}" || die "cannot create ${INSTALL_DIR}, set INSTALL_DIR 
 # Unpacking inside INSTALL_DIR keeps the final move on one filesystem, so it is
 # a rename: an already running Gateway holds the old executable open, and
 # writing over it in place would fail with "text file busy".
-stage="${INSTALL_DIR}/.install"
-rm -rf "${stage}"
-mkdir -p "${stage}"
+stage="$(mktemp -d "${INSTALL_DIR}/.install.XXXXXXXX")"
 tar -xzf "${tmpDir}/${archive}" -C "${stage}" --strip-components=1
+
+executables=(casbin-gateway)
+if [[ -z "${SERVER_ONLY}" ]]; then
+	executables+=(casbin-gateway-desktop)
+fi
+for file in "${executables[@]}" LICENSE NOTICE DISCLAIMER; do
+	[[ -f "${stage}/${file}" ]] || die "the downloaded archive is missing ${file}"
+done
+for executable in "${executables[@]}"; do
+	chmod 755 "${stage}/${executable}"
+done
+
+if [[ -z "${SERVER_ONLY}" && "${osName}" == "linux" ]]; then
+	# ldd can exit successfully even when a shared library is missing.
+	if ! dependencies="$(LC_ALL=C ldd "${stage}/casbin-gateway-desktop" 2>&1)" ||
+		[[ "${dependencies}" == *"not found"* ]]; then
+		printf '%s\n' "${dependencies}" >&2
+		if [[ "${dependencies}" == *"libwebkit2gtk-4.1.so.0 => not found"* ]]; then
+			printf '%s\n' 'Install WebKitGTK 4.1 (webkit2gtk-4.1 on Arch Linux, libwebkit2gtk-4.1-0 on Debian or Ubuntu where available).' >&2
+		fi
+		die "the Linux desktop launcher needs working shared libraries. Fix the dependencies above and rerun the installer. For a server-only install, use SERVER_ONLY=1 with a directory without a desktop launcher."
+	fi
+fi
 
 # ── stop the Gateway that is running ──────────────────────────────────────────
 # Without this an install over a running Gateway put the new executables in
@@ -91,24 +130,18 @@ tar -xzf "${tmpDir}/${archive}" -C "${stage}" --strip-components=1
 # itself. CASBIN_GATEWAY_HOME points that launcher at the installation rather
 # than at the staging directory it runs from.
 wasRunning=""
-chmod 755 "${stage}/casbin-gateway-desktop"
-if [[ -e "${INSTALL_DIR}/casbin-gateway" ]] &&
+if [[ -z "${SERVER_ONLY}" && -e "${INSTALL_DIR}/casbin-gateway" ]] &&
 	CASBIN_GATEWAY_HOME="${INSTALL_DIR}" "${stage}/casbin-gateway-desktop" quit; then
 	wasRunning="yes"
 	info "Stopped the running Gateway, and will start it again once it is updated"
 fi
 
-for executable in casbin-gateway casbin-gateway-desktop; do
+for executable in "${executables[@]}"; do
 	mv -f "${stage}/${executable}" "${INSTALL_DIR}/${executable}"
-	chmod 755 "${INSTALL_DIR}/${executable}"
 done
 for legalFile in LICENSE NOTICE DISCLAIMER; do
 	mv -f "${stage}/${legalFile}" "${INSTALL_DIR}/${legalFile}"
 done
-rm -rf "${stage}"
-
-desktopExe="${INSTALL_DIR}/casbin-gateway-desktop"
-
 # ── put a "casbin-gateway" command on PATH ────────────────────────────────────
 # Gateway keeps its database, logs and temporary files in the working
 # directory, so the command is a wrapper that always starts it in INSTALL_DIR.
@@ -146,12 +179,19 @@ EOF
 	esac
 fi
 
+if [[ -n "${SERVER_ONLY}" ]]; then
+	info "Casbin Gateway server is installed in ${INSTALL_DIR}."
+	info "Use casbin-gateway start to start it, or stop and start it to run the updated version."
+	exit 0
+fi
+
 # ── the desktop application ───────────────────────────────────────────────────
 # A macOS bundle or a Linux desktop entry, created by the launcher so that an
 # install and an archive unpacked by hand end up with the same one. Either
 # points at the launcher rather than at the server: it is what shows the window,
 # and it starts the server itself. Telling it "off" is what keeps a reinstall
 # with NO_SHORTCUT from getting one back on the next start.
+desktopExe="${INSTALL_DIR}/casbin-gateway-desktop"
 appNote=""
 shortcutState="on"
 if [[ -n "${NO_SHORTCUT}" ]]; then

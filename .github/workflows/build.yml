@@ -77,6 +77,10 @@ jobs:
           go-version: '1.25.8'
           cache-dependency-path: ./desktop/go.mod
 
+      - name: Test the Unix installer
+        if: ${{ matrix.goos == 'linux' }}
+        run: python3 scripts/test_install.py -v
+
       # webview_go asks pkg-config for webkit2gtk-4.0, which this Ubuntu no
       # longer ships; the shim points that name at the 4.1 it does.
       - name: Install the Linux dependencies

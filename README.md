@@ -126,6 +126,16 @@ Gateway then opens in its own window — no sign-in: it serves this machine only
 
 If you would rather use a browser, or you are on a machine with no desktop at all, everything is still at **http://localhost:17000**, and `casbin-gateway start` runs the server on its own with no window and no tray.
 
+The Linux desktop launcher needs GTK 3 and WebKitGTK 4.1 runtime libraries. The installer checks them before stopping the existing application or replacing its binaries. If the check fails, install the missing libraries and rerun the installer.
+
+For a server-only install on Linux or macOS, pass `SERVER_ONLY=1` to the script.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/apache/casbin-gateway/master/scripts/install.sh | SERVER_ONLY=1 bash
+```
+
+This installs the server and CLI without desktop dependencies or login items. Run `casbin-gateway start` when you want to use it. On an update, stop and start it to load the new version. To keep a desktop installation alongside it, choose a separate `INSTALL_DIR` and `BIN_DIR`.
+
 That is the whole installation. Gateway keeps its data in a SQLite file inside its own directory.
 
 The password behind that account is `admin` / `123`, and it only matters if you open Gateway to the network — see [Serving other machines](#serving-other-machines).

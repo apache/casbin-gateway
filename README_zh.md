@@ -126,6 +126,16 @@ Gateway 会在自己的窗口里打开 —— 不用登录：它只服务本机�
 
 想用浏览器，或者机器上根本没有桌面环境，**http://localhost:17000** 一样能访问；`casbin-gateway start` 则只跑服务端，没有窗口也没有托盘。
 
+Linux桌面启动器依赖GTK 3和WebKitGTK 4.1运行库。安装脚本会在停止现有程序或替换二进制文件前检查这些依赖。检查失败时，补齐缺失的运行库后再执行安装。
+
+在Linux或macOS上只安装服务端时，可以设置 `SERVER_ONLY=1`。
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/apache/casbin-gateway/master/scripts/install.sh | SERVER_ONLY=1 bash
+```
+
+这种模式安装服务端和CLI，无需桌面依赖，也不设置登录自启。需要时用 `casbin-gateway start` 启动，更新后先停止再启动即可使用新版。要与桌面安装并存，请分别指定 `INSTALL_DIR` 和 `BIN_DIR`。
+
 安装到此为止。Gateway 把数据存在自己目录下的一个 SQLite 文件里，登录也走它自己的用户表。
 
 ## 界面预览
