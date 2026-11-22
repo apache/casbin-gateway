@@ -118,7 +118,7 @@ func checkAgentProtocol(agentId string, mode string, providerIds []string) error
 		if id == "" {
 			continue
 		}
-		provider, err := object.GetProvider(id)
+		provider, err := object.GetProviderById(id)
 		if err != nil {
 			return err
 		}

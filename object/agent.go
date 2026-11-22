@@ -113,16 +113,16 @@ func SetAgentRouting(agentId string, providerId string, fallbacks []string, mode
 	}
 
 	fallbacks = normalizeFallbacks(providerId, fallbacks)
-	for _, id := range append([]string{providerId}, fallbacks...) {
-		if id == "" {
-			continue
-		}
-		provider, err := getProviderById(id)
-		if err != nil {
-			return err
-		}
-		if provider == nil {
-			return fmt.Errorf("the provider does not exist: %s", id)
+	// Unbinding restores the agent even when its inactive fallbacks were deleted.
+	if providerId != "" {
+		for _, id := range append([]string{providerId}, fallbacks...) {
+			provider, err := GetProviderById(id)
+			if err != nil {
+				return err
+			}
+			if provider == nil {
+				return fmt.Errorf("the provider does not exist: %s", id)
+			}
 		}
 	}
 
@@ -197,7 +197,7 @@ func GetProvidersByAgent(agentId string) ([]*Provider, error) {
 	providers := []*Provider{}
 	skipped := ""
 	for _, id := range append([]string{agent.Provider}, agent.Fallbacks...) {
-		provider, err := getProviderById(id)
+		provider, err := GetProviderById(id)
 		if err != nil {
 			skipped = err.Error()
 			continue
@@ -253,8 +253,8 @@ func GetProviderByAgent(agentId string) (*Provider, error) {
 	return providers[0], nil
 }
 
-// getProviderById is GetProvider() without its panic on a malformed id.
-func getProviderById(providerId string) (*Provider, error) {
+// GetProviderById looks up a provider by a validated owner/name id.
+func GetProviderById(providerId string) (*Provider, error) {
 	tokens := strings.Split(providerId, "/")
 	if len(tokens) != 2 || tokens[0] == "" || tokens[1] == "" {
 		return nil, fmt.Errorf("invalid provider ID: %s", providerId)
