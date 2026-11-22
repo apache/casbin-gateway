@@ -15,7 +15,9 @@
 import * as React from "react";
 import {ArrowDownToLine, Check, ChevronDown, FolderSearch} from "lucide-react";
 import i18next from "i18next";
+import {Link} from "react-router-dom";
 
+import * as AgentBackend from "@/backend/AgentBackend";
 import * as CcSwitchBackend from "@/backend/CcSwitchBackend";
 import * as Setting from "@/Setting";
 import {AgentIcon} from "@/components/AgentIcon";
@@ -141,7 +143,11 @@ function Section({title, count, children}: {title: string; count: number; childr
 }
 
 /** What the import did, entry by entry, once it has run. */
-function Outcomes({title, items}: {title: string; items: CcSwitchOutcome[]}) {
+function Outcomes({title, items, actions}: {
+  title: string;
+  items: CcSwitchOutcome[];
+  actions?: (item: CcSwitchOutcome) => React.ReactNode;
+}) {
   if (items.length === 0) {
     return null;
   }
@@ -154,9 +160,129 @@ function Outcomes({title, items}: {title: string; items: CcSwitchOutcome[]}) {
           <span className="truncate">{item.name}</span>
           {item.agent ? <span className="text-muted-foreground text-xs">{item.agent}</span> : null}
           {item.reason ? <span className="text-muted-foreground truncate text-xs">{item.reason}</span> : null}
+          {actions?.(item)}
         </div>
       ))}
     </div>
+  );
+}
+
+function ImportedProviders({items}: {items: CcSwitchOutcome[]}) {
+  const hasCurrent = items.some(item => item.providerId && item.currentFor?.length);
+  const [targets, setTargets] = React.useState<AgentBackend.AgentProviderTarget[] | null>(null);
+  const [lookupError, setLookupError] = React.useState("");
+  const [retry, setRetry] = React.useState(0);
+  const [pending, setPending] = React.useState("");
+  const [switchError, setSwitchError] = React.useState<{agentId: string; message: string} | null>(null);
+
+  React.useEffect(() => {
+    if (!hasCurrent) {
+      return;
+    }
+    let cancelled = false;
+    setLookupError("");
+    AgentBackend.getAgentProviderTargets()
+      .then(res => {
+        if (cancelled) {
+          return;
+        }
+        if (res.status === "ok") {
+          setTargets(res.data.agents);
+        } else {
+          setLookupError(res.msg || i18next.t("link:Could not list installed agents"));
+        }
+      })
+      .catch(err => {
+        if (!cancelled) {
+          setLookupError(String(err));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [hasCurrent, retry]);
+
+  const activate = async (target: AgentBackend.AgentProviderTarget, providerId: string, key: string) => {
+    setPending(key);
+    setSwitchError(null);
+    try {
+      const res = await AgentBackend.setAgentProvider(target.agentId, providerId);
+      if (res.status !== "ok") {
+        setSwitchError({agentId: target.agentId, message: res.msg || i18next.t("agent:Failed to update agent provider")});
+        return;
+      }
+      setTargets(previous => previous?.map(agent =>
+        agent.agentId === target.agentId ? {...agent, provider: providerId} : agent,
+      ) ?? null);
+    } catch (err) {
+      setSwitchError({agentId: target.agentId, message: String(err)});
+    } finally {
+      setPending("");
+    }
+  };
+
+  const action = (item: CcSwitchOutcome) => {
+    if (!item.providerId || !item.currentFor?.length || targets === null) {
+      return null;
+    }
+    const providerId = item.providerId;
+    const matching = item.currentFor.flatMap(id => targets.filter(agent => agent.agentId === id));
+    // Codex CLI and Desktop share a configuration. Reuse the existing binding.
+    const bound = matching.filter(agent => agent.provider !== "");
+    if (bound.length > 1) {
+      return (
+        <Link to="/" className="text-sm underline">
+          {i18next.t("link:Choose a Codex target in Agents")}
+        </Link>
+      );
+    }
+    const target = bound[0] ?? matching[0];
+    if (!target) {
+      return <span className="text-muted-foreground text-xs">{i18next.t("link:Matching agent is not installed")}</span>;
+    }
+    if (target.provider === providerId) {
+      return <Badge variant="info">{i18next.t("link:Selected for {agent}").replace("{agent}", target.name)}</Badge>;
+    }
+    return (
+      <Button
+        type="button"
+        size="xs"
+        variant="outline"
+        loading={pending === item.key}
+        disabled={pending !== ""}
+        onClick={() => void activate(target, providerId, item.key)}
+      >
+        {i18next.t("link:Use for {agent}").replace("{agent}", target.name)}
+      </Button>
+    );
+  };
+
+  return (
+    <>
+      <Outcomes title={kindTitle("providers")} items={items} actions={action} />
+      {hasCurrent && targets === null && lookupError === "" ? <Loading /> : null}
+      {lookupError ? (
+        <MessageAlert
+          title={i18next.t("link:Could not list installed agents")}
+          description={lookupError}
+          action={
+            <Button type="button" size="xs" variant="outline" onClick={() => setRetry(value => value + 1)}>
+              {i18next.t("link:Look again")}
+            </Button>
+          }
+        />
+      ) : null}
+      {switchError ? (
+        <MessageAlert
+          title={switchError.message}
+          action={
+            <Link to={`/agents/${encodeURIComponent(switchError.agentId)}`} className="text-sm underline">
+              {i18next.t("link:Open agent settings")}
+            </Link>
+          }
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -304,7 +430,7 @@ export function CcSwitchImportCard({onImported}: {onImported?: () => void}) {
           />
         ) : result !== null ? (
           <>
-            <Outcomes title={kindTitle("providers")} items={result.providers} />
+            <ImportedProviders items={result.providers} />
             <Outcomes title={kindTitle("mcps")} items={result.mcps} />
             <Outcomes title={kindTitle("prompts")} items={result.prompts} />
             <Outcomes title={kindTitle("skills")} items={result.skills} />
