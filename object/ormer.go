@@ -221,9 +221,7 @@ func prepareSqliteDir(dataSourceName string) error {
 	return os.MkdirAll(dir, 0o755)
 }
 
-// withSqlitePragmas keeps SQLite usable under concurrent requests: WAL lets
-// readers run alongside the writer, and busy_timeout waits instead of failing
-// with SQLITE_BUSY.
+// Set the busy timeout first because opening the WAL can itself need a lock.
 func withSqlitePragmas(dataSourceName string) string {
 	if strings.Contains(dataSourceName, "_pragma=") {
 		return dataSourceName
@@ -234,7 +232,7 @@ func withSqlitePragmas(dataSourceName string) string {
 		separator = "&"
 	}
 
-	return dataSourceName + separator + "_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)"
+	return dataSourceName + separator + "_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)"
 }
 
 func (a *Ormer) close() {
