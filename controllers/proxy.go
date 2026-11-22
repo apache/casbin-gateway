@@ -17,6 +17,7 @@ package controllers
 import (
 	"bytes"
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -684,7 +685,7 @@ func (c *ApiController) allowRelay() bool {
 	}
 
 	token := conf.GetRelayToken()
-	return token != "" && c.relayCredential() == token
+	return token != "" && subtle.ConstantTimeCompare([]byte(c.relayCredential()), []byte(token)) == 1
 }
 
 // relayCredential is the token the client sent, in either of the two headers

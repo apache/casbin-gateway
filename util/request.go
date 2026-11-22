@@ -40,9 +40,15 @@ func GetClientIp(r *http.Request) string {
 }
 
 // IsLoopbackRequest reports whether the request came from this machine, judged
-// by the socket alone. X-Forwarded-For and X-Real-IP are deliberately ignored:
-// they are set by the client and so cannot be trusted to grant anything.
+// by the socket. A forwarding header never grants anything, but it does mean a
+// proxy on this machine relayed the request for a client somewhere else.
 func IsLoopbackRequest(r *http.Request) bool {
+	for _, header := range []string{"X-Forwarded-For", "X-Real-Ip", "Forwarded"} {
+		if r.Header.Get(header) != "" {
+			return false
+		}
+	}
+
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		host = r.RemoteAddr

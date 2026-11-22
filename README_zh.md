@@ -409,6 +409,8 @@ Gateway 默认只监听 `127.0.0.1`，因为有两样东西对能连上这个端
 1. **改掉管理员密码**（**My Account** 里）。自动登录在遇到第一个非本机请求时就停止，从那以后密码是唯一的门槛。
 2. **每个发往 `/v1` 的请求都要带上中继令牌**。Gateway 在首次启动时生成它，显示在 **Settings → Security** 里；Providers 和 Agents 页面上的环境变量片段已经填好了它，Gateway 为 Agent 写配置时写进去的也是它。来自本机的请求永远不需要它。
 
+**放在同一台机器的反向代理后面时**，保持 `httpaddr = 127.0.0.1`，同样做上面两步。带有 `X-Forwarded-For`、`X-Real-IP` 或 `Forwarded` 头的请求会被Gateway当作来自其他机器，所以要确认代理会发其中一个：Caddy默认就发，nginx要加 `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`。如果代理把公网 `Host` 原样传过来，把这个域名加进Settings页面的 **Allowed hosts**。
+
 **这些是 nightly 构建**，每次推送都从 `master` 重新构建，并作为 [`nightly`](https://github.com/apache/casbin-gateway/releases/tag/nightly) 预发布版本发布。它们的用途是让人不装 Go 和 Node 工具链就能试用 Gateway；其他场景都应该从源码发布版构建。
 
 ### 在 Docker 或 Podman 里运行

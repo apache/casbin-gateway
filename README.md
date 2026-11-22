@@ -415,6 +415,8 @@ To serve other machines anyway, set `httpaddr = 0.0.0.0` in `conf/app.conf`, and
 1. **Change the admin password** from **My Account**. The auto sign-in stops at the first request that is not from this machine, so from then on the password is the only thing in the way.
 2. **Send the relay token** with every request to `/v1`. Gateway generates one on first start and shows it under **Settings → Security**; the environment snippets on the Providers and Agents pages already carry it, and it is what Gateway writes into the configuration of an agent it switches. Requests from this machine never need it.
 
+**Behind a reverse proxy on the same machine**, keep `httpaddr = 127.0.0.1` and do the same two steps. Gateway treats a request carrying `X-Forwarded-For`, `X-Real-IP` or `Forwarded` as coming from another machine, so make sure the proxy sends one: Caddy does by default, and nginx needs `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`. If the proxy passes the public `Host` on, add that name to **Allowed hosts** on the Settings page.
+
 **These are nightly builds**, rebuilt from `master` on every push and published as the [`nightly`](https://github.com/apache/casbin-gateway/releases/tag/nightly) pre-release. They exist so that Gateway can be tried without a Go and Node toolchain; anything else should be built from a source release.
 
 ### Running in Docker or Podman

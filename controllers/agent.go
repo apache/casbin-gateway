@@ -487,25 +487,17 @@ func (c *ApiController) AddAgentRecord() {
 	c.ResponseOk()
 }
 
-// directLoopbackClient reports the peer address, rejecting anything that was
-// relayed by a proxy. A forwarding header means the real client is remote even
-// though the socket is local.
+// directLoopbackClient reports the peer address of a request from this machine
+// that no proxy relayed.
 func (c *ApiController) directLoopbackClient() (net.IP, bool) {
-	for _, header := range []string{"X-Forwarded-For", "X-Real-Ip", "Forwarded"} {
-		if c.Ctx.Input.Header(header) != "" {
-			return nil, false
-		}
-	}
-	remoteAddr := c.Ctx.Request.RemoteAddr
-	host, _, err := net.SplitHostPort(remoteAddr)
-	if err != nil {
-		host = remoteAddr
-	}
-	ip := net.ParseIP(host)
-	if ip == nil || !ip.IsLoopback() {
+	if !util.IsLoopbackRequest(c.Ctx.Request) {
 		return nil, false
 	}
-	return ip, true
+	host, _, err := net.SplitHostPort(c.Ctx.Request.RemoteAddr)
+	if err != nil {
+		host = c.Ctx.Request.RemoteAddr
+	}
+	return net.ParseIP(strings.Trim(host, "[]")), true
 }
 
 // readAgentInstallation resolves the request body against the installations that
