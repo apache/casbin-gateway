@@ -298,6 +298,8 @@ Codex is the exception: its ChatGPT sign-in talks to an endpoint no provider sta
 
 ### When a provider cannot answer: fallbacks and model routing
 
+Before deleting a provider, check the confirmation for agents that use it as a primary or fallback. After a primary provider is removed, the agent's **Provider** card lets you choose a replacement or restore its original provider settings. Switching to a replacement keeps the remaining compatible fallbacks.
+
 A key runs out of credit, a relay goes down, a vendor rate-limits you halfway through a session. Gateway moves the request on to the next provider instead of handing the agent the error.
 
 **Fallbacks.** On an agent's page, under the provider it is bound to, pick the other providers to fall back to, in the order they should be tried. They need not be from the same vendor or speak the same API: Claude Code bound to an Anthropic relay can fall back to DeepSeek, then Kimi, then Qwen, and Gateway translates each request for whichever one answers. A fallback that does not serve the model the agent asked for is sent the closest one it does by size, so a request for a small model such as `claude-haiku-4-5` gets that provider's small model and a request for a large one its large one, and background traffic is not billed at the flagship rate.
