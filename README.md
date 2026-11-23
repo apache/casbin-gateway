@@ -235,6 +235,8 @@ A page with tabs or sections is in the sidebar under its own name, so the rail l
 
 Agents are found by reading the user accounts, home directories and install paths of **the machine Gateway runs on**, so run it on the machine whose agents you want to watch.
 
+To set up another account for the same endpoint, choose **Duplicate provider** on a provider card. The new draft starts with the source's endpoint, API format, model list and status. Set the copy's credentials and save it as a separate provider.
+
 ### The killer feature: is the API behind that key what it was sold as?
 
 A reseller can sell a frontier model and serve a cheaper one, count a cached prefix as fresh input, or answer in an API it only pretends to speak. None of that shows up in the traffic, so **Authenticity** asks the upstream directly. Every provider is probed on its own — when it is added, when its endpoint, type or key changes, when it has never been probed, and again whenever its report goes stale — and comes back with a score out of 100 and a grade from A to F, on the Authenticity page and above the agents on the home page. No button to press, and nothing to configure.
