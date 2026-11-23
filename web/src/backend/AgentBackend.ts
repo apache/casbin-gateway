@@ -31,6 +31,7 @@ import type {
   AgentSignin,
   AgentVersionCatalog,
   BrowseListing,
+  ProviderStreamResult,
   SavedAccount,
   SavedAccounts,
   SwitchedAccount,
@@ -281,6 +282,10 @@ export function applyAgentProvider(target: PatchTarget) {
 
 export function restoreAgentProvider(target: PatchTarget) {
   return request<AgentProviderConfig>("/api/restore-agent-provider", "POST", target);
+}
+
+export function checkAgentProviderStream(agentId: string, provider: string) {
+  return request<ProviderStreamResult>("/api/check-agent-provider-stream", "POST", {agentId, provider});
 }
 
 export function getAgentRecords(agent = "", eventType = "", outcome = "", session = "", limit = 200) {

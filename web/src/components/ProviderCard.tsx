@@ -21,6 +21,7 @@ import {EnvSnippet} from "@/components/EnvSnippet";
 import {EnvWarningBanner} from "@/components/EnvWarningBanner";
 import {AgentIcon} from "@/components/AgentIcon";
 import {ProviderIcon} from "@/components/ProviderIcon";
+import {ProviderStreamCheck} from "@/components/ProviderStreamCheck";
 import {ConfirmDialog} from "@/components/shared/confirm-dialog";
 import {Loading} from "@/components/shared/loading";
 import {SimpleSelect} from "@/components/shared/simple-select";
@@ -462,6 +463,10 @@ export function ProviderCard({
             )}
           </>
         )}
+
+        {bound?.status === "enabled" ? (
+          <ProviderStreamCheck key={`${agent.agentId}/${agent.provider}/${mode}`} agentId={agent.agentId} provider={bound} disabled={busy} />
+        ) : null}
 
         <PreviewDialog agent={agent} open={preview} onOpenChange={setPreview} />
       </CardContent>

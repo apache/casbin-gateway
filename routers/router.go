@@ -75,6 +75,7 @@ func initAPI() {
 	beego.Router("/api/patch-agent", &controllers.ApiController{}, "POST:PatchAgent")
 	beego.Router("/api/unpatch-agent", &controllers.ApiController{}, "POST:UnpatchAgent")
 	beego.Router("/api/update-agent-routing", &controllers.ApiController{}, "POST:UpdateAgentRouting")
+	beego.Router("/api/check-agent-provider-stream", &controllers.ApiController{}, "POST:CheckAgentProviderStream")
 	beego.Router("/api/get-agent-permission", &controllers.ApiController{}, "GET:GetAgentPermission")
 	beego.Router("/api/get-agent-permissions", &controllers.ApiController{}, "GET:GetAgentPermissions")
 	beego.Router("/api/update-agent-permission", &controllers.ApiController{}, "POST:UpdateAgentPermission")
