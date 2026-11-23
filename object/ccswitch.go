@@ -114,6 +114,9 @@ type CcSwitchOutcome struct {
 	// Agent names the agent it was written into, for the entries that go into
 	// one rather than into Gateway itself.
 	Agent string `json:"agent,omitempty"`
+	// CurrentFor lists the agent ids that can use this imported provider.
+	CurrentFor []string `json:"currentFor,omitempty"`
+	ProviderId string   `json:"providerId,omitempty"`
 }
 
 // CcSwitchResult is one import, entry by entry.
@@ -248,13 +251,23 @@ func importCcSwitchProviders(owner string, store *ccswitch.Store, selection *CcS
 			outcome.Action, outcome.Reason = agentconfig.ActionSkip, reason
 			continue
 		}
-		if _, err := AddProvider(provider); err != nil {
+		created, err := AddProvider(provider)
+		if err != nil {
 			outcome.Action, outcome.Reason = agentconfig.ActionFailed, err.Error()
+			continue
+		}
+		if !created {
+			outcome.Action, outcome.Reason = agentconfig.ActionFailed, "the provider was not added"
 			continue
 		}
 		// AddProvider settles on a free name, which is the one to report: it is
 		// what the provider is called in the listing afterwards.
 		outcome.Action, outcome.Name = agentconfig.ActionCreate, provider.DisplayName
+		app := strings.ToLower(strings.TrimSpace(entry.App))
+		if entry.Current && (app == "claude" || app == "codex") {
+			outcome.CurrentFor, _ = linkTargets([]string{app})
+			outcome.ProviderId = provider.GetId()
+		}
 	}
 }
 

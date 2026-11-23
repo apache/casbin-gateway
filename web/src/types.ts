@@ -1831,6 +1831,9 @@ export interface CcSwitchOutcome {
   reason?: string;
   /** The agent it was written into, for the entries that go into one. */
   agent?: string;
+  /** The saved provider ID and its agent targets when it was in use in CC Switch. */
+  providerId?: string;
+  currentFor?: string[];
 }
 
 export interface CcSwitchResult {

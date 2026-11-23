@@ -337,6 +337,8 @@ The link is handed to Gateway in the body of an API call, not in the address of 
 
 The scheme is taken from whatever held it only the first time, and given back when Gateway is removed; a registration that is already Gateway's own is rewritten on every start, since it records a path that an update or a move would otherwise leave pointing at a Gateway that is no longer there. On macOS nothing is claimed at all — a URL scheme there belongs to an application bundle and the link arrives as an Apple event, which this launcher has no loop to receive, so declaring it would take links away from whatever can open them. Paste the link into the box on the Import page instead, which works on every platform; the Providers page takes a provider link the same way.
 
+To migrate a local CC Switch setup, use **Import from CC Switch** on the same page. If an imported provider was in use for Claude Code or Codex, click **Use for** the installed agent in the import results to select it and update the agent's provider settings. The import itself leaves provider routing alone.
+
 ### What each agent is allowed to do
 
 **Permissions** in the sidebar is the page for it: every agent on this machine down one side, what the one you picked may do beside it. The same card is on the agent's own page. Everything that agent relays through Gateway is held to what is set there, so it can be given less than it came with without editing its own configuration.

@@ -270,6 +270,18 @@ export function updateAgentRouting(agentId: string, routing: AgentRouting) {
   return request("/api/update-agent-routing", "POST", {agentId: agentId, ...routing});
 }
 
+export type AgentProviderTarget = Pick<Agent, "agentId" | "name" | "provider">;
+
+/** The tray's agent list reads provider assignments without patching agent files. */
+export function getAgentProviderTargets() {
+  return request<{agents: AgentProviderTarget[]}>("/api/get-tray-menu");
+}
+
+/** Select a provider using the same switch as the tray. */
+export function setAgentProvider(agentId: string, provider: string) {
+  return request<string>("/api/set-agent-provider", "POST", {agentId, provider});
+}
+
 /** What a switch would write, rendered without touching a file. */
 export function planAgentProvider(target: PatchTarget) {
   return request<AgentProviderFile[]>("/api/plan-agent-provider", "POST", target);
