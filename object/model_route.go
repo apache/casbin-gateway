@@ -190,7 +190,7 @@ func normalizeModelRoute(route *ModelRoute) error {
 			return fmt.Errorf("model name is too long: %s", target.Model)
 		}
 		if target.Provider != "" {
-			provider, err := getProviderById(target.Provider)
+			provider, err := GetProviderById(target.Provider)
 			if err != nil {
 				return err
 			}
@@ -378,7 +378,7 @@ func planRouteTargets(route *ModelRoute, requested string, pool []*Provider) []R
 // is looked for in the pool the plan was built against.
 func routeTargetProviders(target RouteTarget, model string, pool []*Provider) []*Provider {
 	if target.Provider != "" {
-		provider, err := getProviderById(target.Provider)
+		provider, err := GetProviderById(target.Provider)
 		if err != nil || provider == nil || provider.Status != "enabled" {
 			// A rule outliving the provider it names is why the ladder has
 			// rungs below this one.

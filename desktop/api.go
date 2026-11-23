@@ -17,7 +17,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -35,18 +34,34 @@ const localTokenHeader = "X-Casbin-Gateway-Local-Token"
 
 const apiTimeout = 10 * time.Second
 
+type apiError struct {
+	message string
+	data    json.RawMessage
+}
+
+func (err *apiError) Error() string {
+	return err.message
+}
+
 // trayMenu is what the server says the provider submenus should contain.
 type trayMenu struct {
-	Agents []struct {
-		AgentId  string `json:"agentId"`
-		Name     string `json:"name"`
-		Provider string `json:"provider"`
-	} `json:"agents"`
-	Providers []struct {
-		Id       string `json:"id"`
-		Name     string `json:"name"`
-		Disabled bool   `json:"disabled"`
-	} `json:"providers"`
+	Agents    []trayAgent    `json:"agents"`
+	Providers []trayProvider `json:"providers"`
+}
+
+type trayAgent struct {
+	AgentId  string `json:"agentId"`
+	Name     string `json:"name"`
+	Provider string `json:"provider"`
+	Mode     string `json:"mode"`
+	Protocol string `json:"protocol"`
+}
+
+type trayProvider struct {
+	Id       string `json:"id"`
+	Name     string `json:"name"`
+	Disabled bool   `json:"disabled"`
+	Protocol string `json:"protocol"`
 }
 
 // serverUrl is the server's own address. It is not gatewayUrl(): that one may
@@ -118,7 +133,7 @@ func callApi(method string, path string, body []byte, out interface{}) error {
 		return fmt.Errorf("%s answered %s: %v", path, response.Status, err)
 	}
 	if envelope.Status != "ok" {
-		return errors.New(envelope.Msg)
+		return &apiError{message: envelope.Msg, data: envelope.Data}
 	}
 	if out == nil {
 		return nil

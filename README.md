@@ -282,6 +282,8 @@ One base URL answers whichever API the agent speaks: `/chat/completions` for an 
 
 Upstream, which API Gateway calls is the provider's own setting: **Upstream API** defaults to the one the provider type implies, and can be set to Responses for OpenAI itself or for a relay that accounts cached input on `/responses` more accurately than on `/chat/completions`. A Codex request then meets a Responses provider on both sides and passes through byte for byte, cache counters included.
 
+Use **Switch Provider** in the tray to change an installed agent's provider or select **Built-in model** to restore its own settings. The tray shows what changed and reports failures to update or restore the agent configuration. Click the result to open the agent's settings in your browser.
+
 ### No API key: keep the sign-in the agent already has
 
 An agent signed in with a ChatGPT or Claude subscription has no API key to paste. Set the provider's **Authentication** to **the caller's own login** and it needs none: the base URL points at the vendor, and every request is forwarded with the credentials the agent itself sent, so it keeps its own sign-in. Leave **Models** empty and the provider accepts any model name.

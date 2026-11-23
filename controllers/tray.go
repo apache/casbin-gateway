@@ -19,6 +19,7 @@ import (
 	"sort"
 
 	"github.com/apache/casbin-gateway/agent"
+	"github.com/apache/casbin-gateway/agentprovider"
 	"github.com/apache/casbin-gateway/object"
 )
 
@@ -29,6 +30,8 @@ type trayAgent struct {
 	AgentId  string `json:"agentId"`
 	Name     string `json:"name"`
 	Provider string `json:"provider"`
+	Mode     string `json:"mode"`
+	Protocol string `json:"protocol"`
 }
 
 // trayProvider is one provider a tray menu entry can be switched to.
@@ -36,6 +39,7 @@ type trayProvider struct {
 	Id       string `json:"id"`
 	Name     string `json:"name"`
 	Disabled bool   `json:"disabled"`
+	Protocol string `json:"protocol"`
 }
 
 // GetTrayMenu is everything the desktop tray draws: the agents installed here,
@@ -66,11 +70,13 @@ func (c *ApiController) GetTrayMenu() {
 		seen[installation.AgentId] = true
 
 		item := &trayAgent{
-			AgentId: installation.AgentId,
-			Name:    installation.Name,
+			AgentId:  installation.AgentId,
+			Name:     installation.Name,
+			Protocol: agentprovider.ProtocolOf(installation.AgentId),
 		}
 		if stored, ok := routings[installation.AgentId]; ok {
 			item.Provider = stored.Provider
+			item.Mode = stored.Mode
 		}
 		agents = append(agents, item)
 	}
@@ -91,7 +97,8 @@ func (c *ApiController) GetTrayMenu() {
 		providers = append(providers, &trayProvider{
 			Id:       provider.GetId(),
 			Name:     name,
-			Disabled: provider.Status == "disabled",
+			Disabled: provider.Status != "enabled",
+			Protocol: object.ProviderApiFamily(provider),
 		})
 	}
 	sort.Slice(providers, func(i, j int) bool { return providers[i].Name < providers[j].Name })
@@ -119,6 +126,21 @@ func (c *ApiController) SetAgentProvider() {
 		c.ResponseError("unknown agent: " + form.AgentId)
 		return
 	}
+	if form.Provider != "" {
+		provider, err := object.GetProviderById(form.Provider)
+		if err != nil {
+			c.ResponseError(err.Error())
+			return
+		}
+		if provider == nil {
+			c.ResponseError("the provider does not exist: " + form.Provider)
+			return
+		}
+		if provider.Status != "enabled" {
+			c.ResponseError("the provider is disabled: " + form.Provider)
+			return
+		}
+	}
 
 	fallbacks := []string{}
 	mode := object.ModeGateway
@@ -136,8 +158,9 @@ func (c *ApiController) SetAgentProvider() {
 		}
 	}
 
-	if err := saveAgentRouting(form.AgentId, form.Provider, fallbacks, mode, strategy); err != nil {
-		c.ResponseError(err.Error())
+	saved, err := saveAgentRouting(form.AgentId, form.Provider, fallbacks, mode, strategy)
+	if err != nil {
+		c.ResponseError(err.Error(), map[string]bool{"routingSaved": saved})
 		return
 	}
 	c.ResponseOk(form.Provider)

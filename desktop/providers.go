@@ -15,7 +15,10 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -36,29 +39,86 @@ const builtinTitle = "Built-in model"
 // are redrawn only when what they should show changes, since redrawing one
 // closes it under the pointer.
 type providerMenu struct {
-	root  *systray.MenuItem
-	drawn string
+	root     *systray.MenuItem
+	status   *systray.MenuItem
+	switches chan providerChoice
+	drawn    string
 	// agents holds only the submenu of each agent: removing one removes the
 	// provider items under it, and removing those again is what Windows
 	// answers with "invalid menu handle".
 	agents []*systray.MenuItem
-	// redrawNow carries a switch this menu just made, so the check mark moves
-	// without waiting out the interval.
-	redrawNow chan struct{}
 }
 
-func newProviderMenu(root *systray.MenuItem) *providerMenu {
-	return &providerMenu{root: root, redrawNow: make(chan struct{}, 1)}
+type providerChoice struct {
+	agentId      string
+	agentName    string
+	providerId   string
+	providerName string
+}
+
+func newProviderMenu(root *systray.MenuItem, status *systray.MenuItem) *providerMenu {
+	return &providerMenu{root: root, status: status, switches: make(chan providerChoice, 1)}
 }
 
 func (menu *providerMenu) watch() {
+	ticker := time.NewTicker(menuInterval)
+	defer ticker.Stop()
+	menu.draw()
+	lastAgent := ""
 	for {
-		menu.draw()
 		select {
-		case <-menu.redrawNow:
-		case <-time.After(menuInterval):
+		case choice := <-menu.switches:
+			if menu.root.Disabled() {
+				continue
+			}
+			lastAgent = choice.agentId
+			menu.root.Disable()
+			menu.switchProvider(choice)
+			menu.root.Enable()
+			menu.draw()
+		case <-menu.status.ClickedCh:
+			if lastAgent != "" {
+				if err := openBrowser(gatewayUrl() + "/agents/" + url.PathEscape(lastAgent)); err != nil {
+					fmt.Fprintln(os.Stderr, "casbin-gateway-desktop:", err)
+				}
+			}
+		case <-ticker.C:
+			menu.draw()
 		}
 	}
+}
+
+func (menu *providerMenu) switchProvider(choice providerChoice) {
+	menu.status.SetTitle("Switching provider for " + choice.agentName + "...")
+	menu.status.Show()
+	err := setAgentProvider(choice.agentId, choice.providerId)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "casbin-gateway-desktop:", err)
+	}
+	menu.status.SetTitle(providerSwitchMessage(choice, err))
+}
+
+func providerSwitchMessage(choice providerChoice, err error) string {
+	if err == nil {
+		return choice.agentName + ": " + choice.providerName + " selected"
+	}
+	var failure *apiError
+	if !errors.As(err, &failure) {
+		return choice.agentName + ": could not confirm provider switch"
+	}
+	var outcome struct {
+		RoutingSaved *bool `json:"routingSaved"`
+	}
+	if json.Unmarshal(failure.data, &outcome) != nil || outcome.RoutingSaved == nil {
+		return choice.agentName + ": provider switch failed"
+	}
+	if *outcome.RoutingSaved {
+		if choice.providerId == "" {
+			return choice.agentName + ": routing cleared, configuration restore failed"
+		}
+		return choice.agentName + ": routing saved, agent update failed"
+	}
+	return choice.agentName + ": provider switch rejected"
 }
 
 func (menu *providerMenu) draw() {
@@ -71,11 +131,6 @@ func (menu *providerMenu) draw() {
 		menu.clear("no agent is installed")
 		return
 	}
-	if len(fetched.Providers) == 0 {
-		menu.clear("no provider is configured")
-		return
-	}
-
 	fingerprint := fingerprintOf(fetched)
 	if fingerprint == menu.drawn {
 		return
@@ -88,31 +143,47 @@ func (menu *providerMenu) draw() {
 		submenu := menu.root.AddSubMenuItem(entry.Name, "Choose where "+entry.Name+" sends its requests")
 		menu.agents = append(menu.agents, submenu)
 
-		menu.add(submenu, entry.AgentId, "", builtinTitle, "Unbind "+entry.Name+" and put its own settings back", entry.Provider == "")
+		builtin := providerChoice{agentId: entry.AgentId, agentName: entry.Name, providerName: builtinTitle}
+		menu.add(submenu, builtin, "Unbind "+entry.Name+" and put its own settings back", entry.Provider == "", "")
 		for _, provider := range fetched.Providers {
-			title := provider.Name
-			if provider.Disabled {
-				title += " (disabled)"
+			choice := providerChoice{
+				agentId:      entry.AgentId,
+				agentName:    entry.Name,
+				providerId:   provider.Id,
+				providerName: provider.Name,
 			}
-			menu.add(submenu, entry.AgentId, provider.Id, title, "Send "+entry.Name+" to "+provider.Id, provider.Id == entry.Provider)
+			menu.add(submenu, choice, "Send "+entry.Name+" to "+provider.Id, provider.Id == entry.Provider, unavailableProvider(entry, provider))
 		}
 	}
 	menu.drawn = fingerprint
 }
 
-func (menu *providerMenu) add(submenu *systray.MenuItem, agentId string, providerId string, title string, tooltip string, checked bool) {
-	item := submenu.AddSubMenuItemCheckbox(title, tooltip, checked)
+func unavailableProvider(agent trayAgent, provider trayProvider) string {
+	if provider.Disabled {
+		return "disabled"
+	}
+	if agent.Mode == "direct" && agent.Protocol != "" && provider.Protocol != "" && agent.Protocol != provider.Protocol {
+		return "requires gateway mode"
+	}
+	return ""
+}
+
+func (menu *providerMenu) add(submenu *systray.MenuItem, choice providerChoice, tooltip string, checked bool, unavailable string) {
+	if unavailable != "" {
+		item := submenu.AddSubMenuItemCheckbox(choice.providerName+" ("+unavailable+")", tooltip, checked)
+		item.Disable()
+		return
+	}
+	item := submenu.AddSubMenuItemCheckbox(choice.providerName, tooltip, checked)
 
 	// Remove() closes the channel, so the goroutine of an item the next redraw
 	// drops ends with it.
 	go func() {
 		for range item.ClickedCh {
-			if err := setAgentProvider(agentId, providerId); err != nil {
-				fmt.Fprintln(os.Stderr, "casbin-gateway-desktop:", err)
+			select {
+			case menu.switches <- choice:
+			default:
 			}
-			// Either way the menu is redrawn from what the server now says, so
-			// a switch that failed leaves the check mark where it was.
-			menu.requestRedraw()
 		}
 	}()
 }
@@ -139,22 +210,15 @@ func (menu *providerMenu) remove() {
 	menu.agents = nil
 }
 
-func (menu *providerMenu) requestRedraw() {
-	select {
-	case menu.redrawNow <- struct{}{}:
-	default:
-	}
-}
-
 // fingerprintOf is what the submenus are drawn from, so an unchanged menu is
 // left standing.
 func fingerprintOf(fetched *trayMenu) string {
 	parts := []string{}
 	for _, entry := range fetched.Agents {
-		parts = append(parts, entry.AgentId+"\x00"+entry.Name+"\x00"+entry.Provider)
+		parts = append(parts, strings.Join([]string{entry.AgentId, entry.Name, entry.Provider, entry.Mode, entry.Protocol}, "\x00"))
 	}
 	for _, provider := range fetched.Providers {
-		parts = append(parts, provider.Id+"\x00"+provider.Name+"\x00"+fmt.Sprint(provider.Disabled))
+		parts = append(parts, strings.Join([]string{provider.Id, provider.Name, provider.Protocol, fmt.Sprint(provider.Disabled)}, "\x00"))
 	}
 	return strings.Join(parts, "\x01")
 }
