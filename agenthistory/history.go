@@ -29,12 +29,16 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // Session is one transcript, described without its contents.
 type Session struct {
-	Agent       string `json:"agent"`
-	SessionKey  string `json:"sessionKey"`
+	Agent      string `json:"agent"`
+	SessionKey string `json:"sessionKey"`
+	// ResumeId is the native CLI session ID, which can differ from the transcript key.
+	ResumeId    string `json:"resumeId,omitempty"`
 	Title       string `json:"title"`
 	RecordCount int    `json:"recordCount"`
 	FirstTime   string `json:"firstTime"`
@@ -273,7 +277,8 @@ type line struct {
 		// Originator is the Codex front end that opened the session. They all
 		// write into one sessions directory, so it is the only thing that says
 		// which one a transcript belongs to.
-		Originator string `json:"originator"`
+		Originator string          `json:"originator"`
+		Source     json.RawMessage `json:"source"`
 	} `json:"payload"`
 }
 
@@ -343,6 +348,8 @@ func parse(agent string, file transcript, keyOf func(string) string) (Session, b
 	// the lines they would all be that one session, and opening it would open
 	// whichever of the files was read first.
 	subagent := filepath.Base(filepath.Dir(file.path)) == claudeSubagentDir
+	codexResumeId := ""
+	sawCodexMetadata := false
 
 	// The file name is the session id for Claude Code, and carries it for Codex;
 	// the transcript itself overrides this when it names one.
@@ -376,9 +383,15 @@ func parse(agent string, file transcript, keyOf func(string) string) (Session, b
 			// Codex Desktop and the CLI share ~/.codex/sessions, and monitoring
 			// reports them apart. A session listed under the front end that did
 			// not write it is a second row for one conversation.
-			if agent == codexCliAgent {
+			if agent == codexCliAgent && !sawCodexMetadata {
+				// A fork can also contain copies of its parent's session metadata.
+				sawCodexMetadata = true
 				if front := codexAgentForOriginator(entry.Payload.Originator); front != "" {
 					session.Agent = front
+				}
+				var source map[string]json.RawMessage
+				if err := json.Unmarshal(entry.Payload.Source, &source); err != nil || source["subagent"] == nil {
+					codexResumeId = resumableId(entry.Payload.Id)
 				}
 			}
 		}
@@ -416,8 +429,23 @@ func parse(agent string, file transcript, keyOf func(string) string) (Session, b
 	if session.FirstTime == "" {
 		session.FirstTime = session.LastTime
 	}
+	switch session.Agent {
+	case claudeCodeAgent:
+		if !subagent {
+			session.ResumeId = resumableId(strings.TrimSuffix(file.info.Name(), ".jsonl"))
+		}
+	case codexCliAgent:
+		session.ResumeId = codexResumeId
+	}
 	session.Usage = usage.buckets(dayOf(session.LastTime))
 	return session, true
+}
+
+func resumableId(id string) string {
+	if len(id) == 36 && uuid.Validate(id) == nil {
+		return id
+	}
+	return ""
 }
 
 // codexAgentForOriginator is the agent id one Codex front end reports under,
