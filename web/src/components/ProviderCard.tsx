@@ -20,6 +20,7 @@ import * as AgentBackend from "@/backend/AgentBackend";
 import {EnvSnippet} from "@/components/EnvSnippet";
 import {EnvWarningBanner} from "@/components/EnvWarningBanner";
 import {AgentIcon} from "@/components/AgentIcon";
+import {FallbackQueue} from "@/components/FallbackQueue";
 import {ProviderIcon} from "@/components/ProviderIcon";
 import {ProviderStreamCheck} from "@/components/ProviderStreamCheck";
 import {ConfirmDialog} from "@/components/shared/confirm-dialog";
@@ -60,7 +61,6 @@ import {
   shellForPath,
   usesClientAuth,
 } from "@/lib/providers";
-import {cn} from "@/lib/utils";
 import type {Agent, AgentProviderFile, Provider, ProviderHealth} from "@/types";
 
 /** The file preview, loaded when the dialog opens rather than on every render. */
@@ -125,39 +125,6 @@ function PreviewDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-/** One provider of the chain, with what the proxy last saw of it. */
-function ProviderChip({
-  label,
-  active,
-  disabled,
-  health,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  disabled?: boolean;
-  health?: ProviderHealth;
-  onClick?: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors",
-        active ? "border-primary bg-primary/10" : "hover:bg-accent",
-        disabled && "cursor-not-allowed opacity-50",
-      )}
-    >
-      <span>{label}</span>
-      {health && !health.healthy ? (
-        <Badge variant="warning">{i18next.t("agent:Cooling down")}</Badge>
-      ) : null}
-    </button>
   );
 }
 
@@ -283,14 +250,6 @@ export function ProviderCard({
 
   const strategy = agent.strategy || "order";
 
-  const toggleFallback = (id: string) => {
-    onRouting({
-      fallbacks: fallbacks.includes(id)
-        ? fallbacks.filter(item => item !== id)
-        : [...fallbacks, id],
-    });
-  };
-
   return (
     <Card>
       <CardHeader className="p-4 pb-2">
@@ -378,27 +337,15 @@ export function ProviderCard({
           />
         ) : (
           <>
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">{i18next.t("agent:Fallback hint")}</p>
-              {candidates.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  {i18next.t("agent:No other provider speaks this API")}
-                </p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {candidates.map(provider => (
-                    <ProviderChip
-                      key={providerIdOf(provider)}
-                      label={provider.displayName || provider.name}
-                      active={fallbacks.includes(providerIdOf(provider))}
-                      disabled={busy}
-                      health={healthOf(providerIdOf(provider))}
-                      onClick={() => toggleFallback(providerIdOf(provider))}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+            <FallbackQueue
+              fallbacks={fallbacks}
+              providers={providers}
+              candidates={candidates}
+              health={health}
+              throughGateway={mode === gatewayMode}
+              busy={busy}
+              onChange={next => onRouting({fallbacks: next})}
+            />
 
             {/* With fallbacks the providers are a pool, and which of them a
                 request starts on is a choice of its own. */}

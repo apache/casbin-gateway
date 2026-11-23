@@ -278,7 +278,7 @@ export function useAgents(enabled = true) {
 
       setLoading(true);
       setError("");
-      AgentBackend.getAgents(forceRefresh)
+      return AgentBackend.getAgents(forceRefresh)
         .then(res => {
           if (res.status === "ok") {
             setAgents(res.data ?? []);
@@ -393,6 +393,7 @@ export function useAgents(enabled = true) {
         mode: routing.mode ?? agent.mode ?? gatewayMode,
         strategy: routing.strategy ?? agent.strategy ?? "",
       };
+      const editingFallbacks = routing.fallbacks !== undefined && routing.provider === undefined;
 
       setBusyKey(agentKey(agent));
       AgentBackend.updateAgentRouting(agent.agentId, next)
@@ -402,20 +403,20 @@ export function useAgents(enabled = true) {
               "success",
               next.provider === ""
                 ? `${i18next.t("agent:Built-in model restored")}: ${agentBuiltin(agent)}`
-                : `${i18next.t("agent:Provider saved")}: ${next.provider}`,
+                : editingFallbacks
+                  ? i18next.t("agent:Fallback queue saved")
+                  : `${i18next.t("agent:Provider saved")}: ${next.provider}`,
             );
-            scan();
           } else {
             Setting.showMessage(
               "error",
-              res.msg || i18next.t("agent:Failed to update agent provider"),
+              res.msg || i18next.t(editingFallbacks ? "agent:Failed to save fallback queue" : "agent:Failed to update agent provider"),
             );
-            // The routing itself may already be stored: only writing the agent's
-            // own configuration file failed, and the page has to show that.
-            scan();
           }
         })
         .catch(err => Setting.showMessage("error", err.message || String(err)))
+        // A file write may fail after routing was saved. Refresh before re-enabling edits.
+        .then(() => scan())
         .then(() => setBusyKey(""));
     },
     [scan],
