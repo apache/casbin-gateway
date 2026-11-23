@@ -15,6 +15,7 @@
 package controllers
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -196,4 +197,61 @@ func restoreAgentProvider(agentId string) string {
 
 func providerTarget(target agentpatch.Target) agentprovider.Target {
 	return agentprovider.Target{AgentId: target.AgentId, Path: target.Path, Owner: target.Owner}
+}
+
+// CheckAgentProviderStream tests the selected provider using its saved credentials.
+func (c *ApiController) CheckAgentProviderStream() {
+	if c.RequireAdmin() {
+		return
+	}
+	var form struct {
+		AgentId  string `json:"agentId"`
+		Provider string `json:"provider"`
+	}
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &form); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if !agent.IsKnownAgentId(form.AgentId) {
+		c.ResponseError("unknown agent: " + form.AgentId)
+		return
+	}
+	routing, err := object.GetAgent(form.AgentId)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if routing == nil || routing.Provider == "" || routing.Provider != form.Provider {
+		c.ResponseError("the selected provider changed. Refresh the agent and try again")
+		return
+	}
+	if _, _, ok := getProviderOwnerAndName(routing.Provider); !ok {
+		c.ResponseError("invalid provider ID: " + routing.Provider)
+		return
+	}
+	provider, err := object.GetProvider(routing.Provider)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if provider == nil || provider.Status != "enabled" {
+		c.ResponseError("the selected provider is unavailable")
+		return
+	}
+
+	name := object.ProviderProtocol(provider)
+	if routing.Mode == object.ModeDirect {
+		if spoken := agentprovider.ProtocolOf(form.AgentId); spoken != "" && spoken != object.ProviderApiFamily(provider) {
+			c.ResponseError("the selected provider speaks a different API. Switch the agent to gateway mode to use it")
+			return
+		}
+		if form.AgentId == "codex" || form.AgentId == "codex-cli" {
+			if !object.ServesResponsesApi(provider) {
+				c.ResponseError("this provider needs gateway mode to serve Codex")
+				return
+			}
+			name = object.ProtocolResponses
+		}
+	}
+	c.ResponseOk(object.CheckProviderStream(c.Ctx.Request.Context(), provider, name))
 }

@@ -175,6 +175,15 @@ export interface ProviderTestResult {
   message: string;
 }
 
+export interface ProviderStreamResult {
+  success: boolean;
+  protocol: string;
+  model: string;
+  statusCode?: number;
+  firstTextMs?: number;
+  message?: string;
+}
+
 /** One configuration file a provider switch writes, with what it will contain. */
 export interface AgentProviderFile {
   path: string;
