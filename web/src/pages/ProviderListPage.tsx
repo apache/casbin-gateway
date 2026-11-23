@@ -88,11 +88,28 @@ function providerFromSource(owner: string, source: ProviderSource): Provider {
   return {...newProvider(owner, sourceTitle(source)), ...source.provider};
 }
 
+function providerCopy(owner: string, original: Provider, displayName: string): Provider {
+  const vendor = usesSubscription(original) ? original.subscriptionVendor : undefined;
+  const authMode = usesSubscription(original) && !vendor ? authProvider : original.authMode || authProvider;
+  return {
+    ...newProvider(owner, displayName),
+    type: original.type,
+    protocol: original.protocol,
+    baseUrl: original.baseUrl,
+    models: [...(original.models ?? [])],
+    icon: original.icon,
+    status: original.status === "disabled" ? "disabled" : "enabled",
+    authMode,
+    subscriptionVendor: vendor,
+  };
+}
+
 /** A half-filled add-provider form, kept in the browser until it is submitted. */
 interface ProviderDraft {
   provider: Provider;
   /** Which source card it was started from, so resuming reopens the same form. */
   source: string;
+  copiedFrom?: string;
 }
 
 /**
@@ -141,6 +158,7 @@ export default function ProviderListPage({account}: {account: Account}) {
   const [form, setForm] = React.useState<Provider>(() => newProvider(account.name));
   // null while the dialog is still asking where the credentials come from.
   const [source, setSource] = React.useState<ProviderSource | null>(null);
+  const [copiedFrom, setCopiedFrom] = React.useState("");
   const [nameError, setNameError] = React.useState("");
   const [health, setHealth] = React.useState<ProviderHealth[]>([]);
   const [quotas, setQuotas] = React.useState<ProviderQuota[]>([]);
@@ -151,7 +169,7 @@ export default function ProviderListPage({account}: {account: Account}) {
   const [draft, setDraft] = React.useState<Draft<ProviderDraft> | null>(() =>
     readDraft<ProviderDraft>(draftKey),
   );
-  const test = useProviderTest(form);
+  const test = useProviderTest(addOpen ? form : null);
 
   // What a picked source fills in by itself is not worth keeping, so a draft
   // starts existing at the first thing typed on top of it.
@@ -164,9 +182,9 @@ export default function ProviderListPage({account}: {account: Account}) {
     if (!addOpen || source === null || !dirty) {
       return;
     }
-    const id = setTimeout(() => setDraft(writeDraft(draftKey, {provider: form, source: source.key})), 400);
+    const id = setTimeout(() => setDraft(writeDraft(draftKey, {provider: form, source: source.key, copiedFrom})), 400);
     return () => clearTimeout(id);
-  }, [addOpen, dirty, draftKey, form, source]);
+  }, [addOpen, copiedFrom, dirty, draftKey, form, source]);
 
   const fetchProviders = React.useCallback(
     (nextPage = page, nextPageSize = pageSize, nextSort = sort) => {
@@ -263,13 +281,21 @@ export default function ProviderListPage({account}: {account: Account}) {
     }
     setForm(draft.value.provider);
     setSource(providerSources.find(item => item.key === draft.value.source) ?? null);
+    setCopiedFrom(draft.value.copiedFrom ?? "");
     setNameError("");
     setAddOpen(true);
   };
 
   const closeAddDialog = (open: boolean) => {
     setAddOpen(open);
-    if (!open && draft !== null) {
+    if (open) {
+      return;
+    }
+    const saved = source !== null && dirty
+      ? writeDraft(draftKey, {provider: form, source: source.key, copiedFrom})
+      : draft;
+    setDraft(saved);
+    if (saved !== null) {
       Setting.showMessage("info", i18next.t("provider:Draft saved"));
     }
   };
@@ -277,7 +303,24 @@ export default function ProviderListPage({account}: {account: Account}) {
   const openAddDialog = (start?: ProviderSource) => {
     setForm(start ? providerFromSource(account.name, start) : newProvider(account.name));
     setSource(start ?? null);
+    setCopiedFrom("");
     setNameError("");
+    setAddOpen(true);
+  };
+
+  const duplicateProvider = (provider: Provider) => {
+    const source = providerSources.find(item => item.key === customSource);
+    if (!source) {
+      return;
+    }
+    const originalName = provider.displayName || provider.name;
+    const displayName = i18next.t("provider:{name} copy").replace("{name}", originalName);
+    const copy = providerCopy(account.name, provider, displayName);
+    setForm(copy);
+    setSource(source);
+    setCopiedFrom(originalName);
+    setNameError("");
+    setDraft(writeDraft(draftKey, {provider: copy, source: source.key, copiedFrom: originalName}));
     setAddOpen(true);
   };
 
@@ -289,6 +332,7 @@ export default function ProviderListPage({account}: {account: Account}) {
     setForm(providerFromSource(account.name, picked));
     setNameError("");
     setSource(picked);
+    setCopiedFrom("");
   };
 
   // What a link carries — a base URL and often a key — fills the same form a
@@ -298,6 +342,7 @@ export default function ProviderListPage({account}: {account: Account}) {
       setForm({...newProvider(account.name, parsed.displayName), ...parsed, name: providerSlug(parsed.displayName)});
       setNameError("");
       setSource(providerSources.find(item => item.key === customSource) ?? null);
+      setCopiedFrom("");
       setAddOpen(true);
     },
     [account.name],
@@ -480,6 +525,8 @@ export default function ProviderListPage({account}: {account: Account}) {
                 quota={quotas.find(item => item.provider === providerIdOf(provider))}
                 busy={binding !== ""}
                 onEdit={() => navigate(`/providers/${provider.owner}/${provider.name}`)}
+                onDuplicate={() => duplicateProvider(provider)}
+                hasDraft={draft !== null}
                 onDelete={() => deleteProvider(provider)}
                 onBind={agent => bindAgent(agent, provider)}
               />
@@ -512,8 +559,10 @@ export default function ProviderListPage({account}: {account: Account}) {
       <FormDialog
         open={addOpen}
         onOpenChange={closeAddDialog}
-        title={i18next.t("provider:New Provider")}
-        description={source === null ? i18next.t("provider:Source hint") : undefined}
+        title={i18next.t(copiedFrom === "" ? "provider:New Provider" : "provider:Duplicate provider")}
+        description={copiedFrom !== ""
+          ? i18next.t("provider:Duplicate provider hint").replace("{name}", copiedFrom)
+          : source === null ? i18next.t("provider:Source hint") : undefined}
         size="xl"
         columns={source === null ? 1 : 2}
         note={
@@ -581,7 +630,10 @@ export default function ProviderListPage({account}: {account: Account}) {
                 {usesSubscription(form) ? (
                   <Badge variant="muted">{i18next.t("provider:Held sign-in")}</Badge>
                 ) : null}
-                <Button type="button" size="xs" variant="ghost" onClick={() => setSource(null)}>
+                <Button type="button" size="xs" variant="ghost" onClick={() => {
+                  setSource(null);
+                  setCopiedFrom("");
+                }}>
                   {i18next.t("provider:Change source")}
                 </Button>
               </div>
@@ -628,7 +680,7 @@ export default function ProviderListPage({account}: {account: Account}) {
             {usesSubscription(form) ? (
               <ProviderLoginField
                 provider={form}
-                vendor={source.vendor ?? ""}
+                vendor={source.vendor ?? form.subscriptionVendor ?? ""}
                 onSignedIn={session =>
                   setForm(prev => ({
                     ...prev,
@@ -692,6 +744,18 @@ export default function ProviderListPage({account}: {account: Account}) {
                 onChange={event => setFormField("notes", event.target.value)}
               />
             </Field>
+            {copiedFrom === "" ? null : (
+              <Field label={i18next.t("provider:Status")}>
+                <SimpleSelect
+                  value={form.status}
+                  onChange={value => setFormField("status", value)}
+                  options={[
+                    {label: i18next.t("provider:Enabled"), value: "enabled"},
+                    {label: i18next.t("provider:Disabled"), value: "disabled"},
+                  ]}
+                />
+              </Field>
+            )}
             <Advanced key={source.key} defaultOpen={false}>
               <Field label={i18next.t("provider:Type")}>
                 <SimpleSelect

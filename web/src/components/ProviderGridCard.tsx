@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {CircleX, LogIn, Pencil, Trash2} from "lucide-react";
+import {CircleX, Copy, LogIn, Pencil, Trash2} from "lucide-react";
 import i18next from "i18next";
 
 import {ProviderIcon} from "@/components/ProviderIcon";
@@ -80,6 +80,8 @@ export function ProviderGridCard({
   onEdit,
   onDelete,
   onBind,
+  onDuplicate,
+  hasDraft,
 }: {
   provider: Provider;
   agents: Agent[];
@@ -89,7 +91,20 @@ export function ProviderGridCard({
   onEdit: () => void;
   onDelete: () => void;
   onBind: (agent: Agent) => void;
+  onDuplicate: () => void;
+  hasDraft: boolean;
 }) {
+  const duplicateButton = (
+    <Button
+      type="button"
+      size="icon-sm"
+      variant="ghost"
+      aria-label={i18next.t("provider:Duplicate provider")}
+      onClick={hasDraft ? undefined : onDuplicate}
+    >
+      <Copy />
+    </Button>
+  );
   const id = providerIdOf(provider);
   const protocol = providerProtocol(provider.type);
   const models = provider.models ?? [];
@@ -190,6 +205,21 @@ export function ProviderGridCard({
             </DropdownMenu>
           )}
           <div className="ml-auto flex gap-2">
+            {hasDraft ? (
+              <ConfirmDialog
+                title={i18next.t("provider:Replace the unfinished provider draft?")}
+                description={i18next.t("provider:Duplicate replaces draft hint")}
+                confirmText={i18next.t("provider:Duplicate provider")}
+                variant="default"
+                onConfirm={onDuplicate}
+              >
+                {duplicateButton}
+              </ConfirmDialog>
+            ) : (
+              <SimpleTooltip title={i18next.t("provider:Duplicate provider")}>
+                {duplicateButton}
+              </SimpleTooltip>
+            )}
             <SimpleTooltip title={i18next.t("general:Edit")}>
               <Button size="icon-sm" variant="ghost" aria-label={i18next.t("general:Edit")} onClick={onEdit}>
                 <Pencil />
