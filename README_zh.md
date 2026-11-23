@@ -289,6 +289,8 @@ Codex 是例外：它的 ChatGPT 登录走的是没有任何 Provider 能替代�
 
 ### Provider 答不上来时：备用 Provider 和模型路由
 
+删除供应商前，可在确认框中查看将它用作主供应商或备用供应商的Agent。主供应商删除后，在Agent详情页的**供应商**卡片中可以选择替代供应商，或还原原来的供应商配置。切换到替代供应商时会保留剩余的兼容备用供应商。
+
 Key 没余额了、中转站挂了、厂商在会话中途开始限流 —— Gateway 会把请求转给下一个 Provider，而不是把错误直接丢给 Agent。
 
 **备用 Provider。** 在 Agent 的页面上，绑定的 Provider 下面，按想要的尝试顺序选上其他 Provider 作为备用。它们不必是同一家厂商，也不必说同一套 API：Claude Code 绑的是一个 Anthropic 中转站，可以依次降到 DeepSeek、Kimi、Qwen，Gateway 会按实际作答的那家转换请求。备用 Provider 没有 Agent 点名的那个模型时，会按大小发给它最接近的模型：点名小模型（比如 `claude-haiku-4-5`）就用它的小模型，点名大模型就用它的大模型，后台的零碎请求不会按旗舰模型的价格计费。

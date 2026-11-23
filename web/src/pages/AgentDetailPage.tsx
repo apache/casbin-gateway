@@ -39,12 +39,12 @@ import {DataTable, type Column} from "@/components/shared/data-table";
 import {PermissionCard} from "@/components/PermissionCard";
 import {ProviderCard} from "@/components/ProviderCard";
 import {ResultScreen, UnauthorizedResult} from "@/components/shared/misc";
-import {Alert, AlertDescription} from "@/components/ui/alert";
+import {Alert, AlertDescription, MessageAlert} from "@/components/ui/alert";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {ConfirmDialog} from "@/components/shared/confirm-dialog";
-import {AiDots} from "@/components/shared/loading";
+import {AiDots, Loading} from "@/components/shared/loading";
 import {SimpleTooltip} from "@/components/ui/tooltip";
 import {cn} from "@/lib/utils";
 import {
@@ -282,7 +282,8 @@ export default function AgentDetailPage({account}: {account: Account}) {
   const [tab, setTab] = React.useState<Tab>("Agent Sessions");
   const [records, setRecords] = React.useState<AgentRecord[]>([]);
   const [recordError, setRecordError] = React.useState("");
-  const [providers, setProviders] = React.useState<Provider[]>([]);
+  const [providers, setProviders] = React.useState<Provider[] | null>(null);
+  const [providerError, setProviderError] = React.useState<string | null>(null);
   const [health, setHealth] = React.useState<ProviderHealth[]>([]);
   const [stats, setStats] = React.useState<LlmRecordStats | null>(null);
   const [usage, setUsage] = React.useState<AgentUsage>();
@@ -297,18 +298,26 @@ export default function AgentDetailPage({account}: {account: Account}) {
       candidate.agentId === agentId && (path === "" || candidate.path === path),
   );
 
+  const loadProviders = React.useCallback(() => {
+    setProviderError(null);
+    setProviders(null);
+    // An admin's agent may be routed to a provider from any account.
+    ProviderBackend.getProviders("")
+      .then(res => {
+        if (res.status === "ok") {
+          setProviders(res.data ?? []);
+        } else {
+          setProviderError(res.msg || "");
+        }
+      })
+      .catch(err => setProviderError(String(err)));
+  }, []);
+
   React.useEffect(() => {
     if (!isAdmin) {
       return;
     }
-    ProviderBackend.getProviders(account.name)
-      .then(res => {
-        if (res.status === "ok") {
-          setProviders(res.data ?? []);
-        }
-      })
-      .catch(() => setProviders([]));
-
+    loadProviders();
     ProviderBackend.getProviderHealth()
       .then(res => {
         if (res.status === "ok") {
@@ -316,7 +325,7 @@ export default function AgentDetailPage({account}: {account: Account}) {
         }
       })
       .catch(() => setHealth([]));
-  }, [isAdmin, account.name]);
+  }, [isAdmin, loadProviders]);
 
   React.useEffect(() => {
     if (!isAdmin || agentId === "") {
@@ -516,14 +525,36 @@ export default function AgentDetailPage({account}: {account: Account}) {
           onToggle={() => togglePatch(agent)}
         />
 
-        <ProviderCard
-          agent={agent}
-          providers={providers}
-          health={health}
-          busy={busyKey === agentKey(agent)}
-          onRouting={routing => setRouting(agent, routing)}
-          onWrite={restore => writeProvider(agent, restore)}
-        />
+        {providers === null ? (
+          <Card>
+            <CardHeader className="p-4 pb-2">
+              <CardTitle className="text-base">{i18next.t("agent:Provider")}</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              {providerError !== null ? (
+                <MessageAlert
+                  title={i18next.t("agent:Provider list unavailable")}
+                  description={providerError}
+                  action={
+                    <Button type="button" size="sm" variant="outline" onClick={loadProviders}>
+                      {i18next.t("agent:Retry")}
+                    </Button>
+                  }
+                />
+              ) : <Loading />}
+            </CardContent>
+          </Card>
+        ) : (
+          <ProviderCard
+            key={agentKey(agent)}
+            agent={agent}
+            providers={providers}
+            health={health}
+            busy={busyKey === agentKey(agent)}
+            onRouting={routing => setRouting(agent, routing)}
+            onWrite={restore => writeProvider(agent, restore)}
+          />
+        )}
 
         <UsageCard stats={stats} spent={spent} />
 
@@ -608,7 +639,7 @@ export default function AgentDetailPage({account}: {account: Account}) {
         </Card>
       </div>
 
-      <PermissionCard agent={agent} providers={providers} />
+      <PermissionCard agent={agent} providers={providers ?? []} />
 
       <AgentEgressCard agent={agent} enabled={isAdmin} />
 

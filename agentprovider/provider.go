@@ -274,6 +274,11 @@ func statusOf(target Target) Status {
 		status.Builtin = value.Builtin(target, nil)
 	} else {
 		status.Builtin = value.Builtin(target, saved.Previous)
+		status.Provider = saved.Provider
+		status.Mode = saved.Mode
+		status.BaseUrl = saved.BaseUrl
+		status.Time = saved.Time
+		status.Files = saved.Files
 	}
 
 	current, err := value.Current(target)
@@ -292,14 +297,8 @@ func statusOf(target Target) Status {
 		return status
 	}
 
-	status.Applied = true
-	status.Provider = saved.Provider
-	status.Mode = saved.Mode
-	status.BaseUrl = saved.BaseUrl
-	status.Time = saved.Time
-	status.Files = saved.Files
+	status.Applied = current == saved.BaseUrl
 	if current != saved.BaseUrl {
-		status.Applied = false
 		status.Detail = "Changed outside Gateway, the agent now points at " + emptyAs(current, "no provider")
 	} else if saved.Mode == ModeGateway {
 		status.Detail = "Routed through the local proxy, switching the provider needs no restart"

@@ -145,7 +145,7 @@ export default function ProviderListPage({account}: {account: Account}) {
   const [health, setHealth] = React.useState<ProviderHealth[]>([]);
   const [quotas, setQuotas] = React.useState<ProviderQuota[]>([]);
   const [refreshingQuotas, setRefreshingQuotas] = React.useState(false);
-  const [agents, setAgents] = React.useState<Agent[]>([]);
+  const [agents, setAgents] = React.useState<Agent[] | null>(null);
   const [binding, setBinding] = React.useState("");
   const draftKey = `provider-new:${account.name}`;
   const [draft, setDraft] = React.useState<Draft<ProviderDraft> | null>(() =>
@@ -229,15 +229,16 @@ export default function ProviderListPage({account}: {account: Account}) {
   }, []);
 
   // Which agent a provider answers for is the thing this page is really about,
-  // so the agents are loaded next to them. A non-admin cannot list them, and the
-  // card simply leaves that line out.
+  // so the agents are loaded next to them. An unknown list cannot establish
+  // whether a provider is used.
   const loadAgents = React.useCallback(() => {
     if (!isAdmin) {
+      setAgents(null);
       return;
     }
     AgentBackend.getAgents()
-      .then(res => setAgents(res.status === "ok" ? (res.data ?? []) : []))
-      .catch(() => setAgents([]));
+      .then(res => setAgents(res.status === "ok" ? (res.data ?? []) : null))
+      .catch(() => setAgents(null));
   }, [isAdmin]);
 
   React.useEffect(() => {
@@ -385,7 +386,7 @@ export default function ProviderListPage({account}: {account: Account}) {
       .then(() => setBinding(""));
   };
 
-  const deleteProvider = (provider: Provider) => {
+  const deleteProvider = (provider: Provider) =>
     ProviderBackend.deleteProvider(provider)
       .then(res => {
         if (res.status === "error") {
@@ -394,11 +395,11 @@ export default function ProviderListPage({account}: {account: Account}) {
         }
         Setting.showMessage("success", i18next.t("provider:Provider deleted successfully"));
         fetchProviders();
+        loadAgents();
       })
       .catch(error =>
         Setting.showMessage("error", `${i18next.t("provider:Failed to delete")}: ${error}`),
       );
-  };
 
   return (
     <PageContainer>

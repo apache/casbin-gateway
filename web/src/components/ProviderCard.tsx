@@ -160,6 +160,27 @@ function ProviderChip({
   );
 }
 
+function RestoreProviderButton({agent, busy, clearBinding, onRestore}: {
+  agent: Agent;
+  busy: boolean;
+  clearBinding?: boolean;
+  onRestore: () => void;
+}) {
+  return (
+    <ConfirmDialog
+      title={i18next.t("agent:Restore the configuration of {agent}?").replace("{agent}", agent.name)}
+      description={i18next.t(clearBinding ? "agent:Clear binding and restore hint" : "agent:Restore confirm hint")}
+      confirmText={i18next.t("agent:Restore configuration")}
+      onConfirm={onRestore}
+    >
+      <Button variant="outline" disabled={busy}>
+        <RotateCcw />
+        {i18next.t("agent:Restore configuration")}
+      </Button>
+    </ConfirmDialog>
+  );
+}
+
 /**
  * Which upstream an agent's requests go to, which upstreams take over when it
  * cannot answer, and how that choice reaches the agent: through the local proxy,
@@ -181,9 +202,12 @@ export function ProviderCard({
   onWrite: (restore: boolean) => void;
 }) {
   const [preview, setPreview] = React.useState(false);
+  const [recoverViaGateway, setRecoverViaGateway] = React.useState(false);
 
   const bound = providers.find(provider => providerIdOf(provider) === agent.provider);
   const mode = agent.mode || gatewayMode;
+  const missing = agent.provider !== "" && bound === undefined;
+  const replacementMode = recoverViaGateway ? gatewayMode : mode;
   const fallbacks = agent.fallbacks ?? [];
   // An older backend does not report the provider state at all, and the card
   // still has to render for the parts that do not depend on it.
@@ -211,13 +235,16 @@ export function ProviderCard({
   // two have to speak the same one. A backend that does not report the format
   // yet filters nothing out.
   const protocol = providerConfig.protocol ?? "";
-  const speaksAgentApi = (provider: Provider) =>
-    mode !== directMode || protocol === "" || providerProtocol(provider.type) === protocol;
+  const speaksAgentApi = (provider: Provider, selectedMode = mode) =>
+    selectedMode !== directMode || protocol === "" || providerProtocol(provider.type) === protocol;
   // A provider bound before the mode was switched stays in the list, so the
   // select shows what the agent is on rather than an empty box.
-  const options = providers.filter(
-    provider => speaksAgentApi(provider) || providerIdOf(provider) === agent.provider,
-  );
+  const options = missing
+    ? providers.filter(provider =>
+      provider.status === "enabled" && speaksAgentApi(provider, replacementMode) &&
+      (replacementMode !== directMode || agentGatewayOnlyKey(agent, provider) === ""),
+    )
+    : providers.filter(provider => speaksAgentApi(provider) || providerIdOf(provider) === agent.provider);
   const mismatched = bound !== undefined && !speaksAgentApi(bound);
 
   const candidates = providers.filter(
@@ -231,10 +258,27 @@ export function ProviderCard({
   const gatewayOnlyKey = agentGatewayOnlyKey(agent, bound);
   const gatewayOnly = gatewayOnlyKey !== "";
 
-  // Nothing is bound, yet the agent still calls the proxy: it gets an error
-  // back on every request until its own configuration is put back.
-  const stranded =
-    agent.provider === "" && (providerConfig.current ?? "").includes("/v1/agents/");
+  const pointsAtGateway = (providerConfig.current ?? "").includes("/v1/agents/");
+  const canRetryRestore = agent.provider === "" &&
+    (pointsAtGateway || providerConfig.applied || Boolean(providerConfig.provider));
+  const hasEnabledFallback = mode === gatewayMode && providers.some(provider =>
+    provider.status === "enabled" && fallbacks.includes(providerIdOf(provider)),
+  );
+
+  const chooseProvider = (value: string) => {
+    if (value === builtinProvider) {
+      onRouting({provider: "", fallbacks: []});
+    } else if (missing) {
+      const available = new Set(providers.filter(provider => speaksAgentApi(provider, replacementMode)).map(providerIdOf));
+      onRouting({
+        provider: value,
+        mode: replacementMode,
+        fallbacks: fallbacks.filter(id => id !== value && available.has(id)),
+      });
+    } else {
+      onRouting({provider: value, fallbacks: []});
+    }
+  };
 
   const strategy = agent.strategy || "order";
 
@@ -253,14 +297,12 @@ export function ProviderCard({
       </CardHeader>
       <CardContent className="space-y-3 p-4 pt-0">
         <Select
-          value={agent.provider === "" ? builtinProvider : agent.provider}
+          value={missing ? "" : agent.provider || builtinProvider}
           disabled={busy}
-          onValueChange={value =>
-            onRouting({provider: value === builtinProvider ? "" : value, fallbacks: []})
-          }
+          onValueChange={chooseProvider}
         >
-          <SelectTrigger>
-            <SelectValue />
+          <SelectTrigger aria-label={i18next.t("agent:Provider")}>
+            <SelectValue placeholder={i18next.t("agent:Choose a replacement provider")} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={builtinProvider}>
@@ -298,18 +340,42 @@ export function ProviderCard({
           </p>
         ) : null}
 
-        {stranded ? (
+        {canRetryRestore ? (
           <div className="space-y-2 rounded-md border p-3">
-            <p className="text-sm text-warning">{i18next.t("agent:Still calling Gateway")}</p>
-            <code className="block truncate text-xs">{providerConfig.current}</code>
-            <Button variant="outline" disabled={busy} onClick={() => onWrite(true)}>
-              <RotateCcw />
-              {i18next.t("agent:Restore configuration")}
-            </Button>
+            <p className="text-sm text-warning">
+              {i18next.t(pointsAtGateway ? "agent:Still calling Gateway" : "agent:Retry restoring provider settings")}
+            </p>
+            {providerConfig.current ? <code className="block truncate text-xs">{providerConfig.current}</code> : null}
+            {!providerConfig.applied && providerConfig.detail ? (
+              <p className="text-sm text-muted-foreground">{providerConfig.detail}</p>
+            ) : null}
+            <RestoreProviderButton agent={agent} busy={busy} onRestore={() => onWrite(true)} />
           </div>
         ) : agent.provider === "" ? (
           <p className="text-sm text-muted-foreground">{i18next.t("agent:Built-in hint")}</p>
-        ) : bound === undefined ? null : (
+        ) : bound === undefined ? (
+          <MessageAlert
+            variant="warning"
+            title={i18next.t("agent:Missing provider {provider}").replace("{provider}", agent.provider)}
+            description={i18next.t(hasEnabledFallback ? "agent:Missing provider with fallbacks" : "agent:Missing provider recovery hint")}
+            action={
+              <div className="space-y-3">
+                {mode === directMode ? (
+                  <label className="flex items-center gap-2 text-sm">
+                    <Switch checked={recoverViaGateway} onCheckedChange={setRecoverViaGateway} disabled={busy} />
+                    {i18next.t("agent:Use Gateway for replacement")}
+                  </label>
+                ) : null}
+                <RestoreProviderButton
+                  agent={agent}
+                  busy={busy}
+                  clearBinding
+                  onRestore={() => chooseProvider(builtinProvider)}
+                />
+              </div>
+            }
+          />
+        ) : (
           <>
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">{i18next.t("agent:Fallback hint")}</p>
@@ -428,18 +494,7 @@ export function ProviderCard({
                   </Button>
 
                   {providerConfig.applied || providerConfig.provider !== "" ? (
-                    <ConfirmDialog
-                      title={i18next.t("agent:Restore the configuration of {agent}?").replace("{agent}", agent.name)}
-                      description={i18next.t("agent:Restore confirm hint")}
-                      confirmText={i18next.t("agent:Restore configuration")}
-                      variant="destructive"
-                      onConfirm={() => onWrite(true)}
-                    >
-                      <Button variant="outline" disabled={busy}>
-                        <RotateCcw />
-                        {i18next.t("agent:Restore configuration")}
-                      </Button>
-                    </ConfirmDialog>
+                    <RestoreProviderButton agent={agent} busy={busy} onRestore={() => onWrite(true)} />
                   ) : null}
                 </div>
               </div>

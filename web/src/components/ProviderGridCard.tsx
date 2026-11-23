@@ -82,22 +82,33 @@ export function ProviderGridCard({
   onBind,
 }: {
   provider: Provider;
-  agents: Agent[];
+  agents: Agent[] | null;
   health: ProviderHealth | undefined;
   quota: ProviderQuota | undefined;
   busy: boolean;
   onEdit: () => void;
-  onDelete: () => void;
+  onDelete: () => void | Promise<void>;
   onBind: (agent: Agent) => void;
 }) {
   const id = providerIdOf(provider);
   const protocol = providerProtocol(provider.type);
   const models = provider.models ?? [];
-  const users = agents.filter(agent => agent.provider === id);
+  const installations = agents ?? [];
+  const users = installations.filter(agent => agent.provider === id);
+  const fallbackUsers = installations.filter(agent => agent.provider !== id && agent.fallbacks?.includes(id));
+  const agentNames = (entries: Agent[]) => Array.from(new Set(entries.map(agent => agent.name))).join(", ");
+  const primaryNames = agentNames(users);
+  const fallbackNames = agentNames(fallbackUsers);
   // An agent bound directly to a provider reads its answers itself, so only one
   // serving the API that agent speaks is offered; through the gateway they all
   // are, since the proxy translates.
-  const others = agents.filter(agent => agent.provider !== id && agentSpeaks(agent, protocol));
+  const others = installations.filter(agent => agent.provider !== id && agentSpeaks(agent, protocol));
+  const deleteImpact = agents === null ? i18next.t("provider:Agent usage unavailable") : (
+    [
+      primaryNames ? i18next.t("provider:Delete primary impact").replace("{agents}", primaryNames) : "",
+      fallbackNames ? i18next.t("provider:Delete fallback impact").replace("{agents}", fallbackNames) : "",
+    ].filter(Boolean).join(" ")
+  );
 
   return (
     <Card className="gap-0 py-0">
@@ -165,11 +176,14 @@ export function ProviderGridCard({
           )}
         </div>
 
-        <p className="text-muted-foreground mt-auto truncate text-xs">
-          {users.length === 0
-            ? i18next.t("provider:Used by no agent")
-            : `${i18next.t("provider:Used by")} ${users.map(agent => agent.name).join(", ")}`}
-        </p>
+        <div className="text-muted-foreground mt-auto text-xs">
+          {agents === null ? <p>{i18next.t("provider:Agent usage unavailable")}</p> : null}
+          {agents !== null && !primaryNames && !fallbackNames ? <p>{i18next.t("provider:Used by no agent")}</p> : null}
+          {primaryNames ? <p className="truncate">{`${i18next.t("provider:Used by")} ${primaryNames}`}</p> : null}
+          {fallbackNames ? (
+            <p className="truncate">{i18next.t("provider:Fallback for {agents}").replace("{agents}", fallbackNames)}</p>
+          ) : null}
+        </div>
 
         <div className="flex flex-wrap items-center gap-2 border-t pt-3">
           {others.length === 0 ? null : (
@@ -199,6 +213,7 @@ export function ProviderGridCard({
               title={i18next
                 .t("general:Sure to delete {name} ?")
                 .replace("{name}", provider.displayName || provider.name)}
+              description={deleteImpact}
               confirmText={i18next.t("general:Delete")}
               onConfirm={onDelete}
             >
