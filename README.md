@@ -126,6 +126,8 @@ Gateway then opens in its own window — no sign-in: it serves this machine only
 
 If you would rather use a browser, or you are on a machine with no desktop at all, everything is still at **http://localhost:17000**, and `casbin-gateway start` runs the server on its own with no window and no tray.
 
+On Linux the window needs WebKitGTK 4.1. Where it is missing, as on a server, the installer puts only the server and its command in place and starts it that way; install WebKitGTK 4.1 and run the installer again for the window and the tray. An installation that already has them is left untouched until the library is back.
+
 That is the whole installation. Gateway keeps its data in a SQLite file inside its own directory.
 
 The password behind that account is `admin` / `123`, and it only matters if you open Gateway to the network — see [Serving other machines](#serving-other-machines).

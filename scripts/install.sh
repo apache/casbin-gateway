@@ -66,7 +66,8 @@ url="https://github.com/${REPO}/releases/download/${TAG}/${archive}"
 
 # ── download ──────────────────────────────────────────────────────────────────
 tmpDir="$(mktemp -d)"
-trap 'rm -rf "${tmpDir}"' EXIT
+stage="${INSTALL_DIR}/.install"
+trap 'rm -rf "${tmpDir}" "${stage}"' EXIT
 
 info "Downloading ${url}"
 curl -fsSL -o "${tmpDir}/${archive}" "${url}"
@@ -78,10 +79,40 @@ mkdir -p "${INSTALL_DIR}" || die "cannot create ${INSTALL_DIR}, set INSTALL_DIR 
 # Unpacking inside INSTALL_DIR keeps the final move on one filesystem, so it is
 # a rename: an already running Gateway holds the old executable open, and
 # writing over it in place would fail with "text file busy".
-stage="${INSTALL_DIR}/.install"
 rm -rf "${stage}"
 mkdir -p "${stage}"
 tar -xzf "${tmpDir}/${archive}" -C "${stage}" --strip-components=1
+
+# Everything is checked before the installation is touched, so a download cut
+# short leaves the Gateway that is there as it was.
+for file in casbin-gateway casbin-gateway-desktop LICENSE NOTICE DISCLAIMER; do
+	[[ -f "${stage}/${file}" ]] || die "the downloaded archive is missing ${file}"
+done
+chmod 755 "${stage}/casbin-gateway" "${stage}/casbin-gateway-desktop"
+
+# ── the libraries the window needs ────────────────────────────────────────────
+# On Linux the launcher links GTK 3 and WebKitGTK 4.1, and cannot start without
+# them. A machine with no desktop has neither, so there only the server and its
+# command are installed, as they were before the launcher existed. An existing
+# desktop installation is left alone instead: replacing it would stop the
+# Gateway that is running and leave behind a launcher that cannot start again.
+# ldd lists a missing library as "not found" and can still exit with 0.
+desktop="yes"
+missingLibraries=""
+if [[ "${osName}" == "linux" ]] && command -v ldd >/dev/null 2>&1; then
+	missingLibraries="$(LC_ALL=C ldd "${stage}/casbin-gateway-desktop" 2>&1 | grep 'not found' || true)"
+fi
+if [[ -n "${missingLibraries}" ]]; then
+	printf '%s
+' "${missingLibraries}" >&2
+	libraryHint="install WebKitGTK 4.1 (libwebkit2gtk-4.1-0 on Debian and Ubuntu, webkit2gtk4.1 on Fedora, webkit2gtk-4.1 on Arch Linux), which brings GTK 3 with it"
+	if [[ -e "${INSTALL_DIR}/casbin-gateway-desktop" ]]; then
+		die "the new desktop launcher cannot start on this machine, so ${INSTALL_DIR} was left as it is. To update it, ${libraryHint}, then run the installer again"
+	fi
+	desktop=""
+	info "The desktop launcher cannot start on this machine, so only the server and its command are installed."
+	info "For the window and the tray, ${libraryHint}, then run the installer again."
+fi
 
 # ── stop the Gateway that is running ──────────────────────────────────────────
 # Without this an install over a running Gateway put the new executables in
@@ -90,22 +121,31 @@ tar -xzf "${tmpDir}/${archive}" -C "${stage}" --strip-components=1
 # it, because an installation old enough to have no "quit" command cannot stop
 # itself. CASBIN_GATEWAY_HOME points that launcher at the installation rather
 # than at the staging directory it runs from.
+# Without the launcher, a server started with "casbin-gateway start" is stopped
+# by the server itself.
 wasRunning=""
-chmod 755 "${stage}/casbin-gateway-desktop"
-if [[ -e "${INSTALL_DIR}/casbin-gateway" ]] &&
-	CASBIN_GATEWAY_HOME="${INSTALL_DIR}" "${stage}/casbin-gateway-desktop" quit; then
+executables=(casbin-gateway)
+if [[ -n "${desktop}" ]]; then
+	executables+=(casbin-gateway-desktop)
+	if [[ -e "${INSTALL_DIR}/casbin-gateway" ]] &&
+		CASBIN_GATEWAY_HOME="${INSTALL_DIR}" "${stage}/casbin-gateway-desktop" quit; then
+		wasRunning="yes"
+	fi
+elif [[ -e "${INSTALL_DIR}/casbin-gateway" ]] &&
+	[[ "$(cd "${INSTALL_DIR}" && "${stage}/casbin-gateway" status 2>/dev/null)" == "Casbin Gateway is running"* ]] &&
+	(cd "${INSTALL_DIR}" && "${stage}/casbin-gateway" stop >/dev/null); then
 	wasRunning="yes"
+fi
+if [[ -n "${wasRunning}" ]]; then
 	info "Stopped the running Gateway, and will start it again once it is updated"
 fi
 
-for executable in casbin-gateway casbin-gateway-desktop; do
+for executable in "${executables[@]}"; do
 	mv -f "${stage}/${executable}" "${INSTALL_DIR}/${executable}"
-	chmod 755 "${INSTALL_DIR}/${executable}"
 done
 for legalFile in LICENSE NOTICE DISCLAIMER; do
 	mv -f "${stage}/${legalFile}" "${INSTALL_DIR}/${legalFile}"
 done
-rm -rf "${stage}"
 
 desktopExe="${INSTALL_DIR}/casbin-gateway-desktop"
 
@@ -144,6 +184,21 @@ EOF
 			fi
 			;;
 	esac
+fi
+
+# ── a server without the desktop launcher ─────────────────────────────────────
+if [[ -z "${desktop}" ]]; then
+	info ""
+	info "Casbin Gateway is installed in ${INSTALL_DIR}, without the desktop launcher"
+	info "Its database, logs and temporary files stay in that directory."
+	info "Manage it with: \"casbin-gateway start\", \"casbin-gateway stop\", \"casbin-gateway status\"."
+	info ""
+	if [[ -n "${NO_START}" && -z "${wasRunning}" ]]; then
+		exit 0
+	fi
+	cd "${INSTALL_DIR}"
+	"${INSTALL_DIR}/casbin-gateway" start
+	exit 0
 fi
 
 # ── the desktop application ───────────────────────────────────────────────────
