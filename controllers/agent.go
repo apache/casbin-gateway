@@ -304,12 +304,16 @@ func (c *ApiController) GetAgentSessions() {
 
 	// The transcripts on disk are the sessions that already happened, so they
 	// are listed next to the monitored ones rather than only after Patch.
-	seen := map[string]bool{}
-	for _, session := range sessions {
-		seen[sessionSeenKey(session.Agent, session.SessionKey)] = true
+	monitored := map[string]int{}
+	for index, session := range sessions {
+		monitored[sessionSeenKey(session.Agent, session.SessionKey)] = index
 	}
 	for _, session := range object.HistoricalSessions(agentId) {
-		if seen[sessionSeenKey(session.Agent, session.SessionKey)] {
+		if index, ok := monitored[sessionSeenKey(session.Agent, session.SessionKey)]; ok {
+			if sessions[index].ResumeId == "" && session.ResumeId != "" {
+				sessions[index].ResumeId = session.ResumeId
+				sessions[index].Cwd = session.Cwd
+			}
 			continue
 		}
 		sessions = append(sessions, session)

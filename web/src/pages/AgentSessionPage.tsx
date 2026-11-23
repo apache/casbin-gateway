@@ -20,12 +20,13 @@ import i18next from "i18next";
 import * as AgentBackend from "@/backend/AgentBackend";
 import * as Setting from "@/Setting";
 import {AgentIcon} from "@/components/AgentIcon";
-import {CodeBlock, UnauthorizedResult} from "@/components/shared/misc";
+import {CodeBlock, CopyButton, UnauthorizedResult} from "@/components/shared/misc";
 import {PageContainer, PageHeader} from "@/components/shared/page-header";
 import {MessageAlert} from "@/components/ui/alert";
 import {Badge, type BadgeVariant} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
+import {sessionResumeCommand} from "@/lib/agent-sessions";
 import type {Account, AgentMessage, AgentMessageBlock, AgentTranscript} from "@/types";
 
 const ROLE_VARIANTS: Record<string, BadgeVariant> = {
@@ -115,13 +116,20 @@ export default function AgentSessionPage({account}: {account: Account}) {
   const [searchParams] = useSearchParams();
   const agentId = searchParams.get("agent") ?? "";
 
+  if (!Setting.isAdminUser(account)) {
+    return <UnauthorizedResult />;
+  }
+
+  return <AgentTranscriptView key={JSON.stringify([agentId, sessionKey])} agentId={agentId} sessionKey={sessionKey} />;
+}
+
+function AgentTranscriptView({agentId, sessionKey}: {agentId: string; sessionKey: string}) {
   const [transcript, setTranscript] = React.useState<AgentTranscript | null>(null);
   const [error, setError] = React.useState("");
   const [loading, setLoading] = React.useState(false);
-  const isAdmin = Setting.isAdminUser(account);
 
   const load = React.useCallback(() => {
-    if (!isAdmin || sessionKey === "") {
+    if (sessionKey === "") {
       return;
     }
 
@@ -137,24 +145,21 @@ export default function AgentSessionPage({account}: {account: Account}) {
       })
       .catch(err => setError(err.message || String(err)))
       .then(() => setLoading(false));
-  }, [agentId, isAdmin, sessionKey]);
+  }, [agentId, sessionKey]);
 
   React.useEffect(() => {
     load();
   }, [load]);
 
-  if (!isAdmin) {
-    return <UnauthorizedResult />;
-  }
-
   const session = transcript?.session;
   const messages = transcript?.messages ?? [];
+  const command = session && !loading && !error ? sessionResumeCommand(session) : "";
 
   return (
     <PageContainer>
       <PageHeader
         title={session?.title || sessionKey}
-        description={session?.cwd || session?.path}
+        description={command ? undefined : session?.cwd || session?.path}
         actions={
           <>
             <Button variant="outline" size="sm" asChild>
@@ -184,6 +189,25 @@ export default function AgentSessionPage({account}: {account: Account}) {
           </Badge>
           <span className="text-muted-foreground text-xs">{new Date(session.lastTime).toLocaleString()}</span>
         </div>
+      ) : null}
+
+      {command ? (
+        <section className="space-y-2 rounded-lg border p-4">
+          <h2 className="text-sm font-medium">{i18next.t("agent:Resume in a terminal")}</h2>
+          <p className="text-muted-foreground text-sm">
+            {i18next.t(session?.cwd ? "agent:Resume from the project directory hint" : "agent:Resume from a terminal hint")}
+          </p>
+          {session?.cwd ? (
+            <div className="flex min-w-0 items-center gap-2">
+              <code className="text-muted-foreground min-w-0 truncate text-xs" title={session.cwd}>{session.cwd}</code>
+              <CopyButton className="shrink-0" value={session.cwd} label={i18next.t("agent:Copy project directory")} />
+            </div>
+          ) : null}
+          <div className="flex items-center gap-2">
+            <CodeBlock className="min-w-0 flex-1">{command}</CodeBlock>
+            <CopyButton size="icon-sm" value={command} label={i18next.t("agent:Copy resume command")} />
+          </div>
+        </section>
       ) : null}
 
       {transcript?.truncated ? <MessageAlert title={i18next.t("agent:Transcript truncated")} /> : null}

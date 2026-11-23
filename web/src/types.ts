@@ -664,6 +664,8 @@ export interface AgentRecord {
 export interface AgentSession {
   agent: string;
   sessionKey: string;
+  /** Native CLI session ID, when the transcript can be resumed. */
+  resumeId?: string;
   title?: string;
   recordCount: number;
   firstTime: string;

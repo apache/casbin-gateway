@@ -21,7 +21,7 @@ import * as AgentBackend from "@/backend/AgentBackend";
 import * as Setting from "@/Setting";
 import {AgentIcon} from "@/components/AgentIcon";
 import {DataTable, type Column} from "@/components/shared/data-table";
-import {UnauthorizedResult} from "@/components/shared/misc";
+import {CopyButton, UnauthorizedResult} from "@/components/shared/misc";
 import {PageContainer, PageHeader} from "@/components/shared/page-header";
 import {agentOption} from "@/components/shared/brand-options";
 import {SimpleSelect} from "@/components/shared/simple-select";
@@ -33,6 +33,7 @@ import {Button} from "@/components/ui/button";
 import {Label} from "@/components/ui/label";
 import {Switch} from "@/components/ui/switch";
 import {Tabs, TabsList, TabsTrigger} from "@/components/ui/tabs";
+import {sessionResumeCommand} from "@/lib/agent-sessions";
 import type {Account, AgentSession} from "@/types";
 
 type SourceFilter = "all" | "monitored" | "historical";
@@ -183,30 +184,41 @@ export default function AgentSessionsPage({account}: {account: Account}) {
       // fixed ones do not fit, and the only column worth reading goes first.
       className: "min-w-[240px]",
       sorter: (a, b) => (a.title || a.sessionKey).localeCompare(b.title || b.sessionKey),
-      render: (_value, session) => (
-        <div className="flex min-w-0 flex-col gap-0.5">
-          {/* A session read off disk has no monitoring records behind it, so it
-              opens its own transcript rather than the Activity page. */}
-          <Link
-            to={
-              session.historical
-                ? `/agent-sessions/${encodeURIComponent(session.sessionKey)}?agent=${encodeURIComponent(session.agent)}`
-                : `/agent-records?agent=${encodeURIComponent(session.agent)}&session=${encodeURIComponent(session.sessionKey)}`
-            }
-            className="hover:text-primary truncate font-medium transition-colors"
-          >
-            {session.title || session.sessionKey}
-          </Link>
-          <SimpleTooltip title={session.cwd || session.sessionKey}>
-            <span className="text-muted-foreground flex w-fit max-w-full items-center gap-1.5 text-xs">
-              {session.cwd ? <Folder className="size-3 shrink-0" /> : null}
-              <span className="truncate font-mono">
-                {session.cwd ? baseName(session.cwd) : session.sessionKey}
+      render: (_value, session) => {
+        const command = sessionResumeCommand(session);
+        return (
+          <div className="flex min-w-0 flex-col">
+            <div className="flex min-w-0 items-center gap-1">
+              {/* Monitored sessions still open their Activity records. */}
+              <Link
+                to={
+                  session.historical
+                    ? `/agent-sessions/${encodeURIComponent(session.sessionKey)}?agent=${encodeURIComponent(session.agent)}`
+                    : `/agent-records?agent=${encodeURIComponent(session.agent)}&session=${encodeURIComponent(session.sessionKey)}`
+                }
+                className="hover:text-primary truncate font-medium transition-colors"
+              >
+                {session.title || session.sessionKey}
+              </Link>
+              {command ? (
+                <CopyButton
+                  className="shrink-0"
+                  value={command}
+                  label={i18next.t("agent:Copy resume command")}
+                />
+              ) : null}
+            </div>
+            <SimpleTooltip title={session.cwd || session.sessionKey}>
+              <span className="text-muted-foreground flex w-fit max-w-full items-center gap-1.5 text-xs">
+                {session.cwd ? <Folder className="size-3 shrink-0" /> : null}
+                <span className="truncate font-mono">
+                  {session.cwd ? baseName(session.cwd) : session.sessionKey}
+                </span>
               </span>
-            </span>
-          </SimpleTooltip>
-        </div>
-      ),
+            </SimpleTooltip>
+          </div>
+        );
+      },
     },
     {
       title: i18next.t("agent:Agent"),
