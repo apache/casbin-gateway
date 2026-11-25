@@ -40,7 +40,15 @@ func AgentEndpoint(agentId string) (agentprovider.Endpoint, error) {
 		endpoint.Mode = stored.Mode
 	}
 
-	provider, err := object.GetProviderByAgent(agentId)
+	var provider *object.Provider
+	if endpoint.Mode == object.ModeDirect && stored.Provider != "" {
+		provider, err = object.GetProviderById(stored.Provider)
+		if err == nil && (provider == nil || provider.Status != "enabled") {
+			return endpoint, fmt.Errorf("the direct provider is unavailable: %s", stored.Provider)
+		}
+	} else {
+		provider, err = object.GetProviderByAgent(agentId)
+	}
 	if err != nil {
 		return endpoint, err
 	}

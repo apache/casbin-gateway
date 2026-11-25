@@ -118,6 +118,8 @@
     "Detail": "Detail",
     "Details": "Details",
     "Direct": "Direct",
+    "Return to direct provider": "Switching off Gateway returns to {provider} in direct mode.",
+    "Choose a direct-compatible provider": "Select an enabled provider that supports direct mode.",
     "Direct mode hint": "The provider's own base URL and key are written into the agent's configuration. Switching to another provider rewrites the file, and the agent has to be restarted to pick it up.",
     "Direct mode permission hint": "This agent is bound straight to its provider, so its requests never reach Gateway and none of these rules apply. Switch it back to routing through Gateway.",
     "Drag to reorder": "Drag to reorder",

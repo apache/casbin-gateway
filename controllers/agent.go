@@ -45,10 +45,11 @@ type discoveredAgent struct {
 	// Provider is the "owner/name" id of the bound provider, and Fallbacks are the
 	// providers tried after it. Installations are discovered per host while the
 	// routing is stored per agent id, so they merge here.
-	Provider  string   `json:"provider"`
-	Fallbacks []string `json:"fallbacks"`
-	Mode      string   `json:"mode"`
-	Strategy  string   `json:"strategy"`
+	Provider       string   `json:"provider"`
+	DirectProvider string   `json:"directProvider,omitempty"`
+	Fallbacks      []string `json:"fallbacks"`
+	Mode           string   `json:"mode"`
+	Strategy       string   `json:"strategy"`
 	// ProviderConfig is the state of the agent's own configuration file, which
 	// is what the config orchestrator writes.
 	ProviderConfig agentprovider.Status `json:"providerConfig"`
@@ -128,6 +129,7 @@ func (c *ApiController) GetAgents() {
 		item.ProxyBaseUrl = baseUrl
 		item.EgressFindings = egressFindings[installation.AgentId]
 		if stored, ok := agents[installation.AgentId]; ok {
+			item.DirectProvider = stored.DirectProvider
 			item.Provider = stored.Provider
 			item.Mode = stored.Mode
 			item.Strategy = stored.Strategy
@@ -207,7 +209,9 @@ func (c *ApiController) UpdateAgentRouting() {
 // even if the later update of the agent's configuration failed.
 func saveAgentRouting(agentId string, providerId string, fallbacks []string, mode string, strategy string) (bool, error) {
 	if providerId != "" {
-		if err := checkAgentProtocol(agentId, mode, append([]string{providerId}, fallbacks...)); err != nil {
+		// Direct mode writes only the selected provider into the client. The
+		// saved Gateway queue may include upstreams that need protocol translation.
+		if err := checkAgentProtocol(agentId, mode, providerId); err != nil {
 			return false, err
 		}
 	}

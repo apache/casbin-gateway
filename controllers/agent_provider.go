@@ -105,7 +105,7 @@ func (c *ApiController) GetProviderHealth() {
 // direct binding can be wrong: it writes the provider's own URL into the agent
 // configuration, and the two then have to speak the same API. Through the
 // gateway any provider will do, since the proxy translates.
-func checkAgentProtocol(agentId string, mode string, providerIds []string) error {
+func checkAgentProtocol(agentId string, mode string, providerId string) error {
 	if mode != object.ModeDirect {
 		return nil
 	}
@@ -115,25 +115,23 @@ func checkAgentProtocol(agentId string, mode string, providerIds []string) error
 		return nil
 	}
 
-	for index, id := range providerIds {
-		if id == "" {
-			continue
-		}
-		provider, err := object.GetProviderById(id)
-		if err != nil {
-			return err
-		}
-		// A provider that does not exist is reported by the routing itself.
-		if provider == nil {
-			continue
-		}
-		if spoken := object.ProviderApiFamily(provider); spoken != spokenByAgent {
-			return fmt.Errorf("%s speaks the %s API, but provider %s speaks %s: bind a provider that speaks %s, or route this agent through the gateway",
-				agentId, spokenByAgent, id, spoken, spokenByAgent)
-		}
-		if index == 0 && (agentId == "codex" || agentId == "codex-cli") && !object.ServesResponsesApi(provider) {
-			return fmt.Errorf("provider %s does not serve the OpenAI Responses API required by %s in direct mode. Switch the agent to gateway mode to use this provider", id, agentId)
-		}
+	provider, err := object.GetProviderById(providerId)
+	if err != nil {
+		return err
+	}
+	// A provider that does not exist is reported by the routing itself.
+	if provider == nil {
+		return nil
+	}
+	if provider.Status != "enabled" {
+		return fmt.Errorf("the direct provider is disabled: %s", providerId)
+	}
+	if spoken := object.ProviderApiFamily(provider); spoken != spokenByAgent {
+		return fmt.Errorf("%s speaks the %s API, but provider %s speaks %s: bind a provider that speaks %s, or route this agent through the gateway",
+			agentId, spokenByAgent, providerId, spoken, spokenByAgent)
+	}
+	if (agentId == "codex" || agentId == "codex-cli") && !object.ServesResponsesApi(provider) {
+		return fmt.Errorf("provider %s does not serve the OpenAI Responses API required by %s in direct mode. Switch the agent to gateway mode to use this provider", providerId, agentId)
 	}
 	return nil
 }

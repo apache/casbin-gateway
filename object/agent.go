@@ -47,6 +47,8 @@ type Agent struct {
 
 	// Provider is the "owner/name" id of the bound provider, empty when unbound.
 	Provider string `xorm:"varchar(200)" json:"provider"`
+	// DirectProvider remembers the last direct binding while a different upstream is routed.
+	DirectProvider string `xorm:"varchar(200)" json:"directProvider,omitempty"`
 	// Fallbacks are the provider ids tried, in order, when Provider cannot answer.
 	// They are JSON-serialized by xorm, hence the text column.
 	Fallbacks []string `xorm:"mediumtext" json:"fallbacks"`
@@ -99,9 +101,20 @@ func GetAgents() (map[string]*Agent, error) {
 // them. Every provider is resolved here so a typo fails at the form rather than
 // on the next relayed request.
 func SetAgentRouting(agentId string, providerId string, fallbacks []string, mode string, strategy string) error {
+	return setAgentRouting(agentId, providerId, fallbacks, mode, strategy, nil)
+}
+
+func setAgentRouting(agentId string, providerId string, fallbacks []string, mode string, strategy string, snapshot *Agent) error {
 	if agentId == "" {
 		return errors.New("the agent id is empty")
 	}
+	stored, err := GetAgent(agentId)
+	if err != nil {
+		return err
+	}
+	row := &Agent{Owner: AgentOwner, Name: agentId, UpdatedTime: util.GetCurrentTime()}
+	columns := []string{"provider", "fallbacks", "mode", "strategy", "updated_time"}
+
 	if err := validatePoolStrategy(strategy); err != nil {
 		return err
 	}
@@ -112,10 +125,31 @@ func SetAgentRouting(agentId string, providerId string, fallbacks []string, mode
 		return fmt.Errorf("invalid agent mode: %s", mode)
 	}
 
-	fallbacks = normalizeFallbacks(providerId, fallbacks)
+	var direct *string
+	if snapshot != nil {
+		direct = &snapshot.DirectProvider
+	}
+	if mode == ModeDirect || providerId == "" {
+		direct = &providerId
+	} else if direct == nil && stored != nil && stored.Mode == ModeDirect {
+		// Rows saved before DirectProvider existed still have their direct binding here.
+		direct = &stored.Provider
+	}
+	if direct != nil {
+		row.DirectProvider = *direct
+		columns = append(columns, "direct_provider")
+	}
+
+	checkedProviders := []string{providerId}
+	if mode == ModeDirect {
+		fallbacks = normalizeFallbacks("", fallbacks)
+	} else {
+		fallbacks = normalizeFallbacks(providerId, fallbacks)
+		checkedProviders = append(checkedProviders, fallbacks...)
+	}
 	// Unbinding restores the agent even when its inactive fallbacks were deleted.
 	if providerId != "" {
-		for _, id := range append([]string{providerId}, fallbacks...) {
+		for _, id := range checkedProviders {
 			provider, err := GetProviderById(id)
 			if err != nil {
 				return err
@@ -126,30 +160,17 @@ func SetAgentRouting(agentId string, providerId string, fallbacks []string, mode
 		}
 	}
 
-	stored, err := GetAgent(agentId)
-	if err != nil {
-		return err
-	}
+	row.Provider = providerId
+	row.Fallbacks = fallbacks
+	row.Mode = mode
+	row.Strategy = strategy
 
-	now := util.GetCurrentTime()
 	if stored == nil {
-		_, err = ormer.Engine.Insert(&Agent{
-			Owner:       AgentOwner,
-			Name:        agentId,
-			CreatedTime: now,
-			UpdatedTime: now,
-			Provider:    providerId,
-			Fallbacks:   fallbacks,
-			Mode:        mode,
-			Strategy:    strategy,
-		})
-		return err
+		row.CreatedTime = row.UpdatedTime
+		_, err = ormer.Engine.Insert(row)
+	} else {
+		_, err = ormer.Engine.ID(core.PK{AgentOwner, agentId}).Cols(columns...).Update(row)
 	}
-
-	// Cols() is what writes an empty provider: xorm skips zero values otherwise.
-	_, err = ormer.Engine.ID(core.PK{AgentOwner, agentId}).
-		Cols("provider", "fallbacks", "mode", "strategy", "updated_time").
-		Update(&Agent{Provider: providerId, Fallbacks: fallbacks, Mode: mode, Strategy: strategy, UpdatedTime: now})
 	return err
 }
 
