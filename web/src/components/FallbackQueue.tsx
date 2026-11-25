@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {ArrowDown, ArrowUp, X} from "lucide-react";
+import {useEffect, useState} from "react";
+import {ArrowDown, ArrowUp, GripVertical, X} from "lucide-react";
 import i18next from "i18next";
 
 import {ProviderIcon} from "@/components/ProviderIcon";
@@ -21,7 +22,10 @@ import {Button} from "@/components/ui/button";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {SimpleTooltip} from "@/components/ui/tooltip";
 import {providerIdOf} from "@/lib/providers";
+import {cn} from "@/lib/utils";
 import type {Provider, ProviderHealth} from "@/types";
+
+const fallbackDragType = "application/x-casbin-fallback";
 
 export function FallbackQueue({
   fallbacks,
@@ -40,6 +44,8 @@ export function FallbackQueue({
   busy: boolean;
   onChange: (fallbacks: string[]) => void;
 }) {
+  const [dragged, setDragged] = useState("");
+  const [target, setTarget] = useState("");
   const providersById = new Map(providers.map(provider => [providerIdOf(provider), provider]));
   const candidateIds = new Set(candidates.map(providerIdOf));
   const queued = new Set(fallbacks);
@@ -49,12 +55,28 @@ export function FallbackQueue({
   const title = i18next.t("agent:Fallback queue");
   const addLabel = i18next.t("agent:Add a fallback provider");
 
-  const move = (index: number, offset: number) => {
+  const move = (from: number, to: number) => {
+    if (editingDisabled || from < 0 || to < 0 || to >= fallbacks.length || from === to) {
+      return;
+    }
     const next = [...fallbacks];
-    const [id] = next.splice(index, 1);
-    next.splice(index + offset, 0, id);
+    const [id] = next.splice(from, 1);
+    next.splice(to, 0, id);
     onChange(next);
   };
+
+  const canDrag = !editingDisabled && fallbacks.length > 1;
+  const from = fallbacks.indexOf(dragged);
+  const endDrag = () => {
+    setDragged("");
+    setTarget("");
+  };
+
+  useEffect(() => {
+    if (dragged && (!canDrag || from < 0)) {
+      endDrag();
+    }
+  }, [canDrag, dragged, from]);
 
   return (
     <div className="space-y-2">
@@ -63,10 +85,19 @@ export function FallbackQueue({
         {i18next.t(throughGateway ? "agent:Fallback queue hint" : "agent:Direct fallback queue hint")}
       </p>
       {fallbacks.length > 0 ? (
-        <ol aria-label={title} className="space-y-1">
+        <ol
+          aria-label={title}
+          className="space-y-1"
+          onDragLeave={event => {
+            if (!(event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget))) {
+              setTarget("");
+            }
+          }}
+        >
           {fallbacks.map((id, index) => {
             const provider = providersById.get(id);
             const label = provider?.displayName || provider?.name || id;
+            const dropTarget = canDrag && target === id && from >= 0;
             const lastHealth = health.find(item => item.provider === id);
             const status = !provider ? "agent:Deleted fallback provider"
               : !candidateIds.has(id) ? "agent:Incompatible fallback provider"
@@ -74,7 +105,44 @@ export function FallbackQueue({
                   : lastHealth && !lastHealth.healthy ? "agent:Cooling down" : "";
 
             return (
-              <li key={id} className="flex items-center gap-2 rounded-md border p-1.5">
+              <li
+                key={id}
+                className={cn(
+                  "flex items-center gap-2 rounded-md border p-1.5",
+                  dropTarget && from < index && "border-b-primary",
+                  dropTarget && from > index && "border-t-primary",
+                )}
+                onDragOver={event => {
+                  if (canDrag && from >= 0 && event.dataTransfer.types.includes(fallbackDragType)) {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "move";
+                    setTarget(id);
+                  }
+                }}
+                onDrop={event => {
+                  if (from >= 0 && event.dataTransfer.getData(fallbackDragType) === dragged) {
+                    event.preventDefault();
+                    move(from, index);
+                    endDrag();
+                  }
+                }}
+              >
+                {canDrag && (
+                  <span
+                    draggable
+                    aria-hidden="true"
+                    title={i18next.t("agent:Drag to reorder")}
+                    className="cursor-grab select-none p-1 text-muted-foreground active:cursor-grabbing"
+                    onDragStart={event => {
+                      event.dataTransfer.effectAllowed = "move";
+                      event.dataTransfer.setData(fallbackDragType, id);
+                      setDragged(id);
+                    }}
+                    onDragEnd={endDrag}
+                  >
+                    <GripVertical className="size-4" />
+                  </span>
+                )}
                 <span aria-hidden="true" className="w-5 shrink-0 text-center text-xs tabular-nums text-muted-foreground">
                   {index + 1}
                 </span>
@@ -91,7 +159,7 @@ export function FallbackQueue({
                       variant="ghost"
                       aria-label={i18next.t("agent:Move {provider} up").replace("{provider}", label)}
                       disabled={editingDisabled || index === 0}
-                      onClick={() => move(index, -1)}
+                      onClick={() => move(index, index - 1)}
                     >
                       <ArrowUp />
                     </Button>
@@ -103,7 +171,7 @@ export function FallbackQueue({
                       variant="ghost"
                       aria-label={i18next.t("agent:Move {provider} down").replace("{provider}", label)}
                       disabled={editingDisabled || index === fallbacks.length - 1}
-                      onClick={() => move(index, 1)}
+                      onClick={() => move(index, index + 1)}
                     >
                       <ArrowDown />
                     </Button>
