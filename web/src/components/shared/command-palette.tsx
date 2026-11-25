@@ -53,36 +53,73 @@ export function useCommandPalette() {
   return {open, setOpen};
 }
 
-/**
- * The lists behind the object hits. Neither endpoint takes a search term, so
- * they are fetched once the palette is first opened and filtered here — both
- * lists are the size of one machine's setup, not of a directory.
- */
-function useSearchable(open: boolean, account: Account | null | undefined, isAdmin: boolean) {
+function useSearchableAgents(open: boolean, isAdmin: boolean) {
   const [agents, setAgents] = React.useState<Agent[]>([]);
-  const [providers, setProviders] = React.useState<Provider[]>([]);
   const loadedRef = React.useRef(false);
 
   React.useEffect(() => {
-    if (!open || !account || loadedRef.current) {
+    if (!open || !isAdmin || loadedRef.current) {
       return;
     }
     loadedRef.current = true;
+    AgentBackend.getAgents()
+      .then(res => setAgents(res.status === "ok" ? (res.data ?? []) : []))
+      .catch(() => setAgents([]));
+  }, [open, isAdmin]);
 
-    ProviderBackend.getProviders(account.name)
-      .then(res => setProviders(res.status === "ok" ? (res.data ?? []) : []))
-      .catch(() => setProviders([]));
+  return isAdmin ? agents : [];
+}
 
-    if (isAdmin) {
-      // The scan only an admin may run, so everyone else searches pages and
-      // providers alone.
-      AgentBackend.getAgents()
-        .then(res => setAgents(res.status === "ok" ? (res.data ?? []) : []))
-        .catch(() => setAgents([]));
-    }
-  }, [open, account, isAdmin]);
+function ProviderHits({owner, go}: {owner: string; go: (path: string) => void}) {
+  const [providers, setProviders] = React.useState<Provider[]>([]);
+  const [failed, setFailed] = React.useState(false);
+  React.useEffect(() => {
+    let active = true;
+    ProviderBackend.getProviders(owner)
+      .then(res => {
+        if (active) {
+          setFailed(res.status !== "ok");
+          setProviders(res.data ?? []);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setFailed(true);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [owner]);
 
-  return {agents, providers};
+  if (failed) {
+    return <p role="status" className="px-3 py-2 text-sm text-muted-foreground">{i18next.t("provider:Failed to get providers")}</p>;
+  }
+  if (providers.length === 0) {
+    return null;
+  }
+  return (
+    <>
+      <CommandSeparator />
+      <CommandGroup heading={i18next.t("provider:Providers")}>
+        {providers.map(provider => {
+          const id = `${provider.owner}/${provider.name}`;
+          return (
+            <CommandItem
+              key={id}
+              value={`provider:${id}`}
+              keywords={[provider.displayName, provider.type, provider.baseUrl, provider.notes, ...(provider.models ?? [])].filter(Boolean)}
+              onSelect={() => go(`/providers/${id}`)}
+            >
+              <ProviderIcon icon={provider.icon} baseUrl={provider.baseUrl} alt={provider.type} size={16} />
+              <span className="flex-1 truncate">{provider.displayName || provider.name}</span>
+              <span className="text-muted-foreground max-w-[50%] truncate text-xs">{id}</span>
+            </CommandItem>
+          );
+        })}
+      </CommandGroup>
+    </>
+  );
 }
 
 function agentValue(agent: Agent, agents: Agent[]) {
@@ -123,7 +160,7 @@ export function CommandPalette({
   isAdmin: boolean;
 }) {
   const navigate = useNavigate();
-  const {agents, providers} = useSearchable(open, account, isAdmin);
+  const agents = useSearchableAgents(open, isAdmin);
 
   // Recomputed per render: the labels come from i18next, which changes language
   // without changing this component's inputs.
@@ -175,24 +212,9 @@ export function CommandPalette({
           </>
         )}
 
-        {providers.length === 0 ? null : (
-          <>
-            <CommandSeparator />
-            <CommandGroup heading={i18next.t("provider:Providers")}>
-              {providers.map(provider => (
-                <CommandItem
-                  key={`${provider.owner}/${provider.name}`}
-                  value={`${provider.displayName} ${provider.name} ${provider.type}`}
-                  onSelect={() => go(`/providers/${provider.owner}/${provider.name}`)}
-                >
-                  <ProviderIcon icon={provider.icon} baseUrl={provider.baseUrl} alt={provider.type} size={16} />
-                  <span className="flex-1 truncate">{provider.displayName || provider.name}</span>
-                  <span className="text-muted-foreground max-w-[50%] truncate text-xs">{provider.type}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </>
-        )}
+        {open && account ? (
+          <ProviderHits key={`${account.name}/${isAdmin}`} owner={isAdmin ? "" : account.name} go={go} />
+        ) : null}
       </CommandList>
     </CommandDialog>
   );
