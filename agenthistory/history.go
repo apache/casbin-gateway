@@ -49,6 +49,7 @@ type Session struct {
 	Cwd string `json:"cwd"`
 	// Historical marks a session read off disk rather than collected by monitoring.
 	Historical bool `json:"historical"`
+	Archived   bool `json:"archived,omitempty"`
 	// Usage is what the transcript says the session spent. LLM Records only ever
 	// sees what went through Gateway, so this is the only account of an agent
 	// that talks to its vendor directly.
@@ -155,10 +156,18 @@ func scan(home string) []Session {
 	for _, source := range transcriptDirs {
 		root := filepath.Join(append([]string{home}, source.parts...)...)
 		agent, keyOf := source.agent, source.keyOf
-		for _, file := range newestTranscripts(root, isJSONL) {
+		files := transcriptFiles(root, isJSONL)
+		if agent == codexCliAgent {
+			files = withArchivedRollouts(files, filepath.Join(home, ".codex", "archived_sessions"))
+		}
+		for _, file := range newestTranscripts(files) {
 			if session, ok := read(file, func(file transcript) (Session, bool) {
 				return parse(agent, file, keyOf)
 			}); ok {
+				if file.archived {
+					session.Archived = true
+					session.ResumeId = ""
+				}
 				sessions = append(sessions, session)
 			}
 		}
@@ -177,8 +186,34 @@ func scan(home string) []Session {
 }
 
 type transcript struct {
-	path string
-	info os.FileInfo
+	path     string
+	info     os.FileInfo
+	archived bool
+}
+
+// A continuation has its own rollout key even when its header names the
+// original thread. Prefer active rollouts before applying the scan limit.
+func withArchivedRollouts(files []transcript, archiveDir string) []transcript {
+	index := make(map[string]int, len(files))
+	for i, file := range files {
+		index[sessionKeyFromName(file.info.Name())] = i
+	}
+	for _, file := range transcriptFiles(archiveDir, isJSONL) {
+		if !file.info.Mode().IsRegular() {
+			continue
+		}
+		file.archived = true
+		key := sessionKeyFromName(file.info.Name())
+		if i, found := index[key]; found {
+			if files[i].archived && file.info.ModTime().After(files[i].info.ModTime()) {
+				files[i] = file
+			}
+			continue
+		}
+		index[key] = len(files)
+		files = append(files, file)
+	}
+	return files
 }
 
 // isJSONL is the transcript name rule of an agent that writes plain JSONL.
@@ -186,8 +221,7 @@ func isJSONL(name string) bool {
 	return strings.HasSuffix(name, ".jsonl")
 }
 
-// newestTranscripts finds the transcripts under root, newest first and capped.
-func newestTranscripts(root string, match func(name string) bool) []transcript {
+func transcriptFiles(root string, match func(name string) bool) []transcript {
 	found := []transcript{}
 	// A missing directory means the agent was never installed here, which is not
 	// an error worth reporting from a page that lists whatever it finds.
@@ -203,6 +237,10 @@ func newestTranscripts(root string, match func(name string) bool) []transcript {
 		return nil
 	})
 
+	return found
+}
+
+func newestTranscripts(found []transcript) []transcript {
 	sort.SliceStable(found, func(left, right int) bool {
 		return found[left].info.ModTime().After(found[right].info.ModTime())
 	})

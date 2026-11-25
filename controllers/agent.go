@@ -310,6 +310,7 @@ func (c *ApiController) GetAgentSessions() {
 	}
 	for _, session := range object.HistoricalSessions(agentId) {
 		if index, ok := monitored[sessionSeenKey(session.Agent, session.SessionKey)]; ok {
+			sessions[index].Archived = session.Archived
 			// A monitored row keeps its Activity link and borrows what resuming needs.
 			if session.ResumeId != "" {
 				sessions[index].ResumeId = session.ResumeId

@@ -67,6 +67,8 @@
     "Apply a patch": "Apply a patch",
     "Apply to all agents": "Apply to all agents",
     "Ask the user a question": "Ask the user a question",
+    "Archived": "Archived",
+    "Archived transcript": "Archived transcript",
     "Auto refresh": "Auto refresh",
     "Base URL hint": "Give the agent the settings below. Requests that arrive at this URL always go to the provider selected above, whatever model they name.",
     "Bound provider cooling down": "The bound provider is out of rotation, requests go to the fallbacks",

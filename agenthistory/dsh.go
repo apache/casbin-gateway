@@ -41,7 +41,7 @@ const (
 func scanDsh(home string) []Session {
 	root := filepath.Join(home, ".dsh", "sessions")
 	sessions := []Session{}
-	for _, file := range newestTranscripts(root, isDshTranscript) {
+	for _, file := range newestTranscripts(transcriptFiles(root, isDshTranscript)) {
 		if session, ok := read(file, parseDsh); ok {
 			sessions = append(sessions, session)
 		}

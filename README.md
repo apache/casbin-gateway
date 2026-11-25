@@ -402,6 +402,10 @@ configured and nothing routed: tokens, cache hit rate and cost, over time and br
 agent. The second tab, **What Gateway relayed**, is the narrower account of the traffic that did come through,
 and the only one that knows which provider answered and whether it failed.
 
+**Sessions** also opens Codex conversations stored in `~/.codex/archived_sessions/`.
+Gateway reads the 500 newest Codex rollouts across the active and archived directories and includes
+their recorded tokens in **Usage**. When a rollout appears in both directories, the active copy takes precedence.
+
 Every figure there is worked out from **Model pricing**, which is a table of what a million tokens costs.
 Vendors change their prices and resellers do not follow, so a price can be edited by hand, and Gateway can
 reprice the models this machine has run from the [models.dev](https://models.dev) catalogue on a schedule
