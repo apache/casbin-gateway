@@ -56,6 +56,7 @@ func AgentEndpoint(agentId string) (agentprovider.Endpoint, error) {
 	if endpoint.Mode == object.ModeDirect {
 		endpoint.BaseUrl = provider.BaseUrl
 		endpoint.ApiKey = provider.ApiKey
+		endpoint.AnthropicAuthHeader = provider.AnthropicAuthHeader
 		endpoint.ServesResponsesApi = object.ServesResponsesApi(provider)
 		return endpoint, nil
 	}

@@ -283,6 +283,19 @@ export function setAgentProvider(agentId: string, provider: string) {
   return request<string>("/api/set-agent-provider", "POST", {agentId, provider});
 }
 
+export interface NativeProviderPreview {
+  provider: {displayName: string; baseUrl: string; protocol: string; model: string};
+  revision: string;
+}
+
+export function previewNativeProvider(target: PatchTarget) {
+  return request<NativeProviderPreview>("/api/import-native-provider", "POST", target);
+}
+
+export function saveNativeProvider(target: PatchTarget, revision: string) {
+  return request<string>("/api/import-native-provider", "POST", {...target, revision});
+}
+
 /** What a switch would write, rendered without touching a file. */
 export function planAgentProvider(target: PatchTarget) {
   return request<AgentProviderFile[]>("/api/plan-agent-provider", "POST", target);

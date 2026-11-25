@@ -268,6 +268,8 @@ GATEWAY_PROBE_KEY=sk-... go run github.com/apache/casbin-gateway/cmd/gateway-pro
 
 这是 **LLM Records** 的数据来源，也是让 Gateway 而不是 Agent 持有厂商 Key 的方式。
 
+要保留Claude Code或Codex CLI当前使用的自定义供应商，在Gateway所在机器打开**Agent**详情，点击**预览当前供应商**。核对端点和模型，点击**保存为供应商**，需要切换时再选择该供应商。导入读取CLI配置中的API密钥。仅在Shell中定义的凭据、订阅登录和需要额外请求头的供应商需单独配置。
+
 1. **Providers** → **Add**：选类型（OpenAI 兼容或 Anthropic 兼容），填厂商的 base URL 和 API Key，并列出它提供的模型。
 2. **Agents** → 打开一个 Agent → 选中该 Provider。如果这个 Agent 的配置格式 Gateway 认识，点 **Write configuration** 就会写进它自己的配置文件 —— **Preview** 会先原样列出将要写入的内容，**Restore** 可以还原。写过一次之后再换 Provider，文件会立即被改写，所以之后切换只需要点一下，两个页面上都可以。
 3. 其他 Agent 则复制页面显示的环境变量片段，在设置了这些变量的 shell 里启动：

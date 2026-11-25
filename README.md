@@ -271,6 +271,8 @@ No Go? Download the single `gateway-probe` file for your platform from the [nigh
 
 This is what fills **LLM Records**, and what lets Gateway keep the vendor key instead of the agent.
 
+To keep a custom provider already configured in Claude Code or Codex CLI, open that installation in **Agents** on the Gateway host and choose **Preview current provider**. Review the endpoint and model, select **Save as provider**, then choose the saved provider when you want to switch. Import reads literal API keys from the CLI configuration. Shell-only credentials, sign-in sessions and providers with custom request headers need separate setup.
+
 1. **Providers** → **Add**: pick the type (OpenAI- or Anthropic-compatible), paste the vendor base URL and API key, and list the models it serves.
 2. **Agents** → open an agent → pick that provider. For an agent whose configuration format Gateway knows, **Write configuration** puts it in the agent's own file — **Preview** shows exactly what that will be first, and **Restore** undoes it. Picking a different provider afterwards rewrites the file on the spot, so switching from then on is one click, from either page.
 3. For any other agent, copy the environment snippet the page shows and start the agent from a shell that has it:

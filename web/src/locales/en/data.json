@@ -18,6 +18,13 @@
     "Username": "Username"
   },
   "agent": {
+    "Import current CLI provider": "Import current CLI provider",
+    "Native provider import hint": "Preview the custom endpoint and model used by this installation. Saving copies the API key into Gateway and leaves the CLI configuration in place.",
+    "Preview current provider": "Preview current provider",
+    "Save as provider": "Save as provider",
+    "Native provider ready": "{id} is ready to select in Provider above.",
+    "Could not preview native provider": "Could not preview native provider",
+    "Could not save native provider": "Could not save native provider",
     "API key": "API key",
     "Account": "Account",
     "Account removed": "Account removed",
