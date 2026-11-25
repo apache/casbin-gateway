@@ -140,7 +140,7 @@ func (menu *providerMenu) draw() {
 	menu.root.SetTitle("Switch Provider")
 	menu.root.Enable()
 	for _, entry := range fetched.Agents {
-		submenu := menu.root.AddSubMenuItem(entry.Name, "Choose where "+entry.Name+" sends its requests")
+		submenu := menu.root.AddSubMenuItem(providerMenuTitle(entry, fetched.Providers), "Choose where "+entry.Name+" sends its requests")
 		menu.agents = append(menu.agents, submenu)
 
 		builtin := providerChoice{agentId: entry.AgentId, agentName: entry.Name, providerName: builtinTitle}
@@ -156,6 +156,24 @@ func (menu *providerMenu) draw() {
 		}
 	}
 	menu.drawn = fingerprint
+}
+
+func providerMenuTitle(agent trayAgent, providers []trayProvider) string {
+	if agent.Provider == "" {
+		return agent.Name + " · " + builtinTitle
+	}
+	mode := "Gateway"
+	if agent.Mode == "direct" {
+		mode = "Direct"
+	}
+	name := agent.Provider
+	for _, provider := range providers {
+		if provider.Id == agent.Provider {
+			name = provider.Name
+			break
+		}
+	}
+	return strings.Join([]string{agent.Name, mode, name}, " · ")
 }
 
 func unavailableProvider(agent trayAgent, provider trayProvider) string {
