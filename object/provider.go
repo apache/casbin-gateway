@@ -681,6 +681,10 @@ func AddProvider(provider *Provider) (bool, error) {
 }
 
 func insertProvider(provider *Provider) (bool, error) {
+	if err := placeNewProvider(provider); err != nil {
+		return false, err
+	}
+
 	now := util.GetCurrentTime()
 	if provider.CreatedTime == "" {
 		provider.CreatedTime = now

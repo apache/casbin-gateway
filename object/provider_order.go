@@ -56,3 +56,20 @@ func MoveProvider(id string, from, to int) error {
 	}
 	return session.Commit()
 }
+
+// placeNewProvider puts a new provider at the top of a list that has been
+// reordered, where a rank of 0 would put it after every ranked provider.
+func placeNewProvider(provider *Provider) error {
+	if provider.DisplayRank != 0 {
+		return nil
+	}
+	top := Provider{}
+	has, err := ormer.Engine.Cols("display_rank").Desc("display_rank").Limit(1).Get(&top)
+	if err != nil {
+		return err
+	}
+	if has && top.DisplayRank > 0 {
+		provider.DisplayRank = top.DisplayRank + 1
+	}
+	return nil
+}
