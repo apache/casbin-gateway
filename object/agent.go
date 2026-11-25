@@ -58,7 +58,8 @@ type Agent struct {
 	Mode string `xorm:"varchar(20)" json:"mode"`
 	// Strategy is how the providers are taken in turn, see OrderPool. Empty
 	// tries them as listed.
-	Strategy string `xorm:"varchar(20)" json:"strategy"`
+	Strategy        string `xorm:"varchar(20)" json:"strategy"`
+	FallbacksPaused bool   `xorm:"default false" json:"fallbacksPaused"`
 }
 
 func (agent *Agent) GetId() string {
@@ -118,6 +119,11 @@ func setAgentRouting(agentId string, providerId string, fallbacks []string, mode
 	if err := validatePoolStrategy(strategy); err != nil {
 		return err
 	}
+	if snapshot != nil {
+		row.FallbacksPaused = snapshot.FallbacksPaused
+		columns = append(columns, "fallbacks_paused")
+	}
+
 	if mode == "" {
 		mode = ModeGateway
 	}
@@ -211,13 +217,21 @@ func GetProvidersByAgent(agentId string) ([]*Provider, error) {
 	if err != nil {
 		return nil, err
 	}
+	return providersForAgent(agentId, agent)
+}
+
+func providersForAgent(agentId string, agent *Agent) ([]*Provider, error) {
 	if agent == nil || agent.Provider == "" {
 		return nil, errNoProvider(agentId)
 	}
 
 	providers := []*Provider{}
 	skipped := ""
-	for _, id := range append([]string{agent.Provider}, agent.Fallbacks...) {
+	ids := []string{agent.Provider}
+	if !agent.FallbacksPaused {
+		ids = append(ids, agent.Fallbacks...)
+	}
+	for _, id := range ids {
 		provider, err := GetProviderById(id)
 		if err != nil {
 			skipped = err.Error()
@@ -251,20 +265,6 @@ func errNoProvider(agentId string) error {
 		ErrAgentNoProvider, agentId)
 }
 
-// GetAgentPool is the chain in the order the agent's strategy tries it for the
-// request at hand.
-func GetAgentPool(agentId string, advance bool) ([]*Provider, error) {
-	providers, err := GetProvidersByAgent(agentId)
-	if err != nil {
-		return nil, err
-	}
-	agent, err := GetAgent(agentId)
-	if err != nil || agent == nil {
-		return providers, err
-	}
-	return OrderPool(agentId, agent.Strategy, providers, advance), nil
-}
-
 // GetProviderByAgent resolves the first provider of an agent's chain.
 func GetProviderByAgent(agentId string) (*Provider, error) {
 	providers, err := GetProvidersByAgent(agentId)
@@ -281,4 +281,18 @@ func GetProviderById(providerId string) (*Provider, error) {
 		return nil, fmt.Errorf("invalid provider ID: %s", providerId)
 	}
 	return getProvider(tokens[0], tokens[1])
+}
+
+func SetAgentFailoverPaused(agentId string, paused bool) error {
+	stored, err := GetAgent(agentId)
+	if err != nil {
+		return err
+	}
+	if stored == nil {
+		return errNoProvider(agentId)
+	}
+	_, err = ormer.Engine.ID(core.PK{AgentOwner, agentId}).
+		Cols("fallbacks_paused", "updated_time").
+		Update(&Agent{FallbacksPaused: paused, UpdatedTime: util.GetCurrentTime()})
+	return err
 }

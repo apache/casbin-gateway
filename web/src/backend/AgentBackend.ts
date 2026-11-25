@@ -267,6 +267,10 @@ export interface AgentRouting {
   strategy?: string;
 }
 
+export function setAgentFailoverPaused(agentId: string, paused: boolean) {
+  return request("/api/set-agent-failover-paused", "POST", {agentId, paused});
+}
+
 export function updateAgentRouting(agentId: string, routing: AgentRouting) {
   return request("/api/update-agent-routing", "POST", {agentId: agentId, ...routing});
 }

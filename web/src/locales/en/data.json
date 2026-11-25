@@ -498,6 +498,9 @@
     "Pool smart hint": "Spends first the plan whose 5-hour window resets soonest, since whatever it has left is lost at that reset. API keys come after every plan.",
     "Pool rotate hint": "Each new conversation starts on the next provider.",
     "Pool usage hint": "Starts on the plan with the most left of its tightest window. API keys come after every plan.",
+    "Automatic failover": "Automatic failover",
+    "Failover pause hint": "When paused, requests use only the primary provider. The fallback queue and pool strategy are saved.",
+    "Failed to update failover": "Failed to update failover",
     "Pool sticky hint": "A conversation stays on the provider that answered it until it has been idle for 15 minutes, so its prompt cache is reused, and a plan that has run out waits behind the others until its window resets."
   },
   "agentConfig": {

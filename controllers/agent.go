@@ -56,7 +56,8 @@ type discoveredAgent struct {
 	// ProxyBaseUrl is the endpoint this agent reaches its bound provider at. The
 	// page cannot build it from its own address: an agent that runs in a sandbox
 	// is given this host's network address rather than loopback.
-	ProxyBaseUrl string `json:"proxyBaseUrl"`
+	ProxyBaseUrl    string `json:"proxyBaseUrl"`
+	FallbacksPaused bool   `json:"fallbacksPaused"`
 	// Upgrade is the command that would update this installation in place,
 	// through the package manager that installed it.
 	Upgrade agentinstall.Plan `json:"upgrade"`
@@ -133,6 +134,7 @@ func (c *ApiController) GetAgents() {
 			item.Provider = stored.Provider
 			item.Mode = stored.Mode
 			item.Strategy = stored.Strategy
+			item.FallbacksPaused = stored.FallbacksPaused
 			if stored.Fallbacks != nil {
 				item.Fallbacks = stored.Fallbacks
 			}
@@ -236,6 +238,29 @@ func saveAgentRouting(agentId string, providerId string, fallbacks []string, mod
 		return true, errors.New("the routing was saved, but the agent configuration was not rewritten: " + failure)
 	}
 	return true, nil
+}
+
+func (c *ApiController) SetAgentFailoverPaused() {
+	if c.RequireAdmin() {
+		return
+	}
+	var form struct {
+		AgentId string `json:"agentId"`
+		Paused  *bool  `json:"paused"`
+	}
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &form); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if !agent.IsKnownAgentId(form.AgentId) || form.Paused == nil {
+		c.ResponseError("a known agent and its failover pause setting are required")
+		return
+	}
+	if err := object.SetAgentFailoverPaused(form.AgentId, *form.Paused); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(*form.Paused)
 }
 
 // PatchAgent enables monitoring for one discovered installation.

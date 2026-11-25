@@ -621,7 +621,7 @@ func importAgents(snapshot *Snapshot, mode string, dryRun bool, report *ImportRe
 			report.record(SectionAgents, name, ChangeDelete, "")
 			continue
 		}
-		if err := SetAgentRouting(name, "", nil, "", ""); err != nil {
+		if err := setAgentRouting(name, "", nil, "", "", &Agent{}); err != nil {
 			report.record(SectionAgents, name, ChangeFail, err.Error())
 			continue
 		}

@@ -149,9 +149,5 @@ func (c *ApiController) planPreview(agentId string, model string) ([]object.Rout
 		return object.PlanModelRoute(model)
 	}
 
-	providers, err := object.GetAgentPool(agentId, false)
-	if err != nil {
-		return nil, err
-	}
-	return object.PlanAgentRoute(agentId, model, providers)
+	return object.PlanAgentRoute(agentId, model, false)
 }
