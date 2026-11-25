@@ -66,6 +66,8 @@
     "Any source": "全部来源",
     "Apply a patch": "应用补丁",
     "Apply to all agents": "应用到所有Agent",
+    "Archived": "已归档",
+    "Archived transcript": "归档记录",
     "Ask the user a question": "向用户提问",
     "Auto refresh": "自动刷新",
     "Base URL hint": "把下面的设置配给该Agent。到达这个地址的请求一律转发到上面选定的供应商，与请求里的模型名无关。",

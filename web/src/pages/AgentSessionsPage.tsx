@@ -186,6 +186,7 @@ export default function AgentSessionsPage({account}: {account: Account}) {
       sorter: (a, b) => (a.title || a.sessionKey).localeCompare(b.title || b.sessionKey),
       render: (_value, session) => {
         const command = sessionResumeCommand(session);
+        const transcriptUrl = `/agent-sessions/${encodeURIComponent(session.sessionKey)}?agent=${encodeURIComponent(session.agent)}`;
         return (
           <div className="flex min-w-0 flex-col">
             <div className="flex min-w-0 items-center gap-1">
@@ -193,13 +194,20 @@ export default function AgentSessionsPage({account}: {account: Account}) {
               <Link
                 to={
                   session.historical
-                    ? `/agent-sessions/${encodeURIComponent(session.sessionKey)}?agent=${encodeURIComponent(session.agent)}`
+                    ? transcriptUrl
                     : `/agent-records?agent=${encodeURIComponent(session.agent)}&session=${encodeURIComponent(session.sessionKey)}`
                 }
                 className="hover:text-primary truncate font-medium transition-colors"
               >
                 {session.title || session.sessionKey}
               </Link>
+              {session.archived && (session.historical ? (
+                <Badge variant="muted">{i18next.t("agent:Archived")}</Badge>
+              ) : (
+                <Link to={transcriptUrl} className="shrink-0 text-xs underline">
+                  {i18next.t("agent:Archived transcript")}
+                </Link>
+              ))}
               {command ? (
                 <CopyButton
                   className="shrink-0"

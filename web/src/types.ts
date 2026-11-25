@@ -676,6 +676,7 @@ export interface AgentSession {
   cwd?: string;
   /** True when the session comes from the agent's own transcript, not monitoring. */
   historical?: boolean;
+  archived?: boolean;
 }
 
 /** One installation Gateway can hand a prompt to. */

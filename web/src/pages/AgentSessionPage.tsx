@@ -358,6 +358,7 @@ function AgentTranscriptView({agentId, sessionKey}: {agentId: string; sessionKey
             <AgentIcon agent={session.agent} fallback={<Bot className="size-3" />} size={12} />
             {session.agent}
           </Badge>
+          {session.archived && <Badge variant="muted">{i18next.t("agent:Archived")}</Badge>}
           <Badge variant="muted">
             {i18next.t("agent:{count} messages").replace("{count}", String(messages.length))}
           </Badge>

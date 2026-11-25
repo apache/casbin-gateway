@@ -66,6 +66,8 @@
     "Any source": "Any source",
     "Apply a patch": "Apply a patch",
     "Apply to all agents": "Apply to all agents",
+    "Archived": "Archived",
+    "Archived transcript": "Archived transcript",
     "Ask the user a question": "Ask the user a question",
     "Auto refresh": "Auto refresh",
     "Base URL hint": "Give the agent the settings below. Requests that arrive at this URL always go to the provider selected above, whatever model they name.",
