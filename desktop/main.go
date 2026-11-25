@@ -25,6 +25,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 )
@@ -76,6 +77,16 @@ func main() {
 		hideConsole(cmd)
 		if err := cmd.Run(); err != nil {
 			fmt.Fprintln(os.Stderr, "casbin-gateway-desktop:", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	// The macOS URL handler sends provider credentials through a pipe.
+	if len(os.Args) == 2 && os.Args[1] == "open-link-stdin" {
+		link, err := io.ReadAll(io.LimitReader(os.Stdin, maxLinkLength+1))
+		if err != nil || openImportLink(string(link)) != nil {
+			fmt.Fprintln(os.Stderr, "casbin-gateway-desktop: could not open the import link")
 			os.Exit(1)
 		}
 		return

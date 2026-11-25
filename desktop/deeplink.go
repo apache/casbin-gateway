@@ -64,7 +64,7 @@ func importLinkArg(args []string) string {
 // history and handed on to wherever the page navigates next.
 func openImportLink(link string) error {
 	if !isImportLink(link) || len(link) > maxLinkLength {
-		return fmt.Errorf("%q is not a link Gateway can import", link)
+		return fmt.Errorf("invalid Gateway import link")
 	}
 
 	if _, err := startServer(httpPort()); err != nil {

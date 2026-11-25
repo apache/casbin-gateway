@@ -73,6 +73,10 @@ func installShortcuts() (string, error) {
 		return "", err
 	}
 
+	if err := installImportHelper(bundle); err != nil {
+		return "", err
+	}
+
 	// The build is not signed or notarized, and an ad-hoc signature is the most
 	// this can do without a developer certificate. Finder caches the bundle by
 	// path, so a reinstall over an old one has to say the directory changed or
