@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import * as React from "react";
-import {Check, RefreshCw, X} from "lucide-react";
+import {Check, RefreshCw, Search, X} from "lucide-react";
 import i18next from "i18next";
 
 import * as ProviderBackend from "@/backend/ProviderBackend";
@@ -21,6 +21,7 @@ import * as Setting from "@/Setting";
 import {Field} from "@/components/shared/form-dialog";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
+import {Input} from "@/components/ui/input";
 import {TagsInput} from "@/components/ui/tags-input";
 import {modelPresets, modelsPlaceholder, servesAnyModel} from "@/lib/providers";
 import type {Provider} from "@/types";
@@ -43,14 +44,18 @@ export function ProviderModelsField({
   className?: string;
   onChange: (models: string[]) => void;
 }) {
+  const [query, setQuery] = React.useState("");
   const [fetching, setFetching] = React.useState(false);
   const [fetched, setFetched] = React.useState<string[] | null>(null);
 
-  // The list belongs to one upstream, so it stops being an answer as soon as
-  // the form points somewhere else.
+  const currentRequest = React.useRef<symbol | null>(null);
   React.useEffect(() => {
     setFetched(null);
-  }, [provider.baseUrl, provider.type]);
+    setQuery("");
+    setFetching(false);
+    return () => { currentRequest.current = null; };
+  }, [provider.owner, provider.name, provider.type, provider.protocol, provider.baseUrl, provider.apiKey,
+    provider.authMode, provider.loginId, provider.subscriptionVendor, provider.subscriptionAccount]);
 
   const models = provider.models ?? [];
   // A provider that forwards the caller's login sends no key upstream, so there
@@ -58,15 +63,20 @@ export function ProviderModelsField({
   const canFetch = !servesAnyModel(provider) && provider.baseUrl !== "";
 
   const fetchModels = () => {
+    const request = Symbol();
+    currentRequest.current = request;
     setFetching(true);
     ProviderBackend.getProviderModels(provider)
       .then(res => {
+        if (currentRequest.current !== request) {
+          return;
+        }
         setFetching(false);
         if (res.status === "error") {
           Setting.showMessage("error", `${i18next.t("provider:Failed to fetch models")}: ${res.msg}`);
           return;
         }
-        const list = res.data ?? [];
+        const list = [...new Set(res.data ?? [])];
         setFetched(list);
         Setting.showMessage(
           "success",
@@ -74,22 +84,37 @@ export function ProviderModelsField({
         );
       })
       .catch(error => {
+        if (currentRequest.current !== request) {
+          return;
+        }
         setFetching(false);
         Setting.showMessage("error", `${i18next.t("provider:Failed to fetch models")}: ${error}`);
       });
   };
 
+  const all = fetched ?? [];
+  const needle = query.trim().toLowerCase();
+  const visible = all.filter(model => needle === "" || model.toLowerCase().includes(needle));
+  const shown = needle === "" ? `${all.length}` : `${visible.length} / ${all.length}`;
+
   const toggle = (model: string) => {
     onChange(models.includes(model) ? models.filter(item => item !== model) : [...models, model]);
   };
 
+  // Bulk moves take what the search leaves in view, so a name that is not on the
+  // screen is never selected or dropped by surprise.
   const selectAll = () => {
-    onChange([...models, ...(fetched ?? []).filter(model => !models.includes(model))]);
+    onChange([...models, ...visible.filter(model => !models.includes(model))]);
   };
 
-  // Only the fetched names are dropped, so anything typed by hand survives.
+  // Only fetched names go, so anything typed by hand keeps its place.
   const clearFetched = () => {
-    onChange(models.filter(model => !(fetched ?? []).includes(model)));
+    onChange(models.filter(model => !visible.includes(model)));
+  };
+
+  const closeList = () => {
+    setFetched(null);
+    setQuery("");
   };
 
   return (
@@ -98,7 +123,7 @@ export function ProviderModelsField({
         <span className="flex items-center gap-2">
           {i18next.t("provider:Models")}
           {canFetch ? (
-            <Button type="button" size="xs" variant="outline" loading={fetching} onClick={fetchModels}>
+            <Button type="button" size="xs" variant="outline" aria-label={i18next.t("provider:Fetch models")} loading={fetching} onClick={fetchModels}>
               <RefreshCw />
               {i18next.t("provider:Fetch models")}
             </Button>
@@ -124,31 +149,48 @@ export function ProviderModelsField({
         <div className="grid gap-2 rounded-md border p-2">
           <div className="flex items-center justify-between gap-2">
             <span className="text-muted-foreground text-xs">
-              {i18next.t("provider:Models from upstream")} ({fetched.length})
+              {i18next.t("provider:Models from upstream")} ({shown})
             </span>
             <div className="flex items-center gap-1">
-              <Button type="button" size="xs" variant="ghost" onClick={selectAll}>
-                {i18next.t("provider:Select all")}
+              <Button type="button" size="xs" variant="ghost" onClick={selectAll} disabled={visible.length === 0}>
+                {i18next.t(needle ? "provider:Select matching" : "provider:Select all")}
               </Button>
-              <Button type="button" size="xs" variant="ghost" onClick={clearFetched}>
-                {i18next.t("provider:Clear")}
+              <Button type="button" size="xs" variant="ghost" onClick={clearFetched} disabled={visible.length === 0}>
+                {i18next.t(needle ? "provider:Clear matching" : "provider:Clear")}
               </Button>
               <Button
                 type="button"
                 size="icon-xs"
                 variant="ghost"
                 aria-label={i18next.t("general:Close")}
-                onClick={() => setFetched(null)}
+                onClick={closeList}
               >
                 <X />
               </Button>
             </div>
           </div>
+          <div className="relative">
+            <Search className="text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2" />
+            <Input
+              value={query}
+              onChange={event => setQuery(event.target.value)}
+              // The picker sits inside the provider form, and Enter here would
+              // otherwise submit it.
+              onKeyDown={event => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                }
+              }}
+              aria-label={i18next.t("provider:Search models")}
+              placeholder={i18next.t("provider:Search models")}
+              className="h-8 pl-8 text-xs"
+            />
+          </div>
           <div className="scrollbar-thin flex max-h-40 flex-wrap gap-1 overflow-y-auto">
-            {fetched.map(model => {
+            {visible.map(model => {
               const selected = models.includes(model);
               return (
-                <button key={model} type="button" onClick={() => toggle(model)}>
+                <button key={model} type="button" aria-pressed={selected} onClick={() => toggle(model)}>
                   <Badge variant={selected ? "success" : "muted"} className="cursor-pointer">
                     {selected ? <Check /> : null}
                     {model}
@@ -156,6 +198,9 @@ export function ProviderModelsField({
                 </button>
               );
             })}
+            {needle === "" || visible.length > 0 ? null : (
+              <p className="text-muted-foreground text-xs">{i18next.t("provider:No model matches")}</p>
+            )}
           </div>
         </div>
       )}
