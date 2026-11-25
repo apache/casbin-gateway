@@ -357,6 +357,8 @@ type Provider struct {
 	Quota *QuotaConfig `xorm:"mediumtext json" json:"quota"`
 	// Warmup starts a subscription's short window on a schedule.
 	Warmup *WarmupConfig `xorm:"mediumtext json" json:"warmup"`
+	// DisplayRank orders the provider cards and tray. Higher ranks come first.
+	DisplayRank int `xorm:"int notnull default 0" json:"displayRank,omitempty"`
 	// TODO(1.2): Priority routing strategy will be defined in milestone 1.2.
 	Priority int    `xorm:"int" json:"priority"`
 	Status   string `xorm:"varchar(100)" json:"status"`
@@ -382,6 +384,9 @@ func GetProviderCount(owner, field, value string) (int64, error) {
 func GetPaginationProviders(owner string, offset, limit int, field, value, sortField, sortOrder string) ([]*Provider, error) {
 	providers := []*Provider{}
 	session := GetSession(owner, offset, limit, field, value, sortField, sortOrder)
+	if sortField == "displayRank" {
+		session.Desc("created_time").Asc("owner", "name")
+	}
 	err := session.Find(&providers)
 	decryptProviders(providers)
 	return providers, err
@@ -719,6 +724,10 @@ func freeProviderName(owner string, name string) (string, int, error) {
 }
 
 func UpdateProvider(id string, provider *Provider) (bool, error) {
+	return updateProvider(id, provider, false)
+}
+
+func updateProvider(id string, provider *Provider, restoreDisplayRank bool) (bool, error) {
 	owner, name := util.GetOwnerAndNameFromId(id)
 	stored, err := getProvider(owner, name)
 	if err != nil {
@@ -760,6 +769,9 @@ func UpdateProvider(id string, provider *Provider) (bool, error) {
 	}
 
 	session := ormer.Engine.ID(core.PK{owner, name})
+	if !restoreDisplayRank {
+		session.Omit("display_rank")
+	}
 	// The sign-in never reaches the browser, so a save that carries none is
 	// leaving the stored one alone rather than clearing it. Switching the
 	// provider off a subscription does clear it: it is spent by nothing now.

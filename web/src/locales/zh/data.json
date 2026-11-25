@@ -1607,6 +1607,7 @@
     "Failed to delete": "删除失败",
     "Failed to fetch models": "获取模型列表失败",
     "Failed to get provider": "获取供应商失败",
+    "Failed to reorder providers": "调整供应商顺序失败",
     "Failed to get providers": "获取供应商列表失败",
     "Failed to read the balance": "获取余额失败",
     "Failed to save": "保存失败",

@@ -45,7 +45,7 @@ func getProviderOwnerAndName(id string) (string, string, bool) {
 // query string unchecked.
 var providerSortFields = map[string]bool{
 	"owner": true, "name": true, "createdTime": true, "updatedTime": true,
-	"displayName": true, "type": true, "baseUrl": true, "priority": true, "status": true,
+	"displayName": true, "type": true, "baseUrl": true, "priority": true, "status": true, "displayRank": true,
 }
 
 func getProviderSortField(sortField string) string {
@@ -154,6 +154,7 @@ func (c *ApiController) AddProvider() {
 	}
 
 	provider.Owner = c.GetSessionUsername()
+	provider.DisplayRank = 0
 	c.Data["json"] = wrapActionResponse(object.AddProvider(&provider))
 	c.ServeJSON()
 }
@@ -207,6 +208,31 @@ func (c *ApiController) UpdateProvider() {
 
 	c.Data["json"] = wrapActionResponse(object.UpdateProvider(id, &provider))
 	c.ServeJSON()
+}
+
+// MoveProvider moves one card in the shared desktop display order.
+func (c *ApiController) MoveProvider() {
+	if c.RequireAdmin() {
+		return
+	}
+	var form struct {
+		Id   string `json:"id"`
+		From *int   `json:"from"`
+		To   *int   `json:"to"`
+	}
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &form); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	if form.From == nil || form.To == nil {
+		c.ResponseError("both provider positions are required")
+		return
+	}
+	if err := object.MoveProvider(form.Id, *form.From, *form.To); err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(*form.To)
 }
 
 // DeleteProvider deletes a provider.

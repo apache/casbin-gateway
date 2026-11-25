@@ -59,6 +59,10 @@ export function updateProvider(owner: string, name: string, provider: Provider) 
   return request(`/api/update-provider${query({id: itemId(owner, name)})}`, "POST", provider);
 }
 
+export function moveProvider(id: string, from: number, to: number) {
+  return request<number>("/api/move-provider", "POST", {id, from, to});
+}
+
 export function deleteProvider(provider: Provider) {
   return request("/api/delete-provider", "POST", provider);
 }

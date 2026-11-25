@@ -409,7 +409,7 @@ func importProviders(snapshot *Snapshot, mode string, dryRun bool, report *Impor
 			if provider.Quota != nil && provider.Quota.Token == "" {
 				provider.Quota.Token = ApiKeyMask
 			}
-			if _, err := UpdateProvider(id, &provider); err != nil {
+			if _, err := updateProvider(id, &provider, true); err != nil {
 				report.record(SectionProviders, id, ChangeFail, err.Error())
 				continue
 			}
