@@ -190,9 +190,7 @@ func (w claudeCodeWriter) sessionEnv(endpoint Endpoint) map[string]string {
 	return env
 }
 
-// env is the block written into settings.json. Claude Code authenticates with
-// ANTHROPIC_AUTH_TOKEN, so the provider key goes there and not into
-// ANTHROPIC_API_KEY, which stays cleared.
+// env supplies the same authentication scheme for file writes and driven sessions.
 func (claudeCodeWriter) env(endpoint Endpoint, masked bool) map[string]any {
 	token := endpoint.ApiKey
 	if masked {
@@ -206,7 +204,11 @@ func (claudeCodeWriter) env(endpoint Endpoint, masked bool) map[string]any {
 	// write, and writing one would override the sign-in Claude Code already
 	// has, which is the login the switch is meant to keep using.
 	if endpoint.ApiKey != "" {
-		env["ANTHROPIC_AUTH_TOKEN"] = token
+		key := "ANTHROPIC_AUTH_TOKEN"
+		if endpoint.AnthropicAuthHeader == "X-Api-Key" {
+			key = "ANTHROPIC_API_KEY"
+		}
+		env[key] = token
 	}
 	if endpoint.Model != "" {
 		env["ANTHROPIC_MODEL"] = endpoint.Model

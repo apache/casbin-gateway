@@ -65,6 +65,7 @@ export interface Provider {
   protocol?: string;
   apiKey: string;
   authMode: string;
+  anthropicAuthHeader?: "X-Api-Key" | "Authorization";
   /** A finished sign-in this save takes the credential of. Write-only: the
    *  token itself never reaches the browser. */
   loginId?: string;

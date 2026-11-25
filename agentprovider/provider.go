@@ -50,10 +50,11 @@ type Target struct {
 // Endpoint is the upstream one agent is switched to, already resolved: in
 // gateway mode BaseUrl is the local proxy, in direct mode the provider's own.
 type Endpoint struct {
-	Provider string `json:"provider"`
-	Protocol string `json:"protocol"`
-	BaseUrl  string `json:"baseUrl"`
-	ApiKey   string `json:"apiKey"`
+	Provider            string `json:"provider"`
+	Protocol            string `json:"protocol"`
+	BaseUrl             string `json:"baseUrl"`
+	ApiKey              string `json:"apiKey"`
+	AnthropicAuthHeader string `json:"anthropicAuthHeader,omitempty"`
 	// Model is the one the agent starts on, the first the provider lists.
 	Model string `json:"model"`
 	// Models is every model the provider serves. An agent whose configuration

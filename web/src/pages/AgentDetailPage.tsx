@@ -37,6 +37,7 @@ import {
 import {InstallOutput, ToolUpgradeConfirmDialog} from "@/components/ToolUpgradeConfirmDialog";
 import {DataTable, type Column} from "@/components/shared/data-table";
 import {PermissionCard} from "@/components/PermissionCard";
+import {NativeProviderImport} from "@/components/NativeProviderImport";
 import {ProviderCard} from "@/components/ProviderCard";
 import {ResultScreen, UnauthorizedResult} from "@/components/shared/misc";
 import {Alert, AlertDescription, MessageAlert} from "@/components/ui/alert";
@@ -554,6 +555,10 @@ export default function AgentDetailPage({account}: {account: Account}) {
             onRouting={routing => setRouting(agent, routing)}
             onWrite={restore => writeProvider(agent, restore)}
           />
+        )}
+
+        {(agent.agentId === "claude-code" || agent.agentId === "codex-cli") && !agent.providerConfig?.applied && (
+          <NativeProviderImport key={agentKey(agent)} agent={agent} onSaved={loadProviders} />
         )}
 
         <UsageCard stats={stats} spent={spent} />

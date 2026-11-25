@@ -331,6 +331,8 @@ type Provider struct {
 	ApiKey string `xorm:"varchar(1000)" json:"apiKey"`
 	// AuthMode selects whose credentials reach the upstream, see UsesClientAuth.
 	AuthMode string `xorm:"varchar(100)" json:"authMode"`
+	// A native Claude configuration may require a bearer token or X-Api-Key.
+	AnthropicAuthHeader string `xorm:"varchar(32)" json:"anthropicAuthHeader,omitempty"`
 	// Subscription is the sign-in of a ProviderAuthSubscription provider, stored
 	// as ciphertext like the key. Only the sign-in flow writes it, and it leaves
 	// this process no more than the key does.
@@ -470,6 +472,9 @@ func validateProvider(provider *Provider) error {
 		provider.ApiKey = ""
 	}
 
+	if provider.AnthropicAuthHeader != "" && provider.AnthropicAuthHeader != "X-Api-Key" && provider.AnthropicAuthHeader != "Authorization" {
+		return errors.New("unsupported Anthropic authentication header")
+	}
 	if provider.BaseUrl != "" {
 		if err := validateBaseUrl(provider.BaseUrl); err != nil {
 			return err
@@ -618,7 +623,7 @@ func SetProviderAuth(header http.Header, provider *Provider) {
 		return
 	}
 
-	if ProviderProtocol(provider) == ProtocolAnthropic {
+	if ProviderProtocol(provider) == ProtocolAnthropic && provider.AnthropicAuthHeader != "Authorization" {
 		header.Set("X-Api-Key", provider.ApiKey)
 		return
 	}
@@ -667,6 +672,10 @@ func AddProvider(provider *Provider) (bool, error) {
 		provider.DisplayName = fmt.Sprintf("%s %d", provider.DisplayName, suffix)
 	}
 
+	return insertProvider(provider)
+}
+
+func insertProvider(provider *Provider) (bool, error) {
 	now := util.GetCurrentTime()
 	if provider.CreatedTime == "" {
 		provider.CreatedTime = now

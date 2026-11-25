@@ -18,6 +18,13 @@
     "Username": "用户名"
   },
   "agent": {
+    "Import current CLI provider": "导入当前CLI供应商",
+    "Native provider import hint": "预览此安装所用的自定义端点和模型。保存会将API密钥复制到Gateway，并保留现有CLI配置。",
+    "Preview current provider": "预览当前供应商",
+    "Save as provider": "保存为供应商",
+    "Native provider ready": "现在可以在上方的供应商列表中选择{id}。",
+    "Could not preview native provider": "无法预览当前供应商",
+    "Could not save native provider": "无法保存当前供应商",
     "API key": "API密钥",
     "Account": "账户",
     "Account removed": "账号已移除",
