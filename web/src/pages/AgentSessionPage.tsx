@@ -15,7 +15,7 @@
 import * as React from "react";
 import {useTranslation} from "react-i18next";
 import {Link, useParams, useSearchParams} from "react-router-dom";
-import {ArrowLeft, Bot, ChevronDown, ChevronUp, Image as ImageIcon, RefreshCw, Search, Wrench, X} from "lucide-react";
+import {ArrowLeft, Bot, ChevronDown, ChevronUp, Download, Image as ImageIcon, RefreshCw, Search, Wrench, X} from "lucide-react";
 import i18next from "i18next";
 
 import * as AgentBackend from "@/backend/AgentBackend";
@@ -30,6 +30,7 @@ import {Card, CardContent} from "@/components/ui/card";
 import {Input} from "@/components/ui/input";
 import {SimpleTooltip} from "@/components/ui/tooltip";
 import {sessionResumeCommand} from "@/lib/agent-sessions";
+import {transcriptFileName, transcriptMarkdown} from "@/lib/transcript-markdown";
 import {findTranscriptMatches, type TranscriptMatch} from "@/lib/transcript-search";
 import type {Account, AgentMessage, AgentMessageBlock, AgentTranscript} from "@/types";
 
@@ -297,19 +298,27 @@ export default function AgentSessionPage({account}: {account: Account}) {
   return <AgentTranscriptView key={JSON.stringify([agentId, sessionKey])} agentId={agentId} sessionKey={sessionKey} />;
 }
 
+/** A blob of what the page already holds, so saving the file never asks the server again. */
+function downloadMarkdown(name: string, text: string) {
+  const url = URL.createObjectURL(new Blob([text], {type: "text/markdown;charset=utf-8"}));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
 function AgentTranscriptView({agentId, sessionKey}: {agentId: string; sessionKey: string}) {
   const [transcript, setTranscript] = React.useState<AgentTranscript | null>(null);
   const [error, setError] = React.useState("");
-  const [loading, setLoading] = React.useState(false);
-
-  const load = React.useCallback(() => {
-    if (sessionKey === "") {
-      return;
-    }
-
-    setLoading(true);
+  const [loading, setLoading] = React.useState(true);
+  const [refresh, setRefresh] = React.useState(0);
+  React.useEffect(() => {
+    if (!sessionKey) return;
+    let current = true;
     AgentBackend.getAgentSession(agentId, sessionKey)
       .then(res => {
+        if (!current) return;
         if (res.status === "ok") {
           setTranscript(res.data ?? null);
           setError("");
@@ -317,17 +326,37 @@ function AgentTranscriptView({agentId, sessionKey}: {agentId: string; sessionKey
           setError(res.msg || i18next.t("agent:Failed to read this transcript"));
         }
       })
-      .catch(err => setError(err.message || String(err)))
-      .then(() => setLoading(false));
-  }, [agentId, sessionKey]);
+      .catch(err => {
+        if (current) setError(err.message || String(err));
+      })
+      .finally(() => {
+        if (current) setLoading(false);
+      });
+    return () => { current = false; };
+  }, [agentId, sessionKey, refresh]);
 
-  React.useEffect(() => {
-    load();
-  }, [load]);
+  const reload = () => {
+    setLoading(true);
+    setRefresh(n => n + 1);
+  };
 
   const session = transcript?.session;
   const messages = transcript?.messages ?? [];
   const command = session && !loading && !error ? sessionResumeCommand(session) : "";
+
+  const ready = !loading && !error ? transcript : null;
+
+  const downloadTranscript = () => {
+    if (ready === null) {
+      return;
+    }
+
+    try {
+      downloadMarkdown(transcriptFileName(ready), transcriptMarkdown(ready));
+    } catch (failure) {
+      Setting.showMessage("error", `${i18next.t("agent:Failed to download the transcript")}: ${String(failure)}`);
+    }
+  };
 
   return (
     <PageContainer>
@@ -342,7 +371,11 @@ function AgentTranscriptView({agentId, sessionKey}: {agentId: string; sessionKey
                 {i18next.t("agent:Agent Sessions")}
               </Link>
             </Button>
-            <Button variant="outline" size="sm" onClick={load} loading={loading}>
+            <Button variant="outline" size="sm" onClick={downloadTranscript} disabled={ready === null}>
+              <Download />
+              {i18next.t("agent:Download Markdown")}
+            </Button>
+            <Button variant="outline" size="sm" onClick={reload} loading={loading}>
               <RefreshCw />
               {i18next.t("general:Refresh")}
             </Button>
