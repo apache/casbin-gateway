@@ -329,7 +329,7 @@ func (c *ApiController) forwardByAgent(route *proxyRoute) {
 	// The whole chain is forwarded to, so a bound provider that is down fails
 	// over to the agent's fallbacks instead of failing the request. The agent's
 	// strategy decides which of them is tried first.
-	providers, err := object.GetAgentPool(agentId, true)
+	attempts, err := object.PlanAgentRoute(agentId, route.model, true)
 	if err != nil {
 		if errors.Is(err, object.ErrAgentNoProvider) {
 			route.recordOutcome(http.StatusBadRequest, err.Error())
@@ -339,16 +339,6 @@ func (c *ApiController) forwardByAgent(route *proxyRoute) {
 			route.recordOutcome(http.StatusBadGateway, err.Error())
 			c.writeProxyError(route.codec, http.StatusBadGateway, "server_error", err.Error())
 		}
-		return
-	}
-
-	// The ladder of a rule covering this agent comes first, resolved against the
-	// chain, and the chain itself is what it falls back to.
-	attempts, err := object.PlanAgentRoute(agentId, route.model, providers)
-	if err != nil {
-		beego.Error("model route lookup failed:", err)
-		route.recordOutcome(http.StatusBadGateway, err.Error())
-		c.writeProxyError(route.codec, http.StatusBadGateway, "server_error", err.Error())
 		return
 	}
 

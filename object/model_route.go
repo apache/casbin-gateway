@@ -328,7 +328,18 @@ func PlanModelRoute(model string) ([]RouteAttempt, error) {
 // resolved against; a rung naming a provider outright is an explicit
 // instruction, taken as written and still held to the agent's permissions by
 // the caller.
-func PlanAgentRoute(agentId string, model string, chain []*Provider) ([]RouteAttempt, error) {
+func PlanAgentRoute(agentId string, model string, advance bool) ([]RouteAttempt, error) {
+	agent, err := GetAgent(agentId)
+	if err != nil {
+		return nil, err
+	}
+	chain, err := providersForAgent(agentId, agent)
+	if err != nil {
+		return nil, err
+	}
+	if !agent.FallbacksPaused {
+		chain = OrderPool(agentId, agent.Strategy, chain, advance)
+	}
 	route, err := MatchModelRoute(agentId, model)
 	if err != nil {
 		return nil, err
@@ -337,6 +348,14 @@ func PlanAgentRoute(agentId string, model string, chain []*Provider) ([]RouteAtt
 	attempts := []RouteAttempt{}
 	if route != nil {
 		attempts = planRouteTargets(route, model, chain)
+		if agent.FallbacksPaused {
+			for _, attempt := range attempts {
+				if attempt.providerId() == agent.Provider {
+					return []RouteAttempt{attempt}, nil
+				}
+			}
+			return defaultAttempts(chain, model), nil
+		}
 	}
 	return appendAttempts(attempts, defaultAttempts(chain, model)), nil
 }

@@ -162,12 +162,14 @@ export function ProviderCard({
   busy,
   onRouting,
   onWrite,
+  onFailoverPaused,
 }: {
   agent: Agent;
   providers: Provider[];
   health: ProviderHealth[];
   busy: boolean;
   onRouting: (routing: Partial<AgentBackend.AgentRouting>) => void;
+  onFailoverPaused: (paused: boolean) => void;
   onWrite: (restore: boolean) => void;
 }) {
   const [preview, setPreview] = React.useState(false);
@@ -244,7 +246,7 @@ export function ProviderCard({
   const pointsAtGateway = (providerConfig.current ?? "").includes("/v1/agents/");
   const canRetryRestore = agent.provider === "" &&
     (pointsAtGateway || providerConfig.applied || Boolean(providerConfig.provider));
-  const hasEnabledFallback = mode === gatewayMode && providers.some(provider =>
+  const hasEnabledFallback = !agent.fallbacksPaused && mode === gatewayMode && providers.some(provider =>
     provider.status === "enabled" && fallbacks.includes(providerIdOf(provider)),
   );
 
@@ -313,6 +315,20 @@ export function ProviderCard({
           <p className="text-sm text-warning">
             {`${i18next.t("agent:Bound provider cooling down")}: ${boundHealth.lastError}`}
           </p>
+        ) : null}
+
+        {mode === gatewayMode && agent.provider && agent.fallbacksPaused !== undefined ? (
+          <label className="flex items-start gap-2 text-sm">
+            <Switch
+              checked={!agent.fallbacksPaused}
+              disabled={busy}
+              onCheckedChange={enabled => onFailoverPaused(!enabled)}
+            />
+            <span>
+              {i18next.t("agent:Automatic failover")}
+              <span className="block text-muted-foreground">{i18next.t("agent:Failover pause hint")}</span>
+            </span>
+          </label>
         ) : null}
 
         {canRetryRestore ? (

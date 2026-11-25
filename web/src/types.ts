@@ -257,6 +257,7 @@ export interface Agent {
   directProvider?: string;
   /** The providers tried, in order, when the bound one cannot answer. */
   fallbacks: string[];
+  fallbacksPaused?: boolean;
   /** "gateway" routes through the local proxy, "direct" writes the upstream. */
   mode: string;
   /** How the bound provider and its fallbacks are taken in turn: "order"

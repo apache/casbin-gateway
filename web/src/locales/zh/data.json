@@ -498,6 +498,9 @@
     "Pool smart hint": "先用5小时窗口最早重置的订阅，因为重置时没用完的额度就作废了。API Key排在所有订阅之后。",
     "Pool rotate hint": "每个新对话从下一个供应商开始。",
     "Pool usage hint": "先用剩余额度最多的订阅，按最紧的那个窗口算。API Key排在所有订阅之后。",
+    "Automatic failover": "自动故障转移",
+    "Failover pause hint": "暂停后仅使用主供应商，保留备用队列和调度策略。",
+    "Failed to update failover": "更新故障转移设置失败",
     "Pool sticky hint": "一个对话会留在回答它的供应商上，直到空闲15分钟，这样能复用提示词缓存；额度用完的订阅在窗口重置前排到最后。"
   },
   "agentConfig": {

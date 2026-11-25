@@ -272,6 +272,7 @@ export default function AgentDetailPage({account}: {account: Account}) {
     toggleRunning,
     togglePatch,
     setRouting,
+    setFailoverPaused,
     writeProvider,
   } = useAgents(isAdmin);
   const updates = useAgentUpdates(isAdmin);
@@ -552,6 +553,7 @@ export default function AgentDetailPage({account}: {account: Account}) {
             providers={providers}
             health={health}
             busy={busyKey === agentKey(agent)}
+            onFailoverPaused={paused => setFailoverPaused(agent, paused)}
             onRouting={routing => setRouting(agent, routing)}
             onWrite={restore => writeProvider(agent, restore)}
           />

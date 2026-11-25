@@ -380,6 +380,21 @@ export function useAgents(enabled = true) {
     [scan],
   );
 
+  const setFailoverPaused = React.useCallback(async (agent: Agent, paused: boolean) => {
+    setBusyKey(agentKey(agent));
+    try {
+      const res = await AgentBackend.setAgentFailoverPaused(agent.agentId, paused);
+      if (res.status !== "ok") {
+        throw new Error(res.msg || i18next.t("agent:Failed to update failover"));
+      }
+      await scan();
+    } catch (err) {
+      Setting.showMessage("error", err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyKey("");
+    }
+  }, [scan]);
+
   /**
    * setRouting saves where an agent's requests go. Only the changed part is
    * passed in; the rest of the routing is carried over from the agent so a
@@ -517,6 +532,7 @@ export function useAgents(enabled = true) {
     toggleRunning,
     togglePatch,
     setRouting,
+    setFailoverPaused,
     activateProvider,
     writeProvider,
   };
