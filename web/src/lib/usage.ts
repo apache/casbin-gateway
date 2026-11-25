@@ -81,6 +81,7 @@ export interface UsageRow {
 /** One point of the trend, with the tokens split the way the chart stacks them. */
 export interface UsagePoint {
   bucket: string;
+  totalTokens: number;
   requests: number;
   promptTokens: number;
   completionTokens: number;
@@ -155,21 +156,22 @@ export function fillDays(points: UsagePoint[], days: number): UsagePoint[] {
   const today = localDay(new Date());
   const oldest = points[0].bucket;
   const newest = points[points.length - 1].bucket;
-  const first = days > 0 ? localDay(new Date(at(today) - (days - 1) * step)) : oldest;
+  const first = days > 0 ? keyOf(at(today) - (days - 1) * step) : oldest;
 
   const start = at(first < oldest ? first : oldest);
   const end = at(newest > today ? newest : today);
-  if (Number.isNaN(start) || Number.isNaN(end) || end < start) {
-    return points;
+  if (Number.isNaN(start) || Number.isNaN(end) || end < start || (end - start) / step >= 1500) {
+    return points.slice(-1500);
   }
 
   const known = new Map(points.map(point => [point.bucket, point]));
   const filled: UsagePoint[] = [];
-  for (let stamp = start; stamp <= end && filled.length < 1500; stamp += step) {
+  for (let stamp = start; stamp <= end; stamp += step) {
     const key = keyOf(stamp);
     filled.push(
       known.get(key) ?? {
         bucket: key,
+        totalTokens: 0,
         requests: 0,
         promptTokens: 0,
         completionTokens: 0,

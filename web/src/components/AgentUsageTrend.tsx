@@ -86,6 +86,7 @@ export function AgentUsageTrend({
   const points: UsagePoint[] = fillDays(
     (stat.days ?? []).map(day => ({
       bucket: day.name,
+      totalTokens: day.totalTokens,
       requests: day.requests,
       promptTokens: day.promptTokens,
       completionTokens: day.completionTokens,

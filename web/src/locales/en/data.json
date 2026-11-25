@@ -1719,6 +1719,10 @@
     "{up} sent, {down} received, {gone} dropped": "{up} sent, {down} received, {gone} dropped"
   },
   "usage": {
+    "Usage view": "Usage view",
+    "Daily activity": "Daily activity",
+    "Month": "Month",
+    "Metric": "Metric",
     "Add a price": "Add a price",
     "Agent spend": "Agent spend",
     "Agents description": "What the agents on this machine spent, read from the transcripts they write themselves. This is the only account of a request that never went through Gateway.",

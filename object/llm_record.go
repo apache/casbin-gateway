@@ -841,6 +841,9 @@ func GetLlmUsageTrend(filter LlmRecordFilter, bucket string) ([]LlmTrendPoint, e
 	if len(counted) == 0 {
 		return counted, nil
 	}
+	if len(counted) > llmTrendMaxPoints {
+		return counted[len(counted)-llmTrendMaxPoints:], nil
+	}
 
 	// The window starts where the filter says, and where it says nothing at the
 	// oldest record there is: filling an "all time" series from the epoch would
@@ -875,7 +878,8 @@ func GetLlmUsageTrend(filter LlmRecordFilter, bucket string) ([]LlmTrendPoint, e
 		}
 		filled = append(filled, point)
 	}
-	if len(filled) == 0 {
+	// Keep the measured buckets when the requested span exceeds the padding limit.
+	if len(filled) == 0 || filled[len(filled)-1].Bucket < last {
 		return counted, nil
 	}
 	return filled, nil
