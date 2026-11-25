@@ -13,8 +13,9 @@
 // limitations under the License.
 
 import * as React from "react";
+import {useTranslation} from "react-i18next";
 import {Link, useParams, useSearchParams} from "react-router-dom";
-import {ArrowLeft, Bot, Image as ImageIcon, RefreshCw, Wrench} from "lucide-react";
+import {ArrowLeft, Bot, ChevronDown, ChevronUp, Image as ImageIcon, RefreshCw, Search, Wrench, X} from "lucide-react";
 import i18next from "i18next";
 
 import * as AgentBackend from "@/backend/AgentBackend";
@@ -26,7 +27,10 @@ import {MessageAlert} from "@/components/ui/alert";
 import {Badge, type BadgeVariant} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
+import {Input} from "@/components/ui/input";
+import {SimpleTooltip} from "@/components/ui/tooltip";
 import {sessionResumeCommand} from "@/lib/agent-sessions";
+import {findTranscriptMatches, type TranscriptMatch} from "@/lib/transcript-search";
 import type {Account, AgentMessage, AgentMessageBlock, AgentTranscript} from "@/types";
 
 const ROLE_VARIANTS: Record<string, BadgeVariant> = {
@@ -37,7 +41,33 @@ const ROLE_VARIANTS: Record<string, BadgeVariant> = {
   tool: "muted",
 };
 
-function BlockView({block}: {block: AgentMessageBlock}) {
+function highlightedText(text: string, matches: TranscriptMatch[], active: number) {
+  const parts: React.ReactNode[] = [];
+  let cursor = 0;
+  for (const {start, end, index} of matches) {
+    const current = index === active;
+    parts.push(
+      text.slice(cursor, start),
+      <mark
+        key={start}
+        data-current-match={current ? "" : undefined}
+        className={current ? "bg-primary text-primary-foreground rounded-sm" : "bg-warning/25 text-foreground rounded-sm"}
+      >
+        {text.slice(start, end)}
+      </mark>,
+    );
+    cursor = end;
+  }
+  parts.push(text.slice(cursor));
+  return parts;
+}
+
+function BlockView({block, matches, active}: {
+  block: AgentMessageBlock;
+  matches?: TranscriptMatch[];
+  active: number;
+}) {
+  const text = matches && block.text ? highlightedText(block.text, matches, active) : block.text;
   switch (block.kind) {
   case "thinking":
     return (
@@ -45,7 +75,7 @@ function BlockView({block}: {block: AgentMessageBlock}) {
         <Badge variant="muted">{i18next.t("agent:Thinking")}</Badge>
         {block.text ? (
           <pre className="text-muted-foreground scrollbar-thin min-w-0 flex-1 overflow-x-auto text-xs leading-relaxed whitespace-pre-wrap italic">
-            {block.text}
+            {text}
           </pre>
         ) : (
           <span className="text-muted-foreground text-xs">{i18next.t("agent:Not recorded")}</span>
@@ -59,7 +89,7 @@ function BlockView({block}: {block: AgentMessageBlock}) {
           <Wrench />
           {block.tool || i18next.t("agent:Tool call")}
         </Badge>
-        {block.text ? <CodeBlock maxHeight="16rem">{block.text}</CodeBlock> : null}
+        {block.text ? <CodeBlock maxHeight="16rem">{text}</CodeBlock> : null}
       </div>
     );
   case "toolResult":
@@ -68,7 +98,7 @@ function BlockView({block}: {block: AgentMessageBlock}) {
         <Badge variant={block.isError ? "danger" : "muted"}>
           {block.isError ? i18next.t("agent:Tool error") : i18next.t("agent:Tool result")}
         </Badge>
-        {block.text ? <CodeBlock maxHeight="16rem">{block.text}</CodeBlock> : null}
+        {block.text ? <CodeBlock maxHeight="16rem">{text}</CodeBlock> : null}
       </div>
     );
   case "image":
@@ -80,29 +110,173 @@ function BlockView({block}: {block: AgentMessageBlock}) {
     );
   default:
     return (
-      <pre className="scrollbar-thin overflow-x-auto text-xs leading-relaxed whitespace-pre-wrap">{block.text}</pre>
+      <pre className="scrollbar-thin overflow-x-auto text-xs leading-relaxed whitespace-pre-wrap">{text}</pre>
     );
   }
 }
 
-function MessageView({message, index}: {message: AgentMessage; index: number}) {
+const MessageView = React.memo(function MessageView({message, index, matches, active, language}: {
+  message: AgentMessage;
+  index: number;
+  matches?: Map<number, TranscriptMatch[]>;
+  active: number;
+  language: string;
+}) {
   return (
     <div className="rounded-lg border">
       <div className="bg-muted/40 flex flex-wrap items-center gap-2 border-b px-3 py-1.5">
         <Badge variant={ROLE_VARIANTS[message.role] ?? "secondary"}>{message.role}</Badge>
         <span className="text-muted-foreground text-xs">#{index + 1}</span>
         {message.time ? (
-          <span className="text-muted-foreground text-xs">{new Date(message.time).toLocaleString()}</span>
+          <span className="text-muted-foreground text-xs">{new Date(message.time).toLocaleString(language)}</span>
         ) : null}
       </div>
       <div className="grid gap-3 px-3 py-2">
         {message.blocks.length === 0 ? (
           <span className="text-muted-foreground text-xs">{i18next.t("agent:Empty message")}</span>
         ) : (
-          message.blocks.map((block, position) => <BlockView key={position} block={block} />)
+          message.blocks.map((block, position) => (
+            <BlockView key={position} block={block} matches={matches?.get(position)} active={active} />
+          ))
         )}
       </div>
     </div>
+  );
+});
+
+function TranscriptMessages({messages}: {messages: AgentMessage[]}) {
+  const {i18n} = useTranslation();
+  const [query, setQuery] = React.useState("");
+  const [search, setSearch] = React.useState("");
+  const [matchIndex, setMatchIndex] = React.useState(0);
+  const {byMessage, messageIndices, limited} = React.useMemo(
+    () => findTranscriptMatches(messages, search),
+    [messages, search],
+  );
+  const content = React.useRef<HTMLDivElement>(null);
+  const input = React.useRef<HTMLInputElement>(null);
+  const count = messageIndices.length;
+  const active = Math.min(matchIndex, count - 1);
+  const pending = query.trim() !== search;
+  const searchLabel = i18next.t("agent:Find in transcript");
+  const previousLabel = i18next.t("agent:Previous transcript match");
+  const nextLabel = i18next.t("agent:Next transcript match");
+  const clearLabel = i18next.t("agent:Clear transcript search");
+
+  React.useEffect(() => {
+    if (!pending) {
+      return;
+    }
+    const timer = window.setTimeout(() => setSearch(query.trim()), 150);
+    return () => window.clearTimeout(timer);
+  }, [pending, query]);
+
+  React.useEffect(() => {
+    if (!pending && active >= 0) {
+      content.current?.querySelector("[data-current-match]")?.scrollIntoView({block: "center", inline: "nearest"});
+    }
+  }, [active, byMessage, pending]);
+
+  const updateQuery = (value: string) => {
+    setQuery(value);
+    if (value.trim() !== query.trim()) {
+      setMatchIndex(0);
+    }
+    if (!value.trim()) {
+      setSearch("");
+    }
+  };
+
+  const move = (direction: number) => {
+    if (!pending && count > 0) {
+      setMatchIndex((active + direction + count) % count);
+    }
+  };
+
+  let status = "";
+  if (query.trim() && !pending) {
+    const options = {position: active + 1, total: count};
+    status = count === 0 ? i18next.t("agent:No transcript matches")
+      : limited ? i18next.t("agent:Transcript match limit", options)
+        : i18next.t("agent:Transcript match position", options);
+  }
+
+  return (
+    <>
+      <div
+        role="search"
+        aria-label={searchLabel}
+        className="bg-background sticky top-13 z-20 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border p-2"
+      >
+        <div className="relative min-w-32 flex-1 sm:max-w-xs">
+          <Search aria-hidden="true" className="text-muted-foreground pointer-events-none absolute top-2.5 left-2.5 size-4" />
+          <Input
+            ref={input}
+            aria-label={searchLabel}
+            placeholder={searchLabel}
+            value={query}
+            onChange={event => updateQuery(event.target.value)}
+            onKeyDown={event => {
+              if (event.nativeEvent.isComposing) {
+                return;
+              }
+              if (event.key === "Enter") {
+                event.preventDefault();
+                if (pending) {
+                  setSearch(query.trim());
+                } else {
+                  move(event.shiftKey ? -1 : 1);
+                }
+              } else if (event.key === "Escape" && query) {
+                event.preventDefault();
+                updateQuery("");
+              }
+            }}
+            className="pr-9 pl-8"
+          />
+          {query ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              aria-label={clearLabel}
+              className="absolute top-1 right-1"
+              onClick={() => {
+                updateQuery("");
+                input.current?.focus();
+              }}
+            >
+              <X />
+            </Button>
+          ) : null}
+        </div>
+        <div className="ml-auto flex items-center gap-1 sm:ml-0">
+          <SimpleTooltip title={previousLabel}>
+            <Button type="button" variant="outline" size="icon-sm" aria-label={previousLabel} disabled={pending || count < 2} onClick={() => move(-1)}>
+              <ChevronUp />
+            </Button>
+          </SimpleTooltip>
+          <SimpleTooltip title={nextLabel}>
+            <Button type="button" variant="outline" size="icon-sm" aria-label={nextLabel} disabled={pending || count < 2} onClick={() => move(1)}>
+              <ChevronDown />
+            </Button>
+          </SimpleTooltip>
+        </div>
+        <span role="status" className="text-muted-foreground text-xs tabular-nums max-sm:w-full">{status}</span>
+      </div>
+      <div ref={content} className="grid gap-3">
+        {messages.map((message, index) => (
+          <MessageView
+            key={index}
+            message={message}
+            index={index}
+            matches={byMessage.get(index)}
+            active={messageIndices[active] === index ? active : -1}
+            language={i18n.language}
+          />
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -218,13 +392,9 @@ function AgentTranscriptView({agentId, sessionKey}: {agentId: string; sessionKey
             {i18next.t("agent:This transcript holds no conversation")}
           </CardContent>
         </Card>
-      ) : (
-        <div className="grid gap-3">
-          {messages.map((message, index) => (
-            <MessageView key={index} message={message} index={index} />
-          ))}
-        </div>
-      )}
+      ) : messages.length > 0 ? (
+        <TranscriptMessages messages={messages} />
+      ) : null}
     </PageContainer>
   );
 }
