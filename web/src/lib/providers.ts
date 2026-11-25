@@ -484,6 +484,14 @@ export const providerPresets: ProviderPreset[] = [
     website: "https://app.baseten.co/settings/api_keys",
   },
   {
+    label: "Runcrate",
+    type: "custom",
+    baseUrl: "https://api.runcrate.ai/v1",
+    models: [],
+    category: "platform",
+    website: "https://www.runcrate.ai/dashboard/api-keys",
+  },
+  {
     label: "NVIDIA NIM",
     type: "custom",
     baseUrl: "https://integrate.api.nvidia.com/v1",
