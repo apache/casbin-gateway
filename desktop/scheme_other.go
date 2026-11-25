@@ -12,15 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build !windows && !linux
+//go:build !darwin && !windows && !linux
 
 package main
-
-// On macOS a URL scheme belongs to an application bundle, and LaunchServices
-// delivers the link as an Apple Event rather than as an argument — which this
-// launcher has no event loop to receive. Declaring the scheme would therefore
-// take links away from whatever can open them and drop them. So nothing is
-// claimed here, and a link is imported by pasting it into the import page.
 
 func registerScheme() error { return nil }
 
