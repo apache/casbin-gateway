@@ -1438,6 +1438,7 @@
     "Failed to delete": "Failed to delete",
     "Failed to fetch models": "Failed to fetch models",
     "Failed to get provider": "Failed to get provider",
+    "Failed to reorder providers": "Failed to reorder providers",
     "Failed to get providers": "Failed to get providers",
     "Failed to read the balance": "Failed to read the balance",
     "Failed to save": "Failed to save",

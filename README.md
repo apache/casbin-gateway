@@ -302,6 +302,8 @@ Codex is the exception: its ChatGPT sign-in talks to an endpoint no provider sta
 
 ### When a provider cannot answer: fallbacks and model routing
 
+Administrators can use the arrows on a provider card to move it earlier or later in the list, including onto the next or previous page. The desktop tray uses the same order.
+
 Before deleting a provider, check the confirmation for agents that use it as a primary or fallback. After a primary provider is removed, the agent's **Provider** card lets you choose a replacement or restore its original provider settings. Switching to a replacement keeps the remaining compatible fallbacks.
 
 A key runs out of credit, a relay goes down, a vendor rate-limits you halfway through a session. Gateway moves the request on to the next provider instead of handing the agent the error.

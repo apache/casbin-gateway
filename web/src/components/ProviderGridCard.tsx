@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {CircleX, Copy, LogIn, Pencil, Trash2} from "lucide-react";
+import {ArrowDown, ArrowUp, CircleX, Copy, LogIn, Pencil, Trash2} from "lucide-react";
 import i18next from "i18next";
 
 import {ProviderIcon} from "@/components/ProviderIcon";
@@ -82,6 +82,7 @@ export function ProviderGridCard({
   onBind,
   onDuplicate,
   hasDraft,
+  order,
 }: {
   provider: Provider;
   // undefined while it is unknown or not this user's to see, null when it could not be loaded.
@@ -94,6 +95,7 @@ export function ProviderGridCard({
   onBind: (agent: Agent) => void;
   onDuplicate: () => void;
   hasDraft: boolean;
+  order?: {up: boolean; down: boolean; move: (step: number) => void};
 }) {
   const duplicateButton = (
     <Button
@@ -146,6 +148,30 @@ export function ProviderGridCard({
               <p className="text-muted-foreground truncate font-mono text-xs">{provider.baseUrl || "-"}</p>
             </SimpleTooltip>
           </div>
+          {order ? (
+            <div className="flex shrink-0">
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                disabled={!order.up}
+                onClick={() => order.move(-1)}
+                title={i18next.t("agent:Move {provider} up").replace("{provider}", provider.displayName || provider.name)}
+              >
+                <ArrowUp />
+              </Button>
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                disabled={!order.down}
+                onClick={() => order.move(1)}
+                title={i18next.t("agent:Move {provider} down").replace("{provider}", provider.displayName || provider.name)}
+              >
+                <ArrowDown />
+              </Button>
+            </div>
+          ) : null}
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">

@@ -82,7 +82,7 @@ func (c *ApiController) GetTrayMenu() {
 	}
 	sort.Slice(agents, func(i, j int) bool { return agents[i].Name < agents[j].Name })
 
-	stored, err := object.GetProviders("")
+	stored, err := object.GetPaginationProviders("", -1, -1, "", "", "displayRank", "descend")
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -101,7 +101,6 @@ func (c *ApiController) GetTrayMenu() {
 			Protocol: object.ProviderApiFamily(provider),
 		})
 	}
-	sort.Slice(providers, func(i, j int) bool { return providers[i].Name < providers[j].Name })
 
 	c.ResponseOk(map[string]interface{}{"agents": agents, "providers": providers})
 }

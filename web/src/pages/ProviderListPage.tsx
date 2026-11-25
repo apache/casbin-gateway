@@ -35,7 +35,6 @@ import {ProviderLoginField, signedInAs} from "@/components/ProviderLoginField";
 import {ProviderModelsField} from "@/components/ProviderModelsField";
 import {ProviderSourcePicker, sourceTitle} from "@/components/ProviderSourcePicker";
 import {ProviderTestField, useProviderTest} from "@/components/ProviderTestField";
-import {type SortOrder} from "@/components/shared/data-table";
 import {ErrorState} from "@/components/shared/empty-state";
 import {Field, FormDialog} from "@/components/shared/form-dialog";
 import {PageContainer, PageHeader} from "@/components/shared/page-header";
@@ -135,6 +134,8 @@ function Advanced({defaultOpen, children}: {defaultOpen: boolean; children: Reac
   );
 }
 
+const pageSize = 10;
+
 export default function ProviderListPage({account}: {account: Account}) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -148,11 +149,7 @@ export default function ProviderListPage({account}: {account: Account}) {
   // API keys has no providers is alarming when it is really a dropped request.
   const [error, setError] = React.useState("");
   const [page, setPage] = React.useState(1);
-  const [pageSize, setPageSize] = React.useState(10);
-  const [sort, setSort] = React.useState<{field: string; order: SortOrder}>({
-    field: "",
-    order: undefined,
-  });
+  const [moving, setMoving] = React.useState(false);
   const [addOpen, setAddOpen] = React.useState(false);
   const [adding, setAdding] = React.useState(false);
   const [form, setForm] = React.useState<Provider>(() => newProvider(account.name));
@@ -187,22 +184,14 @@ export default function ProviderListPage({account}: {account: Account}) {
   }, [addOpen, copiedFrom, dirty, draftKey, form, source]);
 
   const fetchProviders = React.useCallback(
-    (nextPage = page, nextPageSize = pageSize, nextSort = sort) => {
+    (nextPage = page) => {
       setLoading(true);
-      ProviderBackend.getProviders(
-        account.name,
-        nextPage,
-        nextPageSize,
-        nextSort.order ? nextSort.field : "",
-        nextSort.order ?? "",
-      )
+      return ProviderBackend.getProviders(isAdmin ? "" : account.name, nextPage, pageSize, "displayRank", "descend")
         .then(res => {
           if (res.status === "ok") {
             setData(res.data ?? []);
             setTotal(res.data2 ?? 0);
             setPage(nextPage);
-            setPageSize(nextPageSize);
-            setSort(nextSort);
             setError("");
           } else {
             setError(res.msg || i18next.t("provider:Failed to get providers"));
@@ -214,13 +203,33 @@ export default function ProviderListPage({account}: {account: Account}) {
           setLoaded(true);
         });
     },
-    [account.name, page, pageSize, sort],
+    [account.name, isAdmin, page],
   );
 
   React.useEffect(() => {
-    fetchProviders(1, 10, {field: "", order: undefined});
+    fetchProviders(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [account.name]);
+  }, [account.name, isAdmin]);
+
+  const moveProvider = async(provider: Provider, index: number, step: number) => {
+    const from = (page - 1) * pageSize + index;
+    const to = from + step;
+    let nextPage = page;
+    setMoving(true);
+    try {
+      const result = await ProviderBackend.moveProvider(providerIdOf(provider), from, to);
+      if (result.status === "ok") {
+        nextPage = Math.floor(to / pageSize) + 1;
+      } else {
+        Setting.showMessage("error", result.msg || i18next.t("provider:Failed to reorder providers"));
+      }
+    } catch (err) {
+      Setting.showMessage("error", err instanceof Error ? err.message : String(err));
+    } finally {
+      await fetchProviders(nextPage);
+      setMoving(false);
+    }
+  };
 
   // What the proxy has seen of each provider lives in memory and changes as
   // requests are relayed, so it is polled rather than read once.
@@ -509,7 +518,7 @@ export default function ProviderListPage({account}: {account: Account}) {
                 <Wallet />
                 {i18next.t("provider:Refresh balances")}
               </Button>
-              <Button variant="outline" size="sm" onClick={() => fetchProviders()} loading={loading}>
+              <Button variant="outline" size="sm" onClick={() => fetchProviders()} loading={loading} disabled={moving}>
                 <RefreshCw />
                 {i18next.t("general:Refresh")}
               </Button>
@@ -517,7 +526,7 @@ export default function ProviderListPage({account}: {account: Account}) {
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {data.map(provider => (
+            {data.map((provider, index) => (
               <ProviderGridCard
                 key={providerIdOf(provider)}
                 provider={provider}
@@ -528,6 +537,11 @@ export default function ProviderListPage({account}: {account: Account}) {
                 onEdit={() => navigate(`/providers/${provider.owner}/${provider.name}`)}
                 onDuplicate={() => duplicateProvider(provider)}
                 hasDraft={draft !== null}
+                order={isAdmin && total > 1 ? {
+                  up: (page > 1 || index > 0) && !moving && !loading && !error,
+                  down: (page - 1) * pageSize + index + 1 < total && !moving && !loading && !error,
+                  move: step => moveProvider(provider, index, step),
+                } : undefined}
                 onDelete={() => deleteProvider(provider)}
                 onBind={agent => bindAgent(agent, provider)}
               />
@@ -539,7 +553,7 @@ export default function ProviderListPage({account}: {account: Account}) {
               <Button
                 variant="outline"
                 size="sm"
-                disabled={page <= 1}
+                disabled={moving || loading || page <= 1}
                 onClick={() => fetchProviders(page - 1)}
               >
                 {i18next.t("general:Previous")}
@@ -547,7 +561,7 @@ export default function ProviderListPage({account}: {account: Account}) {
               <Button
                 variant="outline"
                 size="sm"
-                disabled={page * pageSize >= total}
+                disabled={moving || loading || page * pageSize >= total}
                 onClick={() => fetchProviders(page + 1)}
               >
                 {i18next.t("general:Next")}
