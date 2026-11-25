@@ -22,6 +22,7 @@ import * as LlmRecordBackend from "@/backend/LlmRecordBackend";
 import * as Setting from "@/Setting";
 import {UsageBreakdown} from "@/components/usage/usage-breakdown";
 import {UsageHero} from "@/components/usage/usage-hero";
+import {UsageCalendar} from "@/components/usage/usage-calendar";
 import {UsageTrendChart} from "@/components/usage/usage-trend-chart";
 import {PageContainer, PageHeader} from "@/components/shared/page-header";
 import {agentOption} from "@/components/shared/brand-options";
@@ -29,7 +30,7 @@ import {SimpleSelect} from "@/components/shared/simple-select";
 import {UnauthorizedResult} from "@/components/shared/misc";
 import {MessageAlert} from "@/components/ui/alert";
 import {Button} from "@/components/ui/button";
-import {Tabs, TabsList, TabsTrigger} from "@/components/ui/tabs";
+import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import {
   emptyUsageTotals,
   fillDays,
@@ -60,6 +61,7 @@ const REFRESH_OPTIONS = [0, 10000, 30000, 60000];
 interface UsageView {
   totals: UsageTotals;
   points: UsagePoint[];
+  trendError?: string;
   models: UsageRow[];
   providers: UsageRow[];
   agents: UsageRow[];
@@ -130,6 +132,7 @@ export default function UsagePage({account}: {account: Account}) {
       points: fillDays(
         usage.days.map(day => ({
           bucket: day.name,
+          totalTokens: day.totalTokens,
           requests: day.requests,
           promptTokens: day.promptTokens,
           completionTokens: day.completionTokens,
@@ -169,8 +172,10 @@ export default function UsagePage({account}: {account: Account}) {
         cost: stats.cost,
         unpriced: stats.unpriced,
       },
+      trendError: trendRes.status === "ok" ? "" : trendRes.msg || i18next.t("general:Failed to get data"),
       points: (trendRes.status === "ok" ? (trendRes.data ?? []) : []).map(point => ({
         bucket: point.bucket,
+        totalTokens: point.totalTokens,
         requests: point.requests,
         promptTokens: point.promptTokens,
         completionTokens: point.completionTokens,
@@ -202,16 +207,20 @@ export default function UsagePage({account}: {account: Account}) {
     };
   }, [agent, days]);
 
+  const latestRequest = React.useRef<symbol | null>(null);
   const load = React.useCallback(
     (spinner: boolean) => {
       if (!isAdmin) {
         return;
       }
+      const request = Symbol();
+      latestRequest.current = request;
       if (spinner) {
         setLoading(true);
       }
       (source === "agents" ? loadAgents() : loadRelayed())
         .then(next => {
+          if (request !== latestRequest.current) return;
           setView(next);
           setError("");
           // The agents a window happens to cover are the only names there are
@@ -223,16 +232,20 @@ export default function UsagePage({account}: {account: Account}) {
           });
         })
         .catch(failure => {
+          if (request !== latestRequest.current) return;
           setError(failure.message || String(failure));
           setView(emptyView);
         })
-        .then(() => setLoading(false));
+        .finally(() => {
+          if (request === latestRequest.current) setLoading(false);
+        });
     },
     [isAdmin, source, loadAgents, loadRelayed],
   );
 
   React.useEffect(() => {
     load(true);
+    return () => { latestRequest.current = null; };
   }, [load]);
 
   React.useEffect(() => {
@@ -347,7 +360,20 @@ export default function UsagePage({account}: {account: Account}) {
         cacheWriteHint={cacheWriteHint}
       />
 
-      <UsageTrendChart points={view.points} loading={loading} description={window} />
+      {view.trendError ? <MessageAlert title={view.trendError} /> : (
+        <Tabs defaultValue="trend">
+          <TabsList aria-label={i18next.t("usage:Usage view")}>
+            <TabsTrigger value="trend">{i18next.t("usage:Trend")}</TabsTrigger>
+            <TabsTrigger value="calendar">{i18next.t("usage:Daily activity")}</TabsTrigger>
+          </TabsList>
+          <TabsContent value="trend">
+            <UsageTrendChart points={view.points} loading={loading} description={window} />
+          </TabsContent>
+          <TabsContent value="calendar">
+            <UsageCalendar key={JSON.stringify([source, agent, days])} points={view.points} loading={loading} />
+          </TabsContent>
+        </Tabs>
+      )}
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <UsageBreakdown

@@ -1896,6 +1896,10 @@
     "{up} sent, {down} received, {gone} dropped": "上传{up}个，下载{down}个，清理{gone}个"
   },
   "usage": {
+    "Usage view": "用量视图",
+    "Daily activity": "每日用量",
+    "Month": "月份",
+    "Metric": "指标",
     "Add a price": "新增价格",
     "Agent spend": "Agent账单",
     "Agents description": "这台机器上的agent花掉的量，读自它们自己写的会话记录。没有经过Gateway的请求，只有这一份账。",
