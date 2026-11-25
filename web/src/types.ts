@@ -252,6 +252,8 @@ export interface Agent {
   followup?: string;
   /** The "owner/name" id of the provider this agent's requests are sent to. */
   provider: string;
+  /** The binding to restore when leaving Gateway mode. */
+  directProvider?: string;
   /** The providers tried, in order, when the bound one cannot answer. */
   fallbacks: string[];
   /** "gateway" routes through the local proxy, "direct" writes the upstream. */

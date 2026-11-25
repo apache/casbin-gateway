@@ -109,6 +109,8 @@
     "Detail": "详情",
     "Details": "详情",
     "Direct": "直连",
+    "Return to direct provider": "关闭Gateway路由后，将恢复直连{provider}。",
+    "Choose a direct-compatible provider": "请选择已启用且支持直连的供应商。",
     "Direct mode hint": "直接把该供应商的Base URL和密钥写入Agent配置文件。切换供应商会重写文件，且需要重启Agent才能生效。",
     "Direct mode permission hint": "该Agent客户端直连供应商，请求不经过网关，这里的规则不会生效。请把它切回经网关转发。",
     "Drive a browser": "操作浏览器",

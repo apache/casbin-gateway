@@ -58,6 +58,7 @@ import {
 import {
   providerIdOf,
   providerProtocol,
+  providerWireApi,
   shellForPath,
   usesClientAuth,
 } from "@/lib/providers";
@@ -203,8 +204,10 @@ export function ProviderCard({
   // two have to speak the same one. A backend that does not report the format
   // yet filters nothing out.
   const protocol = providerConfig.protocol ?? "";
-  const speaksAgentApi = (provider: Provider, selectedMode = mode) =>
-    selectedMode !== directMode || protocol === "" || providerProtocol(provider.type) === protocol;
+  const speaksAgentApi = (provider: Provider, selectedMode = mode) => {
+    const api = providerWireApi(provider);
+    return selectedMode !== directMode || protocol === "" || (api === "responses" ? "openai" : api) === protocol;
+  };
   // A provider bound before the mode was switched stays in the list, so the
   // select shows what the agent is on rather than an empty box.
   const options = missing
@@ -223,8 +226,20 @@ export function ProviderCard({
   // reads nothing but the Responses API, the Gemini CLI nothing but Google's.
   // Gateway serves both by translating, so the choice is not offered rather
   // than failing on the write.
-  const gatewayOnlyKey = agentGatewayOnlyKey(agent, bound);
-  const gatewayOnly = gatewayOnlyKey !== "";
+  const remembered = providers.find(provider => providerIdOf(provider) === agent.directProvider);
+  const canReturn = remembered?.status === "enabled" && speaksAgentApi(remembered, directMode) &&
+    !agentGatewayOnlyKey(agent, remembered);
+  const directTarget = canReturn ? remembered : bound;
+  const gatewayOnlyKey = agentGatewayOnlyKey(agent, directTarget);
+  const canGoDirect = directTarget?.status === "enabled" && speaksAgentApi(directTarget, directMode) && !gatewayOnlyKey;
+  const returnHint = canGoDirect && directTarget
+    ? i18next.t("agent:Return to direct provider").replace("{provider}", directTarget.displayName || directTarget.name)
+    : i18next.t(gatewayOnlyKey || "agent:Choose a direct-compatible provider");
+  const goDirect = () => {
+    if (canGoDirect && directTarget) {
+      onRouting({mode: directMode, provider: providerIdOf(directTarget)});
+    }
+  };
 
   const pointsAtGateway = (providerConfig.current ?? "").includes("/v1/agents/");
   const canRetryRestore = agent.provider === "" &&
@@ -326,6 +341,9 @@ export function ProviderCard({
                     {i18next.t("agent:Use Gateway for replacement")}
                   </label>
                 ) : null}
+                {mode === gatewayMode && canReturn ? (
+                  <Button variant="outline" disabled={busy} onClick={goDirect}>{returnHint}</Button>
+                ) : null}
                 <RestoreProviderButton
                   agent={agent}
                   busy={busy}
@@ -373,19 +391,13 @@ export function ProviderCard({
               <Switch
                 className="mt-0.5"
                 checked={mode === gatewayMode}
-                disabled={busy || gatewayOnly}
-                onCheckedChange={checked =>
-                  onRouting({mode: checked ? gatewayMode : directMode})
-                }
+                disabled={busy || (mode === gatewayMode && !canGoDirect)}
+                onCheckedChange={checked => checked ? onRouting({mode: gatewayMode}) : goDirect()}
               />
               <span>
                 {i18next.t("agent:Route through Gateway")}
                 <span className="block text-muted-foreground">
-                  {gatewayOnly
-                    ? i18next.t(gatewayOnlyKey)
-                    : mode === gatewayMode
-                      ? i18next.t("agent:Gateway mode hint")
-                      : i18next.t("agent:Direct mode hint")}
+                  {mode === gatewayMode ? returnHint : i18next.t("agent:Direct mode hint")}
                 </span>
               </span>
             </label>
